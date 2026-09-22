@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ten Skies Field Guide</title>
+<meta name="description" content="A field guide to the ten cloud genera: descend from cirrus to cumulonimbus as a live sky and altimeter follow your scroll, then identify a cloud with a dichotomous key.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=Azeret+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#e6ecef;
+  --paper-2:#d9e1e6;
+  --ink:#16304f;
+  --ink-2:#3d5877;
+  --ink-3:#7890a8;
+  --rule:#b5c3cf;
+  --stamp:#b0412e;
+  --high:#0f2b55;
+  --display:"Instrument Serif", "Didot", Georgia, serif;
+  --serif:"Source Serif 4", "Source Serif Pro", Georgia, serif;
+  --mono:"Azeret Mono", ui-monospace, Menlo, monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:18px;line-height:1.6;overflow-x:hidden;font-weight:300}
+:focus-visible{outline:2px solid var(--stamp);outline-offset:3px}
+.back{position:fixed;z-index:30;top:14px;right:16px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink);background:var(--paper);padding:6px 10px;border:1px solid var(--ink);text-decoration:none}
+.back:hover,.back:focus-visible{background:var(--ink);color:var(--paper)}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);min-height:100vh}
+.sky{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:#0f2b55}
+.sky canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.alt{position:absolute;left:16px;bottom:22px;color:#fff;font-family:var(--mono);z-index:2;text-shadow:0 1px 8px rgba(0,0,0,.35)}
+.alt small{display:block;font-size:11px;letter-spacing:.2em;opacity:.8}
+.alt b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(56px,7vw,110px);line-height:.9;letter-spacing:-.02em}
+.alt b span{font-size:.35em;font-family:var(--mono);letter-spacing:0;margin-left:6px}
+.alt .gname{font-family:var(--display);font-style:italic;font-size:26px;opacity:.95}
+.plate-no{position:absolute;right:16px;top:60px;color:#fff;font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-align:right;opacity:.85;z-index:2}
+
+.guide{background:var(--paper);border-left:1px solid var(--ink);position:relative;
+  background-image:repeating-linear-gradient(transparent 0 31px, rgba(22,48,79,.06) 31px 32px)}
+.masthead{padding:72px 32px 40px;border-bottom:1px solid var(--ink)}
+.masthead .series{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-2);display:flex;justify-content:space-between;gap:10px}
+.masthead h1{font-family:var(--display);font-weight:400;font-size:clamp(64px,9vw,120px);line-height:.85;margin:26px 0 18px;letter-spacing:-.02em}
+.masthead h1 i{display:block;color:var(--stamp)}
+.masthead p{margin:0 0 1em}
+.masthead .howto{font-family:var(--mono);font-size:12px;color:var(--ink-2);border-top:1px dashed var(--rule);padding-top:12px;margin-top:20px}
+.etage{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;padding:16px 32px;background:var(--ink);color:var(--paper);display:flex;justify-content:space-between;gap:8px}
+.entry{padding:56px 32px 60px;border-bottom:1px solid var(--rule);min-height:88vh;display:flex;flex-direction:column;justify-content:center}
+.entry header{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 18px;align-items:end;margin-bottom:22px}
+.abbr{font-family:var(--display);font-size:108px;line-height:.78;color:var(--ink);letter-spacing:-.03em}
+.entry h2{font-family:var(--display);font-weight:400;font-size:42px;line-height:1;margin:0}
+.entry .latin{font-style:italic;color:var(--ink-2);font-size:16px;margin-top:6px}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);margin:0 0 22px}
+.facts div{padding:10px 10px 10px 0}
+.facts div+div{padding-left:10px;border-left:1px solid var(--rule)}
+.facts dt{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.facts dd{margin:2px 0 0;font-size:15px;font-weight:400}
+.entry p{margin:0 0 .9em}
+.lookfor{font-family:var(--mono);font-size:12.5px;line-height:1.55;color:var(--ink-2);border-left:3px solid var(--stamp);padding:4px 0 4px 12px;margin-top:10px}
+.lookfor b{color:var(--stamp);font-weight:600;letter-spacing:.1em}
+.entry.on .abbr{color:var(--stamp)}
+
+/* chart + key full-width */
+.wide{background:var(--paper-2);border-top:1px solid var(--ink);padding:80px 16px}
+.wide-in{max-width:1180px;margin:0 auto}
+.wide h2{font-family:var(--display);font-weight:400;font-size:clamp(44px,6vw,84px);line-height:.9;margin:0 0 14px}
+.wide h2 i{color:var(--stamp)}
+.wide .lead{max-width:40em;margin:0 0 36px}
+.chart{width:100%;height:auto;display:block;background:linear-gradient(#0f2b55,#3c6c9c 55%,#9cc2dc);border:1px solid var(--ink)}
+.chart text{font-family:var(--mono)}
+.chart .g{cursor:pointer}
+.chart .g:hover rect,.chart .g:focus rect{stroke:#fff;stroke-width:2}
+.chart .g:focus{outline:none}
+
+.key{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:start}
+.q{background:var(--paper);border:1px solid var(--ink);padding:26px;min-height:320px;position:relative}
+.q .step{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--ink-3);text-transform:uppercase}
+.q h3{font-family:var(--display);font-weight:400;font-size:34px;line-height:1.1;margin:10px 0 20px}
+.q .opts{display:grid;gap:10px}
+.q button.opt{all:unset;box-sizing:border-box;cursor:pointer;border:1px solid var(--ink);padding:12px 14px;font-family:var(--serif);font-size:17px;display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:baseline;background:var(--paper)}
+.q button.opt span{font-family:var(--mono);font-size:12px;color:var(--stamp)}
+.q button.opt:hover,.q button.opt:focus-visible{background:var(--ink);color:var(--paper)}
+.q button.opt:hover span,.q button.opt:focus-visible span{color:#f3b3a5}
+.q .result{font-family:var(--display);font-size:64px;line-height:1;color:var(--stamp)}
+.q .ctrl{display:flex;gap:16px;margin-top:22px;font-family:var(--mono);font-size:12px}
+.q .ctrl button{all:unset;cursor:pointer;border-bottom:1px solid var(--ink)}
+.q .ctrl button:focus-visible{outline:2px solid var(--stamp)}
+.trail{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.8}
+.trail ol{padding-left:20px;margin:10px 0 0}
+.trail li::marker{color:var(--stamp)}
+.rule-thumb{margin-top:26px;display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
+.rule-thumb figure{margin:0;text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+.rule-thumb svg{display:block;margin:0 auto 6px}
+footer{padding:30px 16px 60px;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:11px;letter-spacing:.1em;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .sky{height:38vh;height:38svh;z-index:5}
+  .guide{border-left:0}
+  .alt b{font-size:48px}
+  .alt .gname{font-size:20px}
+  .alt small{display:none}
+  .plate-no{top:14px;left:16px;right:auto;text-align:left}
+  .masthead,.entry{padding-left:16px;padding-right:16px}
+  .etage{padding-left:16px;padding-right:16px}
+  .entry{min-height:auto;padding-top:44px;padding-bottom:44px}
+  .abbr{font-size:80px}
+  .key{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:480px){.facts{grid-template-columns:minmax(0,1fr)}.facts div+div{padding-left:0;border-left:0;border-top:1px solid var(--rule)}}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="layout">
+  <div class="sky" aria-hidden="true">
+    <canvas id="sky"></canvas>
+    <div class="plate-no" id="plateNo">PLATE I · HIGH ÉTAGE</div>
+    <div class="alt"><small>ALTITUDE OF BASE, TEMPERATE LATITUDES</small><b id="altNum">9.0<span>km</span></b><div class="gname" id="gName">Cirrus</div></div>
+  </div>
+  <div class="guide">
+    <header class="masthead">
+      <div class="series"><span>Ten Skies · Field Guide No. 3</span><span>Pocket edition</span></div>
+      <h1>The Cloud <i>Genera</i></h1>
+      <p>Every cloud you will ever see belongs to one of ten genera. The scheme was sketched by a Quaker pharmacist, Luke Howard, in a lecture of 1802, when he gave Latin names to things everyone had always seen and nobody had thought to sort: <em>cirrus</em>, a curl of hair; <em>cumulus</em>, a heap; <em>stratus</em>, a layer; <em>nimbus</em>, a rain cloud. The World Meteorological Organization still builds its International Cloud Atlas on his bones.</p>
+      <p>The genera are grouped by height into three étages. We begin at the top, where the air is forty below and the clouds are made of ice, and descend. The sky to the left follows you down.</p>
+      <p class="howto">SCROLL to descend · the altimeter reads typical base height · a key to identification waits at the bottom</p>
+    </header>
+
+    <div class="etage"><span>High étage</span><span>5 – 13 km · ice crystals</span></div>
+
+    <article class="entry" data-g="Ci" id="e-Ci">
+      <header><span class="abbr">Ci</span><div><h2>Cirrus</h2><div class="latin">cirrus — a lock of hair, a tendril</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>6 – 12 km</dd></div><div><dt>Made of</dt><dd>Ice crystals</dd></div><div><dt>Precip.</dt><dd>Never reaches ground</dd></div></dl>
+      <p>Detached white filaments, often ending in hooks or tufts, drawn across a deep blue sky. What you are seeing is ice crystals falling out of a cloud head and being stretched by winds that change speed with height; the streaks are fall-streaks, a kind of snow that evaporates long before it gets anywhere.</p>
+      <p>Sailors called them <em>mares' tails</em>, and an old rhyme warns that "mares' tails and mackerel scales make tall ships take in their sails". Thickening cirrus spreading from the west is often the first herald of a warm front a day away.</p>
+      <p class="lookfor"><b>LOOK FOR</b> hooks (uncinus), dense patches (spissatus), and sunsets: cirrus lights up long after lower clouds have gone grey.</p>
+    </article>
+
+    <article class="entry" data-g="Cc" id="e-Cc">
+      <header><span class="abbr">Cc</span><div><h2>Cirrocumulus</h2><div class="latin">cirrus + cumulus — a heap of curls</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>6 – 12 km</dd></div><div><dt>Made of</dt><dd>Ice, some supercooled water</dd></div><div><dt>Element size</dt><dd>&lt; 1° wide</dd></div></dl>
+      <p>A thin sheet of tiny white grains or ripples, often arranged in rows, with no shading at all. Hold your arm out: each element should be smaller than your little fingernail. Anything bigger is probably altocumulus.</p>
+      <p>This is the true <em>mackerel sky</em>, patterned like the scales on a fish's back. It is one of the less common genera and rarely lasts long — the small droplets that help form it freeze quickly, turning the ripples to cirrus or cirrostratus within minutes.</p>
+      <p class="lookfor"><b>LOOK FOR</b> fine ripples like sand on a beach (undulatus), and the absence of grey undersides.</p>
+    </article>
+
+    <article class="entry" data-g="Cs" id="e-Cs">
+      <header><span class="abbr">Cs</span><div><h2>Cirrostratus</h2><div class="latin">cirrus + stratus — a spread of curls</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>6 – 12 km</dd></div><div><dt>Made of</dt><dd>Ice crystals</dd></div><div><dt>Tell-tale</dt><dd>22° halo</dd></div></dl>
+      <p>A transparent, whitish veil that may cover the whole sky so thinly you barely notice it — until you see the halo. Hexagonal ice crystals refract sunlight at 22°, painting a ring around the sun or moon about the width of an outstretched hand.</p>
+      <p>The sun remains sharp-edged and still casts shadows, which is how you tell cirrostratus from the thicker altostratus below. A veil that thickens through the day, turning the halo faint, is a reliable sign that rain is coming within twelve to twenty-four hours.</p>
+      <p class="lookfor"><b>LOOK FOR</b> a halo, sun dogs (bright spots either side of the sun), and a milky sky that still allows shadows.</p>
+    </article>
+
+    <div class="etage"><span>Middle étage</span><span>2 – 7 km · water &amp; ice</span></div>
+
+    <article class="entry" data-g="Ac" id="e-Ac">
+      <header><span class="abbr">Ac</span><div><h2>Altocumulus</h2><div class="latin">altus + cumulus — a high heap</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>2 – 7 km</dd></div><div><dt>Made of</dt><dd>Water droplets</dd></div><div><dt>Element size</dt><dd>1 – 5°</dd></div></dl>
+      <p>Rounded white or grey masses in sheets, rows or waves, with some shading on their undersides. Each element is about the width of one to three fingers held at arm's length. It is the most varied of all the genera and turns up in every season and nearly every weather.</p>
+      <p>When the sun or moon shines through thin altocumulus, you may see a <em>corona</em> — coloured rings close around the disc, caused by diffraction on water droplets rather than refraction through ice. On humid summer mornings, turreted altocumulus castellanus is a classic warning of afternoon thunder.</p>
+      <p class="lookfor"><b>LOOK FOR</b> shading, corona, lens shapes over hills (lenticularis), and small towers (castellanus).</p>
+    </article>
+
+    <article class="entry" data-g="As" id="e-As">
+      <header><span class="abbr">As</span><div><h2>Altostratus</h2><div class="latin">altus + stratus — a high layer</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>2 – 7 km</dd></div><div><dt>Made of</dt><dd>Water &amp; ice</dd></div><div><dt>Tell-tale</dt><dd>Ground-glass sun</dd></div></dl>
+      <p>A grey or bluish sheet, fibrous or uniform, covering all or much of the sky. The sun shows through it only dimly, as if through frosted glass, and casts no shadow. There is no halo. It is the dullest of clouds and the most honest: altostratus usually means the front is nearly here.</p>
+      <p>It rarely produces much itself, though light rain or snow may fall from it. Watch the sun fade over an hour; when it vanishes entirely and the base lowers, the altostratus is becoming nimbostratus.</p>
+      <p class="lookfor"><b>LOOK FOR</b> a watery sun without shadows and a sky the colour of a pewter plate.</p>
+    </article>
+
+    <article class="entry" data-g="Ns" id="e-Ns">
+      <header><span class="abbr">Ns</span><div><h2>Nimbostratus</h2><div class="latin">nimbus + stratus — a raining layer</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>0.5 – 3 km</dd></div><div><dt>Depth</dt><dd>Up to 5 km+</dd></div><div><dt>Precip.</dt><dd>Steady rain or snow</dd></div></dl>
+      <p>A dark grey, thick, featureless layer, the true rain cloud of a British winter. It blots out the sun completely and has a diffuse, wet-looking base, often hidden by ragged scud racing beneath it. The rain it produces is continuous rather than showery, and it can go on for hours.</p>
+      <p>Classed with the middle étage by tradition, it often extends from near the ground into the high levels. You are unlikely to admire it, but it deserves respect: most of the water in most rivers began here.</p>
+      <p class="lookfor"><b>LOOK FOR</b> total grey, steady precipitation, no visible edges, and pannus — dark shreds below.</p>
+    </article>
+
+    <div class="etage"><span>Low étage</span><span>0 – 2 km · water droplets</span></div>
+
+    <article class="entry" data-g="Sc" id="e-Sc">
+      <header><span class="abbr">Sc</span><div><h2>Stratocumulus</h2><div class="latin">stratus + cumulus — a layered heap</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>0.5 – 2 km</dd></div><div><dt>Made of</dt><dd>Water droplets</dd></div><div><dt>Element size</dt><dd>&gt; 5°</dd></div></dl>
+      <p>Grey or whitish patches, rolls or lumps, with dark parts, almost always with shading — each element bigger than your fist at arm's length. It is the most common cloud on Earth, covering vast areas of the oceans and much of a typical British day.</p>
+      <p>Stratocumulus often forms when cumulus spreads out under a temperature inversion, or when a stratus layer breaks up. It may give a little drizzle but seldom anything more. Sunbeams slanting through the gaps — crepuscular rays — are its great consolation.</p>
+      <p class="lookfor"><b>LOOK FOR</b> big soft rolls, blue gaps, and sun rays fanning between them.</p>
+    </article>
+
+    <article class="entry" data-g="St" id="e-St">
+      <header><span class="abbr">St</span><div><h2>Stratus</h2><div class="latin">stratus — spread out, laid flat</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>0 – 0.5 km</dd></div><div><dt>Made of</dt><dd>Water droplets</dd></div><div><dt>Precip.</dt><dd>Drizzle, snow grains</dd></div></dl>
+      <p>A low, grey, uniform layer with a base so near the ground it often hides the tops of hills and tall buildings. Fog that lifts becomes stratus; stratus that sinks to the ground becomes fog. Through thin stratus the outline of the sun is clearly visible.</p>
+      <p>It forms when moist air cools gently — over cold seas, after rain, on still autumn nights. It is the sea fret of the east coast, the haar of Scotland, the grey lid of a November morning that burns off by eleven, or doesn't.</p>
+      <p class="lookfor"><b>LOOK FOR</b> hilltops in cloud, drizzle, and ragged fractus shreds.</p>
+    </article>
+
+    <article class="entry" data-g="Cu" id="e-Cu">
+      <header><span class="abbr">Cu</span><div><h2>Cumulus</h2><div class="latin">cumulus — a heap, a pile</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>0.6 – 2 km</dd></div><div><dt>Made of</dt><dd>Water droplets</dd></div><div><dt>Shape</dt><dd>Flat base, domed top</dd></div></dl>
+      <p>Detached, dense clouds with sharp outlines, flat bases and cauliflower tops that are brilliant white in sunlight. They are the clouds children draw. Each marks the top of a thermal — a column of warm air rising from sun-heated ground — and all their bases sit at the same height, where the rising air cools to its dew point.</p>
+      <p>Small, flat <em>humilis</em> means settled weather. When cumulus grows taller than it is wide — <em>congestus</em> — by early afternoon, watch it: it is on its way to becoming the next genus.</p>
+      <p class="lookfor"><b>LOOK FOR</b> a level line of bases, sharp crisp tops, and gliders circling beneath them.</p>
+    </article>
+
+    <article class="entry" data-g="Cb" id="e-Cb">
+      <header><span class="abbr">Cb</span><div><h2>Cumulonimbus</h2><div class="latin">cumulus + nimbus — a raining heap</div></div></header>
+      <dl class="facts"><div><dt>Base</dt><dd>0.5 – 2 km</dd></div><div><dt>Top</dt><dd>Up to 12 – 16 km</dd></div><div><dt>Brings</dt><dd>Thunder, hail, squalls</dd></div></dl>
+      <p>The king of clouds: a heavy, dense tower of enormous vertical extent, rising from a dark ragged base to a summit that spreads against the tropopause into a smooth, fibrous anvil of ice. A single mature cell may hold hundreds of thousands of tonnes of water.</p>
+      <p>It is the only genus that produces thunder and lightning, and often hail, gusting squalls and torrential showers. Its whole life, from the first bubbling cumulus to the collapse of its anvil, may last less than an hour. If you can hear the thunder, you are close enough to be struck.</p>
+      <p class="lookfor"><b>LOOK FOR</b> an anvil (incus), pouches beneath it (mamma), a rain shaft, and the smell of wet dust before the storm.</p>
+    </article>
+  </div>
+
+  <section class="wide" aria-labelledby="chartTitle">
+    <div class="wide-in">
+      <h2 id="chartTitle">The sky, <i>in section</i></h2>
+      <p class="lead">All ten genera drawn to their typical heights over temperate latitudes. Select any band to jump back to its entry.</p>
+      <svg class="chart" id="chart" viewBox="0 0 1180 520" role="img" aria-label="Altitude chart of the ten cloud genera"></svg>
+    </div>
+  </section>
+
+  <section class="wide" aria-labelledby="keyTitle" style="background:var(--paper)">
+    <div class="wide-in">
+      <h2 id="keyTitle">Which cloud <i>is this?</i></h2>
+      <p class="lead">A dichotomous key: answer a few questions about what's overhead, and it narrows the ten genera to one. Go outside first. We'll wait.</p>
+      <div class="key">
+        <div class="q" id="q" aria-live="polite"></div>
+        <div>
+          <div class="trail" id="trail"><b>YOUR ANSWERS</b><ol id="trailList"><li>Nothing yet — start on the left.</li></ol></div>
+          <div class="rule-thumb" aria-label="Hand rule of thumb for element size">
+            <figure><svg width="70" height="90" viewBox="0 0 70 90" aria-hidden="true"><rect x="28" y="10" width="12" height="70" rx="6" fill="none" stroke="#16304f" stroke-width="2"/><circle cx="34" cy="16" r="3" fill="#b0412e"/></svg>&lt;1° · Cc</figure>
+            <figure><svg width="70" height="90" viewBox="0 0 70 90" aria-hidden="true"><rect x="14" y="10" width="12" height="70" rx="6" fill="none" stroke="#16304f" stroke-width="2"/><rect x="28" y="6" width="12" height="74" rx="6" fill="none" stroke="#16304f" stroke-width="2"/><rect x="42" y="10" width="12" height="70" rx="6" fill="none" stroke="#16304f" stroke-width="2"/><rect x="14" y="14" width="40" height="10" fill="#b0412e" opacity=".5"/></svg>1–5° · Ac</figure>
+            <figure><svg width="70" height="90" viewBox="0 0 70 90" aria-hidden="true"><rect x="10" y="22" width="50" height="50" rx="14" fill="none" stroke="#16304f" stroke-width="2"/><rect x="10" y="22" width="50" height="50" rx="14" fill="#b0412e" opacity=".25"/></svg>&gt;5° · Sc</figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer><span>Ten Skies Field Guide No. 3 · Genera after the WMO International Cloud Atlas</span><span>Skies rendered live in the browser</span></footer>
+</div>
+
+<script>
+(function(){
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const G={
+  Ci:{n:'Cirrus',alt:9,lo:6,hi:12,plate:'I',et:'HIGH'},
+  Cc:{n:'Cirrocumulus',alt:8,lo:6,hi:12,plate:'II',et:'HIGH'},
+  Cs:{n:'Cirrostratus',alt:8.5,lo:6,hi:12,plate:'III',et:'HIGH'},
+  Ac:{n:'Altocumulus',alt:4,lo:2,hi:7,plate:'IV',et:'MIDDLE'},
+  As:{n:'Altostratus',alt:4.5,lo:2,hi:7,plate:'V',et:'MIDDLE'},
+  Ns:{n:'Nimbostratus',alt:1.2,lo:.5,hi:5,plate:'VI',et:'MIDDLE'},
+  Sc:{n:'Stratocumulus',alt:1.2,lo:.5,hi:2,plate:'VII',et:'LOW'},
+  St:{n:'Stratus',alt:.3,lo:0,hi:.6,plate:'VIII',et:'LOW'},
+  Cu:{n:'Cumulus',alt:1.1,lo:.6,hi:3,plate:'IX',et:'LOW'},
+  Cb:{n:'Cumulonimbus',alt:1,lo:.6,hi:13,plate:'X',et:'LOW → HIGH'},
+};
+const ORDER=['Ci','Cc','Cs','Ac','As','Ns','Sc','St','Cu','Cb'];
+const MAXK=13;
+
+/* ---------- seeded random ---------- */
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+
+/* ---------- sky canvas ---------- */
+const cv=document.getElementById('sky'),ctx=cv.getContext('2d');
+let W=0,H=0,dpr=1;
+function size(){const r=cv.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);W=Math.max(1,r.width);H=Math.max(1,r.height);cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+size();addEventListener('resize',()=>{size();draw(performance.now());});
+const ground=()=>Math.max(28,H*.07);
+const yOf=k=>H-ground()-k/MAXK*(H-ground()-20);
+
+function skyGrad(dark){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  if(dark>0){ // overcast mix
+    g.addColorStop(0,mix('#123a6e','#5d6770',dark));g.addColorStop(.6,mix('#3f78ad','#838c94',dark));g.addColorStop(1,mix('#b8d4e6','#a7adb1',dark));
+  } else {g.addColorStop(0,'#0c2750');g.addColorStop(.55,'#3a73aa');g.addColorStop(1,'#b8d4e6');}
+  return g;
+}
+function mix(a,b,t){const pa=parseInt(a.slice(1),16),pb=parseInt(b.slice(1),16);const r=(pa>>16)*(1-t)+(pb>>16)*t,g=((pa>>8)&255)*(1-t)+((pb>>8)&255)*t,bl=(pa&255)*(1-t)+(pb&255)*t;return `rgb(${r|0},${g|0},${bl|0})`;}
+function puff(x,y,r,shade,alpha){
+  const g=ctx.createRadialGradient(x-r*.12,y-r*.25,0,x,y,r);
+  g.addColorStop(0,`rgba(255,255,255,${alpha*.95})`);g.addColorStop(.45,`rgba(${shade[0]+20},${shade[1]+20},${shade[2]+18},${alpha*.8})`);g.addColorStop(.8,`rgba(${shade[0]},${shade[1]},${shade[2]},${alpha*.45})`);g.addColorStop(1,`rgba(${shade[0]-20},${shade[1]-20},${shade[2]-15},0)`);
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+}
+const SUN={x:.78,y:.2};
+function sun(dim,sharp){
+  const x=W*SUN.x,y=H*SUN.y;
+  const g=ctx.createRadialGradient(x,y,0,x,y,sharp?90:140);
+  g.addColorStop(0,`rgba(255,250,230,${1-dim*.6})`);g.addColorStop(sharp?.12:.25,`rgba(255,244,210,${.7-dim*.5})`);g.addColorStop(1,'rgba(255,244,210,0)');
+  ctx.fillStyle=g;ctx.fillRect(x-160,y-160,320,320);
+}
+function hills(fogK){
+  const gy=H-ground();
+  ctx.fillStyle='#253a2e';ctx.beginPath();ctx.moveTo(0,H);
+  for(let x=0;x<=W;x+=8){ctx.lineTo(x,gy-18-Math.sin(x*.008)*16-Math.sin(x*.023+1)*8-(x>W*.55&&x<W*.8?Math.sin((x-W*.55)/(W*.25)*Math.PI)*H*.12:0));}
+  ctx.lineTo(W,H);ctx.fill();
+  ctx.fillStyle='#1b2b22';ctx.fillRect(0,gy+4,W,ground());
+}
+// per-genus layouts
+const L={};
+(function build(){
+  let R=rng(11);L.Ci=Array.from({length:26},()=>({x:R(),y:R()*.5,len:.08+R()*.18,c:(R()-.5)*.6,h:R()<.5}));
+  R=rng(12);L.Cc=[];for(let row=0;row<14;row++)for(let i=0;i<60;i++)L.Cc.push({x:i/60+R()*.01+row*.004,row,r:.5+R()*.6,a:.35+R()*.5});
+  R=rng(13);L.Ac=[];for(let row=0;row<6;row++)for(let i=0;i<16;i++){if(R()<.15)continue;L.Ac.push({x:i/16+(row%2)*.03+R()*.02,row,r:.6+R()*.5,sub:Array.from({length:5},()=>[R()-.5,R()-.5,.5+R()*.5])});}
+  R=rng(14);L.Sc=[];for(let i=0;i<14;i++){if(R()<.2)continue;L.Sc.push({x:i/14+R()*.03,r:.8+R()*.4,sub:Array.from({length:8},()=>[R()-.5,(R()-.5)*.5,.5+R()*.6])});}
+  R=rng(15);L.Cu=[];[[.15,.9],[.48,1.3],[.82,.8],[1.12,1]].forEach(([x,s])=>{L.Cu.push({x,s,sub:Array.from({length:22},()=>{const a=R()*Math.PI;return[Math.cos(a)*(.5+R()*.5),-Math.sin(a)*(.2+R()*.9),.35+R()*.4]})})});
+  R=rng(16);L.Cb={tower:Array.from({length:70},()=>{const h=R();return[(R()-.5)*(.5-h*.25)*(1+.4*R()),h,.08+R()*.07]}),anvil:Array.from({length:30},()=>[(R()-.5)*1.1,R()*.06,.05+R()*.05])};
+  R=rng(17);L.rain=Array.from({length:180},()=>({x:R(),y:R(),l:.03+R()*.04}));
+})();
+const drift=t=>reduce?0:t;
+
+const DRAW={
+  Ci(t,a){
+    ctx.save();ctx.globalAlpha=a;ctx.lineCap='round';
+    const base=yOf(9.5);
+    L.Ci.forEach(s=>{
+      const x0=((s.x*W*1.3+drift(t)*.008)%(W*1.3))-W*.15,y0=base-s.y*H*.25;
+      const len=s.len*W;
+      for(let k=0;k<7;k++){
+        ctx.strokeStyle=`rgba(255,255,255,${.12+.06*k/7})`;ctx.lineWidth=1+k*.35;
+        ctx.beginPath();ctx.moveTo(x0,y0+k*1.5);
+        ctx.bezierCurveTo(x0+len*.4,y0-len*s.c*.4+k,x0+len*.8,y0+len*s.c*.2+k*1.5,x0+len,y0+k*2);
+        if(s.h) ctx.quadraticCurveTo(x0+len+12,y0-6,x0+len+8,y0-16);
+        ctx.stroke();
+      }
+    });
+    ctx.restore();
+  },
+  Cc(t,a){
+    ctx.save();ctx.globalAlpha=a;const base=yOf(8.2);
+    L.Cc.forEach(p=>{const x=((p.x*W*1.2+drift(t)*.006)%(W*1.2))-W*.1;const y=base-p.row*7+Math.sin(p.x*60)*3;
+      ctx.fillStyle=`rgba(255,255,255,${p.a})`;ctx.beginPath();ctx.ellipse(x,y,3.2*p.r,2*p.r,0,0,7);ctx.fill();});
+    ctx.restore();
+  },
+  Cs(t,a){
+    ctx.save();ctx.globalAlpha=a;const base=yOf(8.5);
+    const g=ctx.createLinearGradient(0,base-H*.35,0,base+40);g.addColorStop(0,'rgba(240,246,250,.0)');g.addColorStop(.3,'rgba(240,246,250,.35)');g.addColorStop(1,'rgba(240,246,250,0)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,base+40);
+    // halo
+    const x=W*SUN.x,y=H*SUN.y,R=Math.min(W,H)*.22;
+    ctx.lineWidth=R*.08;
+    ['rgba(255,170,150,.28)','rgba(255,250,240,.35)','rgba(170,200,255,.22)'].forEach((c,i)=>{ctx.strokeStyle=c;ctx.beginPath();ctx.arc(x,y,R+i*R*.05,0,7);ctx.stroke();});
+    ctx.fillStyle='rgba(255,250,230,.6)';[-1,1].forEach(s=>{ctx.beginPath();ctx.ellipse(x+s*R*1.02,y,5,9,0,0,7);ctx.fill();});
+    ctx.restore();
+  },
+  Ac(t,a){
+    ctx.save();ctx.globalAlpha=a;const base=yOf(4.2);const u=Math.max(8,W/52);
+    L.Ac.forEach(p=>{const x=((p.x*W*1.25+drift(t)*.012)%(W*1.25))-W*.12,y=base-p.row*u*1.25;
+      p.sub.forEach(([dx,dy,r])=>puff(x+dx*u*1.4,y+dy*u*.8,u*r*p.r*.9,[196,204,214],.9));});
+    ctx.restore();
+  },
+  As(t,a){
+    ctx.save();ctx.globalAlpha=a;
+    const g=ctx.createLinearGradient(0,yOf(7),0,yOf(2.2));g.addColorStop(0,'rgba(150,160,175,.0)');g.addColorStop(.15,'rgba(150,160,175,.85)');g.addColorStop(1,'rgba(120,130,145,.9)');
+    ctx.fillStyle=g;ctx.fillRect(0,yOf(7),W,yOf(2.2)-yOf(7));
+    ctx.fillStyle='rgba(150,160,175,.9)';ctx.fillRect(0,0,W,yOf(7)+2);
+    // ground glass sun
+    const x=W*SUN.x,y=H*SUN.y;const sg=ctx.createRadialGradient(x,y,0,x,y,70);sg.addColorStop(0,'rgba(255,252,240,.8)');sg.addColorStop(.3,'rgba(255,252,240,.3)');sg.addColorStop(1,'rgba(255,252,240,0)');ctx.fillStyle=sg;ctx.fillRect(x-80,y-80,160,160);
+    // fibres
+    ctx.strokeStyle='rgba(200,208,218,.18)';ctx.lineWidth=2;for(let i=0;i<40;i++){const y2=yOf(6.8)+i*(yOf(2.4)-yOf(6.8))/40;ctx.beginPath();ctx.moveTo(0,y2);ctx.bezierCurveTo(W*.3,y2+6*Math.sin(i+drift(t)*.0003),W*.6,y2-6,W,y2+4);ctx.stroke();}
+    ctx.restore();
+  },
+  Ns(t,a){
+    ctx.save();ctx.globalAlpha=a;
+    ctx.fillStyle='rgba(78,84,92,.97)';ctx.fillRect(0,0,W,yOf(1.1));
+    const g=ctx.createLinearGradient(0,yOf(1.6),0,yOf(.9));g.addColorStop(0,'rgba(78,84,92,0)');g.addColorStop(1,'rgba(62,67,74,.95)');ctx.fillStyle=g;ctx.fillRect(0,yOf(1.6),W,yOf(.9)-yOf(1.6));
+    for(let i=0;i<9;i++){const x=((i/9*W*1.3+drift(t)*.03)%(W*1.3))-W*.15;puff(x,yOf(.9),W*.06,[70,74,80],.6);}
+    rain(t,yOf(.9),.5);
+    ctx.restore();
+  },
+  Sc(t,a){
+    ctx.save();ctx.globalAlpha=a;const base=yOf(1.4);const u=Math.max(26,W/9);
+    L.Sc.forEach(p=>{const x=((p.x*W*1.3+drift(t)*.01)%(W*1.3))-W*.15;
+      p.sub.forEach(([dx,dy,r])=>puff(x+dx*u,base+dy*u*.5,u*.42*r*p.r,[156,164,174],.95));});
+    // crepuscular rays
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<5;i++){const x=W*(.2+i*.17)+Math.sin(drift(t)*.0002+i)*10;const g=ctx.createLinearGradient(0,base,0,H);g.addColorStop(0,'rgba(255,240,200,.12)');g.addColorStop(1,'rgba(255,240,200,0)');ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(x,base+10);ctx.lineTo(x+14,base+10);ctx.lineTo(x+60+i*10,H);ctx.lineTo(x-30,H);ctx.fill();}
+    ctx.restore();
+  },
+  St(t,a){
+    ctx.save();ctx.globalAlpha=a;
+    ctx.fillStyle='rgba(160,168,176,.96)';ctx.fillRect(0,0,W,yOf(.35));
+    const g=ctx.createLinearGradient(0,yOf(.5),0,yOf(0));g.addColorStop(0,'rgba(160,168,176,.96)');g.addColorStop(1,'rgba(170,176,182,.35)');
+    ctx.fillStyle=g;ctx.fillRect(0,yOf(.5),W,yOf(0)-yOf(.5)+ground());
+    // fractus shreds
+    for(let i=0;i<6;i++){const x=((i/6*W*1.3+drift(t)*.02)%(W*1.3))-W*.15;ctx.fillStyle='rgba(140,148,156,.5)';ctx.beginPath();ctx.ellipse(x,yOf(.12),W*.08,6,0,0,7);ctx.fill();}
+    ctx.restore();
+  },
+  Cu(t,a){
+    ctx.save();ctx.globalAlpha=a;const base=yOf(1.1);const u=Math.max(30,Math.min(W,H)*.14);
+    L.Cu.forEach(c=>{const cx=((c.x*W+drift(t)*.012)%(W*1.4))-W*.2;
+      ctx.save();ctx.beginPath();ctx.rect(0,0,W,base+2);ctx.clip();
+      c.sub.forEach(([dx,dy,r])=>puff(cx+dx*u*c.s,base+dy*u*c.s-u*.12,u*r*c.s,[190,198,210],1));
+      ctx.restore();
+      ctx.fillStyle='rgba(120,130,145,.35)';ctx.fillRect(cx-u*c.s*.9,base-4,u*c.s*1.8,5);
+    });
+    ctx.restore();
+  },
+  Cb(t,a){
+    ctx.save();ctx.globalAlpha=a;
+    const cx=W*.45+(reduce?0:Math.sin(t*.00005)*10),base=yOf(1),top=yOf(11.5),hgt=base-top,u=Math.min(W*.9,hgt*1.1);
+    // anvil
+    const ag=ctx.createLinearGradient(0,top-20,0,top+hgt*.12);ag.addColorStop(0,'rgba(245,247,250,.95)');ag.addColorStop(1,'rgba(190,196,206,.9)');
+    ctx.fillStyle=ag;ctx.beginPath();ctx.moveTo(cx-u*.25,top+hgt*.14);ctx.bezierCurveTo(cx-u*.5,top+hgt*.05,cx-u*.6,top,cx-u*.66,top-4);
+    ctx.lineTo(cx+u*.75,top-10);ctx.bezierCurveTo(cx+u*.6,top+hgt*.04,cx+u*.4,top+hgt*.1,cx+u*.2,top+hgt*.16);ctx.fill();
+    L.Cb.anvil.forEach(([dx,dy,r])=>puff(cx+dx*u*.9,top+dy*hgt,r*hgt*.6,[220,224,232],.5));
+    // tower
+    L.Cb.tower.slice().sort((p,q)=>q[1]-p[1]).forEach(([dx,h,r])=>{const s=[Math.round(120+h*110),Math.round(126+h*106),Math.round(138+h*100)];puff(cx+dx*u,base-h*hgt*.9,r*hgt*(1-h*.35),s,1);});
+    // dark base + rain shaft
+    ctx.fillStyle='rgba(50,56,66,.8)';ctx.beginPath();ctx.ellipse(cx,base,u*.32,hgt*.035,0,0,7);ctx.fill();
+    ctx.save();ctx.beginPath();ctx.rect(cx-u*.25,base,u*.4,H);ctx.clip();rain(t,base,.9);ctx.restore();
+    // lightning occasionally
+    if(!reduce&&(Math.floor(t/2600)%3===0)&&(t%2600)<120){ctx.strokeStyle='rgba(255,255,240,.9)';ctx.lineWidth=2;ctx.beginPath();let x=cx-u*.05,y=base;ctx.moveTo(x,y);while(y<H-ground()){x+=(Math.random()-.5)*26;y+=18;ctx.lineTo(x,y);}ctx.stroke();}
+    ctx.restore();
+  }
+};
+function rain(t,from,k){
+  ctx.strokeStyle=`rgba(200,210,225,${.35*k})`;ctx.lineWidth=1;ctx.beginPath();
+  L.rain.forEach(r=>{const y=from+((r.y+(reduce?0:t*.0006))%1)*(H-from);const x=r.x*W-(y-from)*.12;ctx.moveTo(x,y);ctx.lineTo(x-3,y+r.l*H);});
+  ctx.stroke();
+}
+const DARK={As:.7,Ns:1,St:.9,Sc:.35,Cb:.25};
+let active='Ci',prev=null,fade=1,dispAlt=G.Ci.alt;
+function draw(t){
+  const dk=(DARK[active]||0)*fade+(prev?(DARK[prev]||0)*(1-fade):0);
+  ctx.fillStyle=skyGrad(dk);ctx.fillRect(0,0,W,H);
+  sun(dk,!(active==='As'||active==='Ns'||active==='St'));
+  // altitude ticks
+  ctx.strokeStyle='rgba(255,255,255,.35)';ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='10px "Azeret Mono", monospace';ctx.lineWidth=1;
+  for(let k=0;k<=12;k+=2){const y=yOf(k);ctx.beginPath();ctx.moveTo(W-14,y);ctx.lineTo(W,y);ctx.stroke();ctx.textAlign='right';ctx.fillText(k+' km',W-18,y+3);}
+  // etage band for active
+  const g=G[active];ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(W-8,yOf(g.hi),8,yOf(g.lo)-yOf(g.hi));
+  if(prev&&fade<1) DRAW[prev](t,1-fade);
+  DRAW[active](t,fade);
+  hills();
+}
+function loop(t){
+  if(fade<1){fade=Math.min(1,fade+(reduce?1:.03));}
+  const target=G[active].alt;dispAlt+= (target-dispAlt)*(reduce?1:.08);
+  document.getElementById('altNum').firstChild.nodeValue=dispAlt.toFixed(1);
+  draw(t);
+  requestAnimationFrame(loop);
+}
+function setActive(k){
+  if(k===active)return;prev=active;active=k;fade=0;
+  document.getElementById('gName').textContent=G[k].n;
+  document.getElementById('plateNo').textContent=`PLATE ${G[k].plate} · ${G[k].et} ÉTAGE`;
+  document.querySelectorAll('.entry').forEach(e=>e.classList.toggle('on',e.dataset.g===k));
+}
+document.querySelector('.entry').classList.add('on');
+// scroll tracking: which entry crosses the middle
+function onScroll(){
+  const mid=innerHeight*.5;let best=null,bd=1e9;
+  document.querySelectorAll('.entry').forEach(e=>{const r=e.getBoundingClientRect();const d=r.top<mid&&r.bottom>mid?0:Math.min(Math.abs(r.top-mid),Math.abs(r.bottom-mid));if(d<bd){bd=d;best=e;}});
+  if(best)setActive(best.dataset.g);
+}
+addEventListener('scroll',onScroll,{passive:true});
+requestAnimationFrame(loop);
+
+/* ---------- altitude chart ---------- */
+(function(){
+  const svg=document.getElementById('chart');const X0=90,W2=1180,H2=520,top=30,bot=470;
+  const y=k=>bot-k/13*(bot-top);
+  let s='';
+  for(let k=0;k<=13;k++){s+=`<line x1="${X0-10}" x2="${W2-20}" y1="${y(k)}" y2="${y(k)}" stroke="rgba(255,255,255,${k%2?.08:.2})"/>`;if(k%2===0)s+=`<text x="${X0-18}" y="${y(k)+4}" fill="#fff" font-size="12" text-anchor="end">${k} km</text>`;}
+  [['HIGH',5,13],['MIDDLE',2,7],['LOW',0,2]].forEach(([n,a,b],i)=>{s+=`<text x="16" y="${(y(a)+y(b))/2}" fill="rgba(255,255,255,.6)" font-size="11" letter-spacing="3" transform="rotate(-90 16 ${(y(a)+y(b))/2})" text-anchor="middle">${n}</text>`;});
+  const colW=(W2-X0-40)/10;
+  ORDER.forEach((k,i)=>{const g=G[k];const x=X0+10+i*colW;const w=colW-14;
+    s+=`<g class="g" tabindex="0" role="link" aria-label="${g.n}, ${g.lo} to ${g.hi} km" data-k="${k}">
+      <rect x="${x}" y="${y(g.hi)}" width="${w}" height="${y(g.lo)-y(g.hi)}" fill="rgba(255,255,255,${k==='Ns'||k==='As'||k==='St'?.45:.28})" stroke="rgba(255,255,255,.6)"/>
+      <text x="${x+w/2}" y="${y(g.hi)-8}" fill="#fff" font-size="22" text-anchor="middle" font-family="Instrument Serif, Georgia, serif">${k}</text>
+</g>`;});
+  s+=`<rect x="0" y="${bot}" width="${W2}" height="${H2-bot}" fill="#d9e1e6"/>`;
+  s+=ORDER.map((k,i)=>{const g=G[k];const x=X0+10+i*colW;const w=colW-14;return `<text x="${x+w/2}" y="${bot+22}" fill="#16304f" font-size="12" text-anchor="middle">${g.n.length>12?g.n.slice(0,9)+'.':g.n}</text>`}).join('');
+  svg.innerHTML=s;
+  svg.querySelectorAll('.g').forEach(el=>{const go=()=>{document.getElementById('e-'+el.dataset.k).scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});};el.addEventListener('click',go);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
+})();
+
+/* ---------- dichotomous key ---------- */
+const KEY={
+  start:{q:'Is rain, snow or hail falling from it and reaching the ground?',o:[['Yes, precipitation is reaching me','precip'],['No, or only wisps that vanish before landing','dry']]},
+  precip:{q:'Is it steady and grey, or is it a towering storm?',o:[['Steady, hours-long, a uniform dark grey lid','=Ns'],['Showery and violent, perhaps with thunder, hail or an anvil top','=Cb']]},
+  dry:{q:'Is it a more or less featureless sheet across much of the sky?',o:[['Yes, a sheet or veil','sheet'],['No, it has distinct parts — heaps, rolls, wisps or grains','parts']]},
+  sheet:{q:'How does the sun (or moon) look through it?',o:[['Sharp, still casting shadows — maybe a ring (halo) around it','=Cs'],['Blurred as though through frosted glass, no shadows, no halo','=As'],['Hidden or faint; the cloud is very low, hiding hilltops, perhaps drizzle','=St']]},
+  parts:{q:'Is it made of fine white fibres, streaks or hooks?',o:[['Yes — hair-like strands, no shading','=Ci'],['No — rounded masses, grains, rolls or heaps','heaps']]},
+  heaps:{q:'Hold your arm out. How wide is one element of the cloud?',o:[['Smaller than your little fingernail','=Cc'],['About one to three fingers wide','=Ac'],['Wider than your fist','big']]},
+  big:{q:'Are they separate with flat bases and bright domed tops, or a lumpy grey layer?',o:[['Separate heaps, flat bases, crisp cauliflower tops','=Cu'],['A lumpy layer of grey rolls and patches with gaps','=Sc']]},
+};
+let path=[];
+const qEl=document.getElementById('q'),trail=document.getElementById('trailList');
+function renderKey(node){
+  if(node.startsWith('=')){const k=node.slice(1);const g=G[k];
+    qEl.innerHTML=`<div class="step">Identification · step ${path.length}</div><h3>You are looking at</h3><div class="result">${g.n}</div><p style="font-family:var(--mono);font-size:13px;color:var(--ink-2)">Genus ${k} · base ${g.lo}–${g.hi} km · plate ${g.plate}</p><div class="ctrl"><button type="button" id="keyGo">Read the entry ↑</button><button type="button" id="keyBack">← Back a step</button><button type="button" id="keyReset">Start again</button></div>`;
+    document.getElementById('keyGo').onclick=()=>document.getElementById('e-'+k).scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});
+  } else {
+    const n=KEY[node];
+    qEl.innerHTML=`<div class="step">Question ${path.length+1}</div><h3>${n.q}</h3><div class="opts">${n.o.map((o,i)=>`<button type="button" class="opt" id="opt-${i}" data-to="${o[1]}"><span>${String.fromCharCode(97+i)}.</span>${o[0]}</button>`).join('')}</div>${path.length?'<div class="ctrl"><button type="button" id="keyBack">← Back a step</button><button type="button" id="keyReset">Start again</button></div>':''}`;
+    qEl.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{path.push({node,ans:b.textContent.slice(2),to:b.dataset.to});renderKey(b.dataset.to);});
+  }
+  const back=document.getElementById('keyBack');if(back)back.onclick=()=>{const p=path.pop();renderKey(p?p.node:'start');};
+  const rs=document.getElementById('keyReset');if(rs)rs.onclick=()=>{path=[];renderKey('start');};
+  trail.innerHTML=path.length?path.map(p=>`<li>${p.ans}</li>`).join(''):'<li>Nothing yet — start on the left.</li>';
+}
+renderKey('start');
+})();
+</script>
+</body>
+</html>

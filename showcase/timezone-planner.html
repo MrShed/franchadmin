@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Departures Time Board</title>
+<meta name="description" content="A world-clock meeting planner drawn as an airport split-flap departure board: add cities, scrub a time slider to see everyone's local time, and find the hours where working days overlap.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Martian+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --hall:#e6e6e1; --hall-2:#d5d6d0; --ink:#17181a; --ink-soft:#55585d;
+  --sign:#ffc400; --sign-ink:#111;
+  --board:#141516; --board-2:#1d1f21; --board-edge:#050505; --rowline:#2a2c2f;
+  --tile:#232527; --tile-hi:#2f3134; --tile-ink:#f3efe3; --tile-seam:#0b0b0c;
+  --muted:#8d9096;
+  --work:#39d17a; --wake:#ffb13b; --night:#6f7cff; --sleep:#ff5c5c;
+  --c-work:#2a8f55; --c-wake:#c98a24; --c-night:#2b2f55; --c-sleep:#1c1d2c;
+  --overlap:rgba(57,209,122,.22);
+  --focus:#0a58ff;
+  --shadow:0 30px 60px -30px rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --hall:#0c0d0f; --hall-2:#131417; --ink:#ececea; --ink-soft:#9a9ca1;
+    --board:#111214; --board-2:#17181b; --rowline:#25272a;
+    --focus:#8ab4ff;
+    --shadow:0 30px 60px -30px rgba(0,0,0,.9);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; min-height:100vh; color:var(--ink); background-color:var(--hall);
+  background-image:linear-gradient(90deg, var(--hall-2) 1px, transparent 1px);
+  background-size:120px 100%;
+  font-family:"Martian Mono",ui-monospace,Menlo,Consolas,monospace; font-size:13px;
+  padding:0 0 40px}
+:focus-visible{outline:3px solid var(--focus); outline-offset:2px}
+.signbar{background:var(--sign); color:var(--sign-ink); padding:max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 14px max(16px, env(safe-area-inset-left)); border-bottom:6px solid var(--sign-ink)}
+.signbar .in{max-width:1240px; margin:0 auto; display:flex; align-items:center; gap:18px; flex-wrap:wrap; justify-content:space-between}
+.pict{width:52px; height:52px; background:var(--sign-ink); color:var(--sign); display:grid; place-items:center; flex:none}
+.brand{display:flex; align-items:center; gap:14px}
+.brand h1{margin:0; font-family:"Big Shoulders Display","Arial Narrow",Impact,sans-serif; font-weight:900; font-size:clamp(34px,6vw,60px); line-height:.85; letter-spacing:.01em; text-transform:uppercase}
+.brand small{display:block; font-family:"Martian Mono",monospace; font-size:11px; letter-spacing:.14em; font-weight:500; margin-top:6px}
+.back{font-family:"Big Shoulders Display",sans-serif; font-weight:800; font-size:18px; letter-spacing:.06em; text-transform:uppercase; color:var(--sign-ink); text-decoration:none; border:3px solid var(--sign-ink); padding:4px 12px}
+.back:hover{background:var(--sign-ink); color:var(--sign)}
+main{max-width:1240px; margin:0 auto; padding:24px max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left))}
+
+.board{background:linear-gradient(var(--board-2), var(--board)); border:10px solid var(--board-edge); border-radius:6px; box-shadow:var(--shadow), inset 0 0 0 1px #333; color:var(--tile-ink); padding:14px 16px 10px}
+.board-head{display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap; border-bottom:2px solid var(--rowline); padding-bottom:10px}
+.board-head h2{margin:0; font-family:"Big Shoulders Display",sans-serif; font-weight:800; font-size:30px; letter-spacing:.08em; text-transform:uppercase; color:var(--sign)}
+.board-head h2 span{color:var(--tile-ink); font-weight:500; font-size:18px; letter-spacing:.1em; margin-left:10px}
+.clock{font-family:"Big Shoulders Display",sans-serif; font-weight:700; font-size:22px; letter-spacing:.08em; color:var(--muted)}
+.cols, .row{display:grid; grid-template-columns:minmax(0,1.5fr) 150px 190px 110px 176px 70px; gap:14px; align-items:center}
+.cols{font-size:10px; letter-spacing:.2em; color:var(--muted); padding:10px 0 6px; text-transform:uppercase}
+.row{padding:10px 0; border-bottom:1px solid var(--rowline)}
+.row:last-child{border-bottom:0}
+.city{font-family:"Big Shoulders Display",sans-serif; font-weight:800; font-size:30px; line-height:1; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.city small{display:block; font-family:"Martian Mono",monospace; font-weight:400; font-size:10px; letter-spacing:.08em; color:var(--muted); margin-top:5px; text-transform:none}
+.home-badge{display:inline-block; font-size:10px; font-family:"Martian Mono",monospace; font-weight:600; background:var(--sign); color:#111; padding:2px 5px; margin-left:8px; vertical-align:middle; letter-spacing:.1em}
+.off{font-size:12px; color:var(--muted); line-height:1.5}
+.off b{color:var(--tile-ink); font-weight:500}
+.flaps{display:flex; gap:3px; align-items:center}
+.sep{font-family:"Big Shoulders Display",sans-serif; font-weight:800; font-size:30px; color:var(--tile-ink); margin:0 1px}
+
+/* split flap tile */
+.f{--h:44px; position:relative; width:calc(var(--h)*.66); height:var(--h); perspective:200px; font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:800; font-size:calc(var(--h)*.82); color:var(--tile-ink); flex:none}
+.f.sm{--h:30px; font-size:calc(var(--h)*.74); width:calc(var(--h)*.62)}
+.f > span{position:absolute; left:0; right:0; height:50%; overflow:hidden; background:var(--tile); text-align:center; line-height:var(--h); backface-visibility:hidden}
+.f .t, .f .ft{top:0; border-radius:3px 3px 0 0; background:linear-gradient(var(--tile-hi), var(--tile))}
+.f .b, .f .fb{bottom:0; border-radius:0 0 3px 3px; line-height:0}
+.f .b i, .f .fb i{display:block; transform:translateY(0); line-height:var(--h); margin-top:calc(var(--h) * -.5)}
+.f i{font-style:normal}
+.f .t i, .f .ft i{display:block; line-height:var(--h)}
+.f::after{content:""; position:absolute; left:0; right:0; top:50%; height:1px; background:var(--tile-seam); z-index:5}
+.f::before{content:""; position:absolute; left:-1px; width:2px; top:calc(50% - 3px); height:6px; background:#555; z-index:6; border-radius:1px}
+.f .ft{transform-origin:50% 100%; z-index:3}
+.f .fb{transform-origin:50% 0; z-index:3; transform:rotateX(90deg)}
+.f.go .ft{animation:ftop .14s ease-in forwards}
+.f.go .fb{animation:fbot .14s .14s ease-out forwards}
+@keyframes ftop{to{transform:rotateX(-90deg)}}
+@keyframes fbot{from{transform:rotateX(90deg)} to{transform:rotateX(0)}}
+.f.st-work{color:var(--work)} .f.st-wake{color:var(--wake)} .f.st-night{color:var(--night)} .f.st-sleep{color:var(--sleep)}
+.dstat .f{--h:30px}
+.day{font-family:"Big Shoulders Display",sans-serif; font-weight:700; font-size:22px; letter-spacing:.06em; text-transform:uppercase}
+.day em{font-style:normal; font-size:12px; font-family:"Martian Mono",monospace; color:var(--sign); margin-left:6px; vertical-align:top}
+.acts{display:flex; gap:4px; justify-content:flex-end}
+.ib{width:30px; height:30px; border:1px solid #3a3d41; background:transparent; color:var(--tile-ink); cursor:pointer; font:600 14px/1 "Martian Mono",monospace; border-radius:3px}
+.ib:hover{background:var(--sign); color:#111; border-color:var(--sign)}
+@media (max-width:1000px){
+  .cols{display:none}
+  .row{grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"city time" "off stat" "day acts"; row-gap:8px}
+  .row > .c-city{grid-area:city} .row > .c-time{grid-area:time; justify-self:end} .row > .c-off{grid-area:off} .row > .c-stat{grid-area:stat; justify-self:end} .row > .c-day{grid-area:day} .row > .c-acts{grid-area:acts}
+  .city{font-size:26px}
+}
+@media (max-width:460px){ .f{--h:36px} .dstat .f{--h:24px} .sep{font-size:24px} .city{font-size:22px} .board{border-width:6px; padding:12px 10px 8px} }
+
+/* planner */
+.planner{margin-top:28px; background:var(--board); color:var(--tile-ink); border:10px solid var(--board-edge); border-radius:6px; padding:16px; box-shadow:var(--shadow)}
+@media (max-width:460px){ .planner{border-width:6px; padding:12px 10px} }
+.p-top{display:flex; justify-content:space-between; gap:12px 20px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px}
+.p-top h2{margin:0; font-family:"Big Shoulders Display",sans-serif; font-weight:800; font-size:26px; letter-spacing:.08em; text-transform:uppercase; color:var(--sign)}
+.ctl{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.ctl label{font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); display:flex; flex-direction:column; gap:4px}
+.ctl input,.ctl select{font:500 13px "Martian Mono",monospace; background:#0a0a0b; color:var(--tile-ink); border:1px solid #3a3d41; padding:7px 8px; border-radius:3px; color-scheme:dark}
+.btn{font:600 12px/1 "Martian Mono",monospace; letter-spacing:.1em; text-transform:uppercase; padding:10px 12px; background:var(--sign); color:#111; border:0; border-radius:3px; cursor:pointer}
+.btn.alt{background:transparent; color:var(--tile-ink); border:1px solid #3a3d41}
+.btn:hover{filter:brightness(1.1)}
+.slider-row{display:grid; grid-template-columns:120px minmax(0,1fr); gap:10px; align-items:center; margin-bottom:6px}
+@media (max-width:640px){ .slider-row, .tl-row{grid-template-columns:74px minmax(0,1fr) !important} }
+.slider-row span{font-size:10px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase}
+input[type=range]#scrub{width:100%; accent-color:var(--sign); margin:0}
+.tl{position:relative}
+.tl-row{display:grid; grid-template-columns:120px minmax(0,1fr); gap:10px; align-items:center; margin:4px 0}
+.tl-name{font-family:"Big Shoulders Display",sans-serif; font-weight:700; font-size:16px; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.tl-bar{display:grid; grid-template-columns:repeat(48, 1fr); height:26px; gap:1px; position:relative; cursor:crosshair; touch-action:none}
+.tl-bar i{display:block; position:relative; font-style:normal}
+.tl-bar i.work{background:var(--c-work)} .tl-bar i.wake{background:var(--c-wake)} .tl-bar i.night{background:var(--c-night)} .tl-bar i.sleep{background:var(--c-sleep)}
+.tl-bar i.hr::after{content:attr(data-h); position:absolute; left:1px; top:50%; transform:translateY(-50%); font-size:9px; color:rgba(255,255,255,.85); pointer-events:none}
+@media (max-width:640px){ .tl-bar i.hr:not(.h6)::after{content:none} }
+.axis{display:grid; grid-template-columns:repeat(24,1fr); font-size:9px; color:var(--muted); margin-left:130px; margin-top:2px}
+@media (max-width:640px){ .axis{margin-left:84px} .axis span:nth-child(odd){visibility:hidden} }
+.overlay{position:absolute; top:0; bottom:0; pointer-events:none}
+.band{position:absolute; top:-4px; bottom:-4px; background:var(--overlap); border-left:1px dashed var(--work); border-right:1px dashed var(--work)}
+.cursor{position:absolute; top:-8px; bottom:-8px; width:2px; background:var(--sign); box-shadow:0 0 8px var(--sign); transform:translateX(-1px)}
+.cursor::before{content:""; position:absolute; top:-6px; left:-5px; border:6px solid transparent; border-top-color:var(--sign)}
+.summary{margin-top:16px; border-top:1px solid var(--rowline); padding-top:14px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:start}
+@media (max-width:640px){ .summary{grid-template-columns:minmax(0,1fr)} }
+.summary p{margin:0; line-height:1.7; font-size:12px}
+.summary b{color:var(--sign); font-weight:600}
+.legend{display:flex; gap:14px; flex-wrap:wrap; font-size:10px; color:var(--muted); margin-top:10px; letter-spacing:.08em; text-transform:uppercase}
+.legend i{display:inline-block; width:12px; height:12px; vertical-align:-2px; margin-right:5px}
+.add{margin-top:28px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; background:var(--sign); color:#111; padding:14px 16px; border:4px solid #111}
+.add label{display:flex; flex-direction:column; gap:5px; font-size:10px; letter-spacing:.16em; text-transform:uppercase; flex:1 1 240px; font-weight:600}
+.add input{font:500 15px "Martian Mono",monospace; padding:10px; border:3px solid #111; background:#fffbe6; color:#111; border-radius:0; width:100%}
+.add .btn{background:#111; color:var(--sign); padding:13px 16px}
+.msg{font-size:12px; min-height:16px; margin:8px 2px 0}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+@media (prefers-reduced-motion: reduce){ .f.go .ft, .f.go .fb{animation:none} .cursor{box-shadow:none} }
+</style>
+</head>
+<body>
+<header class="signbar">
+  <div class="in">
+    <div class="brand">
+      <div class="pict" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg></div>
+      <h1>Departures<small>World time board &middot; meeting planner</small></h1>
+    </div>
+    <a class="back" href="index.html">&larr; Showcase</a>
+  </div>
+</header>
+
+<main>
+  <section class="board" aria-labelledby="board-h">
+    <div class="board-head">
+      <h2 id="board-h">Local times<span id="mode-label">Live</span></h2>
+      <div class="clock" id="ref-clock"></div>
+    </div>
+    <div class="cols" aria-hidden="true"><span>City</span><span>Zone</span><span>Local time</span><span>Day</span><span>Status</span><span></span></div>
+    <div id="rows"></div>
+  </section>
+
+  <section class="planner" aria-labelledby="plan-h">
+    <div class="p-top">
+      <h2 id="plan-h">Plan a meeting</h2>
+      <div class="ctl">
+        <label for="date">Date<input type="date" id="date"></label>
+        <label for="ws">Work starts<select id="ws"></select></label>
+        <label for="we">Work ends<select id="we"></select></label>
+        <button class="btn alt" id="now">Back to now</button>
+      </div>
+    </div>
+    <div class="slider-row">
+      <span id="scrub-label">Home time</span>
+      <input type="range" id="scrub" min="0" max="1425" step="15" value="720" aria-label="Time in home city">
+    </div>
+    <div class="tl" id="tl"></div>
+    <div class="axis" id="axis" aria-hidden="true"></div>
+    <div class="legend"><span><i style="background:var(--c-work)"></i>Working hours</span><span><i style="background:var(--c-wake)"></i>Awake</span><span><i style="background:var(--c-night)"></i>Late</span><span><i style="background:var(--c-sleep)"></i>Asleep</span><span><i style="background:var(--overlap); outline:1px dashed var(--work)"></i>Everyone at work</span></div>
+    <div class="summary">
+      <p id="overlap-text"></p>
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">
+        <button class="btn" id="copy">Copy times</button>
+        <span class="msg" id="copy-msg" aria-live="polite"></span>
+      </div>
+    </div>
+  </section>
+
+  <form class="add" id="add">
+    <label for="city">Add a city or time zone<input id="city" list="zones" placeholder="e.g. Berlin, Mumbai, America/Denver" autocomplete="off"></label>
+    <datalist id="zones"></datalist>
+    <button class="btn" id="add-btn" type="submit">Add to board</button>
+  </form>
+  <p class="msg" id="add-msg" aria-live="polite"></p>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "departures-tz-v1";
+  var $ = function(id){ return document.getElementById(id); };
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var ALIASES = {"san francisco":"America/Los_Angeles","seattle":"America/Los_Angeles","washington":"America/New_York","boston":"America/New_York","miami":"America/New_York","austin":"America/Chicago","dallas":"America/Chicago","houston":"America/Chicago","atlanta":"America/New_York","montreal":"America/Toronto","mumbai":"Asia/Kolkata","bangalore":"Asia/Kolkata","bengaluru":"Asia/Kolkata","delhi":"Asia/Kolkata","new delhi":"Asia/Kolkata","beijing":"Asia/Shanghai","shenzhen":"Asia/Shanghai","cape town":"Africa/Johannesburg","munich":"Europe/Berlin","barcelona":"Europe/Madrid","milan":"Europe/Rome","edinburgh":"Europe/London","manchester":"Europe/London","dublin":"Europe/Dublin","hanoi":"Asia/Bangkok","osaka":"Asia/Tokyo","melbourne":"Australia/Melbourne","perth":"Australia/Perth","utc":"UTC","gmt":"UTC","ho chi minh city":"Asia/Ho_Chi_Minh","sao paulo":"America/Sao_Paulo","são paulo":"America/Sao_Paulo","rio":"America/Sao_Paulo","zurich":"Europe/Zurich","abu dhabi":"Asia/Dubai","tel aviv":"Asia/Jerusalem"};
+  var FALLBACK = ["Europe/London","Europe/Dublin","Europe/Paris","Europe/Berlin","Europe/Madrid","Europe/Rome","Europe/Amsterdam","Europe/Stockholm","Europe/Warsaw","Europe/Athens","Europe/Istanbul","Europe/Moscow","Africa/Lagos","Africa/Cairo","Africa/Nairobi","Africa/Johannesburg","Asia/Dubai","Asia/Karachi","Asia/Kolkata","Asia/Dhaka","Asia/Bangkok","Asia/Singapore","Asia/Hong_Kong","Asia/Shanghai","Asia/Seoul","Asia/Tokyo","Australia/Perth","Australia/Brisbane","Australia/Sydney","Australia/Melbourne","Pacific/Auckland","Pacific/Honolulu","America/Anchorage","America/Los_Angeles","America/Denver","America/Phoenix","America/Chicago","America/New_York","America/Toronto","America/Mexico_City","America/Bogota","America/Lima","America/Sao_Paulo","America/Argentina/Buenos_Aires","UTC"];
+  var ZONES = FALLBACK;
+  try { if (Intl.supportedValuesOf) { var z = Intl.supportedValuesOf("timeZone"); if (z && z.length) ZONES = z; } } catch(e){}
+  function cityOf(zone){ if (zone === "UTC") return "UTC"; var p = zone.split("/"); return p[p.length-1].replace(/_/g," "); }
+  function validZone(z){ try { new Intl.DateTimeFormat("en-US",{timeZone:z}).format(0); return true; } catch(e){ return false; } }
+
+  var DEF = {cities:[{name:"London", zone:"Europe/London"},{name:"New York", zone:"America/New_York"},{name:"Sydney", zone:"Australia/Sydney"},{name:"Tokyo", zone:"Asia/Tokyo"}], ws:9, we:17.5};
+  function load(){ try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.cities) && s.cities.length) { s.cities = s.cities.filter(function(c){ return c && validZone(c.zone); }); if (s.cities.length) return s; } } catch(e){} return null; }
+  var st = load() || JSON.parse(JSON.stringify(DEF));
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){} }
+
+  // ---------- time math ----------
+  var fmtCache = {};
+  function partsIn(zone, t){
+    var f = fmtCache[zone] || (fmtCache[zone] = new Intl.DateTimeFormat("en-GB", {timeZone:zone, hourCycle:"h23", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", weekday:"short"}));
+    var o = {}; f.formatToParts(new Date(t)).forEach(function(p){ o[p.type] = p.value; });
+    var h = +o.hour; if (h === 24) h = 0;
+    return {y:+o.year, mo:+o.month, d:+o.day, h:h, mi:+o.minute, s:+o.second, wd:o.weekday};
+  }
+  function offsetMin(zone, t){ var p = partsIn(zone, t); var asUTC = Date.UTC(p.y, p.mo-1, p.d, p.h, p.mi, p.s); return Math.round((asUTC - Math.floor(t/1000)*1000)/60000); }
+  function midnightIn(zone, y, mo, d){ var guess = Date.UTC(y, mo-1, d); var t = guess - offsetMin(zone, guess)*60000; t = guess - offsetMin(zone, t)*60000; return t; }
+  function abbr(zone, t){ try { var p = new Intl.DateTimeFormat("en-US",{timeZone:zone, timeZoneName:"short"}).formatToParts(new Date(t)); for (var i=0;i<p.length;i++) if (p[i].type === "timeZoneName") return p[i].value; } catch(e){} return ""; }
+  function offStr(m){ var s = m < 0 ? "-" : "+"; m = Math.abs(m); return "UTC" + s + Math.floor(m/60) + (m%60 ? ":" + String(m%60).padStart(2,"0") : ""); }
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function status(h){
+    if (h >= st.ws && h < st.we) return {k:"work", t:"AT DESK"};
+    if (h >= 7 && h < st.ws) return {k:"wake", t:"MORNING"};
+    if (h >= st.we && h < 22) return {k:"wake", t:"EVENING"};
+    if (h >= 22 || h < 0.5) return {k:"night", t:"LATE"};
+    return {k:"sleep", t:"ASLEEP"};
+  }
+  function cls(h){ var s = status(h); return s.k; }
+
+  // ---------- state ----------
+  var live = true, refDate = null, minutes = 0, instant = Date.now();
+  function ref(){ return st.cities[0]; }
+  function syncFromNow(){
+    instant = Date.now();
+    var p = partsIn(ref().zone, instant);
+    refDate = {y:p.y, mo:p.mo, d:p.d};
+    minutes = p.h*60 + p.mi;
+    $("date").value = p.y + "-" + pad(p.mo) + "-" + pad(p.d);
+    $("scrub").value = Math.floor(minutes/15)*15;
+  }
+  function dayStart(){ return midnightIn(ref().zone, refDate.y, refDate.mo, refDate.d); }
+  function setMinutes(m){ live = false; minutes = Math.max(0, Math.min(1439, m)); instant = dayStart() + minutes*60000; $("scrub").value = Math.floor(minutes/15)*15; update(); }
+
+  // ---------- split flap ----------
+  function flapTile(small){ var f = document.createElement("span"); f.className = "f" + (small ? " sm" : ""); f.innerHTML = '<span class="t"><i></i></span><span class="b"><i></i></span><span class="ft"><i></i></span><span class="fb"><i></i></span>'; f._ch = ""; return f; }
+  function setFlap(f, ch, statusCls){
+    if (statusCls !== undefined){ f.className = f.className.replace(/\s?st-\w+/g, "") + (statusCls ? " st-" + statusCls : ""); }
+    if (f._ch === ch) return;
+    var old = f._ch; f._ch = ch;
+    var q = f.querySelectorAll("i");
+    // t=new top, b=old bottom, ft=old top (falls), fb=new bottom (lands)
+    if (reduce || old === ""){ q[0].textContent = ch; q[1].textContent = ch; q[2].textContent = ch; q[3].textContent = ch; f.classList.remove("go"); return; }
+    q[0].textContent = ch; q[1].textContent = old; q[2].textContent = old; q[3].textContent = ch;
+    f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+    clearTimeout(f._t); f._t = setTimeout(function(){ q[1].textContent = ch; q[2].textContent = ch; f.classList.remove("go"); }, 300);
+  }
+  function flapGroup(n, small){ var g = []; for (var i=0;i<n;i++) g.push(flapTile(small)); return g; }
+
+  // ---------- board ----------
+  var rowEls = [];
+  function buildBoard(){
+    var rows = $("rows"); rows.innerHTML = ""; rowEls = [];
+    st.cities.forEach(function(c, i){
+      var r = document.createElement("div"); r.className = "row";
+      var cc = document.createElement("div"); cc.className = "c-city city";
+      cc.textContent = c.name; if (i === 0){ var hb = document.createElement("span"); hb.className = "home-badge"; hb.textContent = "HOME"; cc.appendChild(hb); }
+      var sm = document.createElement("small"); sm.textContent = c.zone.replace(/_/g," "); cc.appendChild(sm);
+      var co = document.createElement("div"); co.className = "c-off off";
+      var ct = document.createElement("div"); ct.className = "c-time flaps"; ct.setAttribute("aria-hidden","true");
+      var tiles = flapGroup(4); ct.appendChild(tiles[0]); ct.appendChild(tiles[1]); var sep = document.createElement("span"); sep.className = "sep"; sep.textContent = ":"; ct.appendChild(sep); ct.appendChild(tiles[2]); ct.appendChild(tiles[3]);
+      var cd = document.createElement("div"); cd.className = "c-day day";
+      var cs = document.createElement("div"); cs.className = "c-stat flaps dstat"; cs.setAttribute("aria-hidden","true"); var stTiles = flapGroup(7, true); stTiles.forEach(function(t){ cs.appendChild(t); });
+      var ca = document.createElement("div"); ca.className = "c-acts acts";
+      if (i > 0){ var hm = document.createElement("button"); hm.className = "ib"; hm.id = "home-" + i; hm.type = "button"; hm.textContent = "⌂"; hm.title = "Make home city"; hm.setAttribute("aria-label","Make " + c.name + " the home city");
+        hm.addEventListener("click", function(){ st.cities.unshift(st.cities.splice(i,1)[0]); save(); rebuild(true); }); ca.appendChild(hm); }
+      if (st.cities.length > 1){ var rm = document.createElement("button"); rm.className = "ib"; rm.id = "rm-" + i; rm.type = "button"; rm.textContent = "×"; rm.title = "Remove"; rm.setAttribute("aria-label","Remove " + c.name);
+        rm.addEventListener("click", function(){ st.cities.splice(i,1); save(); rebuild(i === 0); }); ca.appendChild(rm); }
+      var sr = document.createElement("span"); sr.className = "sr"; sr.setAttribute("aria-live","off");
+      r.appendChild(cc); r.appendChild(co); r.appendChild(ct); r.appendChild(cd); r.appendChild(cs); r.appendChild(ca); r.appendChild(sr);
+      rows.appendChild(r);
+      rowEls.push({off:co, tiles:tiles, day:cd, stTiles:stTiles, sr:sr});
+    });
+  }
+
+  // ---------- planner ----------
+  function buildPlanner(){
+    var tl = $("tl"); tl.innerHTML = "";
+    st.cities.forEach(function(c, i){
+      var row = document.createElement("div"); row.className = "tl-row";
+      var n = document.createElement("div"); n.className = "tl-name"; n.textContent = c.name; n.title = c.zone;
+      var bar = document.createElement("div"); bar.className = "tl-bar"; bar.dataset.i = i;
+      for (var k=0;k<48;k++){ bar.appendChild(document.createElement("i")); }
+      row.appendChild(n); row.appendChild(bar); tl.appendChild(row);
+    });
+    var ov = document.createElement("div"); ov.className = "overlay"; ov.id = "overlay"; tl.appendChild(ov);
+    var ax = $("axis"); ax.innerHTML = ""; for (var h=0;h<24;h++){ var s = document.createElement("span"); s.textContent = pad(h); ax.appendChild(s); }
+    bindScrub();
+  }
+  function paintPlanner(){
+    var start = dayStart(), bars = document.querySelectorAll(".tl-bar");
+    var all = []; for (var k=0;k<48;k++) all.push(true);
+    bars.forEach(function(bar, i){
+      var c = st.cities[i]; var cells = bar.children;
+      for (var k=0;k<48;k++){
+        var t = start + k*30*60000, p = partsIn(c.zone, t), h = p.h + p.mi/60;
+        var cl = cls(h); cells[k].className = cl + (p.mi === 0 || (k===0) ? " hr" + (p.h % 6 === 0 ? " h6" : "") : "");
+        cells[k].setAttribute("data-h", pad(p.h));
+        if (cl !== "work") all[k] = false;
+      }
+    });
+    // overlay geometry aligns to bars
+    var ov = $("overlay"), first = bars[0]; if (!first) return;
+    var tlr = $("tl").getBoundingClientRect(), br = first.getBoundingClientRect();
+    ov.style.left = (br.left - tlr.left) + "px"; ov.style.width = br.width + "px";
+    ov.innerHTML = "";
+    var runs = [], s = -1;
+    for (var k=0;k<=48;k++){ if (k < 48 && all[k]){ if (s < 0) s = k; } else if (s >= 0){ runs.push([s,k]); s = -1; } }
+    runs.forEach(function(r){ var b = document.createElement("div"); b.className = "band"; b.style.left = (r[0]/48*100) + "%"; b.style.width = ((r[1]-r[0])/48*100) + "%"; ov.appendChild(b); });
+    var cur = document.createElement("div"); cur.className = "cursor"; cur.id = "cursor"; ov.appendChild(cur);
+    placeCursor();
+    // summary
+    var txt = $("overlap-text"); txt.innerHTML = "";
+    if (runs.length){
+      var best = runs.slice().sort(function(a,b){ return (b[1]-b[0]) - (a[1]-a[0]); })[0];
+      var a = start + best[0]*30*60000, b = start + best[1]*30*60000;
+      txt.appendChild(strong("Everyone is at work for " + dur((best[1]-best[0])*30) + ". "));
+      txt.appendChild(document.createTextNode(st.cities.map(function(c){ return c.name + " " + hm(c.zone,a) + "–" + hm(c.zone,b); }).join(" · ")));
+    } else {
+      // find slot maximising number of cities in work hours, tie-break by fewest asleep
+      var bestK = 0, bestScore = -1;
+      for (var k=0;k<48;k++){
+        var score = 0; st.cities.forEach(function(c){ var p = partsIn(c.zone, start + k*30*60000), h = p.h + p.mi/60, cl = cls(h); score += cl === "work" ? 10 : (cl === "wake" ? 4 : (cl === "night" ? 1 : 0)); });
+        if (score > bestScore){ bestScore = score; bestK = k; }
+      }
+      var t = start + bestK*30*60000;
+      txt.appendChild(strong("No shared working hours on this day. "));
+      txt.appendChild(document.createTextNode("Least painful slot: " + st.cities.map(function(c){ var p = partsIn(c.zone, t); return c.name + " " + hm(c.zone,t) + " (" + status(p.h + p.mi/60).t.toLowerCase() + ")"; }).join(" · ")));
+      var go = document.createElement("button"); go.className = "btn alt"; go.id = "jump"; go.type = "button"; go.textContent = "Jump there"; go.style.marginLeft = "8px"; go.style.padding = "6px 8px";
+      go.addEventListener("click", function(){ setMinutes(bestK*30); }); txt.appendChild(go);
+    }
+  }
+  function strong(s){ var b = document.createElement("b"); b.textContent = s; return b; }
+  function dur(m){ var h = Math.floor(m/60), mm = m%60; return (h ? h + "h" : "") + (mm ? (h ? " " : "") + mm + "m" : ""); }
+  function hm(zone, t){ var p = partsIn(zone, t); return pad(p.h) + ":" + pad(p.mi); }
+  function placeCursor(){ var c = $("cursor"); if (c) c.style.left = (Math.min(1439, (instant - dayStart())/60000)/1440*100) + "%"; }
+
+  function bindScrub(){
+    document.querySelectorAll(".tl-bar").forEach(function(bar){
+      var down = false;
+      function at(e){ var r = bar.getBoundingClientRect(); var f = Math.max(0, Math.min(1, (e.clientX - r.left)/r.width)); setMinutes(Math.round(f*1440/15)*15); }
+      bar.addEventListener("pointerdown", function(e){ down = true; bar.setPointerCapture(e.pointerId); at(e); });
+      bar.addEventListener("pointermove", function(e){ if (down) at(e); });
+      bar.addEventListener("pointerup", function(){ down = false; });
+      bar.addEventListener("pointercancel", function(){ down = false; });
+    });
+  }
+
+  var lastDayKey = "";
+  function update(){
+    var t = instant, refZ = ref().zone, rp = partsIn(refZ, t);
+    $("mode-label").textContent = live ? "Live" : "Planned";
+    $("ref-clock").textContent = (live ? "NOW · " : "AT · ") + ref().name.toUpperCase() + " " + pad(rp.h) + ":" + pad(rp.mi) + (live ? ":" + pad(rp.s) : "");
+    $("scrub-label").textContent = ref().name + " " + pad(rp.h) + ":" + pad(rp.mi);
+    $("scrub").setAttribute("aria-valuetext", ref().name + " " + pad(rp.h) + ":" + pad(rp.mi));
+    var refDayNum = Date.UTC(rp.y, rp.mo-1, rp.d);
+    st.cities.forEach(function(c, i){
+      var p = partsIn(c.zone, t), R = rowEls[i]; if (!R) return;
+      var s = status(p.h + p.mi/60);
+      var hh = pad(p.h), mm = pad(p.mi);
+      setFlap(R.tiles[0], hh[0], ""); setFlap(R.tiles[1], hh[1], ""); setFlap(R.tiles[2], mm[0], ""); setFlap(R.tiles[3], mm[1], "");
+      var label = (s.t + "       ").slice(0,7);
+      for (var k=0;k<7;k++) setFlap(R.stTiles[k], label[k] === " " ? " " : label[k], s.k);
+      var off = offsetMin(c.zone, t), refOff = offsetMin(refZ, t), diff = off - refOff;
+      R.off.innerHTML = ""; var b = document.createElement("b"); b.textContent = abbr(c.zone, t) || offStr(off); R.off.appendChild(b);
+      R.off.appendChild(document.createElement("br")); R.off.appendChild(document.createTextNode(offStr(off) + (i ? " · " + (diff >= 0 ? "+" : "−") + dur(Math.abs(diff)).replace(/^$/,"0h") : "")));
+      var dd = Math.round((Date.UTC(p.y, p.mo-1, p.d) - refDayNum)/864e5);
+      R.day.innerHTML = ""; R.day.appendChild(document.createTextNode(p.wd + " " + p.d)); if (dd){ var em = document.createElement("em"); em.textContent = (dd > 0 ? "+" : "") + dd; R.day.appendChild(em); }
+      R.sr.textContent = c.name + " " + hh + ":" + mm + ", " + s.t.toLowerCase();
+    });
+    var dk = refDate.y + "-" + refDate.mo + "-" + refDate.d + "|" + st.ws + "|" + st.we + "|" + st.cities.length;
+    if (dk !== lastDayKey){ lastDayKey = dk; paintPlanner(); } else placeCursor();
+  }
+
+  function rebuild(resetDay){
+    buildBoard(); buildPlanner(); lastDayKey = "";
+    if (live || resetDay){ if (live) syncFromNow(); else { var p = partsIn(ref().zone, instant); refDate = {y:p.y, mo:p.mo, d:p.d}; minutes = p.h*60 + p.mi; $("scrub").value = Math.floor(minutes/15)*15; $("date").value = p.y + "-" + pad(p.mo) + "-" + pad(p.d); } }
+    update();
+  }
+
+  // ---------- controls ----------
+  (function hours(){
+    var ws = $("ws"), we = $("we");
+    for (var h=5; h<=13; h+=0.5){ var o = document.createElement("option"); o.value = h; o.textContent = pad(Math.floor(h)) + ":" + (h%1 ? "30" : "00"); ws.appendChild(o); }
+    for (var h2=13; h2<=22; h2+=0.5){ var o2 = document.createElement("option"); o2.value = h2; o2.textContent = pad(Math.floor(h2)) + ":" + (h2%1 ? "30" : "00"); we.appendChild(o2); }
+    ws.value = st.ws; we.value = st.we;
+    ws.addEventListener("change", function(){ st.ws = +ws.value; save(); lastDayKey = ""; update(); });
+    we.addEventListener("change", function(){ st.we = +we.value; save(); lastDayKey = ""; update(); });
+  })();
+  $("scrub").addEventListener("input", function(){ setMinutes(+this.value); });
+  $("date").addEventListener("change", function(){ var v = this.value.split("-").map(Number); if (v.length === 3 && v[0]){ refDate = {y:v[0], mo:v[1], d:v[2]}; live = false; instant = dayStart() + minutes*60000; lastDayKey = ""; update(); } });
+  $("now").addEventListener("click", function(){ live = true; syncFromNow(); lastDayKey = ""; update(); });
+
+  var dl = $("zones"), seen = {};
+  Object.keys(ALIASES).forEach(function(a){ var o = document.createElement("option"); var nm = a.replace(/\b\w/g, function(c){ return c.toUpperCase(); }); o.value = nm; dl.appendChild(o); seen[nm.toLowerCase()] = 1; });
+  ZONES.forEach(function(z){ var o = document.createElement("option"); o.value = cityOf(z) + " (" + z + ")"; dl.appendChild(o); });
+
+  $("add").addEventListener("submit", function(e){
+    e.preventDefault(); var raw = $("city").value.trim(), msg = $("add-msg"); if (!raw) return;
+    var zone = null, name = null, m = raw.match(/^(.*)\(([^)]+)\)\s*$/);
+    if (m){ zone = m[2].trim(); name = m[1].trim(); }
+    else if (ALIASES[raw.toLowerCase()]){ zone = ALIASES[raw.toLowerCase()]; name = raw.replace(/\b\w/g, function(c){ return c.toUpperCase(); }); }
+    else if (raw.indexOf("/") > 0 || /^utc$/i.test(raw)){ zone = raw; name = cityOf(raw); }
+    else { var hit = ZONES.filter(function(z){ return cityOf(z).toLowerCase() === raw.toLowerCase(); })[0]; if (hit){ zone = hit; name = cityOf(hit); } }
+    if (!zone || !validZone(zone)){ msg.textContent = "Couldn't find “" + raw + "”. Try a big city nearby or an IANA zone like Europe/Lisbon."; return; }
+    if (st.cities.length >= 12){ msg.textContent = "The board holds twelve cities. Remove one first."; return; }
+    st.cities.push({name:name || cityOf(zone), zone:zone}); save(); $("city").value = ""; msg.textContent = name + " added to the board."; rebuild(false);
+  });
+
+  $("copy").addEventListener("click", function(){
+    var t = instant, d = new Date(t);
+    var lines = st.cities.map(function(c){ var p = partsIn(c.zone, t); return c.name + ": " + p.wd + " " + p.d + " " + ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][p.mo-1] + ", " + pad(p.h) + ":" + pad(p.mi) + " (" + (abbr(c.zone,t) || offStr(offsetMin(c.zone,t))) + ")"; });
+    var text = "Proposed meeting time\n" + lines.join("\n");
+    var msg = $("copy-msg");
+    function fb(){ var ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly",""); ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); var ok = false; try { ok = document.execCommand("copy"); } catch(e){} ta.remove(); msg.textContent = ok ? "Copied." : "Copy failed; select the board text instead."; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function(){ msg.textContent = "Copied " + st.cities.length + " times."; }, fb); else fb();
+  });
+
+  window.addEventListener("resize", function(){ lastDayKey = ""; update(); });
+
+  buildBoard(); buildPlanner(); syncFromNow(); update();
+  setInterval(function(){ if (live){ var before = refDate.d; syncFromNow(); if (refDate.d !== before) lastDayKey = ""; update(); } }, 1000);
+})();
+</script>
+</body>
+</html>

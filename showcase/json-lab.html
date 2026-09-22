@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Endpaper JSON Lab</title>
+<meta name="description" content="A JSON formatter, validator and minifier with a bookbinder's marbled-endpaper theme: exact error locations, lossless number handling, a collapsible tree and one-click path copying.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#e9ebf1; --board:#f7f7fa; --board-2:#eef0f5; --edge:#c9cdd9;
+  --ink:#1c1f33; --ink-soft:#5a5f78; --ink-faint:#9095ab;
+  --gilt:#9a7420; --spine:#27305e;
+  --k:#2b3a8c; --s:#8c2a3c; --n:#8a5a00; --b:#0f6b6b; --z:#7a3f8c; --p:#8f93a8;
+  --err:#b3261e; --err-bg:rgba(179,38,30,.12); --ok:#1f7a4d;
+  --sel:rgba(43,58,140,.12); --hover:rgba(43,58,140,.06);
+  --m1:#27305e; --m2:#8c2a3c; --m3:#c89b3c; --m4:#1f6b6b; --m5:#e9ebf1;
+  --focus:#2b5bd7;
+  --shadow:0 1px 0 rgba(0,0,0,.04), 0 24px 40px -28px rgba(20,24,60,.45);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --page:#0f1020; --board:#16182b; --board-2:#1b1e34; --edge:#2b2f4b;
+    --ink:#e6e6f0; --ink-soft:#a3a6c2; --ink-faint:#6a6e8c;
+    --gilt:#d9b456; --spine:#d9b456;
+    --k:#a9b8ff; --s:#f3a3b3; --n:#f0c46a; --b:#72d8cb; --z:#d2a6ff; --p:#6d7194;
+    --err:#ff8a80; --err-bg:rgba(255,138,128,.14); --ok:#7ddba8;
+    --sel:rgba(169,184,255,.16); --hover:rgba(169,184,255,.07);
+    --m1:#1c2350; --m2:#6e1f33; --m3:#b08a2e; --m4:#15524f; --m5:#0f1020;
+    --focus:#8ab4ff;
+    --shadow:0 24px 40px -24px rgba(0,0,0,.9);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; min-height:100vh; background:var(--page); color:var(--ink); font-family:"Fira Code",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; font-size:13.5px}
+:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+.marble{position:relative; height:150px; overflow:hidden; border-bottom:3px double var(--gilt)}
+.marble svg{position:absolute; inset:0; width:100%; height:100%}
+.masthead{position:absolute; left:0; right:0; bottom:0; padding:0 max(16px, env(safe-area-inset-right)) 18px max(16px, env(safe-area-inset-left))}
+.masthead .in{max-width:1320px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap}
+.label{background:var(--board); padding:12px 20px 10px; border:1px solid var(--gilt); box-shadow:0 0 0 4px var(--board), 0 0 0 5px var(--gilt), 0 10px 20px -8px rgba(0,0,0,.4); margin:6px}
+.label h1{font-family:"Young Serif","Iowan Old Style",Georgia,serif; font-weight:400; margin:0; font-size:clamp(24px,4vw,36px); line-height:1; color:var(--ink)}
+.label p{margin:5px 0 0; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft)}
+.back{font-family:"Young Serif",Georgia,serif; color:var(--ink); background:var(--board); text-decoration:none; padding:6px 12px; border:1px solid var(--gilt); font-size:14px; margin:6px}
+.back:hover{background:var(--gilt); color:var(--board)}
+
+main{max-width:1320px; margin:0 auto; padding:18px max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left))}
+.toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px}
+.btn{font:500 13px/1 "Fira Code",monospace; padding:9px 12px; border:1px solid var(--edge); background:var(--board); color:var(--ink); cursor:pointer; border-radius:2px}
+.btn:hover{border-color:var(--gilt)}
+.btn.primary{background:var(--spine); color:var(--board); border-color:var(--spine)}
+@media (prefers-color-scheme: dark){ .btn.primary{color:#16182b} }
+.btn.primary:hover{filter:brightness(1.1)}
+.tsep{width:1px; height:24px; background:var(--edge); margin:0 4px}
+.toolbar label{display:flex; align-items:center; gap:6px; color:var(--ink-soft); font-size:12px}
+.toolbar select{font:inherit; padding:6px; background:var(--board); color:var(--ink); border:1px solid var(--edge)}
+.toolbar input[type=checkbox]{accent-color:var(--spine)}
+
+.panes{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px}
+@media (max-width:900px){ .panes{grid-template-columns:minmax(0,1fr)} }
+.pane{background:var(--board); border:1px solid var(--edge); box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:520px; position:relative}
+.pane::before{content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:linear-gradient(var(--m1),var(--m2) 30%,var(--m3) 55%,var(--m4) 80%,var(--m1))}
+.phead{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 12px 10px 18px; border-bottom:1px solid var(--edge); background:var(--board-2); flex-wrap:wrap}
+.phead h2{margin:0; font-family:"Young Serif",Georgia,serif; font-weight:400; font-size:18px}
+.status{font-size:12px; display:flex; align-items:center; gap:6px}
+.status.ok{color:var(--ok)} .status.bad{color:var(--err)}
+.status i{width:9px; height:9px; border-radius:50%; background:currentColor; display:inline-block}
+
+.editor{position:relative; flex:1; display:grid; grid-template-columns:auto minmax(0,1fr); min-height:460px; overflow:hidden; margin-left:6px}
+.gutter{position:relative; overflow:hidden; background:var(--board-2); color:var(--ink-faint); text-align:right; padding:0; user-select:none; border-right:1px solid var(--edge); min-width:46px}
+.gutter .nums{padding:12px 8px 12px 10px; line-height:21px; font-size:12px; white-space:pre; will-change:transform}
+.gutter .nums b{color:var(--err); font-weight:600}
+.area{position:relative; overflow:hidden}
+.hl{position:absolute; left:0; right:0; top:0; pointer-events:none; will-change:transform}
+.hl .bar{position:absolute; left:0; right:0; height:21px; background:var(--err-bg); border-left:3px solid var(--err)}
+.hl .caret{position:absolute; width:2px; height:21px; background:var(--err)}
+textarea#src{position:absolute; inset:0; width:100%; height:100%; resize:none; border:0; margin:0; padding:12px 14px; background:transparent; color:var(--ink);
+  font:13.5px/21px "Fira Code",ui-monospace,Menlo,Consolas,monospace; white-space:pre; overflow:auto; tab-size:2; caret-color:var(--gilt)}
+textarea#src:focus{outline:none}
+.errbox{margin:0; padding:10px 14px 10px 18px; border-top:1px solid var(--edge); font-size:12.5px; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; min-height:44px}
+.errbox.bad{background:var(--err-bg); color:var(--err)}
+.errbox .meta{color:var(--ink-soft)}
+
+.tabs{display:flex; gap:0}
+.tab{font:500 13px "Fira Code",monospace; border:1px solid var(--edge); background:transparent; color:var(--ink-soft); padding:6px 12px; cursor:pointer; margin-left:-1px}
+.tab[aria-selected="true"]{background:var(--board); color:var(--ink); border-bottom-color:var(--board); box-shadow:inset 0 2px 0 var(--gilt)}
+.view{flex:1; overflow:auto; padding:12px 14px 12px 20px; max-height:620px}
+.view[hidden]{display:none}
+pre.out{margin:0; font:13.5px/21px "Fira Code",monospace; white-space:pre; tab-size:2}
+.k{color:var(--k)} .s{color:var(--s)} .n{color:var(--n)} .b{color:var(--b)} .z{color:var(--z); font-style:italic} .p{color:var(--p)}
+
+.tree{font:13.5px/1.6 "Fira Code",monospace}
+.tree ul{list-style:none; margin:0; padding:0 0 0 18px; border-left:1px dotted var(--edge)}
+.tree > ul{padding-left:0; border-left:0}
+.tree li{margin:0}
+.node{display:flex; align-items:baseline; gap:6px; padding:1px 4px; border-radius:2px; cursor:pointer; white-space:nowrap}
+.node:hover{background:var(--hover)}
+.node.sel{background:var(--sel); box-shadow:inset 2px 0 0 var(--gilt)}
+.node.hit .key, .node.hit .val{background:rgba(200,155,60,.35)}
+.tog{width:16px; height:16px; flex:none; border:0; background:transparent; color:var(--ink-soft); cursor:pointer; padding:0; font:600 12px/16px "Fira Code",monospace; transition:transform .15s}
+.tog[aria-expanded="true"]{transform:rotate(90deg)}
+.tog.leaf{visibility:hidden}
+.key{color:var(--k)}
+.idx{color:var(--ink-faint)}
+.val{overflow:hidden; text-overflow:ellipsis; min-width:0}
+.cnt{color:var(--ink-faint); font-size:12px}
+.tree-tools{display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px 12px 8px 20px; border-bottom:1px solid var(--edge)}
+.tree-tools input{font:inherit; padding:6px 8px; border:1px solid var(--edge); background:var(--board); color:var(--ink); flex:1 1 160px; min-width:0}
+.pathbar{display:flex; gap:8px; align-items:center; padding:9px 12px 9px 20px; border-top:1px solid var(--edge); background:var(--board-2); font-size:12.5px; flex-wrap:wrap}
+.pathbar code{flex:1 1 200px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink)}
+.pathbar select{font:inherit; font-size:12px; padding:4px; background:var(--board); color:var(--ink); border:1px solid var(--edge)}
+.stats{display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:0; margin-top:18px; border:1px solid var(--edge); background:var(--board)}
+.stats div{padding:12px 14px; border-right:1px solid var(--edge)}
+.stats div:last-child{border-right:0}
+.stats b{display:block; font-family:"Young Serif",Georgia,serif; font-weight:400; font-size:22px}
+.stats span{font-size:11px; color:var(--ink-soft); letter-spacing:.1em; text-transform:uppercase}
+@media (max-width:760px){ .stats{grid-template-columns:repeat(3,minmax(0,1fr))} .stats div:nth-child(3){border-right:0} .stats div:nth-child(-n+3){border-bottom:1px solid var(--edge)} }
+.toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); background:var(--spine); color:var(--board); padding:10px 16px; font-size:13px; opacity:0; transition:opacity .2s, transform .2s; pointer-events:none; z-index:10; max-width:calc(100% - 32px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:1px solid var(--gilt)}
+@media (prefers-color-scheme: dark){ .toast{color:#16182b} }
+.toast.on{opacity:1; transform:translateX(-50%)}
+.note{color:var(--ink-soft); font-size:12px; margin:12px 2px 0; line-height:1.6}
+@media (prefers-reduced-motion: reduce){ .toast,.tog{transition:none} }
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+</style>
+</head>
+<body>
+<header class="marble">
+  <svg aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 1200 150">
+    <defs>
+      <pattern id="stripes" width="64" height="150" patternUnits="userSpaceOnUse">
+        <rect width="64" height="150" fill="var(--m5)"/>
+        <rect x="0" width="14" height="150" fill="var(--m1)"/>
+        <rect x="14" width="6" height="150" fill="var(--m3)"/>
+        <rect x="24" width="12" height="150" fill="var(--m2)"/>
+        <rect x="38" width="3" height="150" fill="var(--m5)"/>
+        <rect x="42" width="10" height="150" fill="var(--m4)"/>
+        <rect x="54" width="4" height="150" fill="var(--m3)"/>
+      </pattern>
+      <filter id="comb" x="0" y="0" width="100%" height="100%">
+        <feTurbulence id="turb" type="fractalNoise" baseFrequency="0.003 0.011" numOctaves="2" seed="7" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="120" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <filter id="comb2" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.003" numOctaves="1" seed="3" result="n2"/>
+        <feDisplacementMap in="SourceGraphic" in2="n2" scale="40" xChannelSelector="G" yChannelSelector="R"/>
+      </filter>
+    </defs>
+    <g filter="url(#comb2)"><rect x="-60" y="-40" width="1320" height="230" fill="url(#stripes)" filter="url(#comb)"/></g>
+  </svg>
+  <div class="masthead"><div class="in">
+    <div class="label"><h1>Endpaper JSON Lab</h1><p>Format &middot; validate &middot; minify &middot; explore</p></div>
+    <a class="back" href="index.html">&larr; Showcase</a>
+  </div></div>
+</header>
+
+<main>
+  <div class="toolbar" role="toolbar" aria-label="JSON actions">
+    <button class="btn primary" id="b-format">Format</button>
+    <button class="btn" id="b-minify">Minify</button>
+    <label for="indent">Indent <select id="indent"><option value="2">2 spaces</option><option value="4">4 spaces</option><option value="tab">Tabs</option></select></label>
+    <label for="sort"><input type="checkbox" id="sort"> Sort keys</label>
+    <span class="tsep" aria-hidden="true"></span>
+    <button class="btn" id="b-copy">Copy output</button>
+    <button class="btn" id="b-sample">Load sample</button>
+    <button class="btn" id="b-clear">Clear</button>
+  </div>
+
+  <div class="panes">
+    <section class="pane" aria-labelledby="h-in">
+      <div class="phead"><h2 id="h-in">Source</h2><span class="status" id="status" aria-live="polite"><i></i>Waiting</span></div>
+      <div class="editor">
+        <div class="gutter" aria-hidden="true"><div class="nums" id="nums">1</div></div>
+        <div class="area">
+          <div class="hl" id="hl" aria-hidden="true"></div>
+          <label class="sr" for="src">JSON source</label>
+          <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"></textarea>
+        </div>
+      </div>
+      <div class="errbox" id="errbox"><span id="errmsg" class="meta">Paste JSON, or edit the sample. Validation runs as you type.</span><button class="btn" id="b-jump" hidden>Jump to error</button></div>
+    </section>
+
+    <section class="pane" aria-labelledby="h-out">
+      <div class="phead"><h2 id="h-out">Result</h2>
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" id="t-tree" aria-selected="true" aria-controls="v-tree">Tree</button>
+          <button class="tab" role="tab" id="t-text" aria-selected="false" aria-controls="v-text">Text</button>
+        </div>
+      </div>
+      <div id="v-tree-wrap" style="display:flex; flex-direction:column; flex:1; min-height:0">
+        <div class="tree-tools">
+          <label class="sr" for="find">Filter tree</label>
+          <input id="find" type="search" placeholder="Find key or value&hellip;" autocomplete="off">
+          <button class="btn" id="b-expand">Expand all</button>
+          <button class="btn" id="b-collapse">Collapse</button>
+        </div>
+        <div class="view tree" id="v-tree" role="tabpanel" aria-labelledby="t-tree"></div>
+        <div class="pathbar">
+          <label class="sr" for="pathstyle">Path style</label>
+          <select id="pathstyle"><option value="jsonpath">JSONPath</option><option value="js">JavaScript</option><option value="jq">jq</option></select>
+          <code id="path">Click any node to copy its path</code>
+          <button class="btn" id="b-path">Copy</button>
+        </div>
+      </div>
+      <div class="view" id="v-text" role="tabpanel" aria-labelledby="t-text" hidden><pre class="out" id="out"></pre></div>
+    </section>
+  </div>
+
+  <div class="stats" aria-label="Document statistics">
+    <div><b id="st-size">0</b><span>Bytes in</span></div>
+    <div><b id="st-min">0</b><span>Minified</span></div>
+    <div><b id="st-depth">0</b><span>Max depth</span></div>
+    <div><b id="st-keys">0</b><span>Keys</span></div>
+    <div><b id="st-arr">0</b><span>Array items</span></div>
+    <div><b id="st-lines">0</b><span>Lines</span></div>
+  </div>
+  <p class="note">Parsing is done by a strict hand-written parser, so errors point at the exact character and numbers are kept exactly as written (no silent rounding of 9007199254740993). Your last document is kept in this browser.</p>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "endpaper-json-v1";
+  var $ = function(id){ return document.getElementById(id); };
+  var src = $("src");
+
+  var SAMPLE = {
+    "order": "MP-2026-0419",
+    "placed": "2026-09-18T10:42:00+01:00",
+    "workshop": {"name": "Marbled Press Bindery", "town": "Hebden Bridge", "binder": "Ottilie Brandt"},
+    "customer": {"name": "Dr. Imran Qureshi", "email": "imran.q@example.org", "loyalty_tier": "Folio", "notes": null},
+    "items": [
+      {"sku": "QL-OCT-114", "title": "The Anatomy of Melancholy", "format": "octavo", "binding": "quarter leather",
+       "endpapers": {"pattern": "Nonpareil", "palette": ["indigo", "oxblood", "ochre"], "handmade": true},
+       "gilt": {"spine": true, "edges": "top"}, "price_gbp": 240.0, "qty": 1},
+      {"sku": "CL-DUO-022", "title": "Field notebooks (set of 3)", "format": "duodecimo", "binding": "limp cloth",
+       "endpapers": {"pattern": "Turkish spot", "palette": ["teal", "cream"], "handmade": false},
+       "gilt": null, "price_gbp": 36.5, "qty": 3}
+    ],
+    "rush": false,
+    "ledger_id": 9007199254740993,
+    "tags": ["commission", "gift", "letterpress label"]
+  };
+  var SAMPLE_TEXT = JSON.stringify(SAMPLE, null, 2).replace('"ledger_id": 9007199254740992', '"ledger_id": 9007199254740993');
+
+  // ---------- strict parser producing an ordered AST ----------
+  function ParseError(msg, pos){ this.msg = msg; this.pos = pos; }
+  var NUM = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
+  function parse(text){
+    var i = 0, n = text.length, depth = 0;
+    function ws(){ while (i < n){ var c = text.charCodeAt(i); if (c === 32 || c === 9 || c === 10 || c === 13) i++; else break; } }
+    function fail(msg, at){ throw new ParseError(msg, at === undefined ? i : at); }
+    function ch(){ return i < n ? text[i] : ""; }
+    function desc(c){ return c === "" ? "end of input" : "'" + (c === "\n" ? "\\n" : c) + "'"; }
+    function value(){
+      ws(); var c = ch();
+      if (c === "{") return object();
+      if (c === "[") return array();
+      if (c === '"') return string();
+      if (c === "-" || (c >= "0" && c <= "9")) return number();
+      if (text.startsWith("true", i)){ i += 4; return {t:"boolean", v:true}; }
+      if (text.startsWith("false", i)){ i += 5; return {t:"boolean", v:false}; }
+      if (text.startsWith("null", i)){ i += 4; return {t:"null"}; }
+      if (c === "'") fail("Strings must use double quotes, not single quotes");
+      if (c === "") fail("Unexpected end of input: a value was expected");
+      if (/[A-Za-z_]/.test(c)){ var m = /[A-Za-z_$][\w$]*/y; m.lastIndex = i; var w = m.exec(text); fail("Unexpected word '" + (w ? w[0] : c) + "'. Only true, false and null are allowed bare"); }
+      fail("Unexpected character " + desc(c));
+    }
+    function object(){
+      var start = i; i++; if (++depth > 2000) fail("Nesting is too deep");
+      var kids = []; ws();
+      if (ch() === "}"){ i++; depth--; return {t:"object", kids:kids, start:start}; }
+      for (;;){
+        ws(); var c = ch();
+        if (c === "}" ) fail("Trailing comma before '}' is not allowed in JSON", i - 1 > 0 ? lastComma : i);
+        if (c !== '"') fail(c === "" ? "Unexpected end of input inside an object" : (c === "'" ? "Property names must use double quotes" : "Expected a property name in double quotes, found " + desc(c)));
+        var k = string().v; ws();
+        if (ch() !== ":") fail("Expected ':' after property name \"" + k + "\", found " + desc(ch()));
+        i++;
+        var v = value(); kids.push({k:k, v:v}); ws();
+        c = ch();
+        if (c === ","){ lastComma = i; i++; continue; }
+        if (c === "}"){ i++; depth--; return {t:"object", kids:kids, start:start}; }
+        fail(c === "" ? "Unexpected end of input: missing '}'" : "Expected ',' or '}' after the value of \"" + k + "\", found " + desc(c));
+      }
+    }
+    var lastComma = 0;
+    function array(){
+      var start = i; i++; if (++depth > 2000) fail("Nesting is too deep");
+      var kids = []; ws();
+      if (ch() === "]"){ i++; depth--; return {t:"array", kids:kids, start:start}; }
+      for (;;){
+        ws();
+        if (ch() === "]") fail("Trailing comma before ']' is not allowed in JSON", lastComma);
+        kids.push({v:value()}); ws();
+        var c = ch();
+        if (c === ","){ lastComma = i; i++; continue; }
+        if (c === "]"){ i++; depth--; return {t:"array", kids:kids, start:start}; }
+        fail(c === "" ? "Unexpected end of input: missing ']'" : "Expected ',' or ']' in array, found " + desc(c));
+      }
+    }
+    function string(){
+      var start = i; i++;
+      for (;;){
+        if (i >= n) fail("Unterminated string", start);
+        var c = text.charCodeAt(i);
+        if (c === 34){ i++; break; }
+        if (c === 92){
+          var e = text[i+1];
+          if (e === "u"){ if (!/^[0-9a-fA-F]{4}$/.test(text.substr(i+2,4))) fail("Invalid \\u escape: needs four hex digits", i); i += 6; continue; }
+          if ('"\\/bfnrt'.indexOf(e) < 0 || e === undefined) fail("Invalid escape sequence '\\" + (e || "") + "'", i);
+          i += 2; continue;
+        }
+        if (c < 32) fail(c === 10 ? "Line break inside a string: use \\n instead" : "Control character inside a string must be escaped", i);
+        i++;
+      }
+      return {t:"string", v:JSON.parse(text.slice(start, i))};
+    }
+    function number(){
+      NUM.lastIndex = i; var m = NUM.exec(text);
+      if (!m || !m[0] || m[0] === "-") fail("Invalid number");
+      var next = text[i + m[0].length];
+      if (next && /[0-9.]/.test(next)) fail(m[0] === "0" || m[0] === "-0" ? "Numbers cannot have leading zeros" : "Invalid number", i);
+      i += m[0].length; return {t:"number", raw:m[0]};
+    }
+    var root = value(); ws();
+    if (i < n) fail("Unexpected " + desc(ch()) + " after the end of the document");
+    return root;
+  }
+
+  // ---------- formatting ----------
+  function esc(s){ return s.replace(/[&<>]/g, function(c){ return c === "&" ? "&amp;" : (c === "<" ? "&lt;" : "&gt;"); }); }
+  function kidsOf(node, sort){ if (!sort || node.t !== "object") return node.kids; return node.kids.slice().sort(function(a,b){ return a.k < b.k ? -1 : (a.k > b.k ? 1 : 0); }); }
+  function serialize(node, ind, sort, html){
+    var out = [];
+    function w(s, cls){ out.push(html && cls ? '<span class="' + cls + '">' + esc(s) + "</span>" : (html ? esc(s) : s)); }
+    function go(nd, lvl){
+      var pad = ind ? "\n" + ind.repeat(lvl+1) : "", end = ind ? "\n" + ind.repeat(lvl) : "";
+      switch (nd.t){
+        case "object":
+          if (!nd.kids.length){ w("{}", "p"); return; }
+          w("{", "p");
+          kidsOf(nd, sort).forEach(function(kv, j){ if (j) w(",", "p"); out.push(pad); w(JSON.stringify(kv.k), "k"); w(ind ? ": " : ":", "p"); go(kv.v, lvl+1); });
+          out.push(end); w("}", "p"); return;
+        case "array":
+          if (!nd.kids.length){ w("[]", "p"); return; }
+          w("[", "p");
+          nd.kids.forEach(function(kv, j){ if (j) w(",", "p"); out.push(pad); go(kv.v, lvl+1); });
+          out.push(end); w("]", "p"); return;
+        case "string": w(JSON.stringify(nd.v), "s"); return;
+        case "number": w(nd.raw, "n"); return;
+        case "boolean": w(String(nd.v), "b"); return;
+        default: w("null", "z");
+      }
+    }
+    go(node, 0);
+    return out.join("");
+  }
+  function stats(node){
+    var s = {depth:0, keys:0, items:0};
+    (function go(nd, d){ if (d > s.depth) s.depth = d; if (nd.t === "object"){ s.keys += nd.kids.length; nd.kids.forEach(function(k){ go(k.v, d+1); }); } else if (nd.t === "array"){ s.items += nd.kids.length; nd.kids.forEach(function(k){ go(k.v, d+1); }); } })(node, node.t === "object" || node.t === "array" ? 1 : 0);
+    return s;
+  }
+
+  // ---------- editor chrome ----------
+  var errPos = null, ast = null, lastGood = null;
+  function lineCol(text, pos){ var line = 1, col = 1; for (var i=0;i<pos && i<text.length;i++){ if (text.charCodeAt(i) === 10){ line++; col = 1; } else col++; } return {line:line, col:col}; }
+  function syncGutter(){
+    var text = src.value, count = 1; for (var i=0;i<text.length;i++) if (text.charCodeAt(i) === 10) count++;
+    var errLine = errPos ? lineCol(text, errPos).line : -1, parts = [];
+    for (var l=1;l<=count;l++) parts.push(l === errLine ? "<b>" + l + "</b>" : String(l));
+    $("nums").innerHTML = parts.join("\n");
+  }
+  function syncScroll(){ var y = src.scrollTop, x = src.scrollLeft; $("nums").style.transform = "translateY(" + (-y) + "px)"; $("hl").style.transform = "translate(" + (-x) + "px," + (-y) + "px)"; }
+  var charW = 8.1;
+  function measure(){ var s = document.createElement("span"); s.style.cssText = "position:absolute;visibility:hidden;white-space:pre;font:13.5px/21px 'Fira Code',ui-monospace,Menlo,Consolas,monospace"; s.textContent = "0000000000"; document.body.appendChild(s); charW = s.getBoundingClientRect().width/10 || 8.1; s.remove(); }
+  function paintError(){
+    var hl = $("hl"); hl.innerHTML = "";
+    if (errPos === null) return;
+    var lc = lineCol(src.value, errPos), top = 12 + (lc.line-1)*21;
+    var bar = document.createElement("div"); bar.className = "bar"; bar.style.top = top + "px"; bar.style.width = "4000px"; hl.appendChild(bar);
+    var lineStart = src.value.lastIndexOf("\n", errPos-1) + 1, pre = src.value.slice(lineStart, errPos), vis = 0;
+    for (var i=0;i<pre.length;i++) vis += pre[i] === "\t" ? 2 - (vis % 2) : 1;
+    var car = document.createElement("div"); car.className = "caret"; car.style.top = top + "px"; car.style.left = (14 + vis*charW) + "px"; hl.appendChild(car);
+  }
+
+  function validate(){
+    var text = src.value, st = $("status"), eb = $("errbox"), em = $("errmsg");
+    $("st-size").textContent = fmtBytes(new Blob([text]).size);
+    $("st-lines").textContent = text ? text.split("\n").length : 0;
+    if (!text.trim()){
+      errPos = null; ast = null; st.className = "status"; st.innerHTML = "<i></i>Empty"; eb.className = "errbox"; em.className = "meta"; em.textContent = "Nothing to check yet."; $("b-jump").hidden = true;
+      syncGutter(); paintError(); renderOut(); return;
+    }
+    try {
+      ast = parse(text); lastGood = ast; errPos = null;
+      st.className = "status ok"; st.innerHTML = "<i></i>Valid JSON";
+      eb.className = "errbox"; em.className = "meta"; em.textContent = "Valid " + (ast.t === "object" ? "object with " + ast.kids.length + " keys" : ast.t === "array" ? "array of " + ast.kids.length : ast.t) + ". Click a tree node to copy its path.";
+      $("b-jump").hidden = true;
+    } catch(e){
+      if (!(e instanceof ParseError)) throw e;
+      ast = null; errPos = Math.min(e.pos, text.length);
+      var lc = lineCol(text, errPos);
+      st.className = "status bad"; st.innerHTML = "<i></i>Invalid";
+      eb.className = "errbox bad"; em.className = ""; em.textContent = "Line " + lc.line + ", column " + lc.col + ": " + e.msg + ".";
+      $("b-jump").hidden = false;
+    }
+    syncGutter(); paintError(); renderOut();
+  }
+  function fmtBytes(b){ return b < 1024 ? b + " B" : (b < 1048576 ? (b/1024).toFixed(1) + " KB" : (b/1048576).toFixed(2) + " MB"); }
+  function indentStr(){ var v = $("indent").value; return v === "tab" ? "\t" : " ".repeat(+v); }
+
+  function renderOut(){
+    var node = ast || lastGood, out = $("out");
+    if (!node){ out.textContent = ""; $("v-tree").innerHTML = '<p class="note" style="margin:0">Nothing to show.</p>'; ["st-min","st-depth","st-keys","st-arr"].forEach(function(id){ $(id).textContent = "0"; }); return; }
+    var sort = $("sort").checked, formatted = serialize(node, indentStr(), sort, false);
+    if (formatted.length < 400000) out.innerHTML = serialize(node, indentStr(), sort, true); else out.textContent = formatted;
+    var s = stats(node);
+    $("st-min").textContent = fmtBytes(new Blob([serialize(node, "", false, false)]).size);
+    $("st-depth").textContent = s.depth; $("st-keys").textContent = s.keys; $("st-arr").textContent = s.items;
+    renderTree(node, !ast);
+  }
+
+  // ---------- tree ----------
+  var selPath = null, openSet = null;
+  function pathStr(path, style){
+    var ident = /^[A-Za-z_$][\w$]*$/;
+    if (style === "jq"){ if (!path.length) return "."; return path.map(function(p){ return typeof p === "number" ? "[" + p + "]" : (ident.test(p) ? "." + p : "." + JSON.stringify(p)); }).join("").replace(/^\[/, ".["); }
+    var base = style === "js" ? "data" : "$";
+    return base + path.map(function(p){ return typeof p === "number" ? "[" + p + "]" : (ident.test(p) ? "." + p : "[" + (style === "js" ? JSON.stringify(p) : "'" + p.replace(/\\/g,"\\\\").replace(/'/g,"\\'") + "'") + "]"); }).join("");
+  }
+  function preview(nd){
+    switch (nd.t){
+      case "object": return {cls:"cnt", txt:"{" + nd.kids.length + (nd.kids.length === 1 ? " key}" : " keys}")};
+      case "array": return {cls:"cnt", txt:"[" + nd.kids.length + (nd.kids.length === 1 ? " item]" : " items]")};
+      case "string": return {cls:"s", txt:JSON.stringify(nd.v.length > 140 ? nd.v.slice(0,140) + "…" : nd.v)};
+      case "number": return {cls:"n", txt:nd.raw};
+      case "boolean": return {cls:"b", txt:String(nd.v)};
+      default: return {cls:"z", txt:"null"};
+    }
+  }
+  function renderTree(root, stale){
+    var box = $("v-tree"); box.innerHTML = "";
+    if (stale){ var p = document.createElement("p"); p.className = "note"; p.style.margin = "0 0 8px"; p.textContent = "Showing the last valid version while you fix the error."; box.appendChild(p); }
+    var q = $("find").value.trim().toLowerCase();
+    var ul = document.createElement("ul"); box.appendChild(ul);
+    function matchIn(nd){ if (!q) return false; if (nd.t === "object") return nd.kids.some(function(k){ return k.k.toLowerCase().indexOf(q) >= 0 || matchIn(k.v); }); if (nd.t === "array") return nd.kids.some(function(k){ return matchIn(k.v); }); return preview(nd).txt.toLowerCase().indexOf(q) >= 0; }
+    function add(parentUl, key, nd, path, depth){
+      var li = document.createElement("li"), row = document.createElement("div"); row.className = "node"; row.tabIndex = 0;
+      var pkey = JSON.stringify(path);
+      var container = nd.t === "object" || nd.t === "array";
+      var tog = document.createElement("button"); tog.className = "tog" + (container && nd.kids.length ? "" : " leaf"); tog.type = "button"; tog.textContent = "▸"; tog.tabIndex = -1; tog.setAttribute("aria-label","Toggle");
+      row.appendChild(tog);
+      if (key !== null){ var ks = document.createElement("span"); ks.className = typeof key === "number" ? "idx" : "key"; ks.textContent = typeof key === "number" ? key : JSON.stringify(key); row.appendChild(ks); var c = document.createElement("span"); c.className = "p"; c.textContent = ":"; row.appendChild(c); }
+      else { var r = document.createElement("span"); r.className = "p"; r.textContent = "root"; row.appendChild(r); }
+      var pv = preview(nd), vs = document.createElement("span"); vs.className = "val " + pv.cls; vs.textContent = pv.txt; row.appendChild(vs);
+      if (q){ var selfHit = (key !== null && String(key).toLowerCase().indexOf(q) >= 0) || (!container && pv.txt.toLowerCase().indexOf(q) >= 0); if (selfHit) row.classList.add("hit"); }
+      if (selPath === pkey) row.classList.add("sel");
+      li.appendChild(row); parentUl.appendChild(li);
+      var open = container && nd.kids.length && (openSet ? openSet[pkey] : depth < 2);
+      if (q && container && matchIn(nd)) open = true;
+      var childUl = null;
+      function expand(){ if (childUl) return; childUl = document.createElement("ul"); li.appendChild(childUl); kidsOf(nd, $("sort").checked).forEach(function(kv, j){ var ck = nd.t === "array" ? j : kv.k; add(childUl, ck, kv.v, path.concat([ck]), depth+1); }); }
+      function setOpen(o){ if (!container || !nd.kids.length) return; if (!openSet) openSet = {}; openSet[pkey] = o; tog.setAttribute("aria-expanded", o ? "true" : "false"); if (o){ expand(); childUl.hidden = false; } else if (childUl) childUl.hidden = true; }
+      if (container && nd.kids.length){ tog.setAttribute("aria-expanded", open ? "true" : "false"); if (open) expand(); }
+      tog.addEventListener("click", function(e){ e.stopPropagation(); setOpen(tog.getAttribute("aria-expanded") !== "true"); });
+      row.addEventListener("click", function(){ select(path, row); });
+      row.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " "){ e.preventDefault(); select(path, row); }
+        else if (e.key === "ArrowRight"){ setOpen(true); e.preventDefault(); }
+        else if (e.key === "ArrowLeft"){ setOpen(false); e.preventDefault(); }
+        else if (e.key === "ArrowDown" || e.key === "ArrowUp"){ var all = Array.prototype.filter.call(box.querySelectorAll(".node"), function(n){ return n.offsetParent !== null; }); var ix = all.indexOf(row) + (e.key === "ArrowDown" ? 1 : -1); if (all[ix]) all[ix].focus(); e.preventDefault(); }
+      });
+    }
+    add(ul, null, root, [], 0);
+  }
+  var curPath = [];
+  function select(path, row){
+    curPath = path; selPath = JSON.stringify(path);
+    document.querySelectorAll(".node.sel").forEach(function(n){ n.classList.remove("sel"); }); if (row) row.classList.add("sel");
+    var s = pathStr(path, $("pathstyle").value); $("path").textContent = s; copy(s, "Path copied: " + s);
+  }
+
+  // ---------- clipboard ----------
+  function toast(msg){ var t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(function(){ t.classList.remove("on"); }, 1800); }
+  function copy(text, msg){
+    function fb(){ var ta = document.createElement("textarea"); ta.value = text; ta.style.cssText = "position:fixed;opacity:0;top:0;left:0"; ta.setAttribute("readonly",""); document.body.appendChild(ta); ta.select(); var ok = false; try { ok = document.execCommand("copy"); } catch(e){} ta.remove(); toast(ok ? msg : "Couldn't copy automatically. Select and copy by hand."); }
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) navigator.clipboard.writeText(text).then(function(){ toast(msg); }, fb); else fb();
+  }
+
+  // ---------- actions ----------
+  function persist(){ try { localStorage.setItem(KEY, JSON.stringify({text:src.value, indent:$("indent").value, sort:$("sort").checked, style:$("pathstyle").value})); } catch(e){} }
+  var t = 0;
+  src.addEventListener("input", function(){ clearTimeout(t); t = setTimeout(function(){ openSet = null; validate(); persist(); }, 180); syncGutter(); });
+  src.addEventListener("scroll", syncScroll);
+  src.addEventListener("keydown", function(e){
+    if (e.key === "Tab" && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey){
+      // insert indentation unless the user is tabbing away (Esc then Tab leaves)
+      if (src._escaped){ src._escaped = false; return; }
+      e.preventDefault(); var s = src.selectionStart, en = src.selectionEnd, ins = indentStr();
+      src.setRangeText(ins, s, en, "end"); src.dispatchEvent(new Event("input"));
+    } else if (e.key === "Escape"){ src._escaped = true; }
+    else src._escaped = false;
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "F" || e.key === "f")){ e.preventDefault(); $("b-format").click(); }
+  });
+  function applyText(text){ src.value = text; src.scrollTop = 0; validate(); persist(); syncScroll(); }
+  $("b-format").addEventListener("click", function(){ if (!ast){ toast(errPos !== null ? "Fix the highlighted error first." : "Nothing to format."); return; } applyText(serialize(ast, indentStr(), $("sort").checked, false)); toast("Formatted."); });
+  $("b-minify").addEventListener("click", function(){ if (!ast){ toast(errPos !== null ? "Fix the highlighted error first." : "Nothing to minify."); return; } var before = new Blob([src.value]).size; applyText(serialize(ast, "", $("sort").checked, false)); var after = new Blob([src.value]).size; toast("Minified: " + fmtBytes(before) + " → " + fmtBytes(after)); });
+  $("b-copy").addEventListener("click", function(){ var node = ast || lastGood; if (!node){ toast("Nothing to copy."); return; } copy(serialize(node, indentStr(), $("sort").checked, false), "Formatted JSON copied."); });
+  $("b-sample").addEventListener("click", function(){ openSet = null; applyText(SAMPLE_TEXT); toast("Sample loaded."); });
+  $("b-clear").addEventListener("click", function(){ lastGood = null; applyText(""); src.focus(); });
+  $("b-jump").addEventListener("click", function(){ if (errPos === null) return; src.focus(); src.setSelectionRange(errPos, Math.min(src.value.length, errPos+1)); var lc = lineCol(src.value, errPos); src.scrollTop = Math.max(0, (lc.line-4)*21); syncScroll(); });
+  $("indent").addEventListener("change", function(){ renderOut(); persist(); });
+  $("sort").addEventListener("change", function(){ renderOut(); persist(); });
+  $("pathstyle").addEventListener("change", function(){ $("path").textContent = selPath ? pathStr(curPath, this.value) : "Click any node to copy its path"; persist(); });
+  $("b-path").addEventListener("click", function(){ if (!selPath){ toast("Select a node first."); return; } var s = pathStr(curPath, $("pathstyle").value); copy(s, "Path copied: " + s); });
+  $("find").addEventListener("input", function(){ var n = ast || lastGood; if (n) renderTree(n, !ast); });
+  $("b-expand").addEventListener("click", function(){ var n = ast || lastGood; if (!n) return; openSet = {}; (function go(nd, p){ if (nd.t === "object" || nd.t === "array"){ openSet[JSON.stringify(p)] = true; nd.kids.forEach(function(kv, j){ go(kv.v, p.concat([nd.t === "array" ? j : kv.k])); }); } })(n, []); renderTree(n, !ast); });
+  $("b-collapse").addEventListener("click", function(){ var n = ast || lastGood; if (!n) return; openSet = {}; openSet["[]"] = true; renderTree(n, !ast); });
+  function tabTo(which){
+    var tree = which === "tree";
+    $("t-tree").setAttribute("aria-selected", tree ? "true" : "false"); $("t-text").setAttribute("aria-selected", tree ? "false" : "true");
+    $("v-tree-wrap").style.display = tree ? "flex" : "none"; $("v-text").hidden = tree;
+  }
+  $("t-tree").addEventListener("click", function(){ tabTo("tree"); });
+  $("t-text").addEventListener("click", function(){ tabTo("text"); });
+
+  // ---------- boot ----------
+  var saved = null; try { saved = JSON.parse(localStorage.getItem(KEY)); } catch(e){}
+  if (saved){ if (saved.indent) $("indent").value = saved.indent; $("sort").checked = !!saved.sort; if (saved.style) $("pathstyle").value = saved.style; }
+  if (saved && typeof saved.text === "string" && saved.text.trim()) src.value = saved.text;
+  else { try { lastGood = parse(SAMPLE_TEXT); } catch(e){} src.value = SAMPLE_TEXT.replace('"rush": false,', '"rush": false,\n  "courier": \'Royal Mail\','); }
+  measure();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ measure(); paintError(); });
+  validate(); syncScroll();
+})();
+</script>
+</body>
+</html>

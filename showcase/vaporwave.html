@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Galleria Eterna Mall</title>
+<meta name="description" content="A vaporwave dead-mall homage: marble busts, a neon grid horizon, Japanese signage, a playable slowed-down mallsoft generator made with WebAudio, and a directory of shops that closed in 1999.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Monoton&family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pink:#ff71ce;
+  --cyan:#01cdfe;
+  --mint:#05ffa1;
+  --lav:#b967ff;
+  --yel:#fffb96;
+  --night:#1a0b2e;
+  --deep:#2d0f4f;
+  --text:#fbe8ff;
+  --neon:"Monoton","Impact",sans-serif;
+  --dot:"DotGothic16","MS Gothic","Osaka","Courier New",monospace;
+  --serif:"Times New Roman",Times,serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--night);color:var(--text);font-family:var(--dot);font-size:17px;line-height:1.6;overflow-x:hidden}
+a{color:var(--cyan)}
+:focus-visible{outline:2px dashed var(--mint);outline-offset:3px}
+.pad{padding-left:max(16px,env(safe-area-inset-left),5vw);padding-right:max(16px,env(safe-area-inset-right),5vw)}
+
+.back{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));z-index:40;font:14px var(--dot);color:#000;background:#c0c0c0;text-decoration:none;padding:5px 12px;box-shadow:inset -2px -2px #404040,inset 2px 2px #fff}
+.back:hover{background:var(--pink)}
+
+/* hero */
+.hero{position:relative;height:min(100vh,900px);min-height:600px;overflow:hidden;background:linear-gradient(180deg,#12032a 0%,#3b0d5c 34%,#b3368d 55%,#ff8fb8 62%,#1a0b2e 62.2%)}
+.stars{position:absolute;inset:0 0 40% 0;background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 10%,#fff,transparent),radial-gradient(1px 1px at 85% 40%,#fff,transparent),radial-gradient(1px 1px at 10% 45%,#fff,transparent),radial-gradient(1px 1px at 55% 35%,#fff,transparent);background-size:300px 200px;opacity:.7}
+.sun{position:absolute;left:50%;top:22%;width:min(46vw,420px);aspect-ratio:1;transform:translateX(-50%);border-radius:50%;
+  background:linear-gradient(180deg,#fffb96 0%,#ffb86c 35%,#ff71ce 70%,#b967ff 100%);
+  -webkit-mask-image:linear-gradient(180deg,#000 0 52%,transparent 52% 55%,#000 55% 63%,transparent 63% 67%,#000 67% 74%,transparent 74% 79%,#000 79% 85%,transparent 85% 91%,#000 91%);
+  mask-image:linear-gradient(180deg,#000 0 52%,transparent 52% 55%,#000 55% 63%,transparent 63% 67%,#000 67% 74%,transparent 74% 79%,#000 79% 85%,transparent 85% 91%,#000 91%);
+  filter:drop-shadow(0 0 40px #ff71ce)}
+.floor{position:absolute;left:-50%;right:-50%;bottom:0;height:38%;perspective:260px;overflow:hidden}
+.grid{position:absolute;inset:0 0 -100% 0;transform:rotateX(62deg);transform-origin:50% 0;
+  background-image:linear-gradient(var(--pink) 2px,transparent 2px),linear-gradient(90deg,var(--pink) 2px,transparent 2px);background-size:60px 60px;animation:run 1.6s linear infinite;
+  background-color:#1a0b2e;box-shadow:0 0 0 1px #000}
+.floor::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#1a0b2e 0%,rgba(26,11,46,0) 45%);pointer-events:none}
+@keyframes run{to{background-position:0 60px}}
+.palm{position:absolute;bottom:34%;width:min(18vw,170px);opacity:.95}
+.palm.l{left:3%}.palm.r{right:3%;transform:scaleX(-1)}
+.bust{position:absolute;left:50%;bottom:6%;width:min(40vw,360px);transform:translateX(-50%);z-index:3}
+.bust svg{width:100%;height:auto;display:block;overflow:visible}
+.bust .ghost{position:absolute;inset:0;mix-blend-mode:screen;opacity:.0;pointer-events:none}
+.bust.glitch .ghost{opacity:.8}
+.bust .g1{filter:url(#toCyan);transform:translate(-6px,0)}
+.bust .g2{filter:url(#toPink);transform:translate(6px,1px)}
+.title{position:absolute;left:0;right:0;top:9%;text-align:center;z-index:4;pointer-events:none}
+.title h1{margin:0;font:400 clamp(40px,8.5vw,120px)/1 var(--neon);color:#fff;text-shadow:0 0 6px var(--pink),0 0 18px var(--pink),0 0 40px var(--lav),0 0 2px #fff;letter-spacing:.02em}
+.title .jp{display:block;font:clamp(18px,2.4vw,30px) var(--dot);letter-spacing:.5em;color:var(--mint);text-shadow:0 0 10px var(--mint);margin-top:8px}
+.vert{position:absolute;top:18%;writing-mode:vertical-rl;font:clamp(16px,1.8vw,24px) var(--dot);letter-spacing:.3em;color:var(--cyan);text-shadow:0 0 8px var(--cyan);z-index:4}
+.vert.l{left:max(18px,4vw)}.vert.r{right:max(18px,4vw);color:var(--pink);text-shadow:0 0 8px var(--pink)}
+.aes{position:absolute;bottom:3%;left:0;right:0;text-align:center;z-index:5;font:clamp(16px,2vw,22px) var(--serif);font-style:italic;letter-spacing:.8em;color:#fff;text-shadow:2px 2px 0 var(--lav)}
+
+/* window chrome */
+.win{background:#c0c0c0;color:#000;box-shadow:inset -2px -2px #404040,inset 2px 2px #fff,6px 6px 0 rgba(0,0,0,.35);padding:3px;font-family:var(--dot)}
+.win .tt{background:linear-gradient(90deg,#ff71ce,#b967ff 60%,#01cdfe);color:#fff;padding:3px 6px;display:flex;justify-content:space-between;align-items:center;font-size:14px;text-shadow:1px 1px 0 #6b1e6b}
+.win .tt i{font-style:normal;background:#c0c0c0;color:#000;width:18px;height:16px;display:grid;place-items:center;font-size:11px;box-shadow:inset -1px -1px #404040,inset 1px 1px #fff}
+.win .wb{padding:16px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff;margin-top:3px}
+
+section{position:relative;padding-top:80px;padding-bottom:80px}
+h2{font:400 clamp(30px,5vw,58px)/1.05 var(--neon);margin:0 0 10px;color:#fff;text-shadow:0 0 10px var(--cyan),0 0 26px var(--cyan)}
+h2 small{display:block;font:16px var(--dot);letter-spacing:.4em;color:var(--pink);text-shadow:none;margin-top:10px}
+.checker{height:26px;background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/26px 26px;opacity:.9}
+
+/* history */
+.history{background:linear-gradient(180deg,#1a0b2e,#2d0f4f)}
+.hgrid{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;margin-top:30px;align-items:start}
+.hgrid p{margin:0 0 1em}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{padding:12px 0 12px 20px;border-left:2px solid var(--pink);position:relative}
+.tl li::before{content:"";position:absolute;left:-7px;top:18px;width:12px;height:12px;background:var(--mint);transform:rotate(45deg);box-shadow:0 0 10px var(--mint)}
+.tl b{color:var(--yel);font-weight:400}
+.figs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
+.fig{border:1px solid var(--lav);padding:16px;background:rgba(185,103,255,.08);position:relative}
+.fig h3{margin:0 0 4px;font:400 17px var(--dot);color:var(--cyan)}
+.fig .jp{font-size:13px;color:var(--pink);letter-spacing:.2em}
+.fig p{margin:6px 0 0;font-size:15px}
+
+/* player */
+.player{background:#12032a;background-image:radial-gradient(ellipse at 50% 120%,#5b1a7a 0%,transparent 60%)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:30px;align-items:center}
+.deck .wb{display:flex;flex-direction:column;gap:14px;background:#e8e8e8}
+.lcd{background:#0d1f16;color:var(--mint);font:15px var(--dot);padding:10px 12px;box-shadow:inset 2px 2px #000;display:flex;justify-content:space-between;gap:10px;text-shadow:0 0 6px var(--mint);min-height:44px;align-items:center}
+.lcd .scroll{white-space:nowrap;overflow:hidden;flex:1}
+.lcd .scroll span{display:inline-block;padding-left:100%;animation:marq 14s linear infinite}
+@keyframes marq{to{transform:translateX(-100%)}}
+#viz{width:100%;height:120px;display:block;background:#1a0b2e;box-shadow:inset 2px 2px #000}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.b95{font:15px var(--dot);background:#c0c0c0;border:0;padding:8px 14px;cursor:pointer;box-shadow:inset -2px -2px #404040,inset 2px 2px #fff;color:#000;min-width:44px}
+.b95:active,.b95[aria-pressed="true"]{box-shadow:inset 2px 2px #404040,inset -2px -2px #fff}
+.b95.big{font-size:18px;padding:12px 22px;background:linear-gradient(180deg,#ffb3e6,#ff71ce);}
+.ctl{display:grid;grid-template-columns:110px 1fr 54px;gap:10px;align-items:center;font-size:14px}
+.ctl input{width:100%;accent-color:#b967ff}
+.ctl output{font-size:13px;text-align:right}
+.tracks{display:flex;gap:6px;flex-wrap:wrap}
+.tracks .b95{font-size:13px;padding:6px 10px}
+.blurb p{margin:0 0 1em}
+.blurb .hint{color:var(--yel)}
+
+/* directory */
+.dir{background:linear-gradient(180deg,#2d0f4f,#1a0b2e)}
+.dwrap{display:grid;grid-template-columns:320px 1fr;gap:30px;margin-top:30px;align-items:start}
+.map svg{width:100%;height:auto;display:block}
+.map .unit{cursor:pointer;transition:fill .2s}
+.map .unit:hover,.map .unit.on{fill:var(--pink)}
+.search{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.search input{flex:1;min-width:160px;font:16px var(--dot);padding:9px 12px;background:#fff;border:0;box-shadow:inset 2px 2px #404040,inset -2px -2px #fff;color:#000}
+.cats{display:flex;gap:6px;flex-wrap:wrap}
+.cats .b95{font-size:13px;padding:6px 10px}
+.stores{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.store{border:1px solid rgba(1,205,254,.5);background:rgba(1,205,254,.06);padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;display:block}
+.store:hover,.store.on{background:rgba(255,113,206,.16);border-color:var(--pink)}
+.store .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.store b{font-weight:400;color:#fff;font-size:17px}
+.store .unitno{font-size:12px;color:var(--cyan)}
+.store .jp{font-size:12px;color:var(--pink);letter-spacing:.15em}
+.store .st{display:inline-block;font-size:11px;padding:1px 6px;margin-top:6px;letter-spacing:.1em}
+.st.closed{background:#444;color:#ddd}.st.open{background:var(--mint);color:#000}.st.lease{background:var(--yel);color:#000}
+.store .desc{display:none;font-size:14px;margin-top:8px;color:#e9d6f7}
+.store.on .desc{display:block}
+.none{padding:20px;color:var(--yel)}
+
+/* principles */
+.princ{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:30px}
+.princ .win .wb{min-height:170px;font-size:15px}
+.princ .win .wb b{display:block;font-weight:400;font-size:17px;color:#6b1e9b;margin-bottom:6px}
+
+footer{padding-top:30px;padding-bottom:40px;text-align:center;color:#c8a7e8;font-size:14px}
+footer .big{font:400 28px var(--neon);color:var(--pink);text-shadow:0 0 12px var(--pink);display:block;margin-bottom:10px}
+
+@media (max-width:980px){
+  .hgrid,.pgrid,.dwrap{grid-template-columns:1fr}
+  .figs{grid-template-columns:1fr 1fr}
+  .princ{grid-template-columns:1fr 1fr}
+  .map{max-width:360px}
+}
+@media (max-width:560px){
+  .hero{min-height:560px;height:88vh}
+  .bust{width:62vw;bottom:8%}
+  .sun{width:70vw;top:26%}
+  .vert{display:none}
+  .palm{width:26vw}
+  .figs,.princ,.stores{grid-template-columns:1fr}
+  .ctl{grid-template-columns:90px 1fr 46px}
+  .aes{letter-spacing:.4em}
+}
+@media (prefers-reduced-motion:reduce){
+  .grid,.lcd .scroll span{animation:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="marble" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.04" numOctaves="4" seed="7" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 .55  0 0 0 0 .5  0 0 0 0 .6  0 0 0 -2.4 1.45" result="veins"/>
+      <feComposite in="veins" in2="SourceGraphic" operator="in" result="v"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="v"/></feMerge>
+    </filter>
+    <filter id="toCyan"><feColorMatrix type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/></filter>
+    <filter id="toPink"><feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"/></filter>
+    <linearGradient id="stone" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#e9e3ee"/><stop offset="1" stop-color="#b9b0c6"/></linearGradient>
+    <linearGradient id="rimL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#01cdfe" stop-opacity=".75"/><stop offset=".35" stop-color="#01cdfe" stop-opacity="0"/></linearGradient>
+    <linearGradient id="rimR" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#ff71ce" stop-opacity=".8"/><stop offset=".35" stop-color="#ff71ce" stop-opacity="0"/></linearGradient>
+  </defs>
+  <symbol id="bustShape" viewBox="0 0 300 380">
+    <g>
+      <!-- plinth -->
+      <rect x="70" y="330" width="160" height="40" fill="url(#stone)"/>
+      <rect x="60" y="318" width="180" height="16" fill="#f4eff7"/>
+      <!-- shoulders/chest -->
+      <path d="M150 230 C 110 232 60 250 36 290 C 30 302 40 318 60 318 H240 C 260 318 270 302 264 290 C 240 250 190 232 150 230Z" fill="url(#stone)"/>
+      <!-- drapery -->
+      <path d="M60 300 C 100 280 140 300 170 268 C 190 250 220 262 246 290" fill="none" stroke="#b9b0c6" stroke-width="3"/>
+      <path d="M76 314 C 110 296 150 310 180 286" fill="none" stroke="#c7bfd3" stroke-width="2"/>
+      <!-- neck -->
+      <path d="M128 190 C 128 210 124 228 118 240 L182 240 C 176 228 172 210 172 190Z" fill="url(#stone)"/>
+      <!-- head -->
+      <path d="M150 42 C 108 42 92 78 94 116 C 95 140 102 168 118 186 C 128 198 140 204 150 204 C 160 204 172 198 182 186 C 198 168 205 140 206 116 C 208 78 192 42 150 42Z" fill="url(#stone)"/>
+      <!-- hair curls -->
+      <g fill="#f7f3fa" stroke="#c9c0d6" stroke-width="2">
+        <circle cx="112" cy="70" r="14"/><circle cx="130" cy="54" r="15"/><circle cx="152" cy="48" r="16"/><circle cx="174" cy="54" r="15"/><circle cx="190" cy="70" r="14"/>
+        <circle cx="100" cy="92" r="12"/><circle cx="200" cy="92" r="12"/><circle cx="120" cy="40" r="11"/><circle cx="182" cy="40" r="11"/><circle cx="150" cy="30" r="12"/>
+        <circle cx="96" cy="112" r="9"/><circle cx="204" cy="112" r="9"/>
+      </g>
+      <!-- face details -->
+      <path d="M121 116 C 128 110 138 110 143 116" fill="none" stroke="#a79db7" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M157 116 C 162 110 172 110 179 116" fill="none" stroke="#a79db7" stroke-width="2.4" stroke-linecap="round"/>
+      <ellipse cx="132" cy="124" rx="9" ry="4.5" fill="#ece6f1" stroke="#b3a9c2" stroke-width="1.4"/>
+      <ellipse cx="168" cy="124" rx="9" ry="4.5" fill="#ece6f1" stroke="#b3a9c2" stroke-width="1.4"/>
+      <path d="M150 118 C 148 134 144 148 142 156 C 146 160 154 160 158 156" fill="none" stroke="#b3a9c2" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M138 174 C 146 170 154 170 162 174 C 156 180 144 180 138 174Z" fill="#ddd4e6" stroke="#b3a9c2" stroke-width="1.4"/>
+      <!-- rim lights -->
+      <path d="M150 42 C 108 42 92 78 94 116 C 95 140 102 168 118 186 C 128 198 140 204 150 204 V42Z" fill="url(#rimL)"/>
+      <path d="M150 42 C 192 42 208 78 206 116 C 205 140 198 168 182 186 C 172 198 160 204 150 204 V42Z" fill="url(#rimR)"/>
+      <path d="M150 230 C 110 232 60 250 36 290 C 30 302 40 318 60 318 H150Z" fill="url(#rimL)"/>
+      <path d="M150 230 C 190 232 240 250 264 290 C 270 302 260 318 240 318 H150Z" fill="url(#rimR)"/>
+    </g>
+  </symbol>
+  <symbol id="palmShape" viewBox="0 0 160 240">
+    <path d="M78 240 C 80 180 84 120 92 70" stroke="#12032a" stroke-width="10" fill="none"/>
+    <g fill="#12032a">
+      <path d="M92 70 C 60 50 30 56 4 80 C 34 66 60 68 92 76Z"/>
+      <path d="M92 70 C 70 36 40 26 14 30 C 44 40 66 52 90 76Z"/>
+      <path d="M92 70 C 104 36 130 22 156 26 C 128 36 108 52 94 76Z"/>
+      <path d="M92 70 C 124 60 146 72 158 96 C 136 80 118 76 94 76Z"/>
+      <path d="M92 70 C 90 40 96 16 110 2 C 104 28 100 50 96 74Z"/>
+    </g>
+  </symbol>
+</svg>
+
+<a class="back" href="index.html" id="back">◀ Showcase</a>
+
+<header class="hero">
+  <div class="stars"></div>
+  <div class="sun"></div>
+  <svg class="palm l" viewBox="0 0 160 240" aria-hidden="true"><use href="#palmShape"/></svg>
+  <svg class="palm r" viewBox="0 0 160 240" aria-hidden="true"><use href="#palmShape"/></svg>
+  <div class="floor"><div class="grid"></div></div>
+  <div class="title"><h1>Galleria Eterna</h1><span class="jp">ギャラリア・エテルナ</span></div>
+  <div class="vert l" aria-hidden="true">永遠のショッピング</div>
+  <div class="vert r" aria-hidden="true">閉店セール　一九九九</div>
+  <div class="bust" id="bust" role="img" aria-label="A marble bust in pink and cyan light">
+    <svg viewBox="0 0 300 380" style="filter:url(#marble)"><use href="#bustShape"/></svg>
+    <svg class="ghost g1" viewBox="0 0 300 380" aria-hidden="true"><use href="#bustShape"/></svg>
+    <svg class="ghost g2" viewBox="0 0 300 380" aria-hidden="true"><use href="#bustShape"/></svg>
+  </div>
+  <div class="aes" aria-hidden="true">Ａ Ｅ Ｓ Ｔ Ｈ Ｅ Ｔ Ｉ Ｃ</div>
+</header>
+<div class="checker" aria-hidden="true"></div>
+
+<main>
+<section class="history pad" id="history">
+  <h2>Welcome, Shopper<small>ようこそ · a short history of vaporwave</small></h2>
+  <div class="hgrid">
+    <div>
+      <p>Vaporwave is a music genre, a visual style and an in-joke that grew up on the early-2010s internet. Producers took the background sound of late capitalism — smooth jazz, hold music, 80s commercials, department-store muzak — and slowed it, looped it and drenched it in reverb until it sounded like a memory of a shopping trip you never took.</p>
+      <p>The visuals followed the sound: Roman busts beside early 3D renders, Japanese text nobody on the album could read, dolphins, palm trees, grid horizons, and the grey windows of mid-90s operating systems. Glossy corporate optimism, seen from the other side of its collapse.</p>
+      <p>Its favourite setting is the <b>dead mall</b> — the half-empty American shopping centre, fountain still running, escalators still moving, stores shuttered one by one. <i>Mallsoft</i>, a subgenre, set out to recreate that sound exactly: echoes, footsteps, a PA chime, a saxophone from three floors away.</p>
+    </div>
+    <ol class="tl">
+      <li><b>2010</b> — Daniel Lopatin, as Chuck Person, releases <i>Chuck Person's Eccojams Vol. 1</i>: chopped, slowed pop loops. The blueprint.</li>
+      <li><b>2011</b> — James Ferraro's <i>Far Side Virtual</i> turns ringtones and stock-software sounds into a satire of consumer tech.</li>
+      <li><b>2011</b> — Vektroid, as Macintosh Plus, releases <i>Floral Shoppe</i>. A marble bust of Helios on a pink grid becomes the genre's emblem; "リサフランク420 / 現代のコンピュー" its anthem.</li>
+      <li><b>2013</b> — Blank Banshee, Saint Pepsi and the rise of future funk.</li>
+      <li><b>2015</b> — 猫 シ Corp.'s <i>Palm Mall</i> defines mallsoft: an entire album set inside an imaginary shopping centre.</li>
+      <li><b>2016–</b> — The aesthetic escapes: fashion, memes, album art, and eventually brand campaigns — the very thing it parodied.</li>
+    </ol>
+  </div>
+  <div class="figs">
+    <div class="fig"><h3>Daniel Lopatin</h3><div class="jp">チャック・パーソン</div><p>As Chuck Person and Oneohtrix Point Never, he found the eerie beauty in a slowed-down 80s pop hook.</p></div>
+    <div class="fig"><h3>Vektroid</h3><div class="jp">マッキントッシュ・プラス</div><p>Ramona Andra Xavier. Dozens of aliases; <i>Floral Shoppe</i> is the most famous vaporwave album ever made.</p></div>
+    <div class="fig"><h3>James Ferraro</h3><div class="jp">ファー・サイド</div><p>Hypnagogic pop pioneer; his hyper-clean digital satires shaped the genre's look and irony.</p></div>
+    <div class="fig"><h3>猫 シ Corp.</h3><div class="jp">ネコ・シ・コープ</div><p>The mallsoft architect — field recordings of fountains and PA systems, looped into dreams.</p></div>
+    <div class="fig"><h3>Blank Banshee</h3><div class="jp">ブランク・バンシー</div><p>Brought trap drums and crisp production; his album art pushed the 3D-glitch visual style.</p></div>
+    <div class="fig"><h3>Helios</h3><div class="jp">ヘーリオス</div><p>A plaster bust of the sun god, photographed off a museum website, now the unofficial face of an entire internet movement.</p></div>
+  </div>
+</section>
+<div class="checker" aria-hidden="true"></div>
+
+<section class="player pad" id="mallsoft">
+  <h2>Mallsoft FM<small>モールソフト · 午前三時の噴水</small></h2>
+  <div class="pgrid">
+    <div class="deck win">
+      <div class="tt"><span>mallsoft_generator.exe</span><i>×</i></div>
+      <div class="wb">
+        <div class="lcd"><div class="scroll"><span id="nowPlaying">★ PRESS PLAY ★ you are on level 2 near the fountain ★ all stores closing in 15 minutes ★</span></div><span id="timeOut">0:00</span></div>
+        <canvas id="viz" aria-hidden="true"></canvas>
+        <div class="row">
+          <button type="button" class="b95 big" id="play" aria-pressed="false">▶ Play</button>
+          <button type="button" class="b95" id="chime">♪ PA chime</button>
+        </div>
+        <div class="tracks" role="group" aria-label="Choose a loop">
+          <button type="button" class="b95" id="tr0" data-t="0" aria-pressed="true">Food Court Sunset</button>
+          <button type="button" class="b95" id="tr1" data-t="1" aria-pressed="false">Escalator Dreams</button>
+          <button type="button" class="b95" id="tr2" data-t="2" aria-pressed="false">Level 3 · Closed</button>
+        </div>
+        <div class="ctl"><label for="slow">Slowdown</label><input type="range" id="slow" min="0" max="100" value="55"><output id="slowOut">-55%</output></div>
+        <div class="ctl"><label for="space">Emptiness</label><input type="range" id="space" min="0" max="100" value="70"><output id="spaceOut">70%</output></div>
+        <div class="ctl"><label for="fountain">Fountain</label><input type="range" id="fountain" min="0" max="100" value="35"><output id="fountainOut">35%</output></div>
+      </div>
+    </div>
+    <div class="blurb">
+      <p>Everything you hear is synthesised live in your browser — no samples. A soft electric piano plays jazzy major-seventh chords; it is then slowed and detuned by a wobbling "tape", passed through a lowpass filter like a speaker in the ceiling, and bathed in a long reverb generated from noise.</p>
+      <p>Raise <b>Emptiness</b> to hear the atrium grow. Add <b>Fountain</b> for filtered water noise. Press the <b>PA chime</b> for an announcement nobody is left to hear.</p>
+      <p class="hint">▶ Audio only starts after you press Play. Headphones recommended.</p>
+    </div>
+  </div>
+</section>
+<div class="checker" aria-hidden="true"></div>
+
+<section class="dir pad" id="directory">
+  <h2>Store Directory<small>店舗案内 · as of the last day of 1999</small></h2>
+  <div class="dwrap">
+    <div class="map win">
+      <div class="tt"><span>you_are_here.bmp</span><i>×</i></div>
+      <div class="wb" style="background:#1a0b2e;padding:10px">
+        <svg viewBox="0 0 300 300" id="mapSvg" role="img" aria-label="Mall floor plan"></svg>
+      </div>
+    </div>
+    <div>
+      <div class="search">
+        <input id="q" type="search" placeholder="search stores… (try 'music')" aria-label="Search stores">
+      </div>
+      <div class="cats" role="group" aria-label="Filter by category" style="margin-bottom:14px" id="cats"></div>
+      <ul class="stores" id="stores"></ul>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="principles" style="background:#1a0b2e">
+  <h2>Mall Policies<small>ルール · the grammar of the aesthetic</small></h2>
+  <div class="princ">
+    <div class="win"><div class="tt"><span>01.txt</span><i>×</i></div><div class="wb"><b>Slow it down</b>Pitch everything down until the familiar becomes uncanny. The chorus becomes a lullaby for a closing mall.</div></div>
+    <div class="win"><div class="tt"><span>02.txt</span><i>×</i></div><div class="wb"><b>Loop the moment</b>Four seconds of a hook, repeated until it becomes a place rather than a song.</div></div>
+    <div class="win"><div class="tt"><span>03.txt</span><i>×</i></div><div class="wb"><b>Classical + digital</b>Greek statues next to 3D renders and 90s GUIs: two kinds of ruins in one frame.</div></div>
+    <div class="win"><div class="tt"><span>04.txt</span><i>×</i></div><div class="wb"><b>Pink, cyan, teal</b>Sunset gradients, neon grids, a palette borrowed from 80s VHS covers and Miami at dusk.</div></div>
+    <div class="win"><div class="tt"><span>05.txt</span><i>×</i></div><div class="wb"><b>Ｗｉｄｅ　ｔｅｘｔ</b>Full-width Latin letters and Japanese signage, used for texture as much as meaning.</div></div>
+    <div class="win"><div class="tt"><span>06.txt</span><i>×</i></div><div class="wb"><b>Nostalgia for nowhere</b>A longing for a consumer paradise that only existed in commercials.</div></div>
+    <div class="win"><div class="tt"><span>07.txt</span><i>×</i></div><div class="wb"><b>Irony and sincerity</b>Is it a critique of capitalism or a love letter to it? Yes.</div></div>
+    <div class="win"><div class="tt"><span>08.txt</span><i>×</i></div><div class="wb"><b>Glitch as patina</b>Compression artefacts and VHS tracking errors are the dust on the statue.</div></div>
+  </div>
+</section>
+</main>
+
+<footer class="pad"><span class="big">Thank you for shopping</span>Galleria Eterna is a fictional mall. All stores closed in 1999. The fountain runs forever. · <a href="index.html">Return to the Showcase</a></footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- bust glitch ---------- */
+  var bust=document.getElementById('bust');
+  if(!reduce){(function g(){setTimeout(function(){bust.classList.add('glitch');setTimeout(function(){bust.classList.remove('glitch');g();},120+Math.random()*180);},2200+Math.random()*3000);})();}
+
+  /* ---------- directory ---------- */
+  var STORES=[
+    {n:"Crystal Dolphin Records",jp:"クリスタル・ドルフィン",c:"Music",u:"104",s:"closed",d:"CDs, cassettes and a listening booth with one working pair of headphones. The last album sold was a smooth-jazz Christmas compilation."},
+    {n:"Pacific Sunset Tanning",jp:"パシフィック・サンセット",c:"Beauty",u:"112",s:"closed",d:"Twelve beds, twelve neon palm trees. The signage still glows at night."},
+    {n:"New Horizon Electronics",jp:"ニュー・ホライズン",c:"Tech",u:"118",s:"lease",d:"Once sold 56k modems and CRT televisions that could play laserdiscs. Now: 'Space available, 2,400 sq ft'."},
+    {n:"Food Court: Wok 'n' Roll",jp:"ウォックンロール",c:"Food",u:"FC-3",s:"open",d:"Somehow still open. Nobody has seen the staff. The orange chicken is always hot."},
+    {n:"Food Court: Pretzel Paradise",jp:"プレッツェル・パラダイス",c:"Food",u:"FC-5",s:"closed",d:"A single cinnamon-sugar pretzel remains in the display, perfectly preserved."},
+    {n:"Galleria Fountain",jp:"噴水",c:"Services",u:"ATRIUM",s:"open",d:"Coins from 14 countries. The pump has not stopped since opening day, 12 May 1986."},
+    {n:"Marble Gods Gift Shop",jp:"大理石の神々",c:"Gifts",u:"207",s:"closed",d:"Plaster busts of Greek gods, dolphin figurines, a rack of scented candles called 'Tropical Mainframe'."},
+    {n:"Cyber Café Aurora",jp:"サイバーカフェ・オーロラ",c:"Tech",u:"211",s:"closed",d:"$4 per hour of internet. The screensaver is still flying through a 3D maze."},
+    {n:"Silk & Satin Formalwear",jp:"シルク・アンド・サテン",c:"Fashion",u:"215",s:"lease",d:"Prom dresses in teal and seafoam. A mannequin in the window wears sunglasses."},
+    {n:"VHS Kingdom",jp:"VHSキングダム",c:"Music",u:"220",s:"closed",d:"Be kind, rewind. 3,800 tapes, all of them overdue."},
+    {n:"Lotus Garden Spa",jp:"ロータス・ガーデン",c:"Beauty",u:"304",s:"closed",d:"Pan-flute music on a loop, still playing. Nobody knows where the speaker is."},
+    {n:"Arcade Neon Dreams",jp:"アーケード・ネオン",c:"Games",u:"310",s:"open",d:"Four cabinets still plugged in. The high score on the racing game is from 1997: 'AAA'."},
+    {n:"Plaza Sports Emporium",jp:"プラザ・スポーツ",c:"Fashion",u:"318",s:"closed",d:"Neon windbreakers, discounted 90%. The treadmill in the window is still running, very slowly."},
+    {n:"Security Office",jp:"警備室",c:"Services",u:"B1",s:"open",d:"Seventeen CRT monitors showing seventeen empty corridors."}
+  ];
+  var cats=["All"].concat(STORES.map(function(s){return s.c;}).filter(function(v,i,a){return a.indexOf(v)===i;}));
+  var catSel="All",openIdx=-1;
+  var catsEl=document.getElementById('cats');
+  cats.forEach(function(c){var b=document.createElement('button');b.type='button';b.className='b95';b.textContent=c;b.id='cat-'+c.toLowerCase();b.setAttribute('aria-pressed',c==='All'?'true':'false');b.addEventListener('click',function(){catSel=c;Array.prototype.forEach.call(catsEl.children,function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});renderStores();});catsEl.appendChild(b);});
+  var list=document.getElementById('stores'),q=document.getElementById('q');
+  function renderStores(){
+    var term=q.value.trim().toLowerCase();
+    list.innerHTML='';
+    var shown=0;
+    STORES.forEach(function(s,i){
+      if(catSel!=="All"&&s.c!==catSel)return;
+      if(term&&(s.n+' '+s.c+' '+s.d+' '+s.jp).toLowerCase().indexOf(term)<0)return;
+      shown++;
+      var li=document.createElement('li');
+      var b=document.createElement('button');b.type='button';b.className='store'+(i===openIdx?' on':'');b.id='store-'+i;b.setAttribute('aria-expanded',i===openIdx?'true':'false');
+      b.innerHTML='<div class="top"><b></b><span class="unitno">#'+s.u+'</span></div><div class="jp">'+s.jp+'</div><span class="st '+s.s+'">'+(s.s==='open'?'OPEN':s.s==='lease'?'FOR LEASE':'CLOSED')+'</span><div class="desc"></div>';
+      b.querySelector('b').textContent=s.n;b.querySelector('.desc').textContent=s.d;
+      b.addEventListener('click',function(){openIdx=openIdx===i?-1:i;renderStores();highlight();});
+      li.appendChild(b);list.appendChild(li);
+    });
+    if(!shown)list.innerHTML='<li class="none">No stores found. Perhaps it closed. Everything closed.</li>';
+  }
+  q.addEventListener('input',renderStores);
+  // map
+  var NS="http://www.w3.org/2000/svg",map=document.getElementById('mapSvg');
+  function el(t,a,p){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);(p||map).appendChild(e);return e;}
+  el('rect',{x:10,y:10,width:280,height:280,fill:'none',stroke:'#01cdfe','stroke-width':2});
+  el('circle',{cx:150,cy:150,r:34,fill:'none',stroke:'#05ffa1','stroke-width':2});
+  el('circle',{cx:150,cy:150,r:14,fill:'#05ffa1',opacity:.35});
+  var units={};
+  STORES.forEach(function(s,i){
+    var a=i/STORES.length*Math.PI*2-Math.PI/2,r=100;
+    var x=150+Math.cos(a)*r,y=150+Math.sin(a)*r;
+    if(s.u==="ATRIUM"){x=150;y=150;}
+    var rc=el('rect',{x:x-16,y:y-12,width:32,height:24,fill:s.s==='open'?'#05ffa1':s.s==='lease'?'#fffb96':'#5b3a7a',stroke:'#fff','stroke-width':1,class:'unit',tabindex:0,role:'button','aria-label':s.n});
+    var tt=document.createElementNS(NS,'title');tt.textContent=s.n+' · '+s.u;rc.appendChild(tt);
+    rc.addEventListener('click',function(){openIdx=i;catSel='All';q.value='';Array.prototype.forEach.call(catsEl.children,function(x,k){x.setAttribute('aria-pressed',k===0?'true':'false');});renderStores();highlight();var b=document.getElementById('store-'+i);if(b)b.scrollIntoView({block:'nearest',behavior:reduce?'auto':'smooth'});});
+    rc.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();rc.dispatchEvent(new Event('click'));}});
+    units[i]=rc;
+  });
+  var you=el('g',{});el('circle',{cx:150,cy:200,r:6,fill:'#ff71ce'},you);
+  var yt=el('text',{x:160,y:204,fill:'#ff71ce','font-size':11,'font-family':'DotGothic16, monospace'},you);yt.textContent='YOU ARE HERE';
+  function highlight(){Object.keys(units).forEach(function(k){units[k].classList.toggle('on',+k===openIdx);});}
+  openIdx=5;renderStores();highlight();
+
+  /* ---------- mallsoft audio ---------- */
+  var AC=window.AudioContext||window.webkitAudioContext,ac=null,master,wet,dry,lp,conv,fountainGain,noiseSrc,wobble,wobbleGain;
+  var playing=false,timer=null,step=0,t0=0,track=0;
+  var TRACKS=[
+    {name:"Food Court Sunset",bpm:76,chords:[[65,69,72,76],[64,67,71,74],[62,65,69,72],[60,64,67,71]],bass:[41,40,38,36],mel:[76,74,72,74,76,79,76,74]},
+    {name:"Escalator Dreams",bpm:70,chords:[[62,65,69,72],[67,71,74,77],[60,64,67,71],[57,60,64,67]],bass:[38,43,36,33],mel:[72,74,77,76,74,72,69,72]},
+    {name:"Level 3 · Closed",bpm:64,chords:[[61,65,68,72],[66,70,73,77],[63,66,70,73],[68,72,75,79]],bass:[37,42,39,44],mel:[80,77,75,77,73,75,72,70]}
+  ];
+  function mtof(m){return 440*Math.pow(2,(m-69)/12);}
+  function slowFactor(){return 1-(+document.getElementById('slow').value)/100*0.35;} // 1 .. 0.65
+  function impulse(sec){var len=ac.sampleRate*sec,b=ac.createBuffer(2,len,ac.sampleRate);for(var c=0;c<2;c++){var d=b.getChannelData(c);for(var i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6);}return b;}
+  function setup(){
+    ac=new AC();
+    master=ac.createGain();master.gain.value=.7;
+    lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;lp.Q.value=.5;
+    conv=ac.createConvolver();conv.buffer=impulse(5.5);
+    wet=ac.createGain();dry=ac.createGain();
+    lp.connect(dry);lp.connect(conv);conv.connect(wet);dry.connect(master);wet.connect(master);
+    analyser=ac.createAnalyser();analyser.fftSize=512;master.connect(analyser);analyser.connect(ac.destination);
+    // tape wobble LFO
+    wobble=ac.createOscillator();wobble.frequency.value=.35;wobbleGain=ac.createGain();wobbleGain.gain.value=14;wobble.connect(wobbleGain);wobble.start();
+    // fountain noise
+    var nb=ac.createBuffer(1,ac.sampleRate*3,ac.sampleRate),nd=nb.getChannelData(0);for(var i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+    noiseSrc=ac.createBufferSource();noiseSrc.buffer=nb;noiseSrc.loop=true;
+    var bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1800;bp.Q.value=.4;
+    fountainGain=ac.createGain();fountainGain.gain.value=0;
+    noiseSrc.connect(bp);bp.connect(fountainGain);fountainGain.connect(conv);fountainGain.connect(master);noiseSrc.start();
+    applyKnobs();
+  }
+  var analyser=null;
+  function applyKnobs(){
+    var sp=+document.getElementById('space').value/100,fo=+document.getElementById('fountain').value/100,sl=+document.getElementById('slow').value;
+    document.getElementById('spaceOut').textContent=Math.round(sp*100)+'%';
+    document.getElementById('fountainOut').textContent=Math.round(fo*100)+'%';
+    document.getElementById('slowOut').textContent='-'+sl+'%';
+    if(!ac)return;
+    var now=ac.currentTime;
+    wet.gain.setTargetAtTime(.15+sp*1.1,now,.3);dry.gain.setTargetAtTime(1-sp*.55,now,.3);
+    fountainGain.gain.setTargetAtTime(fo*.05,now,.3);
+    lp.frequency.setTargetAtTime(3400-sl*18,now,.3);
+  }
+  ['slow','space','fountain'].forEach(function(id){document.getElementById(id).addEventListener('input',applyKnobs);});
+  function epiano(freq,start,dur,vel){
+    var sf=slowFactor();
+    var o1=ac.createOscillator(),o2=ac.createOscillator(),g=ac.createGain(),g2=ac.createGain();
+    o1.type='sine';o2.type='triangle';
+    o1.frequency.value=freq*sf;o2.frequency.value=freq*sf*2.001;
+    wobbleGain.connect(o1.detune);wobbleGain.connect(o2.detune);
+    g2.gain.value=.18;
+    o1.connect(g);o2.connect(g2);g2.connect(g);g.connect(lp);
+    g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(vel,start+.02);
+    g.gain.exponentialRampToValueAtTime(vel*.35,start+.5);g.gain.exponentialRampToValueAtTime(.0008,start+dur);
+    o1.start(start);o2.start(start);o1.stop(start+dur+.05);o2.stop(start+dur+.05);
+    o1.onended=function(){try{wobbleGain.disconnect(o1.detune);wobbleGain.disconnect(o2.detune);}catch(e){}};
+  }
+  function bass(freq,start,dur){
+    var sf=slowFactor(),o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=freq*sf;wobbleGain.connect(o.detune);
+    o.connect(g);g.connect(lp);g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(.22,start+.03);g.gain.exponentialRampToValueAtTime(.001,start+dur);o.start(start);o.stop(start+dur+.05);
+  }
+  function chime(){
+    if(!ac){setup();}
+    if(ac.state==='suspended')ac.resume();
+    var t=ac.currentTime+.05;[[76,0],[72,.55],[67,1.1]].forEach(function(n){var o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=mtof(n[0])*slowFactor();o.connect(g);g.connect(conv);g.connect(master);g.gain.setValueAtTime(0,t+n[1]);g.gain.linearRampToValueAtTime(.18,t+n[1]+.01);g.gain.exponentialRampToValueAtTime(.001,t+n[1]+2.2);o.start(t+n[1]);o.stop(t+n[1]+2.3);});
+    setNow('♪ ding-dong ♪ attention shoppers ♪ the galleria will close in fifteen minutes ♪ thank you for shopping ♪');
+  }
+  function schedule(){
+    var T=TRACKS[track],spb=60/(T.bpm*slowFactor());
+    while(t0<ac.currentTime+.6){
+      var bar=Math.floor(step/8)%4,beat=step%8;
+      var ch=T.chords[bar];
+      if(beat===0||beat===3||beat===6){ch.forEach(function(m,i){epiano(mtof(m),t0+i*.012,spb*(beat===0?3.2:2.2),beat===0?.09:.06);});}
+      if(beat===0||beat===5)bass(mtof(T.bass[bar]),t0,spb*2.6);
+      if(beat%2===1&&Math.random()<.7){var mm=T.mel[(step>>1)%T.mel.length];epiano(mtof(mm+12),t0,spb*1.8,.045);}
+      t0+=spb/2;step++;
+    }
+  }
+  var startedAt=0;
+  function setNow(s){var n=document.getElementById('nowPlaying');n.textContent=s;n.style.animation='none';void n.offsetWidth;n.style.animation='';}
+  function play(){
+    if(!AC){setNow('★ this browser has no WebAudio ★ imagine a saxophone ★');return;}
+    if(!ac)setup();
+    if(ac.state==='suspended')ac.resume();
+    playing=true;t0=ac.currentTime+.1;step=0;startedAt=ac.currentTime;
+    timer=setInterval(schedule,120);schedule();
+    document.getElementById('play').textContent='■ Stop';document.getElementById('play').setAttribute('aria-pressed','true');
+    setNow('★ NOW PLAYING: '+TRACKS[track].name+' ★ 午前三時 ★ '+TRACKS[track].bpm+' bpm, slowed ★ the escalators are still moving ★');
+  }
+  function stop(){playing=false;clearInterval(timer);document.getElementById('play').textContent='▶ Play';document.getElementById('play').setAttribute('aria-pressed','false');setNow('★ paused ★ the fountain keeps running ★');}
+  document.getElementById('play').addEventListener('click',function(){playing?stop():play();});
+  document.getElementById('chime').addEventListener('click',chime);
+  document.querySelectorAll('.tracks .b95').forEach(function(b){b.addEventListener('click',function(){track=+b.dataset.t;document.querySelectorAll('.tracks .b95').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});if(playing){stop();play();}else setNow('★ loaded: '+TRACKS[track].name+' ★ press play ★');});});
+
+  /* visualiser */
+  var cv=document.getElementById('viz'),cx=cv.getContext('2d'),buf=null;
+  function sizeViz(){var d=Math.min(2,window.devicePixelRatio||1);cv.width=cv.clientWidth*d;cv.height=cv.clientHeight*d;cx.setTransform(d,0,0,d,0,0);}
+  sizeViz();window.addEventListener('resize',sizeViz);
+  function viz(ts){
+    var W=cv.clientWidth,H=cv.clientHeight;
+    cx.fillStyle='rgba(26,11,46,.35)';cx.fillRect(0,0,W,H);
+    // grid floor
+    cx.strokeStyle='rgba(255,113,206,.35)';cx.lineWidth=1;
+    for(var i=0;i<=12;i++){cx.beginPath();cx.moveTo(W/2+(i-6)*W/12*0.3,H*.45);cx.lineTo(W/2+(i-6)*W/12*1.4,H);cx.stroke();}
+    for(var j=0;j<6;j++){var y=H*.45+Math.pow(j/6,1.8)*H*.55+((ts/40)%10)*(j/6);cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke();}
+    if(analyser&&playing){
+      if(!buf)buf=new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(buf);
+      var n=48,bw=W/n;
+      for(var k=0;k<n;k++){var v=buf[Math.floor(k*buf.length/n/2.2)]/255;var h=v*H*.8;var g=cx.createLinearGradient(0,H-h,0,H);g.addColorStop(0,'#01cdfe');g.addColorStop(1,'#ff71ce');cx.fillStyle=g;cx.fillRect(k*bw+1,H*.5-h/2,bw-2,h);}
+      var s=Math.floor(ac.currentTime-startedAt);document.getElementById('timeOut').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+    }else{
+      cx.fillStyle='#ff71ce';cx.font='14px DotGothic16, monospace';cx.textAlign='center';cx.fillText(playing?'':'▶ 再生ボタンを押してください',W/2,H*.35);
+    }
+    requestAnimationFrame(viz);
+  }
+  requestAnimationFrame(viz);
+  applyKnobs();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marrow Lark Flightdeck</title>
+<meta name="description" content="An amber-phosphor spaceship cockpit HUD you can fly: steer through a parallax starfield, lock and fire on raiders, route reactor power and read the radar, alerts and pitch ladder.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;700&family=Major+Mono+Display&display=swap" rel="stylesheet">
+<style>
+:root{
+  --amb:#ffb547; --amb-d:rgba(255,181,71,.55); --amb-f:rgba(255,181,71,.12); --teal:#5fe3d0; --red:#ff5147; --space:#070612;
+  --ui:"Chakra Petch","Bahnschrift","DIN Alternate",system-ui,sans-serif; --disp:"Major Mono Display","Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0; height:100%; overflow:hidden}
+body{background:var(--space); color:var(--amb); font-family:var(--ui); user-select:none; -webkit-user-select:none}
+#view{position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:crosshair}
+.frame{position:fixed; inset:0; pointer-events:none; width:100%; height:100%}
+.hud{position:fixed; pointer-events:none; font-size:12px; letter-spacing:.08em; text-shadow:0 0 8px rgba(255,181,71,.5)}
+.hud .pe{pointer-events:auto}
+.id{top:max(14px,env(safe-area-inset-top)); left:18px}
+.id h1{font-family:var(--disp); font-weight:400; font-size:20px; margin:0; letter-spacing:.05em; text-transform:lowercase}
+.id p{margin:4px 0 0; opacity:.75; font-size:11px}
+.back{display:inline-block; margin-top:10px; color:var(--teal); text-decoration:none; border:1px solid rgba(95,227,208,.5); padding:4px 9px; font-size:11px; letter-spacing:.14em; clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.back:hover{background:rgba(95,227,208,.15)}
+:focus-visible{outline:2px solid var(--teal); outline-offset:3px}
+
+.sys{top:max(14px,env(safe-area-inset-top)); right:18px; width:230px}
+.box{border:1px solid var(--amb-d); background:linear-gradient(180deg, rgba(255,181,71,.07), rgba(255,181,71,.02)); padding:10px 12px; position:relative;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
+.box h2{margin:0 0 8px; font-size:10px; letter-spacing:.3em; font-weight:500; display:flex; justify-content:space-between; opacity:.85}
+.bar{display:grid; grid-template-columns:62px 1fr 38px; gap:8px; align-items:center; margin:5px 0; font-size:11px}
+.bar .t{height:8px; background:repeating-linear-gradient(90deg, rgba(255,181,71,.18) 0 5px, transparent 5px 7px); position:relative}
+.bar .t i{position:absolute; inset:0 auto 0 0; background:repeating-linear-gradient(90deg, var(--amb) 0 5px, transparent 5px 7px); transition:width .2s}
+.bar.warn .t i{background:repeating-linear-gradient(90deg, var(--red) 0 5px, transparent 5px 7px)}
+.bar.warn{color:var(--red)}
+.bar b{text-align:right; font-weight:500}
+.pips{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px}
+.pip{border:1px solid var(--amb-d); background:none; color:var(--amb); font:500 10px var(--ui); letter-spacing:.14em; padding:6px 0 5px; cursor:pointer; text-align:center}
+.pip span{display:flex; justify-content:center; gap:3px; margin-top:5px}
+.pip span i{width:6px; height:9px; border:1px solid var(--amb-d)}
+.pip span i.on{background:var(--amb); border-color:var(--amb); box-shadow:0 0 6px var(--amb)}
+.pip:hover{background:var(--amb-f)}
+.alerts{margin-top:10px}
+.alerts ul{list-style:none; margin:0; padding:0; font-size:11px; line-height:1.35}
+.alerts li{padding:5px 0 5px 10px; border-left:2px solid var(--amb-d); margin-bottom:4px; animation:in .4s ease-out}
+.alerts li.w{border-color:var(--red); color:var(--red); animation:in .4s ease-out, blink .5s steps(2) 3}
+.alerts li.i{border-color:var(--teal); color:var(--teal)}
+.alerts li time{display:block; opacity:.6; font-size:9.5px; letter-spacing:.14em}
+@keyframes in{from{transform:translateX(12px); opacity:0}}
+@keyframes blink{50%{opacity:.2}}
+.radar{left:18px; bottom:max(18px,env(safe-area-inset-bottom)); width:190px}
+#radar{width:166px; height:166px; display:block; margin:0 auto}
+.radar .legend{display:flex; justify-content:space-between; font-size:10px; margin-top:4px; opacity:.8}
+.keys{left:50%; bottom:max(14px,env(safe-area-inset-bottom)); transform:translateX(-50%); font-size:10.5px; opacity:.8; text-align:center; white-space:nowrap}
+.keys kbd{font-family:var(--ui); border:1px solid var(--amb-d); padding:1px 5px; margin:0 2px}
+.touch{display:none; right:16px; bottom:max(16px,env(safe-area-inset-bottom)); gap:10px}
+.tbtn{width:64px; height:64px; border-radius:50%; border:1.5px solid var(--amb); background:rgba(255,181,71,.08); color:var(--amb); font:700 11px var(--ui); letter-spacing:.14em; touch-action:none}
+.tbtn.fire{border-color:var(--red); color:var(--red); background:rgba(255,81,71,.12); width:74px; height:74px}
+.tbtn:active{background:rgba(255,181,71,.3)}
+.vign{position:fixed; inset:0; pointer-events:none; background:radial-gradient(ellipse at center, transparent 55%, rgba(255,40,30,.55)); opacity:0; transition:opacity .5s}
+.start{position:fixed; left:50%; top:62%; transform:translateX(-50%); pointer-events:none; font-size:12px; letter-spacing:.3em; text-align:center; animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+@media (max-width:760px){
+  .sys{width:auto; left:auto; top:auto; right:12px; bottom:max(96px,calc(env(safe-area-inset-bottom) + 96px)); max-width:176px}
+  .sys .alerts{display:none}
+  .box{padding:8px 9px}
+  .bar{grid-template-columns:48px 1fr 30px; font-size:10px; gap:5px; margin:3px 0}
+  .radar{left:12px; bottom:max(96px,calc(env(safe-area-inset-bottom) + 96px)); width:130px}
+  #radar{width:110px; height:110px}
+  .radar .legend{display:none}
+  .keys{display:none}
+  .touch{display:flex; left:12px; right:12px; justify-content:space-between; align-items:center}
+  .id{left:14px} .id h1{font-size:16px}
+  .toast-sm{display:block}
+}
+.toast-sm{display:none; position:fixed; left:14px; right:14px; top:96px; pointer-events:none; font-size:11px; color:var(--red); text-align:center; letter-spacing:.14em}
+@media (prefers-reduced-motion:reduce){ .alerts li,.alerts li.w,.start{animation:none} }
+</style>
+</head>
+<body>
+<canvas id="view" aria-label="Cockpit view. Arrow keys or WASD steer, space fires, T cycles targets."></canvas>
+<svg class="frame" id="frame" preserveAspectRatio="none" viewBox="0 0 1000 1000" aria-hidden="true">
+  <defs><linearGradient id="strut" x1="0" x2="1"><stop offset="0" stop-color="#15121e"/><stop offset=".6" stop-color="#231e2e"/><stop offset="1" stop-color="#0d0b14"/></linearGradient></defs>
+  <path d="M0 0 L140 0 L60 1000 L0 1000Z" fill="url(#strut)" opacity=".92"/>
+  <path d="M1000 0 L860 0 L940 1000 L1000 1000Z" fill="url(#strut)" opacity=".92"/>
+  <path d="M0 0 L1000 0 L1000 26 Q500 70 0 26Z" fill="#0f0d17" opacity=".95"/>
+  <path d="M0 1000 L0 900 Q500 830 1000 900 L1000 1000Z" fill="#0f0d17" opacity=".96"/>
+  <path d="M140 0 L60 1000" stroke="rgba(255,181,71,.25)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+  <path d="M860 0 L940 1000" stroke="rgba(255,181,71,.25)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+  <path d="M0 900 Q500 830 1000 900" stroke="rgba(255,181,71,.3)" fill="none" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+</svg>
+<div class="vign" id="vign"></div>
+
+<div class="hud id">
+  <h1>isv marrow lark</h1>
+  <p>ESCORT PATROL · KESTREL RELAY · T+<span id="clock">00:00:00</span></p>
+  <a class="back pe" id="backLink" href="index.html">← SHOWCASE</a>
+</div>
+
+<div class="hud sys">
+  <div class="box">
+    <h2><span>SYSTEMS</span><span id="kills">0 KILLS</span></h2>
+    <div class="bar" id="bShield"><span>SHIELD</span><span class="t"><i></i></span><b>100</b></div>
+    <div class="bar" id="bHull"><span>HULL</span><span class="t"><i></i></span><b>100</b></div>
+    <div class="bar" id="bCap"><span>CAP</span><span class="t"><i></i></span><b>100</b></div>
+    <div class="bar" id="bHeat"><span>HEAT</span><span class="t"><i></i></span><b>40</b></div>
+    <div class="bar" id="bFuel"><span>FUEL</span><span class="t"><i></i></span><b>86</b></div>
+    <div class="pips" role="group" aria-label="Power routing">
+      <button class="pip pe" id="pEng">1 ENG<span></span></button>
+      <button class="pip pe" id="pShd">2 SHD<span></span></button>
+      <button class="pip pe" id="pWpn">3 WPN<span></span></button>
+    </div>
+  </div>
+  <div class="box alerts" aria-live="polite"><h2><span>COMMS / ALERTS</span><span id="alertN">0</span></h2><ul id="alerts"></ul></div>
+</div>
+
+<div class="hud radar"><div class="box"><h2><span>RADAR</span><span>4 KM</span></h2><canvas id="radar"></canvas>
+  <div class="legend"><span style="color:#ff5147">■ HOSTILE</span><span style="color:#5fe3d0">■ NEUTRAL</span><span>◆ NAV</span></div></div></div>
+
+<div class="hud keys"><kbd>W A S D</kbd> steer · <kbd>Q E</kbd> roll · <kbd>R F</kbd> throttle · <kbd>SHIFT</kbd> boost · <kbd>SPACE</kbd> fire · <kbd>T</kbd> target · <kbd>1 2 3</kbd> power</div>
+<div class="hud touch" aria-label="Touch controls">
+  <button class="tbtn pe" id="tTarget">TGT</button>
+  <button class="tbtn pe" id="tBoost">BOOST</button>
+  <button class="tbtn fire pe" id="tFire">FIRE</button>
+</div>
+<div class="toast-sm" id="toastSm"></div>
+<div class="hud start" id="start">DRAG OR USE KEYS TO FLY</div>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cv = $('#view'), c = cv.getContext('2d'); const rc = $('#radar'), r2 = rc.getContext('2d');
+let W, H, dpr, F;
+const AMB = '#ffb547', TEAL = '#5fe3d0', RED = '#ff5147';
+function resize(){ dpr = Math.min(devicePixelRatio||1, 2); W = innerWidth; H = innerHeight; cv.width = W*dpr; cv.height = H*dpr; c.setTransform(dpr,0,0,dpr,0,0);
+  F = Math.min(W,H)*.9; const rr = rc.getBoundingClientRect(); rc.width = rr.width*dpr; rc.height = rr.height*dpr; r2.setTransform(dpr,0,0,dpr,0,0); }
+addEventListener('resize', resize);
+
+/* ---------- world ---------- */
+const NSTAR = 900, stars = [];
+for (let i=0;i<NSTAR;i++) stars.push({x:(Math.random()-.5)*4000, y:(Math.random()-.5)*4000, z:Math.random()*3000+1, b:Math.random(), px:null, py:null});
+const dust = Array.from({length:60},()=>({x:(Math.random()-.5)*600, y:(Math.random()-.5)*600, z:Math.random()*600+10}));
+const NAMES = ['VEX-3 RAIDER','VEX-7 RAIDER','CUTTER "MAGPIE"','VEX-9 RAIDER'];
+const NEUT = ['HAULER ORLA BEY','TENDER SAINT KILDA','ORE BARGE 4411'];
+let contacts = [], nextId = 1, parts = [];
+function spawn(type){ const hostile = type==='raider'; const k = {id:nextId++, type, x:(Math.random()-.5)*2400, y:(Math.random()-.5)*1400, z:2600+Math.random()*2400,
+  vx:(Math.random()-.5)*80, vy:(Math.random()-.5)*40, vz: hostile ? -60-Math.random()*80 : 30, hull:100, name: hostile ? NAMES[Math.floor(Math.random()*NAMES.length)] : NEUT[Math.floor(Math.random()*NEUT.length)],
+  phase:Math.random()*6, cool:2+Math.random()*3}; contacts.push(k); return k; }
+spawn('raider'); spawn('raider'); spawn('freighter');
+const nav = {x:600, y:-200, z:52000, name:'KESTREL RELAY', type:'nav'};
+
+const S = { yaw:0, pitch:0, roll:0, yr:0, pr:0, rr:0, speed:220, throttle:.55, boost:false, shield:100, hull:100, cap:100, heat:40, fuel:86,
+  pips:{eng:2, shd:2, wpn:2}, target:null, lock:0, kills:0, shake:0, t0:performance.now(), fired:0, hitFlash:0, started:false };
+const input = {up:0,down:0,left:0,right:0,rl:0,rr:0};
+let mx = 0, my = 0, pmx = 0, pmy = 0, drag = null;
+const beams = [], tracers = [];
+
+function rotAll(arr, yaw, pitch, roll){
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
+  for (const p of arr){ let x = p.x*cy - p.z*sy, z = p.x*sy + p.z*cy; let y = p.y*cp - z*sp; z = p.y*sp + z*cp; const x2 = x*cr - y*sr, y2 = x*sr + y*cr; p.x = x2; p.y = y2; p.z = z; }
+}
+function proj(p, par){ const cx = W/2 - pmx*(par||0)*(400/Math.max(p.z,50)), cy = H/2 - pmy*(par||0)*(400/Math.max(p.z,50));
+  return [cx + p.x/p.z*F, cy + p.y/p.z*F]; }
+
+/* ---------- alerts ---------- */
+const alertsEl = $('#alerts'); let alertCount = 0, lastToast = 0;
+function alertMsg(txt, kind=''){ alertCount++; $('#alertN').textContent = alertCount;
+  const li = document.createElement('li'); if (kind) li.className = kind; li.innerHTML = `<time>T+${clock()}</time>${txt}`; alertsEl.prepend(li);
+  while (alertsEl.children.length > 5) alertsEl.lastChild.remove();
+  if (kind==='w'){ const t = $('#toastSm'); t.textContent = txt; clearTimeout(lastToast); lastToast = setTimeout(()=>t.textContent='', 2500); } }
+function clock(){ const s = Math.floor((performance.now()-S.t0)/1000) + 3600*2 + 14*60; return [s/3600, (s/60)%60, s%60].map(v=>String(Math.floor(v)).padStart(2,'0')).join(':'); }
+const CHATTER = [['Kestrel Relay: "Lark, you are cleared through the corridor. Mind the debris on vector two-seven."','i'],
+  ['Coolant loop B pressure nominal after purge.',''],['Micrometeoroid pitting on forward canopy. Integrity 99.2%.',''],
+  ['Hauler Orla Bey: "Appreciate the escort, Lark. Coffee is on us at the relay."','i'],['Nav: course correction 0.4° applied.',''],
+  ['Long-range scan: ion storm 40,000 km to starboard, drifting away.','']];
+let chatterT = 6, chatterI = 0;
+
+/* ---------- power ---------- */
+function renderPips(){ for (const [k,id] of [['eng','#pEng'],['shd','#pShd'],['wpn','#pWpn']]){ const sp = $(id).querySelector('span'); sp.innerHTML = [0,1,2,3].map(i=>`<i class="${i<S.pips[k]?'on':''}"></i>`).join(''); $(id).setAttribute('aria-label', `${k} power ${S.pips[k]} of 4`); } }
+function route(k){ if (S.pips[k] >= 4) return; const others = Object.keys(S.pips).filter(o => o!==k).sort((a,b)=>S.pips[b]-S.pips[a]); if (S.pips[others[0]] <= 0) return;
+  S.pips[others[0]]--; S.pips[k]++; renderPips(); beep(660,.05); }
+$('#pEng').addEventListener('click', () => route('eng')); $('#pShd').addEventListener('click', () => route('shd')); $('#pWpn').addEventListener('click', () => route('wpn'));
+
+/* ---------- audio ---------- */
+let ac = null;
+function audio(){ if (ac) return ac; try{ ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ ac = null; } return ac; }
+function beep(f, d, type='square', g=.04){ const a = audio(); if (!a) return; const o = a.createOscillator(), gn = a.createGain(); o.type = type; o.frequency.value = f; gn.gain.setValueAtTime(g, a.currentTime); gn.gain.exponentialRampToValueAtTime(.0001, a.currentTime+d); o.connect(gn); gn.connect(a.destination); o.start(); o.stop(a.currentTime+d+.02); }
+function zap(){ const a = audio(); if (!a) return; const o = a.createOscillator(), gn = a.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(1400,a.currentTime); o.frequency.exponentialRampToValueAtTime(120,a.currentTime+.18);
+  gn.gain.setValueAtTime(.06,a.currentTime); gn.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.2); o.connect(gn); gn.connect(a.destination); o.start(); o.stop(a.currentTime+.22); }
+function boom(){ const a = audio(); if (!a) return; const len = a.sampleRate*.8, b = a.createBuffer(1,len,a.sampleRate), d = b.getChannelData(0); for (let i=0;i<len;i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len,2);
+  const s = a.createBufferSource(); s.buffer = b; const f = a.createBiquadFilter(); f.type='lowpass'; f.frequency.value = 600; const g = a.createGain(); g.gain.value = .35; s.connect(f); f.connect(g); g.connect(a.destination); s.start(); }
+
+/* ---------- actions ---------- */
+function fire(){
+  S.started = true; if (S.cap < 12){ beep(160,.12,'square',.03); return; }
+  S.cap -= 12; S.fired++; zap();
+  beams.push({t:0, life:.14});
+  const tg = S.target; if (tg && S.lock >= 1 && tg.z > 0){ setTimeout(() => { if (!contacts.includes(tg)) return; tg.hull -= 34; tg.hitT = .2;
+    if (tg.hull <= 0) destroy(tg); }, 90); }
+}
+function destroy(k){ boom(); for (let i=0;i<70;i++){ const a = Math.random()*Math.PI*2, b = Math.random()*Math.PI-Math.PI/2, v = 80+Math.random()*260;
+  parts.push({x:k.x, y:k.y, z:k.z, vx:Math.cos(a)*Math.cos(b)*v, vy:Math.sin(b)*v, vz:Math.sin(a)*Math.cos(b)*v, life:1+Math.random()*.8, hot:Math.random()<.5}); }
+  contacts = contacts.filter(x => x !== k); if (S.target === k){ S.target = null; S.lock = 0; }
+  if (k.type==='raider'){ S.kills++; $('#kills').textContent = S.kills + (S.kills===1?' KILL':' KILLS'); alertMsg(`${k.name} destroyed.`, ''); }
+  else alertMsg(`You destroyed ${k.name}. Relay command is not happy.`, 'w');
+  setTimeout(() => spawn(Math.random()<.75?'raider':'freighter'), 3500); }
+function cycleTarget(){ S.started = true; const vis = contacts.filter(k => k.z > 0).sort((a,b) => a.z - b.z); if (!vis.length){ S.target = null; return; }
+  const i = vis.indexOf(S.target); S.target = vis[(i+1) % vis.length]; S.lock = 0; beep(880,.06); }
+
+/* ---------- input ---------- */
+const keymap = {ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',KeyQ:'rl',KeyE:'rr'};
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'A') return;
+  if (keymap[e.code]){ input[keymap[e.code]] = 1; S.started = true; e.preventDefault(); }
+  else if (e.code==='Space'){ e.preventDefault(); if (!e.repeat) fire(); }
+  else if (e.code==='KeyT' || e.code==='Tab'){ e.preventDefault(); cycleTarget(); }
+  else if (e.key==='Shift'){ S.boost = true; S.started = true; }
+  else if (e.code==='KeyR'){ S.throttle = Math.min(1, S.throttle+.1); beep(520,.04); }
+  else if (e.code==='KeyF'){ S.throttle = Math.max(0, S.throttle-.1); beep(420,.04); }
+  else if (e.key==='1') route('eng'); else if (e.key==='2') route('shd'); else if (e.key==='3') route('wpn');
+});
+addEventListener('keyup', e => { if (keymap[e.code]) input[keymap[e.code]] = 0; if (e.key==='Shift') S.boost = false; });
+addEventListener('blur', () => { for (const k in input) input[k] = 0; S.boost = false; });
+addEventListener('pointermove', e => { mx = (e.clientX/W - .5)*2; my = (e.clientY/H - .5)*2; if (drag){ drag.dx = e.clientX - drag.x; drag.dy = e.clientY - drag.y; } });
+cv.addEventListener('pointerdown', e => { S.started = true; cv.setPointerCapture(e.pointerId); drag = {x:e.clientX, y:e.clientY, dx:0, dy:0, t:performance.now()}; });
+cv.addEventListener('pointerup', () => { if (drag && Math.hypot(drag.dx,drag.dy) < 6 && performance.now()-drag.t < 300) fire(); drag = null; });
+cv.addEventListener('pointercancel', () => drag = null);
+$('#tFire').addEventListener('pointerdown', e => { e.preventDefault(); fire(); });
+$('#tTarget').addEventListener('click', cycleTarget);
+$('#tBoost').addEventListener('pointerdown', e => { e.preventDefault(); S.boost = true; S.started = true; });
+['pointerup','pointerleave','pointercancel'].forEach(ev => $('#tBoost').addEventListener(ev, () => S.boost = false));
+
+/* ---------- update ---------- */
+let last = performance.now(), T = 0;
+function update(dt){
+  T += dt;
+  let iy = input.right - input.left, ip = input.down - input.up, ir = input.rr - input.rl;
+  if (drag){ iy += Math.max(-1,Math.min(1,drag.dx/120)); ip += Math.max(-1,Math.min(1,drag.dy/120)); }
+  const agility = .7 + S.pips.eng*.12;
+  const k = 1 - Math.exp(-dt*3);
+  S.yr += (iy*.9*agility - S.yr)*k; S.pr += (ip*.7*agility - S.pr)*k; S.rr += (ir*1.6 - S.rr)*k;
+  S.yaw += S.yr*dt; S.pitch += S.pr*dt; S.roll += S.rr*dt;
+  const boosting = S.boost && S.fuel > 0;
+  const tgtSpeed = (120 + S.throttle*300 + S.pips.eng*25) * (boosting ? 2.6 : 1);
+  S.speed += (tgtSpeed - S.speed)*(1-Math.exp(-dt*1.5));
+  if (boosting) S.fuel = Math.max(0, S.fuel - dt*1.8);
+  S.heat += ((boosting ? 92 : 30 + S.throttle*25 + S.pips.eng*6) - S.heat)*(1-Math.exp(-dt*.4));
+  if (S.heat > 85 && !S.heatWarned){ S.heatWarned = true; alertMsg('Reactor temperature critical. Ease off the boost.', 'w'); beep(300,.3,'square',.05); }
+  if (S.heat < 70) S.heatWarned = false;
+  S.cap = Math.min(100, S.cap + dt*(4 + S.pips.wpn*5));
+  S.shield = Math.min(100, S.shield + dt*(S.pips.shd*1.4));
+  const dz = S.speed*dt;
+  const yawStep = -S.yr*dt, pitchStep = S.pr*dt, rollStep = -S.rr*dt;
+  rotAll(stars, yawStep, pitchStep, rollStep); rotAll(dust, yawStep, pitchStep, rollStep); rotAll(contacts, yawStep, pitchStep, rollStep); rotAll(parts, yawStep, pitchStep, rollStep); rotAll([nav], yawStep, pitchStep, rollStep);
+  for (const s of stars){ s.z -= dz*.25; if (s.z < 1 || Math.abs(s.x) > 3000 || Math.abs(s.y) > 3000 || s.z > 3200){ s.x = (Math.random()-.5)*4000; s.y = (Math.random()-.5)*4000; s.z = s.z < 1 ? 3000 : Math.random()*3000+1; s.px = null; } }
+  for (const d of dust){ d.z -= dz; if (d.z < 5 || Math.abs(d.x)>800 || Math.abs(d.y)>800){ d.x = (Math.random()-.5)*600; d.y = (Math.random()-.5)*600; d.z = 600; d.px = null; } }
+  nav.z -= dz*.05;
+  for (const k of contacts){ k.phase += dt; const weave = k.type==='raider' ? Math.sin(k.phase*1.3)*60 : 0;
+    k.x += (k.vx + weave)*dt; k.y += (k.vy + Math.cos(k.phase)*20)*dt; k.z += k.vz*dt - dz;
+    if (k.hitT) k.hitT = Math.max(0, k.hitT - dt);
+    if (k.type==='raider' && k.z > 150 && k.z < 1800){ k.cool -= dt; if (k.cool <= 0){ k.cool = 2.2 + Math.random()*3; enemyFire(k); } }
+    if (k.z < -200 || k.z > 9000 || Math.abs(k.x) > 7000 || Math.abs(k.y) > 7000){ contacts = contacts.filter(x => x!==k); if (S.target===k){ S.target = null; S.lock = 0; } setTimeout(() => spawn(Math.random()<.7?'raider':'freighter'), 1200); }
+  }
+  for (const p of parts){ p.x += p.vx*dt; p.y += p.vy*dt; p.z += p.vz*dt - dz; p.life -= dt; } parts = parts.filter(p => p.life > 0 && p.z > 5);
+  // lock
+  const tg = S.target; if (tg && contacts.includes(tg) && tg.z > 0){ const [sx,sy] = proj(tg, 0); const d = Math.hypot(sx - (W/2 + aimX()), sy - (H/2 + aimY()));
+    const prev = S.lock; S.lock = d < 90 ? Math.min(1.2, S.lock + dt*.9) : Math.max(0, S.lock - dt*1.5); if (prev < 1 && S.lock >= 1) beep(1320,.1,'sine',.06); }
+  else if (tg && !contacts.includes(tg)){ S.target = null; }
+  if (!S.target && contacts.some(k=>k.type==='raider' && k.z>0)) { /* auto suggest nearest hostile */ const n = contacts.filter(k=>k.type==='raider'&&k.z>0).sort((a,b)=>a.z-b.z)[0]; if (n && n.z < 3500) S.target = n; }
+  for (const b of beams) b.t += dt; while (beams.length && beams[0].t > beams[0].life) beams.shift();
+  for (const t of tracers) t.t += dt; while (tracers.length && tracers[0].t > .35) tracers.shift();
+  S.shake = Math.max(0, S.shake - dt*2.5); S.hitFlash = Math.max(0, S.hitFlash - dt*1.2);
+  chatterT -= dt; if (chatterT <= 0){ chatterT = 9 + Math.random()*8; const m = CHATTER[chatterI++ % CHATTER.length]; alertMsg(m[0], m[1]); }
+  if (S.hull <= 0){ S.hull = 100; S.shield = 60; alertMsg('Hull breach sealed. Damage control teams restored integrity.', 'w'); }
+}
+function enemyFire(k){ const [sx,sy] = proj(k,0); tracers.push({x:sx, y:sy, t:0}); beep(220,.15,'sawtooth',.03);
+  setTimeout(() => { const miss = Math.random() < .35 + S.pips.eng*.06; if (miss){ return; }
+    S.shake = reduce ? 0 : .6; S.hitFlash = 1; const dmg = 9 + Math.random()*6;
+    if (S.shield > dmg){ S.shield -= dmg; } else { S.hull -= dmg - S.shield*.5; S.shield = 0; alertMsg('Shields down! Hull taking fire.', 'w'); }
+    if (S.shield < 30 && !S.shWarned){ S.shWarned = true; alertMsg(`Shields at ${Math.round(S.shield)}%. Route power to SHD (2).`, 'w'); }
+    if (S.shield > 50) S.shWarned = false; }, 260); }
+const aimX = () => pmx*40, aimY = () => pmy*30;
+
+/* ---------- draw ---------- */
+function draw(){
+  pmx += (mx - pmx)*.08; pmy += (my - pmy)*.08;
+  const sh = S.shake*14; const ox = sh ? (Math.random()-.5)*sh : 0, oy = sh ? (Math.random()-.5)*sh : 0;
+  c.setTransform(dpr,0,0,dpr,ox*dpr,oy*dpr);
+  // space
+  const g = c.createRadialGradient(W*.5 - pmx*30, H*.45, 0, W*.5, H*.5, Math.max(W,H)*.8); g.addColorStop(0,'#1a1238'); g.addColorStop(.5,'#0c0a1f'); g.addColorStop(1,'#050409');
+  c.fillStyle = g; c.fillRect(-20,-20,W+40,H+40);
+  // nebula wisps
+  c.globalCompositeOperation = 'lighter';
+  const nb = [[.25,.3,'rgba(120,60,160,.10)'],[.75,.65,'rgba(40,120,150,.08)'],[.55,.2,'rgba(200,90,60,.06)']];
+  for (const [nx,ny,col] of nb){ const x = W*nx - S.yaw*120%W - pmx*20, y = H*ny + S.pitch*80%H - pmy*14; const rg = c.createRadialGradient(x,y,0,x,y,Math.max(W,H)*.35); rg.addColorStop(0,col); rg.addColorStop(1,'rgba(0,0,0,0)'); c.fillStyle = rg; c.fillRect(0,0,W,H); }
+  c.globalCompositeOperation = 'source-over';
+  // stars
+  const streak = !reduce && S.speed > 500;
+  for (const s of stars){ if (s.z <= 1) continue; const [x,y] = proj(s, 60); const size = Math.max(.4, (1 - s.z/3200)*2.4); const a = Math.min(1, (1 - s.z/3200)*1.3)*(.4+s.b*.6);
+    if (streak && s.px !== null){ c.strokeStyle = `rgba(255,236,210,${a})`; c.lineWidth = size*.8; c.beginPath(); c.moveTo(s.px, s.py); c.lineTo(x,y); c.stroke(); }
+    else { c.fillStyle = s.b > .9 ? `rgba(180,220,255,${a})` : `rgba(255,240,220,${a})`; c.fillRect(x, y, size, size); }
+    s.px = x; s.py = y; }
+  for (const d of dust){ if (d.z <= 5) continue; const [x,y] = proj(d, 120); const a = Math.min(.5, 1 - d.z/600); c.strokeStyle = `rgba(255,181,71,${a*.5})`; c.lineWidth = 1;
+    if (d.px != null){ c.beginPath(); c.moveTo(d.px, d.py); c.lineTo(x,y); c.stroke(); } d.px = x; d.py = y; }
+  // nav marker
+  if (nav.z > 0){ const [x,y] = proj(nav, 0); if (x > 0 && x < W && y > 0 && y < H){ c.strokeStyle = TEAL; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, y-10); c.lineTo(x+10,y); c.lineTo(x,y+10); c.lineTo(x-10,y); c.closePath(); c.stroke();
+      c.fillStyle = TEAL; c.font = '500 10px "Chakra Petch", sans-serif'; c.textAlign = 'center'; c.fillText(`${nav.name} · ${(nav.z/1000).toFixed(1)} MM`, x, y+24); } }
+  // contacts
+  for (const k of contacts){ if (k.z <= 20) continue; const [x,y] = proj(k, 0); const s = Math.max(2, 26*F/k.z/ (k.type==='raider'?1:.5));
+    const col = k.type==='raider' ? RED : TEAL; c.strokeStyle = k.hitT ? '#fff' : col; c.lineWidth = 1.4;
+    c.save(); c.translate(x,y); c.rotate(Math.sin(k.phase)*.3 - S.roll*0);
+    c.beginPath();
+    if (k.type==='raider'){ c.moveTo(0,-s*.3); c.lineTo(s,s*.35); c.lineTo(s*.3,s*.2); c.lineTo(0,s*.5); c.lineTo(-s*.3,s*.2); c.lineTo(-s,s*.35); c.closePath(); c.moveTo(0,-s*.3); c.lineTo(0,s*.5); }
+    else { c.rect(-s*1.2,-s*.35,s*2.4,s*.7); c.moveTo(-s*.6,-s*.35); c.lineTo(-s*.6,s*.35); c.moveTo(s*.2,-s*.35); c.lineTo(s*.2,s*.35); }
+    c.stroke(); c.fillStyle = col; c.globalAlpha = .9; c.beginPath(); c.arc(0, s*.3, Math.max(1.2,s*.06), 0, Math.PI*2); c.fill(); c.globalAlpha = 1; c.restore();
+    if (k !== S.target){ c.strokeStyle = col; c.globalAlpha = .6; c.lineWidth = 1; const b = Math.max(10, s*1.3); c.beginPath();
+      c.moveTo(x-b,y-b+5); c.lineTo(x-b,y-b); c.lineTo(x-b+5,y-b); c.moveTo(x+b-5,y+b); c.lineTo(x+b,y+b); c.lineTo(x+b,y+b-5); c.stroke(); c.globalAlpha = 1; } }
+  // particles
+  for (const p of parts){ const [x,y] = proj(p,0); const a = Math.min(1,p.life); c.fillStyle = p.hot ? `rgba(255,${150+Math.random()*80|0},80,${a})` : `rgba(255,220,180,${a*.7})`; const s = Math.max(1, 6*F/p.z*.3); c.fillRect(x,y,s,s); }
+  // tracers
+  for (const t of tracers){ const f = t.t/.35; c.strokeStyle = `rgba(255,81,71,${1-f})`; c.lineWidth = 2.5; c.beginPath(); c.moveTo(t.x + (W/2-t.x)*Math.max(0,f-.3), t.y + (H/2-t.y)*Math.max(0,f-.3)); c.lineTo(t.x + (W/2-t.x)*f, t.y + (H/2-t.y)*f); c.stroke(); }
+  // beams
+  const ax = W/2 + aimX(), ay = H/2 + aimY();
+  for (const b of beams){ const f = 1 - b.t/b.life; for (const sx of [W*.12, W*.88]){ const grd = c.createLinearGradient(sx, H, ax, ay); grd.addColorStop(0, `rgba(95,227,208,${f})`); grd.addColorStop(1, `rgba(255,255,255,${f})`);
+    c.strokeStyle = grd; c.lineWidth = 4*f+1; c.beginPath(); c.moveTo(sx, H*.95); c.lineTo(ax, ay); c.stroke(); } }
+  c.setTransform(dpr,0,0,dpr,0,0);
+  drawHUD(ax, ay);
+  $('#vign').style.opacity = Math.max(S.hitFlash*.9, S.hull < 35 ? .35 + .2*Math.sin(T*6) : 0);
+}
+function txt(s, x, y, align='center', col=AMB, size=11, weight=500){ c.fillStyle = col; c.font = `${weight} ${size}px "Chakra Petch", sans-serif`; c.textAlign = align; c.fillText(s, x, y); }
+function drawHUD(ax, ay){
+  const cx = W/2, cy = H/2; const mob = W < 700; const R = mob ? 70 : 110;
+  c.save(); c.shadowColor = 'rgba(255,181,71,.6)'; c.shadowBlur = 6; c.strokeStyle = AMB; c.lineWidth = 1.2;
+  // pitch ladder
+  c.save(); c.beginPath(); c.rect(cx - R*2.2, cy - R*1.6, R*4.4, R*3.2); c.clip(); c.translate(cx, cy); c.rotate(-S.roll);
+  const pdeg = S.pitch*180/Math.PI; const pxPerDeg = R/12;
+  for (let d = Math.floor((pdeg-40)/10)*10; d <= pdeg+40; d += 10){ const y = (pdeg - d)*pxPerDeg*-1; const w = d===0 ? R*2 : R*.9; const wrapped = ((d+180)%360+360)%360-180;
+    c.globalAlpha = .75; c.beginPath(); if (d % 20 === 0 || d===0){ c.moveTo(-w, y); c.lineTo(-R*.45, y); c.moveTo(R*.45, y); c.lineTo(w, y); }
+    else { c.setLineDash([6,5]); c.moveTo(-w*.8, y); c.lineTo(-R*.45, y); c.moveTo(R*.45, y); c.lineTo(w*.8, y); }
+    c.stroke(); c.setLineDash([]); if (d !== 0) { txt(String(Math.abs(wrapped)), -w-14, y+4, 'center', AMB, 10); txt(String(Math.abs(wrapped)), w+14, y+4, 'center', AMB, 10); } }
+  c.restore(); c.globalAlpha = 1;
+  // boresight / reticle
+  c.beginPath(); c.arc(ax, ay, R*.34, 0, Math.PI*2); c.stroke();
+  for (let i=0;i<4;i++){ const a = i*Math.PI/2 + T*.4*(S.lock>=1?3:1); c.beginPath(); c.arc(ax, ay, R*.46, a+.2, a+.9); c.stroke(); }
+  c.beginPath(); c.moveTo(ax-8,ay); c.lineTo(ax-3,ay); c.moveTo(ax+3,ay); c.lineTo(ax+8,ay); c.moveTo(ax,ay-8); c.lineTo(ax,ay-3); c.moveTo(ax,ay+3); c.lineTo(ax,ay+8); c.stroke();
+  // flight path marker (velocity vector)
+  const fvx = cx - S.yr*80, fvy = cy + S.pr*80; c.beginPath(); c.arc(fvx, fvy, 6, 0, Math.PI*2); c.moveTo(fvx-14,fvy); c.lineTo(fvx-6,fvy); c.moveTo(fvx+6,fvy); c.lineTo(fvx+14,fvy); c.moveTo(fvx,fvy-6); c.lineTo(fvx,fvy-12); c.stroke();
+  // heading tape
+  const hy = mob ? 118 : 70, hw = mob ? W*.7 : Math.min(520, W*.45); const hdg = ((-S.yaw*180/Math.PI)%360+360)%360;
+  c.save(); c.beginPath(); c.rect(cx-hw/2, hy-24, hw, 44); c.clip();
+  for (let d = Math.floor(hdg-40); d <= hdg+40; d++){ if (d % 5) continue; const x = cx + (d-hdg)*hw/80; c.beginPath(); c.moveTo(x, hy); c.lineTo(x, hy - (d%10===0?10:5)); c.stroke();
+    if (d % 10 === 0){ const v = ((d%360)+360)%360; const lab = {0:'N',90:'E',180:'S',270:'W'}[v] || String(v).padStart(3,'0'); txt(lab, x, hy-14, 'center', AMB, 10); } }
+  c.restore(); c.beginPath(); c.moveTo(cx, hy+2); c.lineTo(cx-6, hy+10); c.lineTo(cx+6, hy+10); c.closePath(); c.fillStyle = AMB; c.fill();
+  txt(String(Math.round(hdg)).padStart(3,'0') + '°', cx, hy+26, 'center', AMB, 13, 700);
+  // speed & range tapes
+  if (!mob){
+    const tx = cx - R*2.5, th = R*2.4;
+    tape(tx, cy, th, S.speed, 50, 'M/S', 'left'); tape(cx + R*2.5, cy, th, nav.z/1000, 1, 'MM TO RELAY', 'right');
+    // throttle
+    const thx = tx - 42; c.strokeRect(thx, cy - th/2, 8, th); c.fillStyle = S.boost ? RED : AMB; const fh = th*Math.min(1, S.throttle*(S.boost?1.4:1)); c.fillRect(thx+2, cy + th/2 - fh, 4, fh);
+    txt('THR', thx+4, cy + th/2 + 16, 'center', AMB, 9);
+    txt(`G ${ (1 + Math.abs(S.pr)*2.2 + Math.abs(S.yr)*1.4).toFixed(1)}`, tx, cy + th/2 + 36, 'center', AMB, 11);
+    txt(`ROLL ${Math.round(((S.roll*180/Math.PI)%360+540)%360-180)}°`, cx + R*2.5, cy + th/2 + 36, 'center', AMB, 11);
+  } else {
+    txt(`${Math.round(S.speed)} M/S`, cx - R*1.3, cy + R*1.5, 'center', AMB, 12, 700);
+    txt(`${(nav.z/1000).toFixed(1)} MM`, cx + R*1.3, cy + R*1.5, 'center', TEAL, 12, 700);
+  }
+  // target box
+  const tg = S.target;
+  if (tg && tg.z > 0){ const [x,y] = proj(tg,0); const col = tg.type==='raider' ? RED : TEAL; const b = 22 + (S.lock<1 ? (1-S.lock)*22 : Math.sin(T*10)*2);
+    c.strokeStyle = col; c.shadowColor = col; c.lineWidth = 1.6; const onScreen = x > 0 && x < W && y > 0 && y < H;
+    if (onScreen){ c.save(); c.translate(x,y); c.rotate(S.lock>=1 ? 0 : (1-S.lock)*Math.PI/2); c.strokeRect(-b,-b,b*2,b*2); c.restore();
+      if (S.lock >= 1){ c.beginPath(); c.moveTo(x-b-10,y); c.lineTo(x-b,y); c.moveTo(x+b,y); c.lineTo(x+b+10,y); c.moveTo(x,y-b-10); c.lineTo(x,y-b); c.moveTo(x,y+b); c.lineTo(x,y+b+10); c.stroke(); }
+      txt(tg.name, x + b + 8, y - b + 8, 'left', col, 11, 700); txt(`${Math.round(tg.z)} M · HULL ${Math.max(0,Math.round(tg.hull))}%`, x + b + 8, y - b + 22, 'left', col, 10);
+      txt(S.lock >= 1 ? 'LOCKED' : S.lock > 0 ? 'LOCKING ' + Math.round(S.lock*100) + '%' : 'STEER TO LOCK', x, y + b + 18, 'center', col, 10, 700); }
+    else { const ang = Math.atan2(y-cy, x-cx); const ex = cx + Math.cos(ang)*R*1.2, ey = cy + Math.sin(ang)*R*1.2;
+      c.fillStyle = col; c.save(); c.translate(ex,ey); c.rotate(ang); c.beginPath(); c.moveTo(12,0); c.lineTo(0,-7); c.lineTo(0,7); c.closePath(); c.fill(); c.restore(); } }
+  else if (tg && tg.z <= 0){ txt('TARGET BEHIND', cx, cy + R*.9, 'center', RED, 11, 700); }
+  // capacitor arc around reticle
+  c.strokeStyle = S.cap < 20 ? RED : TEAL; c.shadowColor = TEAL; c.lineWidth = 3; c.beginPath(); c.arc(ax, ay, R*.58, Math.PI*.75, Math.PI*.75 + Math.PI*.5*S.cap/100); c.stroke();
+  c.strokeStyle = S.shield < 30 ? RED : AMB; c.beginPath(); c.arc(ax, ay, R*.58, Math.PI*.25, Math.PI*.25 - Math.PI*.5*S.shield/100, true); c.stroke();
+  c.restore();
+}
+function tape(x, cy, h, val, step, label, side){
+  c.save(); c.strokeRect(x - 34, cy - h/2, 68, h); c.beginPath(); c.rect(x-34, cy-h/2, 68, h); c.clip();
+  const px = h/10; for (let i = -6; i <= 6; i++){ const v = Math.round(val/step)*step + i*step; const y = cy - (v - val)/step*px; if (v < 0) continue;
+    c.beginPath(); c.moveTo(side==='left' ? x+34 : x-34, y); c.lineTo(side==='left' ? x+24 : x-24, y); c.stroke();
+    txt(step >= 1 && step < 5 ? v.toFixed(0) : String(v), side==='left' ? x+18 : x-18, y+4, side==='left'?'right':'left', 'rgba(255,181,71,.6)', 10); }
+  c.restore(); c.fillStyle = 'rgba(12,8,20,.9)'; c.fillRect(x-38, cy-12, 76, 24); c.strokeRect(x-38, cy-12, 76, 24);
+  txt(step===1 ? val.toFixed(1) : String(Math.round(val)), x, cy+5, 'center', AMB, 14, 700); txt(label, x, cy - h/2 - 8, 'center', AMB, 9);
+}
+/* radar */
+let sweep = 0;
+function drawRadar(dt){
+  const w = rc.width/dpr, h = rc.height/dpr, cx = w/2, cy = h/2, R = w/2 - 4; sweep += dt*2.2;
+  r2.clearRect(0,0,w,h); r2.strokeStyle = 'rgba(255,181,71,.35)'; r2.lineWidth = 1;
+  for (const f of [1,.66,.33]){ r2.beginPath(); r2.arc(cx,cy,R*f,0,Math.PI*2); r2.stroke(); }
+  r2.beginPath(); r2.moveTo(cx-R,cy); r2.lineTo(cx+R,cy); r2.moveTo(cx,cy-R); r2.lineTo(cx,cy+R); r2.stroke();
+  const sg = r2.createConicGradient ? r2.createConicGradient(sweep - Math.PI/2 - .9, cx, cy) : null;
+  if (sg){ sg.addColorStop(0,'rgba(255,181,71,0)'); sg.addColorStop(.14,'rgba(255,181,71,.28)'); sg.addColorStop(.1401,'rgba(255,181,71,0)'); r2.fillStyle = sg; r2.beginPath(); r2.arc(cx,cy,R,0,Math.PI*2); r2.fill(); }
+  r2.strokeStyle = 'rgba(255,181,71,.9)'; r2.beginPath(); r2.moveTo(cx,cy); r2.lineTo(cx + Math.cos(sweep - Math.PI/2 + .0)*R, cy + Math.sin(sweep - Math.PI/2)*R); r2.stroke();
+  const range = 4000;
+  for (const k of contacts){ const d = Math.hypot(k.x, k.z); if (d > range) continue; const x = cx + k.x/range*R, y = cy - k.z/range*R;
+    const ang = Math.atan2(y-cy, x-cx) + Math.PI/2; const since = ((sweep - ang) % (Math.PI*2) + Math.PI*2) % (Math.PI*2); const a = Math.max(.25, 1 - since/(Math.PI*2));
+    r2.fillStyle = k.type==='raider' ? `rgba(255,81,71,${a})` : `rgba(95,227,208,${a})`; r2.beginPath(); r2.arc(x,y, k===S.target?4:3, 0, Math.PI*2); r2.fill();
+    if (k === S.target){ r2.strokeStyle = '#fff'; r2.strokeRect(x-6,y-6,12,12); } }
+  const nx = Math.atan2(nav.x, nav.z); r2.fillStyle = TEAL; r2.save(); r2.translate(cx + Math.sin(nx)*R, cy - Math.cos(nx)*R); r2.rotate(Math.PI/4); r2.fillRect(-3,-3,6,6); r2.restore();
+  r2.fillStyle = AMB; r2.beginPath(); r2.moveTo(cx, cy-6); r2.lineTo(cx+4, cy+4); r2.lineTo(cx-4, cy+4); r2.closePath(); r2.fill();
+}
+/* panel */
+function setBar(id, v, warnBelow, warnAbove){ const el = $(id); el.querySelector('i').style.width = Math.max(0,Math.min(100,v)) + '%'; el.querySelector('b').textContent = Math.round(v);
+  el.classList.toggle('warn', (warnBelow !== undefined && v < warnBelow) || (warnAbove !== undefined && v > warnAbove)); }
+let panelT = 0;
+function loop(t){
+  const dt = Math.min(.05, (t-last)/1000); last = t;
+  update(dt); draw(); drawRadar(dt);
+  panelT += dt; if (panelT > .1){ panelT = 0; setBar('#bShield', S.shield, 30); setBar('#bHull', S.hull, 40); setBar('#bCap', S.cap, 20); setBar('#bHeat', S.heat, undefined, 80); setBar('#bFuel', S.fuel, 15);
+    $('#clock').textContent = clock(); if (S.started) $('#start').style.display = 'none'; }
+  requestAnimationFrame(loop);
+}
+resize(); renderPips();
+alertMsg('Escort patrol underway. Hauler Orla Bey in convoy.', 'i');
+alertMsg('Two unidentified contacts bearing 010. Classified hostile: VEX raiders.', 'w');
+requestAnimationFrame(t => { last = t; loop(t); });
+})();
+</script>
+</body>
+</html>

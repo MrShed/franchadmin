@@ -139,7 +139,7 @@ footer{padding:40px 0 60px;font:400 10.5px var(--mono);letter-spacing:.06em;colo
       </div>
     </div>
     <div class="mech">
-      <svg id="mech" viewBox="0 0 400 520" role="img" aria-label="Animated anchor escapement and seconds pendulum">
+      <svg id="mech" viewBox="0 -40 400 560" role="img" aria-label="Animated anchor escapement and seconds pendulum">
         <defs>
           <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="rgba(233,241,255,.35)" stroke-width="1"/></pattern>
         </defs>
@@ -152,14 +152,14 @@ footer{padding:40px 0 60px;font:400 10.5px var(--mono);letter-spacing:.06em;colo
         <g id="wheel" stroke="#e9f1ff" stroke-width="1.4" fill="none"></g>
         <circle cx="200" cy="150" r="6" fill="#123e74" stroke="#e9f1ff" stroke-width="1.4"/>
         <g id="anchor" stroke="#e9f1ff" stroke-width="1.6" fill="none">
-          <path d="M200 42 L130 92 L118 128 M200 42 L270 92 L282 128" stroke-linecap="round"/>
+          <path d="M200 -12 L126 70 L118 128 M200 -12 L274 70 L282 128" stroke-linecap="round"/>
           <path d="M118 128 l-8 -12 l14 -4 z M282 128 l8 -12 l-14 -4 z" fill="url(#hatch)"/>
-          <line x1="200" y1="42" x2="200" y2="500" stroke-width="1.2"/>
-          <circle cx="200" cy="42" r="7" fill="#123e74"/>
+          <line x1="200" y1="-12" x2="200" y2="500" stroke-width="1.2"/>
+          <circle cx="200" cy="-12" r="7" fill="#123e74"/>
           <g transform="translate(200 470)"><circle r="30" fill="url(#hatch)"/><circle r="30"/><circle r="3" fill="#e9f1ff"/></g>
         </g>
         <g font-family="Chivo Mono, monospace" font-size="9" fill="rgba(233,241,255,.75)" letter-spacing=".08em">
-          <text x="316" y="40">PALLET ARBOR</text><line x1="312" y1="37" x2="210" y2="42" stroke="rgba(233,241,255,.4)"/>
+          <text x="296" y="-14">PALLET ARBOR</text><line x1="292" y1="-17" x2="210" y2="-12" stroke="rgba(233,241,255,.4)"/>
           <text x="306" y="232">ESCAPE WHEEL · 30 T</text><line x1="302" y1="229" x2="262" y2="210" stroke="rgba(233,241,255,.4)"/>
           <text x="16" y="400">L = 994 mm</text>
           <text x="16" y="414">T = 2.000 s</text>
@@ -263,7 +263,7 @@ function oneSecondIn(spd){
 
 // ---------- chart ----------
 const svg=document.getElementById('chart'), tip=document.getElementById('tip');
-const W=1000,H=540,L=86,R=28,T=24,B=58;
+let W=1000,H=540,L=118,R=28,T=24,B=58,narrow=false;
 const yMax=4, yMin=-14;
 const ys=v=>T+(yMax-Math.log10(v))/(yMax-yMin)*(H-T-B);
 let axisMode='ord', selected='lattice';
@@ -276,17 +276,21 @@ function xs(m,i){
 }
 const NS='http://www.w3.org/2000/svg';
 function draw(){
+  narrow = svg.getBoundingClientRect().width < 640;
+  W = narrow?560:1000; H = narrow?820:540; L = narrow?96:118;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const fs = narrow?1.45:1;
   let s=`<defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9f1ff" stop-opacity=".16"/><stop offset="1" stop-color="#e9f1ff" stop-opacity="0"/></linearGradient></defs><g class="grid axis">`;
   const named={2:'100 s','1':'10 s',0:'1 second','-3':'1 millisecond','-6':'1 microsecond','-9':'1 nanosecond','-12':'1 picosecond','-14':'10 femtoseconds',3:'1,000 s','-1':'100 ms','-2':'10 ms','-4':'100 µs','-5':'10 µs','-7':'100 ns','-8':'10 ns','-10':'100 ps','-11':'10 ps','-13':'100 fs',4:'10,000 s'};
   for(let e=yMax;e>=yMin;e--){
     const y=ys(Math.pow(10,e));
     s+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" ${e%3===0?'style="stroke:rgba(233,241,255,.22)"':''}/>`;
-    if(e%3===0 || e===yMin || e===yMax) s+=`<text x="${L-8}" y="${y+3}" text-anchor="end">${named[e]||''}</text>`;
+    if(e%3===0 || e===yMin || e===yMax) s+=`<text x="${L-8}" y="${y+3}" text-anchor="end" style="font-size:${10*fs}px">${narrow?(named[e]||'').replace('1 second','1 s').replace('millisecond','ms').replace('microsecond','µs').replace('nanosecond','ns').replace('picosecond','ps').replace('femtoseconds','fs'):(named[e]||'')}</text>`;
   }
   const yDay=ys(86400);
   s+=`</g>`;
   if(axisMode==='log'){
-    [3000,1000,300,100,30,10].forEach(a=>{
+    [3000,1000,300,100,30,10].filter(a=>!narrow||a===1000||a===100||a===10).forEach(a=>{
       const x=L+(Math.log10(a)-Math.log10(3600))/(Math.log10(5)-Math.log10(3600))*(W-L-R);
       s+=`<g class="axis"><line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" stroke="rgba(233,241,255,.08)"/><text x="${x}" y="${H-B+34}" text-anchor="middle">${a.toLocaleString('en-GB')} yrs ago</text></g>`;
     });
@@ -312,12 +316,12 @@ function draw(){
       <line x1="${x}" x2="${x}" y1="${y}" y2="${H-B}" stroke="rgba(233,241,255,.18)" stroke-dasharray="2 3"/>
       <circle class="dot" cx="${x}" cy="${y}" r="${m.id===selected?7:5}"/>
       <circle cx="${x}" cy="${y}" r="16" fill="transparent"/>
-      <text x="${lx}" y="${above?y-14:y+22}" text-anchor="${anchor}">${m.name.replace('Marine chronometer ','')}</text>
-      ${axisMode==='ord'?`<text class="yr" x="${x}" y="${H-B+18+(i%2)*14}" text-anchor="middle">${m.date}</text>`:''}
+      ${(!narrow||m.id===selected)?`<text x="${lx}" y="${above?y-14:y+22}" text-anchor="${anchor}" style="font-size:${10.5*fs}px">${m.name.replace('Marine chronometer ','')}</text>`:''}
+      ${axisMode==='ord'?`<text class="yr" x="${x}" y="${H-B+18+(i%2)*14*fs}" text-anchor="middle" style="font-size:${9*fs}px">${narrow?m.date.replace('c. ','').replace(' BCE','BC'):m.date}</text>`:''}
     </g>`;
   });
   s+=`<line x1="${L}" x2="${L}" y1="${T}" y2="${H-B}" stroke="rgba(233,241,255,.5)"/><line x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}" stroke="rgba(233,241,255,.5)"/>`;
-  s+=`<text x="16" y="${T+(H-T-B)/2}" transform="rotate(-90 16 ${T+(H-T-B)/2})" text-anchor="middle" fill="rgba(233,241,255,.6)" font-size="10" letter-spacing="2" font-family="Chivo Mono,monospace">ERROR PER DAY (LOG)</text>`;
+  s+=`<text x="12" y="${T+(H-T-B)/2}" transform="rotate(-90 12 ${T+(H-T-B)/2})" text-anchor="middle" fill="rgba(233,241,255,.6)" font-size="10" letter-spacing="2" font-family="Chivo Mono,monospace">ERROR PER DAY (LOG)</text>`;
   svg.innerHTML=s;
   svg.querySelectorAll('.pt').forEach(g=>{
     const f=()=>{selected=g.dataset.id; draw(); showTip();};
@@ -333,6 +337,7 @@ function showTip(){
   axisMode=k; document.querySelectorAll('.ctl button').forEach(b=>b.setAttribute('aria-pressed',b===e.currentTarget)); draw();
 }));
 draw(); showTip();
+let rz; addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(draw,150)});
 
 // ---------- ledger with glyphs ----------
 const G={
@@ -394,7 +399,7 @@ let step=0, lastBeat=-1;
 function frame(t){
   const s=t/1000; // seconds; period 2 s
   const ang=Math.sin(Math.PI*s)*4.2;
-  anchor.setAttribute('transform',`rotate(${ang.toFixed(3)} 200 42)`);
+  anchor.setAttribute('transform',`rotate(${ang.toFixed(3)} 200 -12)`);
   const beat=Math.floor(s+0.5);
   if(beat!==lastBeat){lastBeat=beat; step++;}
   // wheel advances 6° per beat (half a tooth) with a quick snap

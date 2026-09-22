@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Karesansui Tray</title>
+<meta name="description" content="A top-down karesansui zen garden: drag a wooden rake through lit sand, set stones and watch concentric ripples form around them as the light moves from dawn to dusk.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sawarabi+Mincho&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wood:#2b221b;
+  --wood2:#3a2d23;
+  --plank:#46372b;
+  --sand:#dcd8cc;
+  --moss:#5d6b3a;
+  --rice:#efeae0;
+  --ash:#a89d8f;
+  --line:rgba(239,234,224,.16);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--wood);color:var(--rice);font-family:Jost,"Futura","Century Gothic",sans-serif;font-weight:300;overflow:hidden;
+  background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 38px),repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 2px,transparent 2px 7px),linear-gradient(180deg,#30261e,#231b15)}
+.layout{position:fixed;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;padding:max(14px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));gap:12px}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px}
+h1{font-family:"Sawarabi Mincho","Yu Mincho","Hiragino Mincho ProN",Georgia,serif;font-weight:400;font-size:clamp(20px,2.4vw,28px);margin:0;letter-spacing:.24em}
+h1 small{font-family:Jost,sans-serif;font-size:10px;letter-spacing:.4em;color:var(--ash);margin-left:14px;text-transform:uppercase;vertical-align:middle}
+.back{color:var(--ash);text-decoration:none;font-size:11px;letter-spacing:.3em;text-transform:uppercase}
+.back:hover,.back:focus-visible{color:var(--rice);outline:none;text-decoration:underline;text-underline-offset:5px}
+.bed{position:relative;min-height:0;border-radius:2px;box-shadow:0 0 0 10px #1c1611,0 0 0 11px #4c3c2e,0 0 0 14px #1a140f,0 26px 60px rgba(0,0,0,.6)}
+#garden{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.poem{position:absolute;right:18px;top:16px;writing-mode:vertical-rl;font-family:"Sawarabi Mincho",serif;font-size:14px;letter-spacing:.3em;color:rgba(60,52,44,.55);pointer-events:none;line-height:2}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;font-size:12px;letter-spacing:.12em}
+.tools{display:flex;border:1px solid var(--line)}
+.tool{background:transparent;border:0;color:var(--ash);font:inherit;letter-spacing:.16em;text-transform:uppercase;font-size:11px;padding:9px 14px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.tool+.tool{border-left:1px solid var(--line)}
+.tool svg{width:16px;height:16px}
+.tool[aria-pressed=true]{background:var(--rice);color:var(--wood)}
+.tool:focus-visible,.act:focus-visible,input[type=range]:focus-visible,select:focus-visible{outline:2px solid #c9b27a;outline-offset:2px}
+.field{display:flex;align-items:center;gap:10px;color:var(--ash);text-transform:uppercase;font-size:10px;letter-spacing:.24em}
+input[type=range]{accent-color:#c9b27a;width:110px}
+select{background:var(--wood2);color:var(--rice);border:1px solid var(--line);font:inherit;font-size:12px;padding:6px 8px;letter-spacing:.06em}
+.act{background:transparent;border:1px solid var(--line);color:var(--rice);font:inherit;font-size:11px;letter-spacing:.2em;text-transform:uppercase;padding:9px 14px;cursor:pointer}
+.act:hover,.tool:hover{border-color:var(--rice);color:var(--rice)}
+.tool[aria-pressed=true]:hover{color:var(--wood)}
+.spacer{flex:1}
+.time{font-family:"Sawarabi Mincho",serif;font-size:14px;letter-spacing:.14em;color:var(--rice);min-width:5em}
+@media (max-width:720px){
+  .layout{padding-left:16px;padding-right:16px}
+  h1 small{display:none}
+  .bar{gap:10px 12px}
+  .tool span{display:none}
+  .spacer{display:none}
+  input[type=range]{width:84px}
+  .poem{display:none}
+  .bed{box-shadow:0 0 0 6px #1c1611,0 0 0 7px #4c3c2e,0 16px 40px rgba(0,0,0,.6)}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <header>
+    <h1>Karesansui Tray<small>枯山水 · dry landscape</small></h1>
+    <a class="back" href="index.html">← Showcase</a>
+  </header>
+  <div class="bed">
+    <canvas id="garden" aria-label="Top-down sand garden. Drag to rake grooves. In stone mode, tap to set or lift a stone."></canvas>
+    <div class="poem" aria-hidden="true">石の庭　水なき川の　音を聴く</div>
+  </div>
+  <div class="bar" role="toolbar" aria-label="Garden tools">
+    <div class="tools" role="group" aria-label="Tool">
+      <button class="tool" id="toolRake" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5h12M3 5v5M6 5v5M10 5v5M13 5v5M8 5V1" stroke="currentColor" fill="none" stroke-width="1.3"/></svg><span>Rake</span></button>
+      <button class="tool" id="toolStone" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 11c0-3 2-6 5-6s5 2 5 5-2 3-5 3-5 0-5-2z" stroke="currentColor" fill="none" stroke-width="1.3"/></svg><span>Stone</span></button>
+      <button class="tool" id="toolSmooth" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 10h12M4 7h8" stroke="currentColor" fill="none" stroke-width="1.3"/></svg><span>Smooth</span></button>
+    </div>
+    <label class="field" for="tines">Tines
+      <select id="tines"><option value="3">3</option><option value="5" selected>5</option><option value="7">7</option><option value="9">9</option></select>
+    </label>
+    <label class="field" for="sun">Light <input id="sun" type="range" min="0" max="100" value="38"></label>
+    <span class="time" id="timeLabel" aria-live="polite">mid-morning</span>
+    <span class="spacer"></span>
+    <button class="act" id="btnFlow">Rake all</button>
+    <button class="act" id="btnClear">Smooth all</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cv=document.getElementById('garden'),g=cv.getContext('2d');
+const CELL=2;let W=0,H=0,gw=0,gh=0,Hm=null,grain=null,img=null,sandCv=document.createElement('canvas'),sg=sandCv.getContext('2d');
+let dpr=1;let tool='rake',tines=5,sun=.38,dirty=true;
+const SP=9;// groove spacing in css px
+let stones=[];let leaves=[];
+
+function rnd(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function makeStone(nx,ny,r,seed){
+  const R=rnd(seed);const n=11;const pts=[];for(let i=0;i<n;i++){const a=i/n*Math.PI*2;pts.push([Math.cos(a)*(0.78+R()*.3),Math.sin(a)*(0.7+R()*.3)]);}
+  const hue=[[112,108,100],[92,90,86],[128,118,104],[80,82,80]][(R()*4)|0];
+  return{nx,ny,r,pts,rot:R()*6.28,hue,moss:R()<.7,seed};
+}
+function defaultStones(){
+  stones=[makeStone(.28,.42,44,11),makeStone(.335,.55,26,12),makeStone(.225,.58,18,13),makeStone(.72,.36,36,21),makeStone(.62,.72,22,31)];
+}
+function resize(){
+  const r=cv.getBoundingClientRect();W=Math.max(10,r.width);H=Math.max(10,r.height);dpr=Math.min(devicePixelRatio||1,2);
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+  gw=Math.ceil(W/CELL);gh=Math.ceil(H/CELL);Hm=new Float32Array(gw*gh);grain=new Float32Array(gw*gh);
+  const R=rnd(4);for(let i=0;i<grain.length;i++)grain[i]=R();
+  sandCv.width=gw;sandCv.height=gh;img=sg.createImageData(gw,gh);
+  rakeAll();
+}
+function stoneScale(){return Math.min(W,H)/620;}
+function sx(s){return s.nx*W;}function sy(s){return s.ny*H;}
+function sr(s){return s.r*Math.max(.55,stoneScale());}
+
+// ---------- sand shaping ----------
+function rakeAll(){
+  // parallel lines everywhere; concentric rings near each stone take precedence
+  const ringN=4;
+  for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){
+    const x=i*CELL,y=j*CELL;let best=1e9,phase=y+Math.sin(x*.004)*6;
+    for(const s of stones){const d=Math.hypot(x-sx(s),y-sy(s))-sr(s)*1.05;if(d<ringN*SP&&d<best){best=d;phase=d;}}
+    Hm[j*gw+i]=Math.cos(phase/SP*Math.PI*2);
+  }
+  dirty=true;
+}
+function ringStone(s){
+  const ringN=4,cx=sx(s),cy=sy(s),R0=sr(s)*1.05,Rmax=R0+ringN*SP;
+  const i0=Math.max(0,((cx-Rmax)/CELL)|0),i1=Math.min(gw-1,((cx+Rmax)/CELL)|0),j0=Math.max(0,((cy-Rmax)/CELL)|0),j1=Math.min(gh-1,((cy+Rmax)/CELL)|0);
+  for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){const d=Math.hypot(i*CELL-cx,j*CELL-cy)-R0;if(d<ringN*SP){const a=d>(ringN-1)*SP?1-(d-(ringN-1)*SP)/SP:1;const k=j*gw+i;Hm[k]=Hm[k]*(1-a)+Math.cos(d/SP*Math.PI*2)*a;}}
+  dirty=true;
+}
+function smoothAll(){Hm.fill(0);dirty=true;}
+let rake={x:0,y:0,dx:1,dy:0,active:false};
+function stamp(x,y,dx,dy){
+  // rake bar is perpendicular to motion; tines carve cosine grooves across its width
+  const px=-dy,py=dx;const half=tines*SP/2;const ext=half+SP*.5;const along=CELL*1.6;
+  const bx0=Math.min(x-px*ext,x+px*ext)-along,bx1=Math.max(x-px*ext,x+px*ext)+along,by0=Math.min(y-py*ext,y+py*ext)-along,by1=Math.max(y-py*ext,y+py*ext)+along;
+  const i0=Math.max(0,(bx0/CELL)|0),i1=Math.min(gw-1,Math.ceil(bx1/CELL)),j0=Math.max(0,(by0/CELL)|0),j1=Math.min(gh-1,Math.ceil(by1/CELL));
+  for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
+    const rx=i*CELL-x,ry=j*CELL-y;const o=rx*px+ry*py;const a=rx*dx+ry*dy;
+    if(Math.abs(a)>along||Math.abs(o)>ext)continue;
+    let w=1-Math.max(0,(Math.abs(o)-half+SP*.5)/SP);w=Math.max(0,Math.min(1,w))*(1-Math.abs(a)/along*.3);
+    if(insideStone(i*CELL,j*CELL))continue;
+    const k=j*gw+i;const target=tool==='smooth'?0:Math.cos((o+half)/SP*Math.PI*2);
+    Hm[k]=Hm[k]+(target-Hm[k])*w*.85;
+  }
+  dirty=true;
+}
+function insideStone(x,y){for(const s of stones){const d=Math.hypot(x-sx(s),y-sy(s));if(d<sr(s)*.92)return true;}return false;}
+
+// ---------- rendering ----------
+function lightDir(){
+  // sun sweeps east→west; low at dawn/dusk
+  const a=sun*Math.PI;const elev=.25+Math.sin(a)*.75;
+  return{x:Math.cos(a)*(1-elev*.6),y:-.55*(1-elev*.5),z:elev,warm:1-Math.sin(a)};
+}
+function shadeSand(){
+  const L=lightDir();const n=Math.hypot(L.x,L.y,L.z);const lx=L.x/n,ly=L.y/n,lz=L.z/n;
+  const d=img.data;const amp=1.25;
+  const base=[222-L.warm*6,216-L.warm*18,202-L.warm*40];
+  const amb=.52+L.z*.12;
+  for(let j=0;j<gh;j++){const jm=j>0?j-1:j,jp=j<gh-1?j+1:j;for(let i=0;i<gw;i++){
+    const im=i>0?i-1:i,ip=i<gw-1?i+1:i;const k=j*gw+i;
+    const hx=(Hm[j*gw+ip]-Hm[j*gw+im])*amp,hy=(Hm[jp*gw+i]-Hm[jm*gw+i])*amp;
+    const nl=1/Math.sqrt(hx*hx+hy*hy+1);const dot=(-hx*lx-hy*ly+lz)*nl;
+    let s=amb+Math.max(0,dot)*.62-(1-Hm[k])*.03;s+=(grain[k]-.5)*.07;
+    const o=k*4;d[o]=base[0]*s;d[o+1]=base[1]*s;d[o+2]=base[2]*s;d[o+3]=255;}}
+  sg.putImageData(img,0,0);
+}
+function drawStone(s,L){
+  const x=sx(s),y=sy(s),r=sr(s);
+  g.save();g.translate(x,y);g.rotate(s.rot);
+  const path=new Path2D();s.pts.forEach((p,i)=>{const px=p[0]*r,py=p[1]*r;if(i===0)path.moveTo(px,py);else{const q=s.pts[i-1];const mx=(q[0]*r+px)/2,my=(q[1]*r+py)/2;path.quadraticCurveTo(q[0]*r,q[1]*r,mx,my);}});
+  const f=s.pts[0],la=s.pts[s.pts.length-1];path.quadraticCurveTo(la[0]*r,la[1]*r,(la[0]*r+f[0]*r)/2,(la[1]*r+f[1]*r)/2);path.lineTo(f[0]*r,f[1]*r);path.closePath();
+  g.restore();
+  // shadow opposite the light
+  const shL=(1.3-L.z)*r*.9;const sxo=-L.x*shL,syo=-L.y*shL+r*.1;
+  g.save();g.translate(x+sxo,y+syo);g.rotate(s.rot);g.filter=reduce?'none':'blur(6px)';g.fillStyle=`rgba(40,32,24,${.28+(1-L.z)*.15})`;g.scale(1.05,1.05);g.fill(path);g.restore();g.filter='none';
+  g.save();g.translate(x,y);g.rotate(s.rot);
+  const [cr,cg,cb]=s.hue;const lr=Math.cos(-s.rot),ls=Math.sin(-s.rot);const lx=(L.x*lr-L.y*ls)*r*.45,ly=(L.x*ls+L.y*lr)*r*.45;
+  const gr=g.createRadialGradient(lx,ly,r*.05,0,0,r*1.05);
+  gr.addColorStop(0,`rgb(${cr+70},${cg+66},${cb+60})`);gr.addColorStop(.55,`rgb(${cr},${cg},${cb})`);gr.addColorStop(1,`rgb(${cr*.45|0},${cg*.45|0},${cb*.45|0})`);
+  g.fillStyle=gr;g.fill(path);
+  // mineral speckle and moss cap
+  const R=rnd(s.seed*7);g.save();g.clip(path);
+  for(let i=0;i<r*1.6;i++){g.fillStyle=`rgba(${R()<.5?255:20},${R()<.5?255:20},${R()<.5?250:20},${.05+R()*.08})`;g.fillRect((R()-.5)*2*r,(R()-.5)*2*r,1.4,1.4);}
+  if(s.moss){g.fillStyle='rgba(93,107,58,.55)';for(let i=0;i<14;i++){const a=R()*6.28,d=R()*r*.45;g.beginPath();g.arc(Math.cos(a)*d+lx*.3,Math.sin(a)*d+ly*.3+r*.25,r*(.12+R()*.2),0,6.283);g.fill();}}
+  g.restore();
+  g.strokeStyle='rgba(30,26,20,.35)';g.lineWidth=1;g.stroke(path);
+  g.restore();
+}
+function drawLeaf(l){
+  g.save();g.translate(l.x,l.y);g.rotate(l.a);g.scale(l.s,l.s*Math.abs(Math.cos(l.flip))+.15);
+  g.fillStyle=l.c;g.beginPath();
+  for(let i=0;i<5;i++){const a=-Math.PI/2+(i-2)*.55;g.moveTo(0,0);g.quadraticCurveTo(Math.cos(a-.2)*7,Math.sin(a-.2)*7,Math.cos(a)*11,Math.sin(a)*11);g.quadraticCurveTo(Math.cos(a+.2)*7,Math.sin(a+.2)*7,0,0);}
+  g.fill();g.strokeStyle='rgba(60,20,10,.5)';g.lineWidth=.6;g.beginPath();g.moveTo(0,0);g.lineTo(0,6);g.stroke();g.restore();
+}
+function render(){
+  if(dirty){shadeSand();dirty=false;}
+  const L=lightDir();
+  g.setTransform(dpr,0,0,dpr,0,0);g.imageSmoothingEnabled=true;g.drawImage(sandCv,0,0,gw*CELL,gh*CELL);
+  // warm/cool wash from the hour
+  g.fillStyle=`rgba(${L.warm>.5?'255,150,60':'120,150,200'},${Math.abs(L.warm-.5)*.14})`;g.fillRect(0,0,W,H);
+  for(const s of stones)drawStone(s,L);
+  for(const l of leaves)drawLeaf(l);
+  // edge vignette from the wooden frame
+  const v=g.createLinearGradient(0,0,0,18);v.addColorStop(0,'rgba(20,14,8,.35)');v.addColorStop(1,'rgba(20,14,8,0)');g.fillStyle=v;g.fillRect(0,0,W,18);
+  if(rake.active&&tool!=='stone'){g.save();g.translate(rake.x,rake.y);g.rotate(Math.atan2(rake.dy,rake.dx));g.strokeStyle='rgba(58,45,35,.65)';g.lineWidth=3;g.beginPath();g.moveTo(-4,-tines*SP/2-4);g.lineTo(-4,tines*SP/2+4);g.stroke();g.lineWidth=2;g.beginPath();g.moveTo(-4,0);g.lineTo(-40,0);g.stroke();g.restore();}
+}
+
+// ---------- input ----------
+let down=false,moved=0,startX=0,startY=0,dragStone=null;
+function pos(e){const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top];}
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);const [x,y]=pos(e);down=true;moved=0;startX=x;startY=y;
+  if(tool==='stone'){dragStone=stones.find(s=>Math.hypot(x-sx(s),y-sy(s))<sr(s));return;}
+  rake={x,y,dx:rake.dx,dy:rake.dy,active:true,started:false};});
+cv.addEventListener('pointermove',e=>{if(!down)return;const [x,y]=pos(e);
+  if(tool==='stone'){moved+=1;if(dragStone&&moved>3){dragStone.nx=Math.max(0,Math.min(1,x/W));dragStone.ny=Math.max(0,Math.min(1,y/H));}return;}
+  let dx=x-rake.x,dy=y-rake.y;const d=Math.hypot(dx,dy);if(d<1.5)return;moved+=d;dx/=d;dy/=d;
+  // low-pass the heading so the rake turns like a real tool
+  const k=rake.started?.25:1;let ndx=rake.dx*(1-k)+dx*k,ndy=rake.dy*(1-k)+dy*k;const nl=Math.hypot(ndx,ndy)||1;ndx/=nl;ndy/=nl;
+  const steps=Math.ceil(d/CELL);for(let s=1;s<=steps;s++){stamp(rake.x+dx*d*s/steps,rake.y+dy*d*s/steps,ndx,ndy);}
+  rake.x=x;rake.y=y;rake.dx=ndx;rake.dy=ndy;rake.started=true;});
+function up(e){if(!down)return;down=false;rake.active=false;
+  if(tool==='stone'){const [x,y]=pos(e);
+    if(dragStone&&moved>3){ringStone(dragStone);}
+    else if(dragStone){stones.splice(stones.indexOf(dragStone),1);}
+    else{const s=makeStone(x/W,y/H,16+Math.random()*30,(Math.random()*1e6)|0);stones.push(s);ringStone(s);}
+    dragStone=null;dirty=true;}}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+
+function setTool(t){tool=t;[['toolRake','rake'],['toolStone','stone'],['toolSmooth','smooth']].forEach(([id,v])=>document.getElementById(id).setAttribute('aria-pressed',String(v===t)));cv.style.cursor=t==='stone'?'copy':'crosshair';}
+document.getElementById('toolRake').addEventListener('click',()=>setTool('rake'));
+document.getElementById('toolStone').addEventListener('click',()=>setTool('stone'));
+document.getElementById('toolSmooth').addEventListener('click',()=>setTool('smooth'));
+document.getElementById('tines').addEventListener('change',e=>tines=+e.target.value);
+const labels=[[.08,'first light'],[.22,'early morning'],[.42,'mid-morning'],[.58,'noon'],[.75,'afternoon'],[.9,'late afternoon'],[1.01,'dusk']];
+function setSun(v){sun=v;document.getElementById('timeLabel').textContent=labels.find(l=>v<l[0])[1];dirty=true;}
+document.getElementById('sun').addEventListener('input',e=>setSun(+e.target.value/100));
+document.getElementById('btnFlow').addEventListener('click',rakeAll);
+document.getElementById('btnClear').addEventListener('click',smoothAll);
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.key==='r')setTool('rake');if(e.key==='s')setTool('stone');if(e.key==='e')setTool('smooth');});
+
+// ---------- falling maple leaves ----------
+let leafT=4;
+function updateLeaves(dt){
+  if(reduce)return;leafT-=dt;
+  if(leafT<0&&leaves.length<9){leafT=6+Math.random()*9;leaves.push({x:Math.random()*W,y:-20,vy:18+Math.random()*10,a:Math.random()*6,va:(Math.random()-.5)*2,s:.8+Math.random()*.5,flip:0,land:H*(.2+Math.random()*.7),c:['#b8412a','#c9602e','#a3301f','#d88a3a'][Math.random()*4|0],rest:0});}
+  for(const l of leaves){if(l.y<l.land){l.y+=l.vy*dt;l.x+=Math.sin(l.y*.03)*24*dt;l.a+=l.va*dt;l.flip+=dt*3;}else{l.rest+=dt;l.flip=0;}}
+  leaves=leaves.filter(l=>l.rest<40);
+}
+
+// ---------- loop ----------
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;updateLeaves(dt);render();requestAnimationFrame(loop);}
+defaultStones();resize();setSun(.38);
+// a few hand-raked swirls in the open sand so it reads as tended, not generated
+(function(){const saveT=tool;tool='rake';let x=W*.5,y=H*.18,dx=1,dy=0;for(let t=0;t<260;t++){const a=t/260*Math.PI*1.2;const nx=W*.46+Math.cos(a-1.3)*W*.1,ny=H*.2+Math.sin(a-1.3)*H*.08+t*.0;const ddx=nx-x,ddy=ny-y,d=Math.hypot(ddx,ddy);if(d>0.1){stamp(nx,ny,ddx/d,ddy/d);}x=nx;y=ny;}tool=saveT;})();
+stones.forEach(ringStone);
+addEventListener('resize',()=>{clearTimeout(resize._t);resize._t=setTimeout(()=>{resize();},160);});
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

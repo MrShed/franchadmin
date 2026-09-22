@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ramen Yūrei Namba</title>
+<meta name="description" content="A rain-soaked Osaka 2089 ramen bar with flickering neon signage and a ticket-machine bowl builder that draws your ramen as you choose broth, noodles and toppings.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#07080c; --wet:#0d1017; --line:#1f2430; --dim:#6c7385; --text:#d8dce6;
+  --red:#ff3b5c; --cyan:#3de8ff; --amber:#ffb347;
+  --jp:"Dela Gothic One","Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif;
+  --sans:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic","Helvetica Neue",Arial,sans-serif;
+  --mono:"Share Tech Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--night);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.7;overflow-x:hidden}
+a{color:var(--cyan)}
+:focus-visible{outline:1px solid var(--cyan);outline-offset:3px}
+.mono{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.back{position:fixed;top:14px;left:16px;z-index:40;font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--cyan);text-decoration:none;padding:6px 10px;border:1px solid rgba(61,232,255,.4);background:rgba(7,8,12,.8)}
+.back:hover{box-shadow:0 0 12px rgba(61,232,255,.5)}
+/* hero */
+.hero{position:relative;height:100vh;min-height:640px;max-height:1000px;overflow:hidden;background:
+  linear-gradient(180deg,#07080c 0%,#0b0d15 60%,#07080c 100%)}
+#rain{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none}
+.grid{position:absolute;inset:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:70px clamp(16px,4vw,56px) 40px;z-index:2}
+.sign{position:relative;display:flex;gap:clamp(10px,2vw,26px);align-items:flex-start;justify-self:center}
+.vert{writing-mode:vertical-rl;text-orientation:upright;font-family:var(--jp);line-height:1;letter-spacing:.05em;padding:18px 12px;border:3px solid currentColor;border-radius:10px}
+.v1{font-size:clamp(58px,10vh,110px);height:calc(4.2em + 42px);color:#ffe3e8;border-color:var(--red);
+  text-shadow:0 0 4px #fff,0 0 12px var(--red),0 0 28px var(--red),0 0 60px var(--red);
+  box-shadow:0 0 12px var(--red),0 0 40px rgba(255,59,92,.5),inset 0 0 22px rgba(255,59,92,.45)}
+.v2{font-size:clamp(28px,4.8vh,52px);height:calc(2.1em + 42px);color:#e2fbff;border-color:var(--cyan);margin-top:40px;
+  text-shadow:0 0 4px #fff,0 0 10px var(--cyan),0 0 26px var(--cyan);
+  box-shadow:0 0 10px var(--cyan),0 0 30px rgba(61,232,255,.4),inset 0 0 16px rgba(61,232,255,.35)}
+.v1 .f{animation:flick 7s infinite steps(1)}
+.v1 .f2{animation:flick2 11s infinite steps(1)}
+@keyframes flick{0%,100%{opacity:1}42%{opacity:.25;text-shadow:none}43%{opacity:1}44%{opacity:.2;text-shadow:none}46%{opacity:1}}
+@keyframes flick2{0%,100%{opacity:1}71%{opacity:.15;text-shadow:none}72.5%{opacity:1}}
+.reflect{position:absolute;left:0;right:0;top:100%;transform:scaleY(-1);transform-origin:50% 50%;margin-top:14px;opacity:.28;filter:blur(3px);-webkit-mask-image:linear-gradient(0deg,#000 0%,transparent 55%);mask-image:linear-gradient(0deg,#000 0%,transparent 55%);pointer-events:none}
+.left-col{align-self:end;max-width:320px}
+.left-col h1{font-family:var(--jp);font-weight:400;font-size:clamp(34px,4vw,56px);line-height:1.05;margin:10px 0 14px;color:#fff;letter-spacing:.01em}
+.left-col p{margin:0;color:#a8afc0;max-width:30ch}
+.right-col{align-self:end;justify-self:end;text-align:right}
+.right-col .hours{font-family:var(--mono);font-size:clamp(30px,4vw,48px);color:var(--amber);text-shadow:0 0 12px rgba(255,179,71,.6);line-height:1}
+.right-col .status{margin-top:10px;font-family:var(--mono);font-size:13px;letter-spacing:.14em}
+.status i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);margin-right:8px;vertical-align:1px}
+.status.open i{background:#57ff9a;box-shadow:0 0 8px #57ff9a}
+.street{position:absolute;left:0;right:0;bottom:0;height:22%;z-index:1;background:linear-gradient(180deg,rgba(255,59,92,.08),rgba(61,232,255,.05) 40%,transparent);border-top:1px solid #1a1e28}
+/* sections */
+section{padding:clamp(70px,9vw,130px) clamp(16px,4vw,56px);border-top:1px solid var(--line)}
+.wrap{max-width:1200px;margin:0 auto}
+.head{display:grid;grid-template-columns:200px 1fr;gap:24px;margin-bottom:44px}
+.head h2{margin:0;font-family:var(--jp);font-weight:400;font-size:clamp(32px,4.4vw,60px);line-height:1.05;color:#fff}
+.head h2 small{display:block;font-family:var(--sans);font-size:15px;color:var(--dim);margin-top:10px;font-weight:400;max-width:52ch;line-height:1.6}
+/* builder */
+.builder{display:grid;grid-template-columns:1fr 1.05fr;gap:clamp(24px,4vw,64px);align-items:start}
+.bowlbox{position:sticky;top:20px}
+.bowlbox svg{width:100%;max-width:520px;display:block;margin:0 auto;filter:drop-shadow(0 0 40px rgba(255,59,92,.14))}
+.steam path{animation:steam 4s ease-in-out infinite;opacity:.0}
+.steam path:nth-child(2){animation-delay:1.3s}.steam path:nth-child(3){animation-delay:2.6s}
+@keyframes steam{0%{opacity:0;transform:translateY(10px)}40%{opacity:.35}100%{opacity:0;transform:translateY(-40px)}}
+fieldset{border:0;border-top:1px solid var(--line);margin:0;padding:18px 0 22px}
+legend{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);padding:0 10px 0 0}
+.opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.opt label{display:flex;justify-content:space-between;gap:8px;align-items:baseline;border:1px solid var(--line);padding:10px 12px;cursor:pointer;transition:border-color .2s,background .2s;min-height:48px}
+.opt label b{font-weight:500;font-size:15px}
+.opt label b span{display:block;font-family:var(--jp);font-weight:400;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.opt label em{font-style:normal;font-family:var(--mono);font-size:12px;color:var(--dim)}
+.opt input:checked + label{border-color:var(--red);background:rgba(255,59,92,.08);box-shadow:inset 3px 0 0 var(--red)}
+.opt input:focus-visible + label{outline:1px solid var(--cyan);outline-offset:2px}
+.spice{display:flex;align-items:center;gap:16px}
+.spice input{flex:1;accent-color:var(--red)}
+.spice output{font-family:var(--mono);color:var(--red);min-width:9ch}
+.ticket-row{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--line);padding-top:20px;flex-wrap:wrap}
+.total{font-family:var(--mono);font-size:34px;color:#fff;line-height:1}
+.total small{display:block;font-size:12px;color:var(--dim);letter-spacing:.12em;margin-top:6px}
+#buy{font-family:var(--jp);font-size:18px;background:var(--red);color:#fff;border:0;padding:14px 22px;cursor:pointer;box-shadow:0 0 18px rgba(255,59,92,.55);letter-spacing:.06em}
+#buy:hover{box-shadow:0 0 30px rgba(255,59,92,.8)}
+#ticket{margin-top:18px;min-height:0}
+.tk{background:#f1efe6;color:#111;font-family:var(--mono);padding:14px 16px;max-width:340px;position:relative;animation:print .7s cubic-bezier(.2,.8,.2,1);clip-path:polygon(0 0,100% 0,100% calc(100% - 6px),95% 100%,90% calc(100% - 6px),85% 100%,80% calc(100% - 6px),75% 100%,70% calc(100% - 6px),65% 100%,60% calc(100% - 6px),55% 100%,50% calc(100% - 6px),45% 100%,40% calc(100% - 6px),35% 100%,30% calc(100% - 6px),25% 100%,20% calc(100% - 6px),15% 100%,10% calc(100% - 6px),5% 100%,0 calc(100% - 6px))}
+.tk b{font-family:var(--jp);font-weight:400;font-size:22px;display:block}
+@keyframes print{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+/* menu */
+.menu{display:grid;grid-template-columns:1fr 1fr;gap:0 clamp(24px,4vw,64px)}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:baseline;padding:18px 0;border-bottom:1px solid var(--line)}
+.item .k{font-family:var(--jp);font-size:22px;color:var(--red);width:1.4em}
+.item h3{margin:0;font-weight:700;font-size:17px}
+.item p{margin:2px 0 0;color:var(--dim);font-size:14px}
+.item .p{font-family:var(--mono);color:var(--amber)}
+/* story */
+.story{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,90px)}
+.story p{margin:0 0 1em;color:#b9bfcc;max-width:54ch}
+.quote{font-family:var(--jp);font-size:clamp(26px,3.2vw,42px);line-height:1.3;color:#fff}
+.quote span{color:var(--cyan);text-shadow:0 0 12px rgba(61,232,255,.6)}
+.loc{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.loc div{padding:20px 20px 20px 0;border-right:1px solid var(--line);margin-right:20px}
+.loc div:last-child{border-right:0}
+.loc b{display:block;font-weight:500;font-size:18px;color:#fff;margin-top:6px}
+footer{padding:36px clamp(16px,4vw,56px) 60px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
+@media (max-width:900px){
+  .grid{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;gap:18px;padding-top:64px}
+  .left-col{order:3;align-self:start;max-width:none}
+  .sign{order:1}
+  .right-col{order:2;justify-self:start;text-align:left;align-self:start;display:none}
+  .builder,.menu,.story{grid-template-columns:1fr}
+  .bowlbox{position:relative;top:0}
+  .head{grid-template-columns:1fr;gap:8px}
+  .loc{grid-template-columns:1fr 1fr}
+  .loc div:nth-child(2){border-right:0}
+}
+@media (max-width:900px) and (max-height:760px){ .v1{font-size:54px} .v2{font-size:26px} }
+@media (prefers-reduced-motion:reduce){
+  .v1 .f,.v1 .f2,.steam path{animation:none}
+  .steam path{opacity:.2}
+  .tk{animation:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<header class="hero">
+  <div class="street" aria-hidden="true"></div>
+  <div class="grid">
+    <div class="left-col">
+      <div class="mono">Namba Underground · Level B7 · Stall 14</div>
+      <h1>A bowl for the<br>last train home.</h1>
+      <p>Nine stools. One pot of pork bone that hasn't stopped simmering since 2061. Ramen Yūrei is where Osaka's night shift comes to thaw.</p>
+    </div>
+    <div class="sign" aria-label="Neon sign reading Ramen, Yūrei">
+      <div class="vert v1" aria-hidden="true"><span>ラ</span><span class="f">ー</span><span>メ</span><span class="f2">ン</span></div>
+      <div class="vert v2" aria-hidden="true">幽霊</div>
+      <div class="reflect" aria-hidden="true" style="display:flex;gap:inherit">
+        <div class="vert v1"><span>ラ</span><span>ー</span><span>メ</span><span>ン</span></div>
+        <div class="vert v2">幽霊</div>
+      </div>
+    </div>
+    <div class="right-col">
+      <div class="mono">営業 · Hours</div>
+      <div class="hours">23:00—05:00</div>
+      <div class="status mono" id="status"><i></i><span>Checking…</span></div>
+    </div>
+  </div>
+  <canvas id="rain" aria-hidden="true"></canvas>
+</header>
+
+<section id="build">
+  <div class="wrap">
+    <div class="head"><div class="mono">01 / 食券機 Ticket machine</div><h2>Build your bowl<small>Choose on the machine, hand the ticket to Kaz. Your ramen is drawn live as you choose — this is roughly what arrives, minus the steam on your glasses.</small></h2></div>
+    <div class="builder">
+      <div class="bowlbox"><svg id="bowl" viewBox="0 0 400 420" role="img" aria-label="Your ramen bowl, seen from above"></svg></div>
+      <form id="machine" onsubmit="return false">
+        <fieldset><legend>Broth · スープ</legend><div class="opts" id="o-broth"></div></fieldset>
+        <fieldset><legend>Noodles · 麺</legend><div class="opts" id="o-noodle"></div></fieldset>
+        <fieldset><legend>Toppings · トッピング</legend><div class="opts" id="o-top"></div></fieldset>
+        <fieldset><legend>Chili oil · 辣油</legend>
+          <div class="spice"><input type="range" id="spice" min="0" max="5" value="1" aria-label="Chili oil level"><output id="spiceOut" for="spice">1 · gentle</output></div>
+        </fieldset>
+        <div class="ticket-row">
+          <div class="total" id="total">¥0<small>≈ 0 cr · incl. tax</small></div>
+          <button type="button" id="buy">食券を買う · Buy ticket</button>
+        </div>
+        <div id="ticket" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section id="menu">
+  <div class="wrap">
+    <div class="head"><div class="mono">02 / お品書き Menu</div><h2>The fixed bowls<small>For regulars who stopped choosing years ago.</small></h2></div>
+    <div class="menu">
+      <div class="item"><span class="k">幽</span><div><h3>Yūrei Tonkotsu</h3><p>House pork-bone broth, thin Hakata noodles, chashu, ajitama, kikurage.</p></div><span class="p">¥1,480</span></div>
+      <div class="item"><span class="k">黒</span><div><h3>Black Garlic Mayu</h3><p>Tonkotsu with burnt garlic oil, the colour of the Dotonbori at 4 a.m.</p></div><span class="p">¥1,620</span></div>
+      <div class="item"><span class="k">潮</span><div><h3>Vat-Kelp Shio</h3><p>Clear broth from bay-grown kelp, yuzu, grown-crab, mitsuba.</p></div><span class="p">¥1,540</span></div>
+      <div class="item"><span class="k">辛</span><div><h3>Signal Red Miso</h3><p>Hokkaido-style miso, corn, butter, level-four chili oil. Warning lights included.</p></div><span class="p">¥1,580</span></div>
+      <div class="item"><span class="k">餃</span><div><h3>Gyoza · six</h3><p>Pan-fried, lattice skirt, black vinegar.</p></div><span class="p">¥580</span></div>
+      <div class="item"><span class="k">飯</span><div><h3>Chashu don</h3><p>Rice, torched chashu trimmings, tare, raw yolk.</p></div><span class="p">¥520</span></div>
+      <div class="item"><span class="k">替</span><div><h3>Kaedama</h3><p>Extra noodles into your leftover broth. Shout it.</p></div><span class="p">¥180</span></div>
+      <div class="item"><span class="k">酒</span><div><h3>Highball · Asahi · oolong</h3><p>Or a bottle of the chef's cold barley tea.</p></div><span class="p">¥450</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="story">
+  <div class="wrap story">
+    <p class="quote">"The city got taller. The rain got warmer. <span>The broth stayed the same.</span>"</p>
+    <div>
+      <div class="mono" style="margin-bottom:14px">03 / 由来 Story</div>
+      <p>Kazuhiro Tanabe's grandmother opened the stall in 2061, three years before the Namba arcades were sunk underground to escape the summer heat. She named it Yūrei — ghost — because the steam off her pot drifted down the corridor and pulled strangers in like a haunting.</p>
+      <p>Everything upstairs changed. Delivery drones replaced delivery bikes; the canal lights went holographic. Kaz still skims his pot by hand at 3 a.m., and still refuses to let the ordering machine speak. You press a button. It prints a ticket. That's it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="find">
+  <div class="wrap">
+    <div class="head"><div class="mono">04 / 地図 Find us</div><h2>Take the B7 escalator<small>Exit the Midōsuji Line at Namba, follow the red signal lamps past the pachinko hall. If the corridor smells like pork bone, you're close.</small></h2></div>
+    <div class="loc">
+      <div><span class="mono">Address</span><b>Namba-naka 2-B7-14, Naniwa, Osaka</b></div>
+      <div><span class="mono">Hours</span><b>23:00 – 05:00, closed Tuesdays</b></div>
+      <div><span class="mono">Seats</span><b>9 counter stools, no bookings</b></div>
+      <div><span class="mono">Pay</span><b>Yen, credit, or palm</b></div>
+    </div>
+  </div>
+</section>
+
+<footer><span class="mono">© 2089 ラーメン幽霊 · Ramen Yūrei</span><span class="mono">Slurping is encouraged</span></footer>
+
+<script>
+(function(){
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* rain */
+  var cv=document.getElementById('rain'),ctx=cv.getContext('2d'),W,H,dpr,drops=[],splashes=[];
+  function size(){ dpr=Math.min(2,window.devicePixelRatio||1); var r=cv.getBoundingClientRect(); W=r.width;H=r.height; cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    drops=[]; var n=Math.round(W*H/5200); for(var i=0;i<n;i++) drops.push(mk(true)); draw(); }
+  function mk(any){ var z=Math.random(); return {x:Math.random()*W*1.2-W*.1,y:any?Math.random()*H:-20,l:8+z*22,v:7+z*12,z:z}; }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.lineCap='round';
+    for(var i=0;i<drops.length;i++){ var d=drops[i];
+      var tint = d.x < W*.5 ? '255,120,150' : '120,230,255';
+      ctx.strokeStyle='rgba('+(d.z>.7?tint:'180,190,210')+','+(0.12+d.z*.3).toFixed(2)+')';
+      ctx.lineWidth=.6+d.z*.9;
+      ctx.beginPath(); ctx.moveTo(d.x,d.y); ctx.lineTo(d.x-d.l*.18,d.y+d.l); ctx.stroke(); }
+    for(var j=0;j<splashes.length;j++){ var s=splashes[j]; ctx.strokeStyle='rgba(180,200,230,'+(s.a).toFixed(2)+')'; ctx.lineWidth=.7; ctx.beginPath(); ctx.ellipse(s.x,s.y,s.r,s.r*.3,0,0,6.283); ctx.stroke(); }
+  }
+  function step(){
+    for(var i=0;i<drops.length;i++){ var d=drops[i]; d.y+=d.v; d.x-=d.v*.18;
+      if(d.y>H*.8+d.z*H*.2){ if(d.z>.5&&splashes.length<60) splashes.push({x:d.x,y:d.y,r:1,a:.5}); drops[i]=mk(false); } }
+    for(var j=splashes.length-1;j>=0;j--){ var s=splashes[j]; s.r+=.6; s.a-=.03; if(s.a<=0) splashes.splice(j,1); }
+    draw(); if(!reduce) requestAnimationFrame(step);
+  }
+  var rt; window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(size,150);});
+  size(); if(!reduce) requestAnimationFrame(step);
+
+  /* open status (Osaka time) */
+  (function(){ var st=document.getElementById('status'); var now=new Date(); var jst=new Date(now.getTime()+ (now.getTimezoneOffset()+540)*60000);
+    var h=jst.getHours(), d=jst.getDay(); var open=(h>=23||h<5) && !(d===2&&h>=23) && !(d===3&&h<5);
+    st.classList.toggle('open',open); st.querySelector('span').textContent=(open?'Open now':'Closed')+' · Osaka '+String(h).padStart(2,'0')+':'+String(jst.getMinutes()).padStart(2,'0'); })();
+
+  /* builder */
+  var BROTH=[
+    {id:'tonkotsu',n:'Tonkotsu',j:'豚骨',p:1100,c:['#f1e2c4','#d8bf92'],oil:'rgba(255,230,170,.5)'},
+    {id:'shoyu',n:'Shoyu',j:'醤油',p:1000,c:['#a0622e','#6b3a17'],oil:'rgba(255,200,120,.55)'},
+    {id:'miso',n:'Red Miso',j:'赤味噌',p:1080,c:['#d49248','#9d5f22'],oil:'rgba(255,210,120,.5)'},
+    {id:'shio',n:'Vat-Kelp Shio',j:'昆布塩',p:1040,c:['#efe0a2','#cdb86a'],oil:'rgba(255,255,220,.6)'},
+    {id:'mayu',n:'Black Garlic',j:'マー油',p:1180,c:['#3a2a22','#1a120e'],oil:'rgba(120,90,70,.6)'}
+  ];
+  var NOODLE=[
+    {id:'thin',n:'Hakata thin',j:'細麺',p:0,w:1.6,amp:.5,col:'#f3dd8a'},
+    {id:'wavy',n:'Sapporo wavy',j:'縮れ麺',p:0,w:2.6,amp:5,col:'#f0cf5c'},
+    {id:'thick',n:'Thick chewy',j:'太麺',p:80,w:4.6,amp:1.5,col:'#e8c86a'}
+  ];
+  var TOP=[
+    {id:'chashu',n:'Chashu ×2',j:'チャーシュー',p:280,on:1},
+    {id:'egg',n:'Ajitama',j:'味玉',p:150,on:1},
+    {id:'nori',n:'Nori ×3',j:'海苔',p:100,on:1},
+    {id:'negi',n:'Negi',j:'ネギ',p:80,on:1},
+    {id:'menma',n:'Menma',j:'メンマ',p:120,on:0},
+    {id:'naruto',n:'Narutomaki',j:'なると',p:90,on:1},
+    {id:'corn',n:'Butter corn',j:'コーン',p:130,on:0},
+    {id:'beni',n:'Beni shoga',j:'紅生姜',p:60,on:0},
+    {id:'crab',n:'Grown-crab',j:'培養蟹',p:420,on:0}
+  ];
+  function opts(host,list,type,name,checkedFn){
+    document.getElementById(host).innerHTML=list.map(function(o,i){ var id=name+'-'+o.id;
+      return '<div class="opt"><input type="'+type+'" name="'+name+'" id="'+id+'" value="'+o.id+'"'+(checkedFn(o,i)?' checked':'')+'><label for="'+id+'"><b>'+o.n+'<span>'+o.j+'</span></b><em>'+(o.p?(type==='radio'&&name==='broth'?'¥':'+¥')+o.p:'—')+'</em></label></div>'; }).join('');
+  }
+  opts('o-broth',BROTH,'radio','broth',function(o,i){return i===0;});
+  opts('o-noodle',NOODLE,'radio','noodle',function(o,i){return i===0;});
+  opts('o-top',TOP,'checkbox','top',function(o){return o.on;});
+  var NS='http://www.w3.org/2000/svg', svg=document.getElementById('bowl');
+  // deterministic random
+  function rng(seed){ return function(){ seed=(seed*16807)%2147483647; return (seed-1)/2147483646; }; }
+  var spiceNames=['none','gentle','warm','hot','signal red','ghost'];
+  function state(){
+    var f=document.getElementById('machine');
+    var b=BROTH.find(function(x){return x.id===f.querySelector('input[name=broth]:checked').value;});
+    var n=NOODLE.find(function(x){return x.id===f.querySelector('input[name=noodle]:checked').value;});
+    var t=Array.prototype.map.call(f.querySelectorAll('input[name=top]:checked'),function(i){return i.value;});
+    return {b:b,n:n,t:t,s:+document.getElementById('spice').value};
+  }
+  function render(){
+    var S=state(), R=rng(42), cx=200, cy=210;
+    var h='<defs><radialGradient id="brothG" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="'+S.b.c[0]+'"/><stop offset="1" stop-color="'+S.b.c[1]+'"/></radialGradient>'+
+      '<radialGradient id="bowlG" cx="50%" cy="50%" r="50%"><stop offset=".82" stop-color="#111318"/><stop offset=".9" stop-color="#262a35"/><stop offset="1" stop-color="#0a0b0f"/></radialGradient>'+
+      '<clipPath id="soup"><circle cx="'+cx+'" cy="'+cy+'" r="150"/></clipPath></defs>';
+    h+='<circle cx="'+cx+'" cy="'+cy+'" r="186" fill="url(#bowlG)" stroke="#ff3b5c" stroke-opacity=".5" stroke-width="1"/>';
+    // rim pattern (raimon)
+    var rp=''; for(var k=0;k<48;k++){ var a=k/48*Math.PI*2; rp+=(k?'L':'M')+(cx+Math.cos(a)*(170+(k%2?6:0))).toFixed(1)+' '+(cy+Math.sin(a)*(170+(k%2?6:0))).toFixed(1); }
+    h+='<path d="'+rp+'Z" fill="none" stroke="#ff3b5c" stroke-width="1.2" opacity=".55"/>';
+    h+='<circle cx="'+cx+'" cy="'+cy+'" r="152" fill="url(#brothG)"/>';
+    h+='<g clip-path="url(#soup)">';
+    // noodles
+    for(var i=0;i<26;i++){ var y=cy-90+i*7+R()*4, x0=cx-150, d='M'+x0+' '+y.toFixed(1);
+      for(var x=x0;x<=cx+150;x+=10){ d+=' L'+x+' '+(y+Math.sin(x/9+i)*S.n.amp+ Math.sin(x/47+i*2)*6).toFixed(1); }
+      h+='<path d="'+d+'" fill="none" stroke="'+S.n.col+'" stroke-width="'+S.n.w+'" stroke-linecap="round" opacity="'+(0.8+R()*.2).toFixed(2)+'"/>'; }
+    // fat droplets
+    for(var j=0;j<40;j++){ var a2=R()*6.283, r2=R()*140; h+='<circle cx="'+(cx+Math.cos(a2)*r2).toFixed(1)+'" cy="'+(cy+Math.sin(a2)*r2).toFixed(1)+'" r="'+(1+R()*3.5).toFixed(1)+'" fill="'+S.b.oil+'"/>'; }
+    // chili oil
+    for(var q=0;q<S.s*14;q++){ var a3=R()*6.283, r3=R()*145; h+='<circle cx="'+(cx+Math.cos(a3)*r3).toFixed(1)+'" cy="'+(cy+Math.sin(a3)*r3).toFixed(1)+'" r="'+(1.5+R()*4).toFixed(1)+'" fill="rgba(230,40,20,'+(0.5+R()*.4).toFixed(2)+')"/>'; }
+    h+='</g>';
+    var T=S.t;
+    if(T.indexOf('nori')>=0){ [[-20,0],[0,0],[20,0]].forEach(function(o,i){ h+='<g transform="translate('+(cx-120+i*18)+','+(cy-120+i*6)+') rotate('+(-30+i*8)+')"><rect x="-18" y="-40" width="44" height="86" fill="#15201a" stroke="#28382d"/><path d="M-12 -30 l30 0 M-12 -10 l30 0 M-12 10 l30 0" stroke="#233328"/></g>'; }); }
+    if(T.indexOf('chashu')>=0){ [[70,-60],[40,-95]].forEach(function(p){ h+='<g transform="translate('+(cx+p[0])+','+(cy+p[1])+')"><ellipse rx="44" ry="38" fill="#c98a6a"/><ellipse rx="40" ry="34" fill="#e8b39a"/><path d="M-30 -6 Q-5 -20 28 -4 M-24 12 Q2 2 30 14" stroke="#fff3ea" stroke-width="3" fill="none" opacity=".7"/><ellipse rx="44" ry="38" fill="none" stroke="#7a3f26" stroke-width="3"/></g>'; }); }
+    if(T.indexOf('egg')>=0){ [[-60,70,-20],[-20,95,25]].forEach(function(p){ h+='<g transform="translate('+(cx+p[0])+','+(cy+p[1])+') rotate('+p[2]+')"><ellipse rx="30" ry="24" fill="#c68a4a"/><ellipse rx="27" ry="21" fill="#fbf4e4"/><ellipse cx="2" rx="15" ry="12" fill="#f3a21a"/><ellipse cx="0" cy="-2" rx="8" ry="6" fill="#ffc94a"/></g>'; }); }
+    if(T.indexOf('naruto')>=0){ h+='<g transform="translate('+(cx+80)+','+(cy+50)+')"><circle r="24" fill="#fbf7f0" stroke="#e8e0d0"/><path d="M0 0 m0 -4 a4 4 0 1 1 -4 4 a8 8 0 1 1 8 8 a12 12 0 1 1 -12 -12 a16 16 0 1 1 16 16" fill="none" stroke="#ff4f7b" stroke-width="3"/></g>'; }
+    if(T.indexOf('menma')>=0){ for(var m=0;m<6;m++){ h+='<rect x="'+(cx+20+m*9)+'" y="'+(cy+80+m*3)+'" width="7" height="34" rx="2" fill="#b8844a" transform="rotate('+(-30+m*4)+' '+(cx+20+m*9)+' '+(cy+80)+')"/>'; } }
+    if(T.indexOf('corn')>=0){ for(var c=0;c<34;c++){ var a4=R()*6.283, r4=R()*26; h+='<circle cx="'+(cx-80+Math.cos(a4)*r4).toFixed(1)+'" cy="'+(cy-10+Math.sin(a4)*r4).toFixed(1)+'" r="3.4" fill="#ffd23f" stroke="#e0a800" stroke-width=".6"/>'; } h+='<rect x="'+(cx-94)+'" y="'+(cy-24)+'" width="24" height="18" rx="3" fill="#fff4b0" opacity=".9"/>'; }
+    if(T.indexOf('beni')>=0){ for(var bs=0;bs<14;bs++){ h+='<rect x="'+(cx+10+R()*30).toFixed(1)+'" y="'+(cy-10+R()*20).toFixed(1)+'" width="2.5" height="'+(10+R()*8).toFixed(1)+'" fill="#ff2a4a" transform="rotate('+(R()*180).toFixed(0)+' '+(cx+25)+' '+cy+')"/>'; } }
+    if(T.indexOf('crab')>=0){ h+='<g transform="translate('+(cx-10)+','+(cy-30)+')"><path d="M-30 0 Q0 -18 30 0 Q0 10 -30 0Z" fill="#fff" /><path d="M-30 0 Q0 -18 30 0" stroke="#ff5a3c" stroke-width="7" fill="none"/><path d="M-26 8 Q2 -6 28 10" stroke="#3de8ff" stroke-width="1" fill="none" opacity=".8"/></g>'; }
+    if(T.indexOf('negi')>=0){ for(var g=0;g<28;g++){ var a5=R()*6.283, r5=40+R()*60; h+='<circle cx="'+(cx+Math.cos(a5)*r5).toFixed(1)+'" cy="'+(cy+Math.sin(a5)*r5).toFixed(1)+'" r="'+(3+R()*2).toFixed(1)+'" fill="none" stroke="#7ed957" stroke-width="2"/>'; } }
+    // chopsticks + steam
+    h+='<g><rect x="250" y="20" width="8" height="220" rx="3" fill="#1b1d24" stroke="#ff3b5c" stroke-opacity=".35" transform="rotate(28 254 20)"/><rect x="268" y="18" width="8" height="220" rx="3" fill="#1b1d24" stroke="#3de8ff" stroke-opacity=".35" transform="rotate(24 272 18)"/></g>';
+    h+='<g class="steam" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"><path d="M150 150 q-20 -30 0 -60 t0 -60"/><path d="M200 140 q20 -30 0 -60 t0 -60"/><path d="M250 160 q-20 -30 0 -60 t0 -60"/></g>';
+    svg.innerHTML=h;
+    // price
+    var price=S.b.p+S.n.p+S.t.reduce(function(a,id){return a+TOP.find(function(x){return x.id===id;}).p;},0)+(S.s>=4?50:0);
+    document.getElementById('total').innerHTML='¥'+price.toLocaleString('en-US')+'<small>≈ '+(price/7.4).toFixed(1)+' cr · incl. tax</small>';
+    document.getElementById('spiceOut').textContent=S.s+' · '+spiceNames[S.s];
+    return {S:S,price:price};
+  }
+  document.getElementById('machine').addEventListener('change',render);
+  document.getElementById('spice').addEventListener('input',render);
+  var num=Math.floor(100+Math.random()*800);
+  document.getElementById('buy').addEventListener('click',function(){
+    var r=render(); num++;
+    var names=r.S.t.map(function(id){return TOP.find(function(x){return x.id===id;}).j;}).join('・')||'素ラーメン';
+    document.getElementById('ticket').innerHTML='<div class="tk"><div>食券 No.'+num+' · B7-14</div><b>'+r.S.b.j+' / '+r.S.n.j+'</b><div>'+names+'</div><div>辣油 ×'+r.S.s+'</div><div style="margin-top:6px;border-top:1px dashed #111;padding-top:6px">TOTAL ¥'+r.price.toLocaleString('en-US')+' — hand this to Kaz</div></div>';
+  });
+  render();
+})();
+</script>
+</body>
+</html>

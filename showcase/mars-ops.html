@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jezero Base Ops</title>
+<meta name="description" content="Amber mission-control console for a fictional colony in Jezero crater, driven by real Mars time: Coordinated Mars Time, local solar time, sol count, season and Earth–Mars light delay computed live, plus power, life support, greenhouse, dust forecast and crew schedule.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e0a04;
+  --panel:#140e06;
+  --amb:#ffb000;
+  --amb2:#ffcf66;
+  --dim:#9a6a10;
+  --faint:#3b2a0c;
+  --hair:#261b08;
+  --red:#ff5a36;
+  --mono:"Share Tech Mono","Lucida Console",ui-monospace,monospace;
+  --disp:"Chakra Petch","Eurostile","Arial Narrow",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg)}
+body{color:var(--amb);font-family:var(--mono);font-size:13px;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden;
+  background:radial-gradient(ellipse at 50% 0%,#2a1a05 0%,transparent 55%),var(--bg)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+:focus-visible{outline:1px solid var(--amb2);outline-offset:2px}
+a{color:inherit}
+.glow{text-shadow:0 0 8px rgba(255,176,0,.45)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px max(16px,2vw);border-bottom:1px solid var(--faint);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px}
+.brand .mark{width:34px;height:34px;border:1.5px solid var(--amb);display:grid;place-items:center;font-family:var(--disp);font-weight:700;font-size:13px;transform:rotate(45deg)}
+.brand .mark span{transform:rotate(-45deg)}
+.brand h1{font-family:var(--disp);font-weight:600;font-size:20px;letter-spacing:.24em;margin:0;text-transform:uppercase}
+.brand small{display:block;font-size:10.5px;letter-spacing:.2em;color:var(--dim)}
+.back{font-size:11px;letter-spacing:.2em;color:var(--dim);text-decoration:none;border:1px solid var(--faint);padding:5px 9px}
+.back:hover{color:var(--amb);border-color:var(--dim)}
+.status{display:flex;gap:18px;align-items:center;font-size:11px;letter-spacing:.14em;color:var(--dim);flex-wrap:wrap}
+.status b{color:var(--amb);font-weight:400}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amb);box-shadow:0 0 8px var(--amb);margin-right:6px;animation:blink 2s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+
+/* time strip */
+.clocks{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--faint)}
+.clocks>div{padding:12px max(12px,1.2vw);border-right:1px solid var(--hair);min-width:0}
+.clocks>div:last-child{border-right:0}
+.clocks .k{font-size:10px;letter-spacing:.2em;color:var(--dim);white-space:nowrap}
+.clocks .v{font-family:var(--disp);font-weight:500;font-size:clamp(18px,1.9vw,28px);letter-spacing:.04em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.clocks .s{font-size:10.5px;color:var(--dim);line-height:1.35}
+.clocks .hero .v{font-size:clamp(24px,2.6vw,38px);color:var(--amb2)}
+
+/* grid */
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;padding:12px max(16px,2vw) 30px}
+.p{background:var(--panel);border:1px solid var(--faint);position:relative;padding:12px 14px 14px;min-width:0}
+.p::before,.p::after{content:"";position:absolute;width:10px;height:10px;border-color:var(--amb);border-style:solid;opacity:.8}
+.p::before{top:-1px;left:-1px;border-width:1.5px 0 0 1.5px}
+.p::after{bottom:-1px;right:-1px;border-width:0 1.5px 1.5px 0}
+.p h2{font-family:var(--disp);font-weight:600;font-size:12.5px;letter-spacing:.26em;margin:0 0 10px;display:flex;justify-content:space-between;gap:8px;text-transform:uppercase}
+.p h2 span{color:var(--dim);font-weight:400;letter-spacing:.14em;font-family:var(--mono);font-size:10.5px}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:12.5px}
+.kv dt{color:var(--dim);letter-spacing:.06em}
+.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.big{font-family:var(--disp);font-size:clamp(30px,3vw,44px);font-weight:500;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-size:13px;color:var(--dim);margin-left:4px;font-family:var(--mono)}
+.row{display:flex;gap:18px;flex-wrap:wrap;align-items:end;margin-bottom:10px}
+.lab{font-size:10px;letter-spacing:.2em;color:var(--dim);display:block;margin-bottom:3px}
+svg text{font-family:var(--mono);fill:var(--dim);font-size:10px}
+#orbit text{font-size:8px}
+.meter{height:8px;border:1px solid var(--faint);position:relative;margin-top:4px}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:repeating-linear-gradient(90deg,var(--amb) 0 3px,transparent 3px 5px)}
+.ok{color:var(--amb)} .warn{color:var(--red)}
+.gauges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.g{border:1px solid var(--hair);padding:8px}
+.g .v{font-family:var(--disp);font-size:22px;font-variant-numeric:tabular-nums}
+.g .v small{font-size:11px;color:var(--dim);font-family:var(--mono)}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th{font-weight:400;color:var(--dim);text-align:left;letter-spacing:.1em;font-size:10px;padding:0 6px 6px 0;border-bottom:1px solid var(--faint)}
+td{padding:6px 6px 6px 0;border-bottom:1px solid var(--hair);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.bar{width:34%}
+.log{height:230px;overflow:hidden;font-size:12px;line-height:1.6;position:relative}
+.log div{display:grid;grid-template-columns:auto 1fr;gap:10px;animation:in .6s ease-out}
+.log div time{color:var(--dim)}
+.log div.a span{color:var(--red)}
+@keyframes in{from{opacity:0;transform:translateY(-6px)}}
+.gantt{position:relative;font-size:11px}
+.gantt .r{display:grid;grid-template-columns:150px 1fr;align-items:center;height:26px;border-bottom:1px solid var(--hair)}
+.gantt .r .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+.gantt .r .n small{color:var(--dim)}
+.gantt .track{position:relative;height:16px}
+.gantt .blk{position:absolute;top:0;bottom:0;border:1px solid var(--dim);background:rgba(255,176,0,.08);font-size:9.5px;line-height:14px;padding:0 3px;overflow:hidden;white-space:nowrap;color:var(--amb)}
+.gantt .blk.eva{background:var(--amb);color:#140e06;border-color:var(--amb)}
+.gantt .blk.sleep{background:repeating-linear-gradient(135deg,transparent 0 3px,rgba(255,176,0,.12) 3px 4px);border-color:var(--faint);color:var(--dim)}
+.gantt .now{position:absolute;top:0;bottom:0;width:1px;background:var(--red);box-shadow:0 0 6px var(--red);pointer-events:none}
+.gantt .axis{display:grid;grid-template-columns:150px 1fr;font-size:9.5px;color:var(--dim);height:18px}
+.gantt .axis .t{position:relative}
+.gantt .axis .t span{position:absolute;transform:translateX(-50%)}
+.tabs{display:flex;gap:4px}
+.tabs button{font:inherit;font-size:10.5px;letter-spacing:.14em;background:transparent;color:var(--dim);border:1px solid var(--faint);padding:4px 8px;cursor:pointer}
+.tabs button[aria-pressed="true"]{color:#140e06;background:var(--amb);border-color:var(--amb)}
+.foot{padding:0 max(16px,2vw) 30px;color:var(--dim);font-size:11px;line-height:1.7;max-width:110ch}
+@media (max-width:1180px){.c3{grid-column:span 6}.c4{grid-column:span 6}.c5,.c7,.c8{grid-column:span 12}.clocks{grid-template-columns:repeat(4,minmax(0,1fr))}.clocks>div{border-bottom:1px solid var(--hair)}}
+@media (max-width:720px){.brand small{letter-spacing:.08em}.brand h1{font-size:17px}.grid>.p{grid-column:span 12}.clocks{grid-template-columns:repeat(2,minmax(0,1fr))}.gantt .r,.gantt .axis{grid-template-columns:92px 1fr}.gauges{grid-template-columns:repeat(2,1fr)}.status>span{display:none}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}.log div{animation:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="mark"><span>JZ</span></div><div><h1 class="glow">Jezero Base</h1><small>COLONY OPERATIONS · 18.44°N 77.45°E · −2,560 M</small></div></div>
+  <div class="status"><span><span class="dot"></span>ALL HABS NOMINAL</span><span>CREW <b>8/8</b></span><span>BASE SOL <b id="baseSol">—</b></span><a class="back" href="index.html">← SHOWCASE</a></div>
+</header>
+
+<section class="clocks" aria-label="Clocks">
+  <div class="hero"><div class="k">LMST · JEZERO</div><div class="v glow" id="lmst">--:--:--</div><div class="s">local mean solar time</div></div>
+  <div><div class="k">LTST · SUNDIAL</div><div class="v" id="ltst">--:--:--</div><div class="s" id="eot">EoT —</div></div>
+  <div><div class="k">MTC · AIRY-0</div><div class="v" id="mtc">--:--:--</div><div class="s">coordinated Mars time</div></div>
+  <div><div class="k">MARS SOL DATE</div><div class="v" id="msd">—</div><div class="s" id="percy">Perseverance sol —</div></div>
+  <div><div class="k">SEASON · Lₛ</div><div class="v" id="ls">—</div><div class="s" id="season">—</div></div>
+  <div><div class="k">EARTH · UTC</div><div class="v" id="utc">--:--:--</div><div class="s" id="utcd">—</div></div>
+  <div><div class="k">ONE-WAY LIGHT</div><div class="v" id="owlt">—</div><div class="s" id="dist">Earth distance —</div></div>
+</section>
+
+<main class="grid">
+  <section class="p c7" aria-labelledby="h-pow">
+    <h2 id="h-pow">Power bus <span>SOL PROFILE · kW</span></h2>
+    <div class="row">
+      <div><span class="lab">SOLAR NOW</span><div class="big glow" id="solNow">—<small>kW</small></div></div>
+      <div><span class="lab">FISSION 4×10 kWe</span><div class="big">40.0<small>kW</small></div></div>
+      <div><span class="lab">HAB LOAD</span><div class="big" id="load">—<small>kW</small></div></div>
+      <div style="flex:1;min-width:140px"><span class="lab">BATTERY · 1.2 MWh</span><div class="big" id="soc">—<small>%</small></div><div class="meter"><i id="socBar"></i></div></div>
+    </div>
+    <svg id="powChart" viewBox="0 0 700 210" preserveAspectRatio="none" style="width:100%;height:210px;display:block" role="img" aria-label="Solar power over the sol"></svg>
+  </section>
+
+  <section class="p c5" aria-labelledby="h-dust">
+    <h2 id="h-dust">Dust forecast <span>10-SOL · OPTICAL DEPTH τ</span></h2>
+    <div class="row">
+      <div><span class="lab">τ NOW</span><div class="big glow" id="tauNow">—</div></div>
+      <div><span class="lab">REGIONAL STORM RISK</span><div class="big" id="risk">—<small>%</small></div></div>
+      <div><span class="lab">WIND 10 M</span><div class="big">6.4<small>m/s</small></div></div>
+    </div>
+    <svg id="dustChart" viewBox="0 0 500 170" style="width:100%;height:auto;display:block" role="img" aria-label="Ten-sol dust opacity forecast"></svg>
+    <p id="dustNote" style="margin:8px 0 0;color:var(--dim);font-size:11.5px;line-height:1.6"></p>
+  </section>
+
+  <section class="p c4" aria-labelledby="h-ls">
+    <h2 id="h-ls">Life support <span>HAB-A · HAB-B · LAB</span></h2>
+    <div class="gauges">
+      <div class="g"><span class="lab">PRESSURE</span><div class="v" id="press">70.3<small> kPa</small></div></div>
+      <div class="g"><span class="lab">O₂</span><div class="v" id="o2">26.4<small> %</small></div></div>
+      <div class="g"><span class="lab">CO₂</span><div class="v" id="co2">2,140<small> ppm</small></div></div>
+      <div class="g"><span class="lab">TEMP</span><div class="v" id="temp">21.6<small> °C</small></div></div>
+      <div class="g"><span class="lab">HUMIDITY</span><div class="v">44<small> %</small></div></div>
+      <div class="g"><span class="lab">DOSE · SOL</span><div class="v">0.31<small> mSv</small></div></div>
+    </div>
+    <dl class="kv" style="margin-top:12px">
+      <dt>ISRU O₂ from CO₂ (SOXE ×6)</dt><dd id="isru">—</dd>
+      <dt>Crew O₂ demand</dt><dd>6.7 kg/sol</dd>
+      <dt>Water recovery</dt><dd>98.1 %</dd>
+      <dt>Ice mine yield</dt><dd>212 L/sol</dd>
+      <dt>Outside · surface</dt><dd id="outside">—</dd>
+    </dl>
+  </section>
+
+  <section class="p c8" aria-labelledby="h-gh">
+    <h2 id="h-gh">Greenhouse · Dome 2 <span>LED + FILTERED SUN · 410 m²</span></h2>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>CROP</th><th>CULTIVAR</th><th>BAY</th><th>DAY</th><th class="bar">TO HARVEST</th><th>KG · THIS SOL</th><th>KG · MARS YR</th></tr></thead>
+      <tbody id="crops"></tbody>
+    </table></div>
+    <p style="margin:10px 0 0;color:var(--dim);font-size:11.5px">Caloric self-sufficiency <b style="color:var(--amb)" id="kcal">—</b> · remainder from 2033 cargo landing reserves.</p>
+  </section>
+
+  <section class="p c12" aria-labelledby="h-crew">
+    <h2 id="h-crew">Crew timeline <span id="sched">LOCAL SOL · 24 h 39 m 35 s</span></h2>
+    <div class="gantt" id="gantt"></div>
+  </section>
+
+  <section class="p c7" aria-labelledby="h-log">
+    <h2 id="h-log">Ops log <span>AUTO + CREW ENTRIES</span></h2>
+    <div class="log" id="log" aria-live="polite"></div>
+  </section>
+
+  <section class="p c5" aria-labelledby="h-com">
+    <h2 id="h-com">Earth link <span>DSN · RELAY</span></h2>
+    <svg id="orbit" viewBox="0 0 300 200" style="width:100%;height:auto;display:block" role="img" aria-label="Positions of Earth and Mars around the Sun"></svg>
+    <dl class="kv" style="margin-top:10px">
+      <dt>Earth–Mars distance</dt><dd id="d2">—</dd>
+      <dt>Round-trip question</dt><dd id="rt">—</dd>
+      <dt>Sun–Earth–Mars angle</dt><dd id="elong">—</dd>
+      <dt>Next pass</dt><dd>DSS-43 Canberra · 70 m</dd>
+    </dl>
+  </section>
+</main>
+<p class="foot">Jezero Base, its crew and its telemetry are fictional. The clocks are real: Mars Sol Date and Coordinated Mars Time follow NASA GISS Mars24 (Allison &amp; McEwen 2000) with TT−UTC = 69.184 s; Lₛ and the equation of time use the same algorithm; Earth and Mars positions use JPL's Keplerian elements; solar power is modelled from Lₛ, local sundial time, latitude and dust opacity.</p>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const D2R=Math.PI/180, LON_E=77.45, LAT=18.44;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const pad=n=>String(n).padStart(2,'0');
+const hms=h=>{h=((h%24)+24)%24;const s=Math.floor(h*3600);return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`};
+
+// ---------- Mars24 ----------
+function mars(ms){
+  const jdUT=ms/86400000+2440587.5, jdTT=jdUT+69.184/86400;
+  const d=jdTT-2451545.0;
+  const msd=(jdTT-2405522.0028779)/1.0274912517;
+  const mtc=((24*msd)%24+24)%24;
+  const M=(19.3871+0.52402073*d)*D2R;
+  const aFMS=270.3871+0.524038496*d;
+  const A=[0.0071,0.0057,0.0039,0.0037,0.0021,0.0020,0.0018],tau=[2.2353,2.7543,1.1177,15.7866,2.1354,2.4694,32.8493],ph=[49.409,168.173,191.837,21.736,15.704,95.528,49.095];
+  let pbs=0; for(let i=0;i<7;i++) pbs+=A[i]*Math.cos((0.985626*d/tau[i]+ph[i])*D2R);
+  const nuM=(10.691+3e-7*d)*Math.sin(M)+0.623*Math.sin(2*M)+0.050*Math.sin(3*M)+0.005*Math.sin(4*M)+0.0005*Math.sin(5*M)+pbs;
+  const Ls=((aFMS+nuM)%360+360)%360;
+  const eot=2.861*Math.sin(2*Ls*D2R)-0.071*Math.sin(4*Ls*D2R)+0.002*Math.sin(6*Ls*D2R)-nuM; // degrees
+  const lmst=((mtc+LON_E/15)%24+24)%24;
+  const ltst=((lmst+eot/15)%24+24)%24;
+  const localDay=Math.floor(msd+LON_E/360);
+  const MY=38+Math.round((jdUT-2460627.0)/686.9711-Ls/360);
+  const r=1.5236*(1.00436-0.09309*Math.cos(M)-0.004336*Math.cos(2*M)-0.00031*Math.cos(3*M)-0.00003*Math.cos(4*M)); // heliocentric distance AU
+  return {jdTT,d,msd,mtc,Ls,eot,lmst,ltst,localDay,MY,r};
+}
+function season(Ls){
+  const n=['Northern spring','Northern summer','Northern autumn','Northern winter'][Math.floor(Ls/90)];
+  return n + (Ls>=180?' · dust season':'');
+}
+
+// ---------- JPL Keplerian positions ----------
+const EL={
+  earth:[1.00000261,0.00000562,0.01671123,-0.00004392,-0.00001531,-0.01294668,100.46457166,35999.37244981,102.93768193,0.32327364,0,0],
+  mars:[1.52371034,0.00001847,0.09339410,0.00007882,1.84969142,-0.00813131,-4.55343205,19140.30268499,-23.94362959,0.44441088,49.55953891,-0.29257343]
+};
+function helio(k,T){
+  const e0=EL[k]; const a=e0[0]+e0[1]*T, e=e0[2]+e0[3]*T, I=(e0[4]+e0[5]*T)*D2R, L=e0[6]+e0[7]*T, w=e0[8]+e0[9]*T, O=e0[10]+e0[11]*T;
+  let M=((L-w)%360+540)%360-180; M*=D2R; const om=(w-O)*D2R, Om=O*D2R;
+  let E=M+e*Math.sin(M); for(let i=0;i<8;i++) E=E-(E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+  const xp=a*(Math.cos(E)-e), yp=a*Math.sqrt(1-e*e)*Math.sin(E);
+  const x=(Math.cos(om)*Math.cos(Om)-Math.sin(om)*Math.sin(Om)*Math.cos(I))*xp+(-Math.sin(om)*Math.cos(Om)-Math.cos(om)*Math.sin(Om)*Math.cos(I))*yp;
+  const y=(Math.cos(om)*Math.sin(Om)+Math.sin(om)*Math.cos(Om)*Math.cos(I))*xp+(-Math.sin(om)*Math.sin(Om)+Math.cos(om)*Math.cos(Om)*Math.cos(I))*yp;
+  const z=(Math.sin(om)*Math.sin(I))*xp+(Math.cos(om)*Math.sin(I))*yp;
+  return [x,y,z];
+}
+
+// ---------- seeded noise ----------
+function rng(s){return()=>{s=(s*16807)%2147483647;return(s-1)/2147483646}}
+
+// ---------- solar power model ----------
+const ARRAY_M2=1400, EFF=0.235;
+function tauFor(day){const r=rng(day*7+3);let t=0.52+0.18*Math.sin(day/9)+r()*0.12; return t}
+function solarKW(ltst,Ls,r,tau){
+  const dec=Math.asin(Math.sin(25.19*D2R)*Math.sin(Ls*D2R));
+  const H=(ltst-12)*15*D2R;
+  const mu=Math.sin(LAT*D2R)*Math.sin(dec)+Math.cos(LAT*D2R)*Math.cos(dec)*Math.cos(H);
+  if(mu<=0) return 0;
+  const S=1361/(r*r);
+  const direct=Math.exp(-tau/Math.max(mu,0.05));
+  const diffuse=0.35*(1-Math.exp(-tau))*Math.sqrt(mu);
+  return S*mu*(direct*0.92+diffuse)*ARRAY_M2*EFF/1000;
+}
+
+// ---------- panels ----------
+const crops=[
+  ['Potato','Norland','B1',74,110,4.8,1180],
+  ['Dwarf wheat','Apogee','B2',52,70,2.1,640],
+  ['Soybean','Hoyt','B3',61,95,1.2,310],
+  ['Lettuce','Outredgeous','B4',22,28,1.9,520],
+  ['Tomato','Red Robin','B5',80,104,2.6,455],
+  ['Chile pepper','Española','B6',98,137,0.7,96],
+  ['Sweet potato','Beauregard','B7',40,120,0.0,210]
+];
+function drawCrops(localDay){
+  const r=rng(localDay);
+  $('crops').innerHTML=crops.map(([c,cv,bay,d,full,kg,yr])=>{
+    const day=((d+localDay)%full)+1, pct=day/full*100, today=(kg*(.8+r()*.4));
+    return `<tr><td>${c}</td><td style="color:var(--dim)">${cv}</td><td>${bay}</td><td>${day}/${full}</td><td class="bar"><div class="meter" style="margin:0"><i style="width:${pct.toFixed(1)}%"></i></div></td><td>${today.toFixed(2)}</td><td>${(yr+localDay%97).toLocaleString('en-GB')}</td></tr>`;
+  }).join('');
+  $('kcal').textContent='41 %';
+}
+
+const crew=[
+  ['I. Adeyemi','CDR'],['T. Echeverría','PLT'],['M. Takahara','MED'],['R. Lindqvist','GEO'],
+  ['P. Raghunathan','BOT'],['O. Kovalenko','SYS'],['A. Okafor-Blake','ISRU'],['J. Park','HAB']
+];
+const SOL_H=24.6597; // hours of Earth time per local sol expressed on a 24-"hour" Mars clock: we draw 0–24 LMST
+function blocks(i,day){
+  const r=rng(day*13+i*101);
+  const b=[['sleep',0,6.5,'SLEEP'],['meal',6.5,7,'BRKFST'],['dpc',7,7.75,'DPC']];
+  const evaTeam = (day+i)%4===0 || (day+i)%4===1;
+  const roleWork={CDR:'OPS DESK',PLT:'ROVER MAINT',MED:'MED CHECKS',GEO:'CORE LAB',BOT:'DOME 2',SYS:'POWER BUS',ISRU:'SOXE PLANT',HAB:'ECLSS'}[crew[i][1]];
+  if(evaTeam && i!==0){ b.push(['prep',7.75,8.75,'PREBREATHE'],['eva',8.75,13,'EVA · DELTA']); }
+  else b.push(['work',7.75,12.25,roleWork]);
+  b.push(['meal',13,13.75,'LUNCH']);
+  const ex=13.75+Math.floor(r()*3)*0.5;
+  b.push(['ex',ex,ex+2,'EXERCISE']);
+  b.push(['work',ex+2,19.5,roleWork]);
+  b.push(['meal',19.5,20.5,'DINNER'],['free',20.5,22,'OFF DUTY'],['sleep',22,24,'SLEEP']);
+  return b;
+}
+function drawGantt(localDay){
+  let h=`<div class="axis"><span></span><div class="t">${[0,3,6,9,12,15,18,21,24].map(t=>`<span style="left:${t/24*100}%">${pad(t)}</span>`).join('')}</div></div>`;
+  crew.forEach(([n,role],i)=>{
+    h+=`<div class="r"><div class="n">${n} <small>${role}</small></div><div class="track">${blocks(i,localDay).map(([k,a,b,l])=>`<div class="blk ${k==='eva'?'eva':k==='sleep'?'sleep':''}" style="left:${a/24*100}%;width:${(b-a)/24*100}%" title="${l} ${hms(a).slice(0,5)}–${hms(b).slice(0,5)}">${l}</div>`).join('')}<div class="now" data-now></div></div></div>`;
+  });
+  $('gantt').innerHTML=h;
+}
+
+// log
+const LOGS=[
+  'SOXE-4 stack temp 800 °C, O₂ purity 99.6 %','Dome 2 lighting cycle → photoperiod B','Rover PRV-2 charge complete, 96 %','Relay pass via MRO acquired, 2.1 Mbit/s',
+  'Airlock B cycled · 2 crew egress','Regolith bag inventory 1,284 · shielding berm N at 71 %','Water ice drill D2 torque nominal','HAB-B CO₂ scrubber bed swap',
+  'Dust deposition on array E: 0.4 % loss, brush run scheduled','Seismometer: marsquake M1.9, 1,820 km, farside','Greenhouse humidity 72 % → dehumidifier 2 on',
+  'Kilopower unit 3 thermal margin 14 K','DSN: uplink of sol plan received','MEDICAL: all crew dosimetry within limits','EVA suit 3 battery at 88 %, scrubber swapped',
+  'Potato bay B1 root zone EC adjusted','Methane sensor: background 0.4 ppbv','Laundry water loop back online','Solar array tracking offset −0.3°, corrected'
+];
+function addLog(ms,alert){
+  const m=mars(ms), line=document.createElement('div');
+  if(alert) line.className='a';
+  const r=Math.floor(Math.random()*LOGS.length);
+  line.innerHTML=`<time>${hms(m.lmst).slice(0,5)}</time><span>${alert||LOGS[r]}</span>`;
+  const L=$('log'); L.prepend(line); while(L.children.length>12) L.lastChild.remove();
+}
+
+// charts
+function drawPower(m){
+  const svg=$('powChart'), W=700, H=210, top=10, bot=24;
+  const tau=tauFor(m.localDay);
+  const pts=[]; let max=0;
+  for(let i=0;i<=240;i++){const lt=i/10; const kw=solarKW(lt,m.Ls,m.r,tau); pts.push([lt,kw]); max=Math.max(max,kw)}
+  const yMax=Math.max(200,Math.ceil(max/50)*50);
+  const X=t=>t/24*W, Y=v=>top+(1-v/yMax)*(H-top-bot);
+  const loadKW=58;
+  let s='';
+  for(let v=0;v<=yMax;v+=50) s+=`<line x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="#261b08"/><text x="4" y="${Y(v)-3}">${v}</text>`;
+  for(let t=0;t<=24;t+=3) s+=`<line x1="${X(t)}" x2="${X(t)}" y1="${top}" y2="${H-bot}" stroke="#1d1507"/><text x="${Math.min(W-14,X(t)+3)}" y="${H-8}">${pad(t)}h</text>`;
+  const d=pts.map(([t,v],i)=>`${i?'L':'M'}${X(t).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ');
+  s+=`<path d="${d} L${W} ${Y(0)} L0 ${Y(0)}Z" fill="rgba(255,176,0,.12)"/><path d="${d}" fill="none" stroke="#ffb000" stroke-width="1.6"/>`;
+  s+=`<line x1="0" x2="${W}" y1="${Y(loadKW-40)}" y2="${Y(loadKW-40)}" stroke="#ff5a36" stroke-dasharray="4 4"/><text x="${W-4}" y="${Y(loadKW-40)-4}" text-anchor="end" style="fill:#ff5a36">LOAD − FISSION = ${loadKW-40} kW</text>`;
+  const nx=X(m.ltst), ny=Y(solarKW(m.ltst,m.Ls,m.r,tau));
+  s+=`<line x1="${nx}" x2="${nx}" y1="${top}" y2="${H-bot}" stroke="#ffcf66"/><circle cx="${nx}" cy="${ny}" r="4" fill="#ffcf66"/><text x="${Math.min(W-60,nx+6)}" y="${top+10}" style="fill:#ffcf66">NOW · LTST</text>`;
+  svg.innerHTML=s;
+  const kw=solarKW(m.ltst,m.Ls,m.r,tau);
+  $('solNow').innerHTML=`${kw.toFixed(1)}<small>kW</small>`;
+  $('load').innerHTML=`${(loadKW+Math.sin(m.lmst)*1.6).toFixed(1)}<small>kW</small>`;
+  // battery: charges while solar > 18 kW deficit; simple sinusoid on the sol
+  const soc=62+30*Math.sin((m.ltst-10.5)/24*2*Math.PI);
+  $('soc').innerHTML=`${soc.toFixed(0)}<small>%</small>`; $('socBar').style.width=soc+'%';
+  $('tauNow').textContent=tau.toFixed(2);
+}
+function drawDust(m){
+  const svg=$('dustChart'), W=500,H=170,top=10,bot=26;
+  const days=[...Array(10)].map((_,i)=>m.localDay+i);
+  const t=days.map(tauFor);
+  const X=i=>30+i*(W-40)/10, bw=(W-40)/10-8, Y=v=>top+(1-v/1.5)*(H-top-bot);
+  let s='';
+  [0.5,1.0,1.5].forEach(v=>{s+=`<line x1="30" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="#261b08"/><text x="0" y="${Y(v)+3}">${v.toFixed(1)}</text>`});
+  s+=`<line x1="30" x2="${W}" y1="${Y(1)}" y2="${Y(1)}" stroke="#ff5a36" stroke-dasharray="3 3"/><text x="${W}" y="${Y(1)-4}" text-anchor="end" style="fill:#ff5a36">EVA LIMIT τ 1.0</text>`;
+  t.forEach((v,i)=>{
+    const unc=0.04+i*0.025;
+    s+=`<rect x="${X(i)}" y="${Y(v)}" width="${bw}" height="${Y(0)-Y(v)}" fill="${i?'rgba(255,176,0,.25)':'#ffb000'}" stroke="#ffb000" stroke-width=".8"/>`;
+    s+=`<line x1="${X(i)+bw/2}" x2="${X(i)+bw/2}" y1="${Y(v+unc)}" y2="${Y(Math.max(0,v-unc))}" stroke="#ffcf66"/>`;
+    s+=`<text x="${X(i)+bw/2}" y="${H-10}" text-anchor="middle">${i?'+'+i:'NOW'}</text>`;
+  });
+  svg.innerHTML=s;
+  const inSeason=m.Ls>=180;
+  const risk=inSeason? Math.round(6+10*Math.exp(-Math.pow((m.Ls-250)/60,2))+(m.Ls>330?2:0)) : 2;
+  $('risk').innerHTML=`${risk}<small>%</small>`;
+  $('dustNote').textContent= inSeason
+    ? `Lₛ ${m.Ls.toFixed(1)}°: ${m.Ls>320?'tail of the dusty season — perihelion (Lₛ 251°) has passed and the regional-storm window is closing as northern spring approaches.':'peak dusty season around perihelion (Lₛ 251°), when regional storms most often grow.'}`
+    : `Lₛ ${m.Ls.toFixed(1)}°: clear season. Aphelion cloud belt (Lₛ ≈ 71°) brings water-ice haze rather than dust.`;
+}
+function drawOrbit(T){
+  const svg=$('orbit'), cx=150, cy=100, sc=52;
+  const e=helio('earth',T), mm=helio('mars',T);
+  const dx=mm[0]-e[0], dy=mm[1]-e[1], dz=mm[2]-e[2]; const dAU=Math.hypot(dx,dy,dz);
+  let s=`<circle cx="${cx}" cy="${cy}" r="6" fill="#ffcf66"/><circle cx="${cx}" cy="${cy}" r="${sc}" fill="none" stroke="#3b2a0c"/><circle cx="${cx}" cy="${cy}" r="${sc*1.524}" fill="none" stroke="#3b2a0c" stroke-dasharray="2 3"/>`;
+  const ex=cx+e[0]*sc, ey=cy-e[1]*sc, mx=cx+mm[0]*sc, my=cy-mm[1]*sc;
+  s+=`<line x1="${ex}" y1="${ey}" x2="${mx}" y2="${my}" stroke="#ffb000" stroke-dasharray="3 3"/>`;
+  s+=`<circle cx="${ex}" cy="${ey}" r="4" fill="#ffb000"/><text x="${ex+7}" y="${ey+3}" style="fill:#ffb000">EARTH</text>`;
+  s+=`<circle cx="${mx}" cy="${my}" r="4" fill="#ff5a36"/><text x="${mx+7}" y="${my+3}" style="fill:#ff5a36">MARS</text>`;
+  s+=`<text x="4" y="12">HELIOCENTRIC · ECLIPTIC · TOP = ♈ +90°</text>`;
+  svg.innerHTML=s;
+  const km=dAU*149597870.7, lt=km/299792.458;
+  // Sun-Earth-Mars elongation
+  const el=Math.acos(((-e[0])*dx+(-e[1])*dy+(-e[2])*dz)/(Math.hypot(...e)*dAU))/D2R;
+  return {dAU,km,lt,el};
+}
+
+// ---------- tick ----------
+let lastDay=null, lastMin=-1;
+function tick(){
+  const now=Date.now(), m=mars(now);
+  $('lmst').textContent=hms(m.lmst); $('ltst').textContent=hms(m.ltst); $('mtc').textContent=hms(m.mtc);
+  $('eot').textContent=`EoT ${(m.eot*4>=0?'+':'−')}${Math.abs(m.eot*4).toFixed(1)} min`;
+  $('msd').textContent=m.msd.toFixed(4);
+  $('percy').textContent=`Perseverance sol ${m.localDay-52304}`;
+  $('ls').textContent=`${m.Ls.toFixed(2)}°`; $('season').textContent=`MY ${m.MY} · ${season(m.Ls)}`;
+  const d=new Date(now);
+  $('utc').textContent=`${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  $('utcd').textContent=d.toISOString().slice(0,10);
+  $('baseSol').textContent=m.localDay-53920;
+  const o=drawOrbitCached(m);
+  $('owlt').textContent=`${Math.floor(o.lt/60)} m ${pad(Math.floor(o.lt%60))} s`;
+  $('dist').textContent=`${(o.km/1e6).toFixed(1)} M km · ${o.dAU.toFixed(3)} AU`;
+  $('d2').textContent=`${Math.round(o.km).toLocaleString('en-GB')} km`;
+  $('rt').textContent=`${Math.floor(2*o.lt/60)} min ${pad(Math.floor(2*o.lt%60))} s`;
+  $('elong').textContent=`${o.el.toFixed(1)}°${o.el<5?' · CONJUNCTION BLACKOUT':''}`;
+  document.querySelectorAll('[data-now]').forEach(n=>n.style.left=(m.lmst/24*100)+'%');
+  const minute=Math.floor(m.lmst*60);
+  if(minute!==lastMin){lastMin=minute; drawPower(m);}
+  if(m.localDay!==lastDay){lastDay=m.localDay; drawGantt(m.localDay); drawCrops(m.localDay); drawDust(m); $('isru').textContent=`${(8.9+rng(m.localDay)()*0.6).toFixed(2)} kg/sol`;}
+  const sunUp=solarKW(m.ltst,m.Ls,m.r,0.1)>0;
+  $('outside').textContent=`${Math.round(sunUp?-20-30*Math.cos((m.ltst-14)/24*2*Math.PI)*0.5:-78)} °C · 0.62 kPa`;
+}
+let oc=null, ocT=0;
+function drawOrbitCached(m){ if(!oc || Date.now()-ocT>60000){ oc=drawOrbit((m.jdTT-2451545)/36525); ocT=Date.now(); } return oc; }
+
+// seed log
+(function(){const n=Date.now(); for(let i=8;i>0;i--) addLog(n-i*1000*60*37, i===5?'DUST: τ rose 0.08 overnight — EVA delta reviewed, GO':null);})();
+tick(); setInterval(tick,1000);
+if(!reduce) setInterval(()=>addLog(Date.now()),9000);
+})();
+</script>
+</body>
+</html>

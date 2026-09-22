@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Squiggle Club Milano</title>
+<meta name="description" content="A loud, laminated homage to the Memphis Group of 1980s Milan — squiggles, terrazzo, clashing pastels, the people and the scandal — with a party invitation generator.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rammetto+One&family=Chivo:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pink:#ff7eb6;
+  --yel:#ffd93b;
+  --teal:#2ec4b6;
+  --lilac:#b79cff;
+  --blue:#2b50ff;
+  --red:#ff4b3e;
+  --mint:#b8f2d0;
+  --ink:#141414;
+  --paper:#fffaf0;
+  --disp:"Rammetto One","Cooper Black","Arial Black",sans-serif;
+  --body:"Chivo","Trebuchet MS","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background-color:#fff;color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;overflow-x:hidden;
+  background-image:
+   radial-gradient(circle at 12% 18%,var(--pink) 0 5px,transparent 6px),
+   radial-gradient(circle at 70% 40%,var(--teal) 0 4px,transparent 5px),
+   radial-gradient(circle at 40% 80%,var(--yel) 0 6px,transparent 7px),
+   radial-gradient(circle at 88% 88%,var(--ink) 0 2px,transparent 3px),
+   radial-gradient(circle at 25% 55%,var(--ink) 0 2px,transparent 3px),
+   radial-gradient(circle at 55% 12%,var(--lilac) 0 4px,transparent 5px),
+   radial-gradient(circle at 92% 22%,var(--ink) 0 1.5px,transparent 2.5px);
+  background-size:180px 180px,220px 220px,260px 260px,90px 90px,120px 120px,200px 200px,70px 70px}
+a{color:inherit}
+:focus-visible{outline:4px solid var(--blue);outline-offset:3px}
+.pad{padding-left:max(16px,env(safe-area-inset-left),5vw);padding-right:max(16px,env(safe-area-inset-right),5vw)}
+
+.back{position:fixed;top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));z-index:30;font:14px var(--disp);background:var(--yel);border:3px solid var(--ink);padding:6px 12px;text-decoration:none;box-shadow:4px 4px 0 var(--ink);transform:rotate(-3deg);transition:transform .2s}
+.back:hover{transform:rotate(3deg) scale(1.05)}
+
+/* hero */
+.hero{position:relative;min-height:min(100vh,900px);display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:20px;padding-top:90px;padding-bottom:60px;overflow:hidden}
+.hero h1{font:400 clamp(48px,9.5vw,148px)/.88 var(--disp);margin:0;letter-spacing:-.02em;position:relative;z-index:2}
+.hero h1 .a{display:block;color:var(--ink)}
+.hero h1 .b{display:block;color:var(--pink);-webkit-text-stroke:3px var(--ink);text-shadow:6px 6px 0 var(--ink);transform:rotate(-4deg);transform-origin:left;margin:.08em 0 .1em .4em}
+.hero h1 .c{display:block;background:var(--teal);color:var(--ink);width:max-content;max-width:100%;padding:0 .15em;border:4px solid var(--ink)}
+.hero .tag{font:700 clamp(18px,1.7vw,22px)/1.35 var(--body);max-width:30em;margin:26px 0 0;background:#fff;border:3px solid var(--ink);padding:14px 16px;box-shadow:8px 8px 0 var(--lilac),8px 8px 0 3px var(--ink);position:relative;z-index:2}
+.totem{width:100%;max-width:470px;justify-self:center;position:relative;z-index:1}
+.totem svg{width:100%;height:auto;display:block;overflow:visible}
+.float{animation:bob 5s ease-in-out infinite}
+.float.d2{animation-delay:-1.7s}.float.d3{animation-delay:-3.1s}
+@keyframes bob{50%{transform:translateY(-10px) rotate(4deg)}}
+.squig{position:absolute;pointer-events:none;z-index:0}
+
+/* marquee band */
+.bandwrap{overflow:hidden;padding:12px 0}
+.band{background:var(--ink);color:var(--yel);border-top:4px solid var(--ink);border-bottom:4px solid var(--ink);overflow:hidden;white-space:nowrap;font:22px/1 var(--disp);padding:14px 0;transform:rotate(-1.5deg);margin:10px -20px}
+.band span{display:inline-block;animation:scroll 26s linear infinite;padding-right:40px}
+.band i{font-style:normal;color:var(--pink)}
+@keyframes scroll{to{transform:translateX(-100%)}}
+
+/* sections */
+section{padding-top:80px;padding-bottom:80px;position:relative}
+h2{font:400 clamp(34px,5.4vw,72px)/.95 var(--disp);margin:0 0 26px;letter-spacing:-.01em}
+h2 .hl{background:linear-gradient(transparent 55%,var(--yel) 55% 88%,transparent 88%)}
+.kicker{display:inline-block;font:900 13px var(--body);letter-spacing:.2em;text-transform:uppercase;background:var(--ink);color:#fff;padding:5px 10px;margin-bottom:16px;transform:rotate(-2deg)}
+
+/* story */
+.story{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+.story .col p{margin:0 0 1em}
+.drop::first-letter{font:400 4.2em/.8 var(--disp);float:left;margin:.04em .08em 0 0;color:var(--pink);-webkit-text-stroke:2px var(--ink)}
+.laminate{border:4px solid var(--ink);padding:26px;position:relative;background:var(--mint);
+  background-image:repeating-linear-gradient(45deg,transparent 0 14px,rgba(20,20,20,.9) 14px 16px);box-shadow:12px 12px 0 var(--ink)}
+.laminate .inner{background:#fff;border:3px solid var(--ink);padding:20px}
+.laminate .inner b{font-family:var(--disp);font-weight:400}
+.dates{list-style:none;margin:0;padding:0}
+.dates li{display:grid;grid-template-columns:72px 1fr;gap:12px;padding:10px 0;border-bottom:2px dashed var(--ink)}
+.dates li:last-child{border-bottom:0}
+.dates b{font:400 20px var(--disp)}
+
+/* people */
+.people{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+.card{border:4px solid var(--ink);background:#fff;position:relative;padding:18px 16px 20px;transition:transform .25s}
+.card:nth-child(4n+1){transform:rotate(-1.5deg)}
+.card:nth-child(4n+2){transform:rotate(1deg) translateY(12px)}
+.card:nth-child(4n+3){transform:rotate(-.5deg)}
+.card:nth-child(4n){transform:rotate(1.8deg) translateY(-6px)}
+.card:hover{transform:rotate(0) scale(1.03);z-index:2}
+.card .pic{height:92px;border:3px solid var(--ink);margin-bottom:12px;position:relative;overflow:hidden}
+.card h3{font:400 20px/1.05 var(--disp);margin:0 0 4px}
+.card .work{font:900 12px var(--body);letter-spacing:.12em;text-transform:uppercase;color:#555;margin-bottom:8px}
+.card p{margin:0;font-size:15px}
+
+/* principles */
+.princ{background:var(--yel);border-top:4px solid var(--ink);border-bottom:4px solid var(--ink)}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.rule{padding:24px;border:3px solid var(--ink);margin:-1.5px;background:var(--yel);position:relative}
+.rule:nth-child(2){background:var(--pink)}.rule:nth-child(4){background:var(--teal)}.rule:nth-child(6){background:var(--lilac)}
+.rule .n{font:400 44px/1 var(--disp);display:inline-block;background:#fff;border:3px solid var(--ink);border-radius:50%;width:66px;height:66px;text-align:center;line-height:62px;margin-bottom:10px}
+.rule h3{font:400 22px/1.1 var(--disp);margin:0 0 6px}
+.rule p{margin:0;font-size:15.5px}
+
+/* invite tool */
+.tool{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:36px;align-items:start}
+.form{border:4px solid var(--ink);background:#fff;padding:22px;box-shadow:10px 10px 0 var(--teal),10px 10px 0 4px var(--ink);display:grid;gap:14px}
+.form label{font:900 12px var(--body);letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:4px}
+.form input{width:100%;font:700 17px var(--body);border:3px solid var(--ink);padding:9px 10px;background:var(--paper);border-radius:0;color:var(--ink)}
+.form input:focus{outline:0;background:var(--mint)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn{font:16px var(--disp);border:3px solid var(--ink);background:var(--pink);padding:10px 16px;cursor:pointer;box-shadow:4px 4px 0 var(--ink);color:var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{background:var(--yel)}
+.btn:active{transform:translate(4px,4px);box-shadow:0 0 0 var(--ink)}
+.btn.alt{background:var(--teal)}
+.pals{display:flex;gap:8px;flex-wrap:wrap}
+.pal{width:46px;height:30px;border:3px solid var(--ink);cursor:pointer;padding:0;display:flex}
+.pal span{flex:1}
+.pal[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:3px}
+
+.stage{position:relative;display:flex;justify-content:center;padding:10px 0 30px}
+#invite{position:relative;width:100%;max-width:560px;aspect-ratio:5/7;border:5px solid var(--ink);overflow:hidden;background:var(--c1);box-shadow:16px 16px 0 var(--ink);transform:rotate(-1.2deg);transition:transform .3s}
+#invite:hover{transform:rotate(0)}
+#invite .shape{position:absolute;transition:all .6s cubic-bezier(.3,1.4,.5,1)}
+#invite .txt{position:absolute;left:8%;right:8%;bottom:7%;z-index:5;background:#fff;border:4px solid var(--ink);padding:5% 6%;box-shadow:8px 8px 0 var(--ink)}
+#invite .you{font:900 clamp(10px,1.6vw,13px) var(--body);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px}
+#invite .ev{font:400 clamp(24px,4.4vw,44px)/.92 var(--disp);margin:0 0 10px;word-break:break-word}
+#invite .meta{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font:700 clamp(12px,1.7vw,15px)/1.35 var(--body)}
+#invite .meta dt{font-weight:900;text-transform:uppercase;letter-spacing:.1em;font-size:.8em;padding-top:.15em}
+#invite .meta dd{margin:0}
+#invite .host{position:absolute;top:5%;right:6%;z-index:5;font:400 clamp(12px,1.9vw,16px) var(--disp);background:var(--ink);color:#fff;padding:6px 10px;transform:rotate(4deg)}
+
+footer{background:var(--ink);color:#fff;padding-top:40px;padding-bottom:50px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+footer b{font:400 24px var(--disp);color:var(--yel)}
+footer a{font:16px var(--disp);color:var(--pink)}
+
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr}
+  .totem{max-width:340px;order:-1;margin-top:10px}
+  .story,.tool{grid-template-columns:1fr}
+  .people{grid-template-columns:repeat(2,1fr)}
+  .rules{grid-template-columns:1fr 1fr}
+}
+@media (max-width:560px){
+  body{font-size:16px}
+  .hero{padding-top:70px}
+  .totem{max-width:260px}
+  .hero h1 .b{-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink)}
+  .people,.rules{grid-template-columns:1fr}
+  .card{transform:none!important}
+  .row2{grid-template-columns:1fr}
+  #invite{box-shadow:8px 8px 0 var(--ink)}
+  .laminate{box-shadow:8px 8px 0 var(--ink);padding:14px}
+  .band{font-size:18px}
+}
+@media (prefers-reduced-motion:reduce){
+  .float,.band span{animation:none}
+  #invite .shape{transition:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html" id="back">← Showcase</a>
+
+<header class="hero pad">
+  <svg class="squig" style="left:-40px;top:120px;width:260px" viewBox="0 0 260 60" aria-hidden="true"><path d="M5 30 q15 -25 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0" fill="none" stroke="#141414" stroke-width="7" stroke-linecap="round"/></svg>
+  <svg class="squig" style="right:4%;bottom:40px;width:200px" viewBox="0 0 200 60" aria-hidden="true"><path d="M5 30 q12 -22 25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0" fill="none" stroke="#2b50ff" stroke-width="6" stroke-linecap="round"/></svg>
+  <div>
+    <h1><span class="a">Stuck</span><span class="b">inside</span><span class="c">Memphis</span></h1>
+    <p class="tag">Milan, December 1980. A group of young designers crowd into Ettore Sottsass's living room while a Bob Dylan record skips on "the Memphis blues again" — and decide that good taste is over.</p>
+  </div>
+  <div class="totem" aria-label="A Memphis-style bookcase totem">
+    <svg viewBox="0 0 420 520" role="img" aria-label="Illustration of a colourful laminate bookcase with pastel arms, after Sottsass's Carlton">
+      <defs>
+        <pattern id="bacterio" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="40" height="40" fill="#fff"/><path d="M6 8 q4 -4 8 0 t8 0 M24 26 q3 -5 7 -1 M4 30 q5 2 7 -3 M28 6 l5 4 M16 18 q2 4 6 2 M34 34 q-3 3 -6 0" stroke="#141414" stroke-width="2.4" fill="none" stroke-linecap="round"/></pattern>
+        <pattern id="grid" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#ffd93b"/><path d="M0 0 H16 M0 0 V16" stroke="#141414" stroke-width="1.6"/></pattern>
+        <pattern id="dots" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="#b79cff"/><circle cx="7" cy="7" r="2.2" fill="#141414"/></pattern>
+        <pattern id="zig" width="24" height="14" patternUnits="userSpaceOnUse"><rect width="24" height="14" fill="#2ec4b6"/><path d="M0 10 L6 4 L12 10 L18 4 L24 10" stroke="#141414" stroke-width="2.4" fill="none"/></pattern>
+      </defs>
+      <!-- base -->
+      <rect x="120" y="430" width="180" height="70" fill="url(#bacterio)" stroke="#141414" stroke-width="5"/>
+      <rect x="140" y="500" width="30" height="14" fill="#141414"/><rect x="250" y="500" width="30" height="14" fill="#141414"/>
+      <!-- trunk -->
+      <rect x="190" y="120" width="40" height="310" fill="#ff7eb6" stroke="#141414" stroke-width="5"/>
+      <!-- arms -->
+      <path d="M60 330 L190 250 L190 280 L60 360Z" fill="#ffd93b" stroke="#141414" stroke-width="5"/>
+      <path d="M360 330 L230 250 L230 280 L360 360Z" fill="#2b50ff" stroke="#141414" stroke-width="5"/>
+      <rect x="40" y="330" width="40" height="100" fill="url(#grid)" stroke="#141414" stroke-width="5"/>
+      <rect x="340" y="330" width="40" height="100" fill="#ff4b3e" stroke="#141414" stroke-width="5"/>
+      <rect x="80" y="200" width="110" height="26" fill="url(#zig)" stroke="#141414" stroke-width="5"/>
+      <rect x="230" y="200" width="110" height="26" fill="url(#dots)" stroke="#141414" stroke-width="5"/>
+      <rect x="60" y="160" width="26" height="66" fill="#141414"/><rect x="334" y="160" width="26" height="66" fill="#ffd93b" stroke="#141414" stroke-width="5"/>
+      <!-- head -->
+      <path d="M150 120 L210 30 L270 120Z" fill="url(#dots)" stroke="#141414" stroke-width="5"/>
+      <g class="float"><circle cx="355" cy="80" r="30" fill="#ff7eb6" stroke="#141414" stroke-width="5"/></g>
+      <g class="float d2"><path d="M40 70 L80 30 L100 90Z" fill="#2ec4b6" stroke="#141414" stroke-width="5"/></g>
+      <g class="float d3"><path d="M20 250 q10 -18 20 0 t20 0 t20 0" fill="none" stroke="#141414" stroke-width="6" stroke-linecap="round"/></g>
+      <g class="float d2"><rect x="370" y="180" width="30" height="30" fill="#ffd93b" stroke="#141414" stroke-width="5" transform="rotate(20 385 195)"/></g>
+    </svg>
+  </div>
+</header>
+
+<div class="bandwrap"><div class="band" aria-hidden="true"><span>MEMPHIS MILANO <i>✶</i> 1981–1987 <i>✶</i> LAMINATE IS LOVE <i>✶</i> DOWN WITH GOOD TASTE <i>✶</i> ETTORE SOTTSASS <i>✶</i> NATHALIE DU PASQUIER <i>✶</i> BACTERIO <i>✶</i> </span><span>MEMPHIS MILANO <i>✶</i> 1981–1987 <i>✶</i> LAMINATE IS LOVE <i>✶</i> DOWN WITH GOOD TASTE <i>✶</i> ETTORE SOTTSASS <i>✶</i> NATHALIE DU PASQUIER <i>✶</i> BACTERIO <i>✶</i> </span></div></div>
+
+<main>
+<section class="pad" id="story">
+  <span class="kicker">The story</span>
+  <h2>How a skipping record <span class="hl">broke design</span></h2>
+  <div class="story">
+    <div class="col">
+      <p class="drop">By 1980 Ettore Sottsass was 63, a respected designer of Olivetti typewriters and a veteran of Italy's radical-design scene. He was also bored. Modernism had become a polite corporate beige, and "good design" meant chrome and restraint.</p>
+      <p>On 11 December 1980 he invited a group of younger designers to his Milan flat. Bob Dylan's <i>Stuck Inside of Mobile with the Memphis Blues Again</i> played over and over, the needle stuck. By the end of the night the group had a name that meant both the blues city of Tennessee and the ancient capital of Egypt — and a plan to make furniture that looked like nothing anyone had seen.</p>
+      <p>Nine months later, on 18 September 1981, the first Memphis collection opened at the Arc '74 showroom in Milan. More than two thousand people crammed the street. Critics called it vulgar, childish and brilliant, often in the same review.</p>
+    </div>
+    <div class="laminate">
+      <div class="inner">
+        <ul class="dates">
+          <li><b>1980</b><span>The Dylan night. Sottsass, De Lucchi, Du Pasquier, Sowden, Bedin, Zanini, Cibic, Thun and friends found the group.</span></li>
+          <li><b>1981</b><span>First show. The Carlton room divider, Casablanca sideboard and Super lamp debut.</span></li>
+          <li><b>1982</b><span>Critic Barbara Radice's writing gives the movement a voice; the collective shows in Paris, London, Tokyo.</span></li>
+          <li><b>1985</b><span>Sottsass steps away; he later compared Memphis to an intense love affair — wonderful, and never meant to last.</span></li>
+          <li><b>1987</b><span>The group dissolves. The pieces go to museums — and Karl Lagerfeld fills his Monte Carlo flat with them.</span></li>
+          <li><b>2016</b><span>David Bowie's Memphis collection sells at Sotheby's for over a million pounds. The squiggles are back.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="people" style="padding-top:20px">
+  <span class="kicker" style="background:var(--pink);color:var(--ink);border:3px solid var(--ink)">The gang</span>
+  <h2>Who was in <span class="hl">the living room</span></h2>
+  <div class="people" id="peopleGrid"></div>
+</section>
+
+<section class="pad princ" id="rules">
+  <span class="kicker">The (anti-)rules</span>
+  <h2>Six ways to annoy a modernist</h2>
+  <div class="rules">
+    <div class="rule"><div class="n">1</div><h3>Laminate is noble</h3><p>Cheap plastic laminate from bars and diners, printed with bacteria and sponge patterns, applied to luxury furniture. Materials have no class.</p></div>
+    <div class="rule"><div class="n">2</div><h3>Pattern before form</h3><p>Surface decoration is not a crime. It is the point. Nathalie Du Pasquier and George Sowden treated every plane as a canvas.</p></div>
+    <div class="rule"><div class="n">3</div><h3>Clash the colours</h3><p>Pink against red, mint against black, yellow against lilac. Harmony is optional; energy is required.</p></div>
+    <div class="rule"><div class="n">4</div><h3>Primitive shapes</h3><p>Cylinders, cones, spheres, zigzags — stacked like a child's blocks or an Aztec totem. Geometry as toy.</p></div>
+    <div class="rule"><div class="n">5</div><h3>Function is negotiable</h3><p>The Carlton's shelves slant. Who cares? An object's job is also to make you feel something.</p></div>
+    <div class="rule"><div class="n">6</div><h3>Pop is culture</h3><p>Suburbia, Hollywood, comics, kitsch and the ancient world, all in one room. High and low, together at last.</p></div>
+  </div>
+</section>
+
+<section class="pad" id="invite-tool">
+  <span class="kicker" style="background:var(--teal);color:var(--ink);border:3px solid var(--ink)">Interactive</span>
+  <h2>Throw a <span class="hl">Memphis party</span></h2>
+  <div class="tool">
+    <div class="form">
+      <div><label for="iEvent">Party name</label><input id="iEvent" value="Laminate & Lambrusco" maxlength="40"></div>
+      <div><label for="iHost">Hosted by</label><input id="iHost" value="Ettore's cousin Gianni" maxlength="32"></div>
+      <div class="row2">
+        <div><label for="iDate">When</label><input id="iDate" value="Sat 18 Sept · 9 pm" maxlength="30"></div>
+        <div><label for="iWhere">Where</label><input id="iWhere" value="Corso Europa 2, Milano" maxlength="36"></div>
+      </div>
+      <div><label for="iDress">Dress code</label><input id="iDress" value="Shoulder pads mandatory" maxlength="40"></div>
+      <div><label id="palLbl">Palette</label><div class="pals" role="group" aria-labelledby="palLbl" id="pals"></div></div>
+      <div class="btns">
+        <button class="btn" type="button" id="shuffle">Shuffle shapes</button>
+        <button class="btn alt" type="button" id="randomAll">Surprise me</button>
+      </div>
+    </div>
+    <div class="stage">
+      <div id="invite" role="img" aria-label="Party invitation preview">
+        <div class="host" id="oHost"></div>
+        <div class="txt">
+          <div class="you">You are invited to</div>
+          <div class="ev" id="oEvent"></div>
+          <dl class="meta"><dt>When</dt><dd id="oDate"></dd><dt>Where</dt><dd id="oWhere"></dd><dt>Wear</dt><dd id="oDress"></dd></dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="pad">
+  <div><b>Squiggle Club Milano</b><br>A homage to Memphis, 1981–1987. Nothing here is in good taste, on purpose.</div>
+  <a href="index.html">← back to the Showcase</a>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var people=[
+    ["Ettore Sottsass","1917–2007 · founder","The Carlton room divider, the Valentine typewriter, and the courage to be silly at sixty-three.","pink"],
+    ["Nathalie Du Pasquier","b. 1957 · pattern","Came from Bordeaux via West Africa and India; her textile and laminate patterns are Memphis's handwriting.","yel"],
+    ["Michele De Lucchi","b. 1951 · furniture","The First chair — a ring, a disc and two balls on a tubular frame — and a lifetime of lamps.","teal"],
+    ["George Sowden","b. 1942 · pattern & objects","English designer in Milan; with Du Pasquier drew many of the group's graphic surfaces.","lilac"],
+    ["Martine Bedin","b. 1957 · lighting","Her Super lamp: a half-moon on wheels studded with coloured bulbs, like a toy you could walk.","red"],
+    ["Peter Shire","b. 1947 · L.A. ceramics","Brought Echo Park sunshine: the Bel Air armchair, teapots with wings, pure California geometry.","mint"],
+    ["Masanori Umeda","b. 1941 · Tokyo","The Tawaraya bed: a boxing ring for sleeping, complete with ropes and corner posts.","blue"],
+    ["Barbara Radice","b. 1943 · critic","Art director, writer and Sottsass's partner; she gave the movement its manifesto-grade prose.","yel"]
+  ];
+  var C={pink:"#ff7eb6",yel:"#ffd93b",teal:"#2ec4b6",lilac:"#b79cff",red:"#ff4b3e",mint:"#b8f2d0",blue:"#2b50ff",ink:"#141414"};
+  function pic(i,c){
+    var bg=C[c],s='<svg viewBox="0 0 200 92" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true"><rect width="200" height="92" fill="'+bg+'"/>';
+    var v=i%4;
+    if(v===0)s+='<circle cx="150" cy="46" r="30" fill="#fff" stroke="#141414" stroke-width="4"/><path d="M10 70 q10-20 20 0 t20 0 t20 0 t20 0" fill="none" stroke="#141414" stroke-width="5" stroke-linecap="round"/>';
+    if(v===1)s+='<path d="M20 80 L60 12 L100 80Z" fill="#fff" stroke="#141414" stroke-width="4"/><g fill="#141414"><circle cx="130" cy="20" r="3"/><circle cx="150" cy="40" r="3"/><circle cx="170" cy="20" r="3"/><circle cx="140" cy="66" r="3"/><circle cx="180" cy="60" r="3"/></g>';
+    if(v===2)s+='<rect x="30" y="20" width="60" height="52" fill="#fff" stroke="#141414" stroke-width="4"/><path d="M110 70 L130 20 L150 70 L170 20 L190 70" fill="none" stroke="#141414" stroke-width="5"/>';
+    if(v===3)s+='<rect x="120" y="10" width="20" height="72" fill="#141414"/><circle cx="60" cy="46" r="26" fill="none" stroke="#141414" stroke-width="10"/><path d="M150 20 l30 0 M150 36 l30 0 M150 52 l30 0 M150 68 l30 0" stroke="#fff" stroke-width="5"/>';
+    return s+'</svg>';
+  }
+  var pg=document.getElementById('peopleGrid');
+  people.forEach(function(p,i){var d=document.createElement('article');d.className='card';d.innerHTML='<div class="pic">'+pic(i,p[3])+'</div><div class="work">'+p[1]+'</div><h3>'+p[0]+'</h3><p>'+p[2]+'</p>';pg.appendChild(d);});
+
+  /* ---------- invite generator ---------- */
+  var PALS=[
+    {id:"pal-classic",c:["#ff7eb6","#ffd93b","#2ec4b6","#141414","#b79cff"]},
+    {id:"pal-miami",c:["#b8f2d0","#ff7eb6","#2b50ff","#ffd93b","#141414"]},
+    {id:"pal-sorbet",c:["#ffd93b","#ff4b3e","#b79cff","#2ec4b6","#141414"]},
+    {id:"pal-lilac",c:["#b79cff","#2ec4b6","#ff7eb6","#ffd93b","#141414"]},
+    {id:"pal-night",c:["#141414","#ff7eb6","#ffd93b","#2ec4b6","#ffffff"]}
+  ];
+  var state={pal:0,seed:1981};
+  try{var sv=JSON.parse(localStorage.getItem('memphis-invite')||'null');if(sv){['iEvent','iHost','iDate','iWhere','iDress'].forEach(function(k){if(typeof sv[k]==='string')document.getElementById(k).value=sv[k];});if(PALS[sv.pal])state.pal=sv.pal;if(sv.seed)state.seed=sv.seed;}}catch(e){}
+  var palsEl=document.getElementById('pals');
+  PALS.forEach(function(p,i){var b=document.createElement('button');b.type='button';b.className='pal';b.id=p.id;b.setAttribute('aria-label','Palette '+(i+1));b.innerHTML=p.c.slice(0,4).map(function(c){return'<span style="background:'+c+'"></span>';}).join('');b.addEventListener('click',function(){state.pal=i;renderShapes();renderText();});palsEl.appendChild(b);});
+  function rng(s){return function(){s=(s*16807)%2147483647;return(s-1)/2147483646;};}
+  var inv=document.getElementById('invite');
+  var KINDS=["circle","tri","squig","grid","dots","zig","half","bar","ring","terrazzo"];
+  var shapes=[];
+  for(var i=0;i<11;i++){var d=document.createElement('div');d.className='shape';inv.appendChild(d);shapes.push(d);}
+  function shapeSVG(kind,col,ink,r){
+    var s='<svg viewBox="0 0 100 100" width="100%" height="100%" style="overflow:visible;display:block">';
+    switch(kind){
+      case"circle":s+='<circle cx="50" cy="50" r="46" fill="'+col+'" stroke="'+ink+'" stroke-width="5"/>';break;
+      case"tri":s+='<path d="M50 5 L96 92 L4 92Z" fill="'+col+'" stroke="'+ink+'" stroke-width="5" stroke-linejoin="round"/>';break;
+      case"squig":s+='<path d="M4 50 q8 -24 16 0 t16 0 t16 0 t16 0 t16 0 t16 0" fill="none" stroke="'+ink+'" stroke-width="8" stroke-linecap="round"/>';break;
+      case"grid":s+='<rect x="3" y="3" width="94" height="94" fill="'+col+'" stroke="'+ink+'" stroke-width="5"/>';for(var g=1;g<5;g++)s+='<path d="M'+(g*20)+' 3 V97 M3 '+(g*20)+' H97" stroke="'+ink+'" stroke-width="2.5"/>';break;
+      case"dots":for(var y=0;y<5;y++)for(var x=0;x<5;x++)s+='<circle cx="'+(10+x*20)+'" cy="'+(10+y*20)+'" r="5" fill="'+ink+'"/>';break;
+      case"zig":s+='<path d="M4 70 L20 30 L36 70 L52 30 L68 70 L84 30 L96 60" fill="none" stroke="'+col+'" stroke-width="12" stroke-linejoin="miter"/><path d="M4 70 L20 30 L36 70 L52 30 L68 70 L84 30 L96 60" fill="none" stroke="'+ink+'" stroke-width="3"/>';break;
+      case"half":s+='<path d="M4 70 A46 46 0 0 1 96 70Z" fill="'+col+'" stroke="'+ink+'" stroke-width="5"/>';break;
+      case"bar":s+='<rect x="2" y="38" width="96" height="24" fill="'+col+'" stroke="'+ink+'" stroke-width="5"/>';break;
+      case"ring":s+='<circle cx="50" cy="50" r="38" fill="none" stroke="'+ink+'" stroke-width="18"/><circle cx="50" cy="50" r="38" fill="none" stroke="'+col+'" stroke-width="10"/>';break;
+      case"terrazzo":s+='<rect x="3" y="3" width="94" height="94" rx="0" fill="#fff" stroke="'+ink+'" stroke-width="5"/>';for(var t=0;t<14;t++){var tx=10+r()*80,ty=10+r()*80;s+='<path d="M'+tx+' '+ty+' l'+(3+r()*6)+' '+(r()*6-3)+' l'+(r()*-4)+' '+(3+r()*4)+'Z" fill="'+(t%3?ink:col)+'"/>';}break;
+    }
+    return s+'</svg>';
+  }
+  function renderShapes(){
+    var P=PALS[state.pal].c,r=rng(state.seed),ink=P[0]==="#141414"?"#ffffff":"#141414";
+    inv.style.background=P[0];
+    inv.style.backgroundImage='radial-gradient(circle at 20% 30%,'+P[3]+' 0 2px,transparent 3px),radial-gradient(circle at 70% 60%,'+P[3]+' 0 2px,transparent 3px)';
+    inv.style.backgroundSize='46px 46px,38px 38px';
+    shapes.forEach(function(el,i){
+      var kind=KINDS[Math.floor(r()*KINDS.length)];
+      var size=12+r()*34, x=-8+r()*90, y=-6+r()*60;
+      if(i<3){size=28+r()*24;}
+      var col=P[1+Math.floor(r()*3)];
+      el.style.width=size+'%';el.style.height=(size*5/7)+'%';
+      if(kind==="circle"||kind==="ring"||kind==="dots"||kind==="terrazzo"||kind==="grid"){el.style.height=(size*5/7)+'%';}
+      el.style.left=x+'%';el.style.top=y+'%';
+      el.style.transform='rotate('+Math.round(r()*80-40)+'deg)';
+      el.style.zIndex=1+Math.floor(r()*3);
+      el.innerHTML=shapeSVG(kind,col,ink,r);
+    });
+    Array.prototype.forEach.call(palsEl.children,function(b,i){b.setAttribute('aria-pressed',i===state.pal?'true':'false');});
+    save();
+  }
+  function renderText(){
+    var v=function(id){return document.getElementById(id).value;};
+    document.getElementById('oEvent').textContent=v('iEvent')||'A party';
+    document.getElementById('oHost').textContent='hosted by '+(v('iHost')||'someone fabulous');
+    document.getElementById('oDate').textContent=v('iDate');
+    document.getElementById('oWhere').textContent=v('iWhere');
+    document.getElementById('oDress').textContent=v('iDress');
+    inv.setAttribute('aria-label','Invitation: '+v('iEvent')+', '+v('iDate')+', '+v('iWhere'));
+    save();
+  }
+  function save(){try{var o={pal:state.pal,seed:state.seed};['iEvent','iHost','iDate','iWhere','iDress'].forEach(function(k){o[k]=document.getElementById(k).value;});localStorage.setItem('memphis-invite',JSON.stringify(o));}catch(e){}}
+  ['iEvent','iHost','iDate','iWhere','iDress'].forEach(function(k){document.getElementById(k).addEventListener('input',renderText);});
+  document.getElementById('shuffle').addEventListener('click',function(){state.seed=1+Math.floor(Math.random()*2147483000);renderShapes();});
+  var EVENTS=["Laminate & Lambrusco","Carlton Cocktail Hour","The Squiggle Ball","Terrazzo Disco","Neon Aperitivo","Bacterio Bash","Postmodern Prom"];
+  var HOSTS=["Ettore's cousin Gianni","The Bel Air Chair","Nathalie & friends","Club Tawaraya","Studio Arc '74","The Super Lamp"];
+  var DRESS=["Shoulder pads mandatory","Pastel from the neck down","Geometric earrings only","One sock, one squiggle","Wear a pattern, clash a pattern","Sunglasses after dark"];
+  function pick(a){return a[Math.floor(Math.random()*a.length)];}
+  document.getElementById('randomAll').addEventListener('click',function(){
+    document.getElementById('iEvent').value=pick(EVENTS);document.getElementById('iHost').value=pick(HOSTS);document.getElementById('iDress').value=pick(DRESS);
+    state.pal=Math.floor(Math.random()*PALS.length);state.seed=1+Math.floor(Math.random()*2147483000);renderShapes();renderText();
+  });
+  renderShapes();renderText();
+})();
+</script>
+</body>
+</html>

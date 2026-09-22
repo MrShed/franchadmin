@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lux Vitrea</title>
+<meta name="description" content="A generative Voronoi stained-glass window — lancet, rose or triple lancet — leaded in came and lit by a wandering sun that throws coloured light across a cathedral floor.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=Alegreya+SC:wght@400;500&family=Alegreya:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nave:#0b0909;
+  --stone:#b9ad98;
+  --vellum:#e8dcc4;
+  --dim:rgba(232,220,196,.6);
+  --faint:rgba(232,220,196,.2);
+  --rubric:#b8322a;
+  --black:"UnifrakturCook","Old English Text MT","Luminari",fantasy,serif;
+  --sc:"Alegreya SC","Alegreya","Palatino Linotype",Palatino,Georgia,serif;
+  --body:"Alegreya","Palatino Linotype",Palatino,Georgia,serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--nave);overflow:hidden}
+body{color:var(--vellum);font-family:var(--body)}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+:focus-visible{outline:2px solid var(--rubric);outline-offset:3px}
+.back{position:fixed;z-index:4;top:max(16px,env(safe-area-inset-top));right:max(18px,env(safe-area-inset-right));font-family:var(--sc);font-size:14px;letter-spacing:.08em;color:var(--dim);text-decoration:none}
+.back:hover{color:var(--vellum)}
+.card{position:fixed;z-index:3;left:max(22px,env(safe-area-inset-left));top:max(20px,env(safe-area-inset-top));max-width:300px;pointer-events:none}
+.card h1{font-family:var(--black);font-weight:700;font-size:clamp(40px,5vw,66px);line-height:.95;margin:0;color:var(--vellum);text-shadow:0 2px 20px rgba(0,0,0,.6)}
+.card h1::first-letter{color:var(--rubric)}
+.card .sub{font-family:var(--sc);font-size:15px;letter-spacing:.06em;color:var(--dim);margin:10px 0 0;line-height:1.35}
+.card .verse{font-style:italic;font-size:14px;color:var(--dim);margin:12px 0 0;line-height:1.45;border-left:1px solid var(--rubric);padding-left:10px}
+.panel{
+  position:fixed;z-index:4;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));
+  width:min(300px,calc(100vw - 32px));background:rgba(14,11,10,.8);border:1px solid var(--faint);padding:14px 16px;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.panel h2{font-family:var(--sc);font-weight:500;font-size:15px;letter-spacing:.12em;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+.panel h2 button{background:none;border:0;color:var(--dim);font:inherit;cursor:pointer;padding:0 4px}
+.panel.min .body{display:none}
+.row{display:grid;grid-template-columns:78px 1fr;gap:8px;align-items:center;margin:8px 0;font-family:var(--sc);font-size:13px;color:var(--dim)}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{flex:1 1 auto;background:transparent;border:1px solid var(--faint);color:var(--vellum);font:13px var(--sc);padding:5px 6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vellum);color:var(--nave);border-color:var(--vellum)}
+input[type=range]{width:100%;accent-color:var(--rubric)}
+input[type=text]{width:100%;background:transparent;border:0;border-bottom:1px solid var(--faint);color:var(--vellum);font:16px var(--body);padding:2px 0}
+.acts{display:flex;gap:6px;margin-top:10px}
+.acts button{flex:1;background:transparent;border:1px solid var(--vellum);color:var(--vellum);font:14px var(--sc);letter-spacing:.06em;padding:8px;cursor:pointer}
+.acts button.r{background:var(--rubric);border-color:var(--rubric)}
+.hour{font-family:var(--sc);font-size:12px;color:var(--dim);margin-top:8px;letter-spacing:.06em}
+@media (max-width:700px){
+  .card{max-width:60vw}
+  .card .verse{display:none}
+  .card .sub{font-size:13px}
+}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Stained glass window with sunlight moving across it and coloured light on the floor"></canvas>
+<a class="back" href="index.html">← Showcase</a>
+<div class="card">
+  <h1>Lux Vitrea</h1>
+  <p class="sub" id="sub">A lancet of 240 panes, leaded by Voronoi</p>
+  <p class="verse">Each pane is the region of glass nearer its own seed than any other; the came follows where two seeds disagree.</p>
+</div>
+<section class="panel" id="panel" aria-label="Window controls">
+  <h2>The Glazier's Bench <button id="minBtn" aria-expanded="true" aria-label="Collapse controls">–</button></h2>
+  <div class="body">
+    <div class="row"><span>Window</span><div class="seg" id="shapes" role="group" aria-label="Window shape"></div></div>
+    <div class="row"><span>Glass</span><div class="seg" id="pals" role="group" aria-label="Glass palette"></div></div>
+    <div class="row"><label for="panes">Panes</label><input id="panes" type="range" min="60" max="420" step="10" value="240"></div>
+    <div class="row"><label for="sunSpeed">Sun</label><input id="sunSpeed" type="range" min="0" max="3" step="0.1" value="1"></div>
+    <div class="row"><label for="seed">Seed</label><input id="seed" type="text" inputmode="numeric" value="1163" autocomplete="off"></div>
+    <div class="acts"><button id="pauseBtn">Pause</button><button id="newBtn" class="r">New window</button></div>
+    <div class="hour" id="hour">Hora tertia</div>
+  </div>
+</section>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const SHAPES = [
+  { id:'lancet', name:'Lancet' }, { id:'rose', name:'Rose' }, { id:'triple', name:'Triple' }
+];
+const PALS = [
+  { id:'chartres', name:'Chartres', cols:['#1d3f9a','#1a3585','#2a55b8','#9e1b24','#c22a2a','#d9a22b','#2f7a4b','#5b2a74','#e8dcb0'], w:[18,14,10,10,7,6,4,4,3], medal:['#b61f28','#d9a22b'], bg:[0,1,2] },
+  { id:'chapelle', name:'Sainte-Chapelle', cols:['#8e1422','#b01c2c','#6a0f1c','#233a8f','#2d4cad','#d69b2a','#6e2a86','#2c6b46','#f0e2b8'], w:[16,14,8,10,8,6,5,3,2], medal:['#233a8f','#d69b2a'], bg:[0,1,2] },
+  { id:'grisaille', name:'Grisaille', cols:['#cfd2c4','#bfc4b2','#dfe0d2','#a9ae9c','#d3c78e','#8c9c8a','#e9e6d6','#b5b9ad','#c9b46a'], w:[16,12,12,8,5,5,6,6,3], medal:['#c9a64a','#8e1d24'], bg:[0,1,2] },
+  { id:'chagall', name:'Chagall', cols:['#1439a8','#0f2f95','#2a62d6','#1b4fc2','#e2b52a','#c42d34','#2b8f63','#dfe6f5','#6a2c9a'], w:[20,16,12,10,4,3,3,2,2], medal:['#e2b52a','#c42d34'], bg:[0,1,2,3] }
+];
+const canvas = $('c'), ctx = canvas.getContext('2d');
+const layerGlass = document.createElement('canvas'), lg = layerGlass.getContext('2d');
+const layerTop = document.createElement('canvas'), lt = layerTop.getContext('2d');
+const layerBlur = document.createElement('canvas'), lb = layerBlur.getContext('2d');
+const tmp = document.createElement('canvas'), tx = tmp.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+let W, H, DPR, win, seed = 1163, shape = SHAPES[0], pal = PALS[0], panes = 240, sunSpeed = reduce.matches ? .2 : 1, running = true;
+let cells = [], sunT = .32, motes = [];
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+
+// ---------- window geometry ----------
+function lancetPath(p, x, y, w, h) { // pointed (equilateral) arch
+  const r = w, sy = y + w * .87;
+  p.moveTo(x, y + h); p.lineTo(x, sy);
+  p.arc(x + w, sy, r, Math.PI, Math.PI + Math.PI / 3);
+  p.arc(x, sy, r, -Math.PI / 3, 0);
+  p.lineTo(x + w, y + h); p.closePath();
+}
+function computeWindow() {
+  const narrow = W < 700;
+  const wh = Math.min(H * (narrow ? .6 : .68), 760);
+  let ww;
+  if (shape.id === 'rose') ww = wh * .92; else if (shape.id === 'triple') ww = wh * .78; else ww = wh * .42;
+  ww = Math.min(ww, W * (narrow ? .8 : .6));
+  const x = (W - ww) / 2, y = narrow ? H * .2 : H * .07;
+  const path = new Path2D(), sub = [];
+  if (shape.id === 'lancet') { lancetPath(path, x, y, ww, wh); sub.push({ x, y, w: ww, h: wh }); }
+  else if (shape.id === 'rose') { const r = ww / 2; path.arc(x + r, y + r, r, 0, Math.PI * 2); }
+  else {
+    const g = ww * .05, lw = (ww - 2 * g) / 3;
+    [[0, .82], [1, 1], [2, .82]].forEach(([i, k]) => { const hh = wh * k; const sx = x + i * (lw + g); lancetPath(path, sx, y + wh - hh, lw, hh); sub.push({ x: sx, y: y + wh - hh, w: lw, h: hh }); });
+  }
+  const h = shape.id === 'rose' ? ww : wh;
+  return { x, y, w: ww, h, path, sub, cx: x + ww / 2, cy: y + (shape.id === 'rose' ? ww / 2 : h / 2) };
+}
+
+// ---------- voronoi by half-plane clipping ----------
+function clip(poly, nx, ny, c) { // keep points with nx*x+ny*y <= c
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const da = nx * a[0] + ny * a[1] - c, db = nx * b[0] + ny * b[1] - c;
+    if (da <= 0) out.push(a);
+    if ((da < 0 && db > 0) || (da > 0 && db < 0)) { const t = da / (da - db); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+  }
+  return out;
+}
+function voronoi(pts, bx0, by0, bx1, by1) {
+  const res = [];
+  for (let i = 0; i < pts.length; i++) {
+    const [px, py] = pts[i];
+    const order = pts.map((q, j) => [j, (q[0] - px) ** 2 + (q[1] - py) ** 2]).filter(o => o[0] !== i).sort((a, b) => a[1] - b[1]);
+    let poly = [[bx0, by0], [bx1, by0], [bx1, by1], [bx0, by1]];
+    for (const [j, d2] of order) {
+      let rmax = 0; for (const v of poly) rmax = Math.max(rmax, (v[0] - px) ** 2 + (v[1] - py) ** 2);
+      if (d2 > 4 * rmax) break;
+      const [qx, qy] = pts[j];
+      const nx = qx - px, ny = qy - py, c = nx * (px + qx) / 2 + ny * (py + qy) / 2;
+      poly = clip(poly, nx, ny, c);
+      if (poly.length < 3) break;
+    }
+    if (poly.length >= 3) res.push({ poly, site: pts[i] });
+  }
+  return res;
+}
+
+function seeds(r) {
+  const pts = [];
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const inside = (x, y) => ctx.isPointInPath(win.path, x, y);
+  if (shape.id === 'rose') {
+    const sym = 8 + 4 * ((r() * 2) | 0), R = win.w / 2, n = Math.max(4, Math.round(panes / sym / 2));
+    const wedge = [];
+    for (let k = 0; k < n; k++) {
+      let best = null, bd = -1;
+      for (let c = 0; c < 10; c++) {
+        const rr = R * Math.sqrt(.02 + r() * .98) * 1.02, a = r() * Math.PI / sym;
+        const cand = [Math.cos(a) * rr, Math.sin(a) * rr];
+        let md = 1e9; for (const w of wedge) md = Math.min(md, (w[0] - cand[0]) ** 2 + (w[1] - cand[1]) ** 2);
+        if (md > bd) { bd = md; best = cand; }
+      }
+      wedge.push(best);
+    }
+    for (let s = 0; s < sym; s++) {
+      const a0 = s * 2 * Math.PI / sym;
+      for (const [wx, wy] of wedge) {
+        for (const m of [1, -1]) {
+          const ang = Math.atan2(wy * m, wx) + a0, rr = Math.hypot(wx, wy);
+          pts.push([win.cx + Math.cos(ang) * rr, win.cy + Math.sin(ang) * rr]);
+        }
+      }
+    }
+    pts.push([win.cx, win.cy]);
+    win.sym = sym;
+    return pts;
+  }
+  const target = panes;
+  let tries = 0;
+  while (pts.length < target && tries < target * 40) {
+    let best = null, bd = -1;
+    for (let c = 0; c < 8; c++) {
+      const x = win.x - 10 + r() * (win.w + 20), y = win.y - 10 + r() * (win.h + 20); tries++;
+      if (!inside(x, y)) continue;
+      let md = 1e9; for (const p of pts) { const d = (p[0] - x) ** 2 + (p[1] - y) ** 2; if (d < md) md = d; }
+      if (md > bd) { bd = md; best = [x, y]; }
+    }
+    if (best) pts.push(best);
+  }
+  return pts;
+}
+
+function pickColor(r) {
+  const tot = pal.w.reduce((a, b) => a + b, 0); let v = r() * tot;
+  for (let i = 0; i < pal.cols.length; i++) { v -= pal.w[i]; if (v <= 0) return pal.cols[i]; }
+  return pal.cols[0];
+}
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255;
+  r = Math.max(0, Math.min(255, r * k)); g = Math.max(0, Math.min(255, g * k)); b = Math.max(0, Math.min(255, b * k));
+  return `rgb(${r | 0},${g | 0},${b | 0})`;
+}
+
+function build() {
+  const r = mulberry32(seed);
+  win = computeWindow();
+  const pts = seeds(r);
+  cells = voronoi(pts, win.x - 40, win.y - 40, win.x + win.w + 40, win.y + win.h + 40);
+  // medallions for lancets: roundels stacked up the light
+  const medals = [];
+  if (shape.id !== 'rose') for (const s of win.sub) {
+    const mr = s.w * .34, top = s.y + s.w * 1.02, bot = s.y + s.h - mr * 1.35;
+    const n = Math.max(1, Math.floor((bot - top) / (mr * 2.7)) + 1);
+    for (let k = 0; k < n; k++) medals.push({ x: s.x + s.w / 2, y: n === 1 ? (top + bot) / 2 : top + (bot - top) * k / (n - 1), r: mr });
+  }
+  for (const c of cells) {
+    let cx = 0, cy = 0; for (const v of c.poly) { cx += v[0]; cy += v[1]; } cx /= c.poly.length; cy /= c.poly.length;
+    c.cx = cx; c.cy = cy;
+    let col = pickColor(r);
+    if (shape.id === 'rose') {
+      const rr = Math.hypot(cx - win.cx, cy - win.cy) / (win.w / 2);
+      const ring = Math.floor(rr * 5);
+      const ang = (Math.atan2(cy - win.cy, cx - win.cx) + Math.PI * 2) % (Math.PI * 2 / win.sym);
+      const mirrorA = Math.min(ang, Math.PI * 2 / win.sym - ang);
+      const rr2 = mulberry32((seed * 31 + ring * 7 + Math.floor(mirrorA * 40)) | 0);
+      col = ring === 0 ? pal.medal[1] : ring % 2 ? pickColor(rr2) : pal.cols[pal.bg[(rr2() * pal.bg.length) | 0]];
+    } else {
+      for (const m of medals) {
+        const d = Math.hypot(cx - m.x, cy - m.y);
+        if (d < m.r * .8) { col = r() < .7 ? pal.medal[0] : pickColor(r); break; }
+        if (d < m.r * 1.08) { col = pal.medal[1]; break; }
+      }
+      if (!medals.some(m => Math.hypot(cx - m.x, cy - m.y) < m.r * 1.08)) col = r() < .72 ? pal.cols[pal.bg[(r() * pal.bg.length) | 0]] : col;
+    }
+    c.col = col; c.ga = r() * Math.PI * 2; c.gk = .75 + r() * .45;
+  }
+  win.medals = medals;
+  paintLayers(r);
+  // dust motes in the beam
+  motes = Array.from({ length: W < 700 ? 50 : 110 }, () => ({ u: r(), v: r(), s: .4 + r() * 1.3, p: r() * 10 }));
+  const name = { lancet: 'A lancet', rose: 'A rose', triple: 'A triple lancet' }[shape.id];
+  $('sub').textContent = `${name} of ${cells.length} panes, leaded by Voronoi`;
+}
+
+function paintLayers(r) {
+  for (const c of [layerGlass, layerTop, layerBlur, tmp]) { c.width = canvas.width; c.height = canvas.height; }
+  // --- glass
+  lg.setTransform(DPR, 0, 0, DPR, 0, 0);
+  lg.save(); lg.clip(win.path);
+  for (const c of cells) {
+    const g = lg.createLinearGradient(c.cx - Math.cos(c.ga) * 30, c.cy - Math.sin(c.ga) * 30, c.cx + Math.cos(c.ga) * 30, c.cy + Math.sin(c.ga) * 30);
+    g.addColorStop(0, shade(c.col, 1.18 * c.gk)); g.addColorStop(1, shade(c.col, .72 * c.gk));
+    lg.fillStyle = g; lg.beginPath(); c.poly.forEach((v, i) => i ? lg.lineTo(v[0], v[1]) : lg.moveTo(v[0], v[1])); lg.closePath(); lg.fill();
+  }
+  // seeds, streaks and bubbles in hand-blown glass
+  lg.globalCompositeOperation = 'soft-light';
+  for (let i = 0; i < 900; i++) {
+    lg.fillStyle = r() < .5 ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.35)';
+    const x = win.x + r() * win.w, y = win.y + r() * win.h;
+    lg.beginPath(); lg.ellipse(x, y, 1 + r() * 10, .5 + r() * 2, r() * Math.PI, 0, Math.PI * 2); lg.fill();
+  }
+  lg.globalCompositeOperation = 'source-over';
+  lg.restore();
+  // --- blurred copy for the floor projection
+  lb.setTransform(1, 0, 0, 1, 0, 0);
+  try { lb.filter = `blur(${Math.round(6 * DPR)}px)`; } catch (e) {}
+  lb.drawImage(layerGlass, 0, 0); lb.filter = 'none';
+  // --- lead cames and stone
+  lt.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const leadW = Math.max(2.5, Math.min(6, win.w / 90));
+  lt.save(); lt.clip(win.path);
+  lt.lineJoin = 'round';
+  for (const pass of [[leadW, '#141313'], [leadW * .28, 'rgba(160,160,165,.28)']]) {
+    lt.lineWidth = pass[0]; lt.strokeStyle = pass[1];
+    lt.beginPath();
+    for (const c of cells) { c.poly.forEach((v, i) => i ? lt.lineTo(v[0], v[1]) : lt.moveTo(v[0], v[1])); lt.closePath(); }
+    lt.stroke();
+  }
+  // ferramenta / tracery
+  lt.strokeStyle = '#1b1918'; lt.lineWidth = leadW * 1.6;
+  if (shape.id === 'rose') {
+    const R = win.w / 2;
+    lt.beginPath(); for (let k = 1; k <= 2; k++) { lt.moveTo(win.cx + R * k / 3, win.cy); lt.arc(win.cx, win.cy, R * k / 3, 0, Math.PI * 2); } lt.stroke();
+    lt.lineWidth = leadW * 2.4; lt.strokeStyle = shade('#b9ad98', .8);
+    lt.beginPath();
+    for (let s = 0; s < win.sym; s++) { const a = s * Math.PI * 2 / win.sym; lt.moveTo(win.cx + Math.cos(a) * R / 3, win.cy + Math.sin(a) * R / 3); lt.lineTo(win.cx + Math.cos(a) * R, win.cy + Math.sin(a) * R); }
+    lt.stroke();
+    lt.beginPath(); lt.arc(win.cx, win.cy, R / 3, 0, Math.PI * 2); lt.stroke();
+  } else {
+    for (const s of win.sub) {
+      lt.beginPath();
+      for (let y = s.y + s.w * 1.1; y < s.y + s.h - 10; y += s.w * .9) { lt.moveTo(s.x, y); lt.lineTo(s.x + s.w, y); }
+      lt.stroke();
+    }
+    for (const m of win.medals) { lt.lineWidth = leadW * 1.4; lt.beginPath(); lt.arc(m.x, m.y, m.r * 1.08, 0, Math.PI * 2); lt.stroke(); }
+  }
+  lt.restore();
+  // stone reveal
+  const sw = Math.max(10, win.w / 18);
+  lt.lineWidth = sw * 2; lt.strokeStyle = '#8b8171'; lt.save();
+  lt.stroke(win.path);
+  lt.lineWidth = sw * 1.1; lt.strokeStyle = '#b9ad98'; lt.stroke(win.path);
+  lt.lineWidth = 1.5; lt.strokeStyle = 'rgba(0,0,0,.5)'; lt.stroke(win.path);
+  lt.restore();
+  // sill
+  if (shape.id !== 'rose') {
+  lt.fillStyle = '#9b907f';
+  lt.fillRect(win.x - sw * 1.6, win.y + win.h + sw * .6, win.w + sw * 3.2, sw * .9);
+  lt.fillStyle = 'rgba(0,0,0,.35)'; lt.fillRect(win.x - sw * 1.6, win.y + win.h + sw * 1.5, win.w + sw * 3.2, sw * .3);
+  }
+}
+
+function paintWall() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#0d0b0a'); g.addColorStop(.72, '#171311'); g.addColorStop(.74, '#0e0c0b'); g.addColorStop(1, '#1a1613');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // ashlar courses
+  ctx.strokeStyle = 'rgba(255,240,220,.035)'; ctx.lineWidth = 1;
+  const floorY = H * .74, course = 34;
+  ctx.beginPath();
+  for (let y = course; y < floorY; y += course) {
+    ctx.moveTo(0, y); ctx.lineTo(W, y);
+    const off = (y / course) % 2 ? 0 : 38;
+    for (let x = off; x < W; x += 76) { ctx.moveTo(x, y); ctx.lineTo(x, y - course); }
+  }
+  // floor flagstones in perspective
+  for (let i = -14; i <= 14; i++) { ctx.moveTo(W / 2 + i * 26, floorY); ctx.lineTo(W / 2 + i * 150, H); }
+  for (let k = 1; k < 8; k++) { const y = floorY + (H - floorY) * Math.pow(k / 8, 1.6); ctx.moveTo(0, y); ctx.lineTo(W, y); }
+  ctx.stroke();
+}
+
+function frame(now) {
+  raf = 0; if (document.hidden) return;
+  const dt = last ? Math.min(.1, (now - last) / 1000) : .016; last = now;
+  if (running) sunT = (sunT + dt * .012 * sunSpeed) % 1;
+  render(now / 1000);
+  if (running) raf = requestAnimationFrame(frame);
+}
+function render(t) {
+  paintWall();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // sun: east to west across the window face
+  const s = sunT, sx = win.x - win.w * .35 + (win.w * 1.7) * s, sy = win.y + win.h * (.9 - Math.sin(s * Math.PI) * .7);
+  const day = Math.sin(s * Math.PI); // brightness over the day
+  // base glass (unlit panes glow dimly)
+  ctx.globalAlpha = .42 + .38 * day; ctx.drawImage(layerGlass, 0, 0); ctx.globalAlpha = 1;
+  // sunlit hotspot, coloured by the glass itself
+  tx.setTransform(1, 0, 0, 1, 0, 0); tx.globalCompositeOperation = 'source-over'; tx.clearRect(0, 0, tmp.width, tmp.height);
+  const rad = Math.max(win.w, win.h) * .75;
+  const rg = tx.createRadialGradient(sx * DPR, sy * DPR, 0, sx * DPR, sy * DPR, rad * DPR);
+  rg.addColorStop(0, `rgba(255,255,255,${.95 * day})`); rg.addColorStop(.35, `rgba(255,255,255,${.4 * day})`); rg.addColorStop(1, 'rgba(255,255,255,0)');
+  tx.fillStyle = rg; tx.fillRect(0, 0, tmp.width, tmp.height);
+  tx.globalCompositeOperation = 'source-in'; tx.drawImage(layerGlass, 0, 0);
+  ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(tmp, 0, 0);
+  // beams toward the floor
+  const floorY = H * .74, skew = (.5 - s) * W * .9;
+  const bx0 = win.x * DPR, bx1 = (win.x + win.w) * DPR, by = (win.y + win.h * .55) * DPR;
+  const fx0 = (win.x + skew - win.w * .1) * DPR, fx1 = (win.x + win.w + skew + win.w * .1) * DPR, fy = (floorY + (H - floorY) * .55) * DPR;
+  const bg = ctx.createLinearGradient(0, by, 0, fy);
+  bg.addColorStop(0, `rgba(255,236,200,${.07 * day})`); bg.addColorStop(1, `rgba(255,236,200,${.02 * day})`);
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(bx0, by); ctx.lineTo(bx1, by); ctx.lineTo(fx1, fy); ctx.lineTo(fx0, fy); ctx.closePath(); ctx.fill();
+  // the window's image thrown onto the floor
+  ctx.globalAlpha = .5 * day;
+  ctx.setTransform(1, 0, 0, .34, skew * DPR * .9, floorY * DPR - win.y * DPR * .34 + (H - floorY) * DPR * .12);
+  ctx.drawImage(layerBlur, 0, 0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+  // dust motes drifting in the light
+  ctx.fillStyle = `rgba(255,240,210,${.55 * day})`;
+  for (const m of motes) {
+    const v = (m.v + t * .01 * m.s) % 1, u = m.u + Math.sin(t * .3 + m.p) * .02;
+    const y = by + (fy - by) * v, x = (bx0 + (fx0 - bx0) * v) + ((bx1 + (fx1 - bx1) * v) - (bx0 + (fx0 - bx0) * v)) * u;
+    const tw = .5 + .5 * Math.sin(t * 2 + m.p * 3);
+    ctx.globalAlpha = tw; ctx.beginPath(); ctx.arc(x, y, m.s * DPR, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  // lead and stone sit on top of the light
+  ctx.drawImage(layerTop, 0, 0);
+  const hours = ['Prima', 'Tertia', 'Sexta', 'Nona', 'Vesperae'];
+  $('hour').textContent = 'Hora ' + hours[Math.min(4, Math.floor(s * 5))].toLowerCase() + ' · the sun at ' + Math.round(s * 180) + '°';
+}
+
+let raf = 0, last = 0;
+function kick() { if (!raf && !document.hidden) { last = 0; raf = requestAnimationFrame(frame); } }
+document.addEventListener('visibilitychange', kick);
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  build(); render(performance.now() / 1000);
+}
+let rt = 0; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
+
+// UI
+function seg(el, items, get, set) {
+  items.forEach(it => {
+    const b = document.createElement('button'); b.type = 'button'; b.id = el.id + '-' + it.id; b.textContent = it.name;
+    b.addEventListener('click', () => { set(it); sync(); build(); render(performance.now() / 1000); });
+    el.appendChild(b);
+  });
+  const sync = () => [...el.children].forEach(b => b.setAttribute('aria-pressed', b.id === el.id + '-' + get().id));
+  sync(); return sync;
+}
+seg($('shapes'), SHAPES, () => shape, v => { shape = v; });
+seg($('pals'), PALS, () => pal, v => { pal = v; try { localStorage.setItem('vitrea.pal', v.id); } catch (e) {} });
+$('panes').addEventListener('change', e => { panes = +e.target.value; build(); render(performance.now() / 1000); });
+$('sunSpeed').addEventListener('input', e => { sunSpeed = +e.target.value; });
+$('seed').addEventListener('change', e => { seed = parseInt(String(e.target.value).replace(/\D/g, ''), 10) || 0; e.target.value = seed; build(); render(performance.now() / 1000); });
+$('pauseBtn').addEventListener('click', e => { running = !running; e.currentTarget.textContent = running ? 'Pause' : 'Resume'; kick(); });
+$('newBtn').addEventListener('click', () => { seed = (Math.random() * 9999) | 0; $('seed').value = seed; build(); render(performance.now() / 1000); });
+$('minBtn').addEventListener('click', e => { const m = $('panel').classList.toggle('min'); e.currentTarget.textContent = m ? '+' : '–'; e.currentTarget.setAttribute('aria-expanded', !m); });
+
+try { const s = localStorage.getItem('vitrea.pal'); const f = PALS.find(p => p.id === s); if (f) { pal = f; $('pals').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.id === 'pals-' + f.id)); } } catch (e) {}
+$('sunSpeed').value = sunSpeed;
+if (innerWidth < 700) $('minBtn').click();
+resize(); kick();
+})();
+</script>
+</body>
+</html>

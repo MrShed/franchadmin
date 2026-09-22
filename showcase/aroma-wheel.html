@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cellar Book Aromas</title>
+<meta name="description" content="A sommelier's cellar notebook in burgundy ink: a zoomable wine aroma wheel, grape variety profiles traced onto it, and a tasting journal that keeps your notes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Spectral:ital,wght@0,300;0,400;0,600;1,300;1,400&family=La+Belle+Aurore&family=Overpass+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cellar:#1a1113;
+  --cellar-2:#24181b;
+  --page:#ece5e2;
+  --page-2:#e2d9d6;
+  --ink:#5e1426;
+  --ink-2:#8a3a4c;
+  --ink-soft:rgba(94,20,38,.18);
+  --pencil:#5d5552;
+  --pencil-2:#8b8380;
+  --gild:#b8925a;
+  --display:"Gloock", "Bodoni 72", Georgia, serif;
+  --serif:"Spectral", Georgia, serif;
+  --hand:"La Belle Aurore", "Segoe Script", cursive;
+  --mono:"Overpass Mono", ui-monospace, Menlo, monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--cellar)}
+body{margin:0;background:var(--cellar);color:var(--pencil);font-family:var(--serif);font-size:18px;line-height:1.55;overflow-x:hidden;
+  background-image:radial-gradient(ellipse 70% 50% at 50% 0, rgba(184,146,90,.14), transparent 70%),
+  repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 60px),
+  repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 120px)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.back{position:absolute;top:16px;left:16px;font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--gild);text-decoration:none;text-transform:uppercase}
+.back:hover,.back:focus-visible{color:#f0d7a8}
+.top{max-width:1240px;margin:0 auto;padding:70px 16px 30px;color:#e8d8cf;display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap}
+.top h1{font-family:var(--display);font-weight:400;font-size:clamp(46px,7vw,96px);line-height:.9;margin:0;color:#f1e2d8}
+.top h1 span{font-family:var(--hand);font-size:.45em;color:var(--gild);display:block;margin-top:10px;transform:rotate(-2deg);transform-origin:left}
+.top p{max-width:28em;margin:0;color:#c7b1a8;font-style:italic}
+
+.book{max-width:1240px;margin:0 auto 40px;padding:0 16px}
+.spread{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:var(--page);box-shadow:0 40px 80px -30px #000, 0 0 0 1px #3b2a2d;position:relative}
+.spread::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:60px;transform:translateX(-50%);background:linear-gradient(90deg,transparent,rgba(60,30,35,.18) 45%,rgba(60,30,35,.28) 50%,rgba(60,30,35,.18) 55%,transparent);pointer-events:none}
+.pg{padding:36px 40px 40px;position:relative;
+  background-image:repeating-linear-gradient(transparent 0 29px, rgba(94,20,38,.09) 29px 30px);background-position:0 12px}
+.pg.l{border-right:1px solid rgba(0,0,0,.05)}
+.pg-head{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--pencil-2);border-bottom:1px solid var(--ink-soft);padding-bottom:8px;margin-bottom:18px}
+h2{font-family:var(--display);font-weight:400;color:var(--ink);font-size:clamp(30px,3.2vw,44px);line-height:1;margin:0 0 10px}
+h2 i{font-family:var(--hand);font-style:normal;font-size:.7em;color:var(--ink-2)}
+.hint{font-size:15px;font-style:italic;color:var(--pencil);margin:0 0 10px}
+#wheel{width:100%;height:auto;display:block;max-width:600px;margin:0 auto;touch-action:manipulation}
+#wheel path{cursor:pointer;transition:opacity .25s}
+#wheel path:focus{outline:none;stroke:var(--ink);stroke-width:2.5}
+#wheel text{pointer-events:none;font-family:var(--serif)}
+#wheel .dim{opacity:.22}
+.crumbs{font-family:var(--mono);font-size:12px;color:var(--pencil-2);text-align:center;min-height:1.4em;margin-top:6px}
+.crumbs b{color:var(--ink)}
+
+/* note form */
+.field{margin-bottom:14px}
+.field label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--pencil-2);margin-bottom:2px}
+.field input[type=text],.field input[type=number],.field select,.field textarea{
+  width:100%;background:transparent;border:0;border-bottom:1px solid var(--ink-2);font-family:var(--hand);font-size:24px;color:var(--ink);padding:2px 2px 0;line-height:1.3}
+.field textarea{font-size:21px;resize:vertical;min-height:90px;border:1px solid var(--ink-soft);padding:6px;line-height:30px;background:transparent}
+.field select{font-family:var(--serif);font-size:18px;font-style:italic}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--ink);background:rgba(94,20,38,.04)}
+.row2{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;padding:4px 0}
+.chip{all:unset;cursor:pointer;font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink);border:1px solid var(--ink-2);border-radius:14px 3px 14px 3px;padding:1px 10px}
+.chip:hover,.chip:focus-visible{background:var(--ink);color:var(--page)}
+.chip::after{content:" ×";opacity:.6}
+.empty{font-style:italic;color:var(--pencil-2);font-size:15px}
+.struct{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 22px;margin:8px 0 14px}
+.struct label{display:grid;grid-template-columns:78px minmax(0,1fr) 20px;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--pencil)}
+.struct input{accent-color:var(--ink);width:100%}
+.struct output{font-family:var(--hand);font-size:20px;color:var(--ink);text-align:right}
+.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.btn{all:unset;cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:9px 16px;background:var(--ink);color:var(--page)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.saved{font-family:var(--hand);color:var(--ink-2);font-size:20px}
+
+/* grapes */
+.grapes{margin-top:0;background:var(--page-2);padding:36px 40px;box-shadow:0 40px 80px -30px #000;position:relative}
+.grapes .tabs{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--ink-2);margin:14px 0 22px}
+.grapes .tabs button{all:unset;cursor:pointer;padding:8px 14px;font-family:var(--display);font-size:17px;color:var(--pencil);border:1px solid transparent;border-bottom:0;margin-bottom:-1px}
+.grapes .tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--ink-2);background:var(--page)}
+.grapes .tabs button:focus-visible{outline:2px solid var(--ink)}
+.gp{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:36px}
+.gp h3{font-family:var(--display);font-weight:400;font-size:40px;margin:0;color:var(--ink);line-height:1}
+.gp .origin{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--pencil-2);margin:6px 0 14px}
+.gp p{margin:0 0 .8em}
+.gp .aromas{display:flex;flex-wrap:wrap;gap:6px 14px;font-family:var(--hand);font-size:22px;color:var(--ink)}
+.bars{display:grid;gap:10px;margin-top:4px}
+.bars div{display:grid;grid-template-columns:78px minmax(0,1fr);align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.bars i{display:block;height:10px;background:repeating-linear-gradient(90deg,var(--ink) 0 18%,transparent 18% 20%);clip-path:inset(0 calc(100% - var(--v)*20%) 0 0);border-bottom:1px solid var(--ink-soft)}
+.serve{margin-top:16px;font-size:15px;font-style:italic;border-top:1px solid var(--ink-soft);padding-top:10px}
+
+/* journal */
+.journal{margin-top:40px}
+.journal h2{color:#f1e2d8}
+.journal .sub{color:#c7b1a8;font-style:italic;margin:0 0 20px}
+.entries{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px}
+.entry{background:var(--page);padding:22px 22px 18px;position:relative;box-shadow:0 20px 30px -18px #000;transform:rotate(var(--r,0deg));
+  background-image:repeating-linear-gradient(transparent 0 27px, rgba(94,20,38,.09) 27px 28px)}
+.entry::before{content:"";position:absolute;right:16px;top:-10px;width:42px;height:42px;border-radius:50%;background:radial-gradient(circle,rgba(94,20,38,.0) 52%,rgba(94,20,38,.28) 56%,rgba(94,20,38,.12) 62%,transparent 66%)}
+.entry h4{font-family:var(--display);font-weight:400;font-size:24px;color:var(--ink);margin:0;line-height:1.1;padding-right:40px}
+.entry .m{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--pencil-2);margin:4px 0 8px}
+.entry .n{font-family:var(--hand);font-size:20px;color:var(--ink);line-height:28px}
+.entry .tags{font-style:italic;font-size:14px;color:var(--ink-2);margin-top:6px}
+.entry .foot{display:flex;justify-content:space-between;align-items:end;margin-top:8px}
+.entry .score{font-family:var(--display);font-size:30px;color:var(--ink)}
+.entry .score small{font-size:13px;color:var(--pencil-2)}
+.entry button{all:unset;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--pencil-2)}
+.entry button:hover,.entry button:focus-visible{color:var(--ink)}
+footer{max-width:1240px;margin:0 auto;padding:40px 16px 70px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:#8e7a72;text-transform:uppercase;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+@media (max-width:900px){
+  .spread{grid-template-columns:minmax(0,1fr)}
+  .spread::after{display:none}
+  .pg,.grapes{padding:26px 16px}
+  .gp{grid-template-columns:minmax(0,1fr)}
+  .struct{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){#wheel path{transition:none}}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<header class="top">
+  <h1>The Cellar Book<span>aromas, grapes &amp; tasting notes</span></h1>
+  <p>Kept in the cellar at Maison Ferrand-Lucas by the house sommelier. A wheel to find the words, a page for each grape, and the notes of what was poured.</p>
+</header>
+
+<div class="book">
+  <div class="spread">
+    <section class="pg l" aria-labelledby="wheelTitle">
+      <div class="pg-head"><span>Folio 12</span><span>The Aroma Wheel</span></div>
+      <h2 id="wheelTitle">What does it <i>smell of?</i></h2>
+      <p class="hint">Begin at the centre and work outward: the broad family first, then the group, then the precise word. Tap a family to open it; tap the centre to step back. The outermost words drop into your note on the facing page.</p>
+      <svg id="wheel" viewBox="-310 -310 620 620" role="group" aria-label="Wine aroma wheel"></svg>
+      <div class="crumbs" id="crumbs"></div>
+    </section>
+    <section class="pg r" aria-labelledby="noteTitle">
+      <div class="pg-head"><span>Folio 13</span><span id="today">Tasting note</span></div>
+      <h2 id="noteTitle">On the <i>glass tonight</i></h2>
+      <form id="noteForm" autocomplete="off">
+        <div class="row2">
+          <div class="field"><label for="wine">Wine</label><input type="text" id="wine" value="Chambolle-Musigny, Domaine Roux"></div>
+          <div class="field"><label for="vintage">Vintage</label><input type="number" id="vintage" value="2017" min="1900" max="2030"></div>
+        </div>
+        <div class="field"><label for="grape">Grape</label><select id="grape"></select></div>
+        <div class="field"><label>Aromas (from the wheel)</label><div class="chips" id="chips"></div></div>
+        <div class="struct" id="struct"></div>
+        <div class="field"><label for="notes">Impressions</label><textarea id="notes">Pale garnet, rim going brick. Cherry and wild strawberry, then a cool, damp forest note. Silky tannin, bright acid — needs another hour in the glass.</textarea></div>
+        <div class="row2">
+          <div class="field"><label for="score">Score / 20</label><input type="number" id="score" value="17" min="0" max="20" step="0.5"></div>
+          <div class="actions"><button class="btn" type="submit" id="saveNote">Enter in book</button><button class="btn ghost" type="button" id="clearNote">New page</button><span class="saved" id="saved" aria-live="polite"></span></div>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <section class="grapes" aria-labelledby="grapeTitle">
+    <div class="pg-head"><span>Folios 14 – 22</span><span>The varieties</span></div>
+    <h2 id="grapeTitle">Nine grapes, <i>traced on the wheel</i></h2>
+    <p class="hint">Choose a variety and its classic aromas are inked onto the wheel above; everything else fades to pencil.</p>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div id="gpanel" role="tabpanel"></div>
+  </section>
+
+  <section class="journal" aria-labelledby="jTitle">
+    <h2 id="jTitle">Entered in the book</h2>
+    <p class="sub">Notes are kept on this device only. Three are the sommelier's own.</p>
+    <div class="entries" id="entries"></div>
+  </section>
+</div>
+<footer><span>Maison Ferrand-Lucas · The Cellar Book</span><span>Wheel after the tradition of A. C. Noble's aroma wheel</span></footer>
+
+<script>
+(function(){
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=id=>document.getElementById(id);
+/* ---------- data ---------- */
+const TREE={name:'Aroma',children:[
+ {name:'Fruit',c:'#8e1b33',children:[
+   {name:'Citrus',children:['Lemon','Lime','Grapefruit','Orange peel']},
+   {name:'Orchard',children:['Green apple','Pear','Quince']},
+   {name:'Stone fruit',children:['Peach','Apricot','Nectarine']},
+   {name:'Tropical',children:['Pineapple','Passion fruit','Lychee','Mango']},
+   {name:'Red fruit',children:['Strawberry','Raspberry','Red cherry','Cranberry','Redcurrant']},
+   {name:'Black fruit',children:['Blackberry','Blackcurrant','Black cherry','Plum']},
+   {name:'Dried fruit',children:['Fig','Prune','Raisin']}]},
+ {name:'Floral',c:'#b04a6a',children:[
+   {name:'Blossom',children:['Orange blossom','Elderflower','Honeysuckle','Jasmine']},
+   {name:'Perfume',children:['Rose','Violet','Lavender']}]},
+ {name:'Herbal',c:'#5f7550',children:[
+   {name:'Green',children:['Cut grass','Bell pepper','Tomato leaf','Asparagus']},
+   {name:'Herb',children:['Mint','Eucalyptus','Dill','Garrigue']},
+   {name:'Dried',children:['Hay','Black tea']}]},
+ {name:'Spice',c:'#a0602a',children:[
+   {name:'Sweet spice',children:['Cinnamon','Clove','Nutmeg','Ginger']},
+   {name:'Pepper',children:['Black pepper','White pepper','Liquorice']}]},
+ {name:'Earth',c:'#5a4637',children:[
+   {name:'Mineral',children:['Wet stone','Flint','Chalk','Petrol']},
+   {name:'Forest',children:['Mushroom','Forest floor','Truffle']},
+   {name:'Animal',children:['Leather','Tar','Game']}]},
+ {name:'Oak & Age',c:'#7c5a36',children:[
+   {name:'Oak',children:['Vanilla','Toast','Cedar','Smoke','Coconut']},
+   {name:'Aged',children:['Tobacco','Coffee','Dark chocolate']},
+   {name:'Nutty',children:['Almond','Hazelnut','Walnut']}]},
+ {name:'Lees & Sweet',c:'#b8925a',children:[
+   {name:'Lees',children:['Brioche','Bread dough','Butter']},
+   {name:'Sweet',children:['Honey','Caramel','Butterscotch']}]},
+]};
+const GRAPES=[
+ {n:'Pinot Noir',o:'Burgundy · also Oregon, Central Otago, Sonoma',a:['Red cherry','Raspberry','Strawberry','Rose','Mushroom','Forest floor','Clove'],s:{Acidity:4,Tannin:2,Body:2,Alcohol:3,Finish:4},
+  t:'The most transparent of red grapes, and the most fickle. Thin-skinned and early-ripening, it shows every detail of the slope it grew on, which is why Burgundians spent a thousand years dividing the Côte d’Or into ever-smaller named plots. In youth it smells of red fruit and flowers; with age it drifts toward the forest — damp leaves, mushrooms, a little game.',serve:'Serve at 14–16 °C in a wide bowl. Duck, mushrooms, roast chicken.'},
+ {n:'Cabernet Sauvignon',o:'Bordeaux · also Napa, Coonawarra, Maipo',a:['Blackcurrant','Black cherry','Bell pepper','Mint','Cedar','Tobacco','Vanilla'],s:{Acidity:3,Tannin:5,Body:5,Alcohol:4,Finish:5},
+  t:'A cross of Cabernet Franc and Sauvignon Blanc, discovered by DNA in 1996 — the parents gave it blackcurrant and a green, leafy streak. Thick-skinned, late-ripening and deeply tannic, it is built for oak and for time; a great Pauillac may need twenty years to come round.',serve:'Serve at 16–18 °C, decanted. Lamb, beef, hard cheese.'},
+ {n:'Syrah',o:'Northern Rhône · also Barossa (Shiraz), Walla Walla',a:['Blackberry','Plum','Black pepper','Violet','Leather','Smoke'],s:{Acidity:3,Tannin:4,Body:4,Alcohol:4,Finish:4},
+  t:'On the granite hill of Hermitage it is savoury, peppery and floral, often with a whisper of smoked meat. In the warm Barossa as Shiraz it becomes riper and more generous, all plum and chocolate. The pepper is real: it comes from rotundone, the same compound found in peppercorns.',serve:'Serve at 16–18 °C. Grilled meats, olives, anything smoked.'},
+ {n:'Nebbiolo',o:'Piedmont · Barolo, Barbaresco',a:['Rose','Red cherry','Tar','Liquorice','Violet','Leather'],s:{Acidity:5,Tannin:5,Body:3,Alcohol:4,Finish:5},
+  t:'Pale in the glass and ferocious on the palate: high acid, high tannin, and a perfume the Piedmontese summarise as “tar and roses”. Named, some say, for the nebbia — the autumn fog that settles over the Langhe hills at harvest.',serve:'Serve at 16–18 °C after long decanting. Truffles, braised beef, risotto.'},
+ {n:'Tempranillo',o:'Rioja · Ribera del Duero · Toro',a:['Red cherry','Fig','Tobacco','Leather','Dill','Vanilla','Coconut'],s:{Acidity:3,Tannin:3,Body:3,Alcohol:3,Finish:3},
+  t:'Spain’s great red, its name from temprano, early, because it ripens ahead of its neighbours. Traditional Rioja ages it for years in American oak, which is where the dill, vanilla and coconut come from; the fruit fades toward dried fig and old leather.',serve:'Serve at 15–17 °C. Lamb, chorizo, Manchego.'},
+ {n:'Chardonnay',o:'Burgundy · Champagne · everywhere',a:['Green apple','Lemon','Peach','Butter','Vanilla','Toast','Brioche','Hazelnut'],s:{Acidity:3,Tannin:1,Body:4,Alcohol:3,Finish:4},
+  t:'The winemaker’s grape: fairly neutral on its own, it takes on the character of its place and its making. Chablis is lean, chalky and citric; Meursault is nutty and rich from oak and lees; Champagne’s Blanc de Blancs is all brioche and green apple. Butter comes from malolactic fermentation, not the grape.',serve:'Serve at 10–13 °C. Lobster, roast chicken, soft cheese.'},
+ {n:'Sauvignon Blanc',o:'Loire · Marlborough · Bordeaux',a:['Grapefruit','Lime','Passion fruit','Cut grass','Bell pepper','Flint','Elderflower'],s:{Acidity:5,Tannin:1,Body:2,Alcohol:3,Finish:3},
+  t:'Pungent and unmistakable. In Sancerre and Pouilly-Fumé it is flinty and restrained; in Marlborough it explodes with passion fruit and freshly cut grass. The green notes come from methoxypyrazines, the same compounds that give bell pepper its smell.',serve:'Serve at 7–10 °C. Goat’s cheese, asparagus, shellfish.'},
+ {n:'Riesling',o:'Mosel · Alsace · Clare Valley',a:['Lime','Green apple','Apricot','Petrol','Honeysuckle','Wet stone','Honey'],s:{Acidity:5,Tannin:1,Body:2,Alcohol:2,Finish:5},
+  t:'Crystalline acidity lets Riesling range from bone-dry to lusciously sweet and age for decades either way. The famous whiff of petrol — from a compound called TDN — develops with age and sunshine, and divides tasters sharply.',serve:'Serve at 8–10 °C. Pork, spiced food, fruit tarts.'},
+ {n:'Gewürztraminer',o:'Alsace · Alto Adige',a:['Lychee','Rose','Ginger','Orange blossom','Honey'],s:{Acidity:2,Tannin:1,Body:4,Alcohol:4,Finish:4},
+  t:'The most perfumed wine in the cellar: lychee and rose petals, so fragrant you can smell it from across the room. Gewürz means spice in German, though the effect is more Turkish delight than pepper grinder. Low acid, oily, often off-dry.',serve:'Serve at 9–11 °C. Munster cheese, Thai and Indian food.'},
+];
+const STRUCT=['Acidity','Tannin','Body','Alcohol','Finish'];
+
+/* ---------- partition layout ---------- */
+function prep(node,depth,parent){
+  node.depth=depth;node.parent=parent;
+  if(typeof node==='string')return;
+  if(node.children){node.children=node.children.map(ch=>typeof ch==='string'?{name:ch}:ch);node.children.forEach(ch=>{ch.c=ch.c||node.c;prep(ch,depth+1,node);});
+    node.value=node.children.reduce((a,c)=>a+c.value,0);} else node.value=1;
+}
+prep(TREE,0,null);
+function part(node,x0,x1){node.x0=x0;node.x1=x1;if(!node.children)return;let x=x0;node.children.forEach(c=>{const w=(x1-x0)*c.value/node.value;part(c,x,x+w);x+=w;});}
+part(TREE,0,1);
+const all=[];(function walk(n){all.push(n);(n.children||[]).forEach(walk);})(TREE);
+const RINGS=[0,72,142,208,300];
+
+/* ---------- wheel render ---------- */
+const svg=$('wheel');const NS='http://www.w3.org/2000/svg';
+let focus=TREE,view={x0:0,x1:1,d:0};
+let selected=new Set(['Red cherry','Strawberry','Forest floor','Rose']);
+let highlight=null;
+function arc(a0,a1,r0,r1){
+  const large=(a1-a0)>Math.PI?1:0;const p=(a,r)=>[(Math.sin(a)*r).toFixed(2),(-Math.cos(a)*r).toFixed(2)];
+  const [x0,y0]=p(a0,r1),[x1,y1]=p(a1,r1),[x2,y2]=p(a1,r0),[x3,y3]=p(a0,r0);
+  if(a1-a0>=Math.PI*2-1e-6){return `M0 ${-r1}A${r1} ${r1} 0 1 1 0 ${r1}A${r1} ${r1} 0 1 1 0 ${-r1}M0 ${-r0}A${r0} ${r0} 0 1 0 0 ${r0}A${r0} ${r0} 0 1 0 0 ${-r0}Z`;}
+  return `M${x0} ${y0}A${r1} ${r1} 0 ${large} 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 ${large} 0 ${x3} ${y3}Z`;
+}
+function tint(hex,k){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;r=Math.round(r+(236-r)*k);g=Math.round(g+(229-g)*k);b=Math.round(b+(226-b)*k);return `rgb(${r},${g},${b})`;}
+const paths=new Map(),labels=new Map();
+const gArcs=document.createElementNS(NS,'g'),gText=document.createElementNS(NS,'g');svg.append(gArcs,gText);
+const center=document.createElementNS(NS,'g');center.innerHTML=`<circle r="${RINGS[1]-3}" fill="#ece5e2" stroke="#5e1426" stroke-width="1"/><text id="ctext" text-anchor="middle" dy="-2" font-family="Gloock, Georgia, serif" font-size="20" fill="#5e1426"></text><text id="csub" text-anchor="middle" dy="20" font-family="Overpass Mono, monospace" font-size="9" letter-spacing="1.5" fill="#8b8380"></text>`;
+center.setAttribute('tabindex','0');center.setAttribute('role','button');center.setAttribute('aria-label','Step back out');center.style.cursor='pointer';
+svg.append(center);
+all.forEach(n=>{if(n===TREE)return;
+  const p=document.createElementNS(NS,'path');p.setAttribute('tabindex','0');p.setAttribute('role','button');
+  p.setAttribute('aria-label',n.children?`${n.name}: open`:`${n.name}: add to note`);
+  p.addEventListener('click',()=>clickNode(n));p.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();clickNode(n);}});
+  const t=document.createElementNS(NS,'title');t.textContent=n.name;p.appendChild(t);
+  gArcs.appendChild(p);paths.set(n,p);
+  const tx=document.createElementNS(NS,'text');tx.textContent=n.name;gText.appendChild(tx);labels.set(n,tx);
+});
+function inFocus(n){let p=n;while(p){if(p===focus)return true;p=p.parent;}return false;}
+function render(){
+  const {x0,x1,d}=view;const span=x1-x0;
+  all.forEach(n=>{if(n===TREE)return;const p=paths.get(n),tx=labels.get(n);
+    const rel=n.depth-d;const a0=Math.max(0,Math.min(1,(n.x0-x0)/span))*Math.PI*2,a1=Math.max(0,Math.min(1,(n.x1-x0)/span))*Math.PI*2;
+    const visible=rel>=1&&rel<=3&&a1-a0>0.001;
+    if(!visible){p.style.display='none';tx.style.display='none';p.setAttribute('tabindex','-1');return;}
+    p.style.display='';p.setAttribute('tabindex',inFocus(n)&&n!==focus?'0':'-1');
+    const r0=RINGS[rel]+1,r1=RINGS[rel+1]-1;
+    p.setAttribute('d',arc(a0,a1,r0,r1));
+    const isLeaf=!n.children;
+    const on=isLeaf&&selected.has(n.name);
+    const hl=highlight?(isLeaf?highlight.has(n.name):[...highlight].some(h=>(n.children||[]).some(function f(c){return c.name===h||(c.children||[]).some(f);}))):true;
+    p.setAttribute('fill',on?n.c:tint(n.c,rel===1?.25:rel===2?.5:.72));
+    p.setAttribute('stroke','#ece5e2');p.setAttribute('stroke-width','1.5');
+    p.classList.toggle('dim',!hl);
+    // label
+    const am=(a0+a1)/2,rm=(r0+r1)/2,arcLen=(a1-a0)*rm;
+    const radial=rel===3||(rel===2&&arcLen<70);
+    const fs=rel===1?15:rel===2?12.5:11.5;
+    const fits=radial?((a1-a0)*r0>fs*.95&&(r1-r0)>tx.textContent.length*fs*.42):arcLen>tx.textContent.length*fs*.52;
+    if(!fits){tx.style.display='none';return;}
+    tx.style.display='';tx.setAttribute('font-size',fs);tx.setAttribute('fill',on?'#fff':(rel===1?'#fff':'#3b1018'));
+    if(rel===1){tx.setAttribute('fill',on?'#fff':'#fdf6f2');tx.setAttribute('font-family','Gloock, Georgia, serif');p.setAttribute('fill',n.c);}
+    const deg=am*180/Math.PI;
+    let rot,x=Math.sin(am)*rm,y=-Math.cos(am)*rm;
+    if(radial){rot=deg-90;if(deg>180)rot+=180;}
+    else{rot=deg;if(deg>90&&deg<270)rot+=180;}
+    tx.setAttribute('transform',`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot.toFixed(1)})`);
+    tx.setAttribute('text-anchor','middle');tx.setAttribute('dominant-baseline','central');
+    tx.setAttribute('font-style',isLeaf?'italic':'normal');
+    tx.classList.toggle('dim',!hl);
+  });
+  $('ctext').textContent=focus===TREE?'Aroma':focus.name;
+  $('csub').textContent=focus===TREE?'THE WHEEL':'◂ BACK';
+  const trail=[];let f=focus;while(f){trail.unshift(f.name);f=f.parent;}
+  $('crumbs').innerHTML=trail.map((t,i)=>i===trail.length-1?`<b>${t}</b>`:t).join(' → ');
+}
+let anim=null;
+function zoomTo(n){
+  focus=n;const from={...view},to={x0:n.x0,x1:n.x1,d:n.depth};
+  if(reduce){view=to;render();return;}
+  const t0=performance.now(),dur=650;cancelAnimationFrame(anim);
+  const step=now=>{let k=Math.min(1,(now-t0)/dur);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+    view={x0:from.x0+(to.x0-from.x0)*k,x1:from.x1+(to.x1-from.x1)*k,d:from.d+(to.d-from.d)*k};
+    view.d=k<1?Math.round(from.d+(to.d-from.d)*Math.min(1,k*1.4)):to.d;render();if(k<1)anim=requestAnimationFrame(step);};
+  anim=requestAnimationFrame(step);
+}
+function clickNode(n){
+  if(n.children){zoomTo(n===focus?(n.parent||TREE):n);}
+  else{selected.has(n.name)?selected.delete(n.name):selected.add(n.name);render();renderChips();}
+}
+center.addEventListener('click',()=>{if(focus.parent)zoomTo(focus.parent);});
+center.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&focus.parent){e.preventDefault();zoomTo(focus.parent);}});
+
+/* ---------- note form ---------- */
+const gsel=$('grape');GRAPES.forEach(g=>{const o=document.createElement('option');o.textContent=g.n;gsel.appendChild(o);});
+const o2=document.createElement('option');o2.textContent='Blend / other';gsel.appendChild(o2);
+gsel.value='Pinot Noir';
+const st=$('struct');const DEF={Acidity:4,Tannin:2,Body:2,Alcohol:3,Finish:4};
+STRUCT.forEach(k=>{const id='s-'+k.toLowerCase();st.insertAdjacentHTML('beforeend',`<label for="${id}">${k}<input type="range" id="${id}" min="1" max="5" value="${DEF[k]}"><output id="${id}-o">${DEF[k]}</output></label>`);
+  $(id).addEventListener('input',()=>{$(id+'-o').textContent=$(id).value;});});
+function renderChips(){
+  const c=$('chips');if(!selected.size){c.innerHTML='<span class="empty">Tap a word on the outer ring of the wheel…</span>';return;}
+  c.innerHTML=[...selected].map(s=>`<button type="button" class="chip" data-s="${s}" aria-label="Remove ${s}">${s}</button>`).join('');
+}
+$('chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;selected.delete(b.dataset.s);renderChips();render();});
+$('today').textContent='Tasting note · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+/* ---------- journal ---------- */
+const SEED=[
+ {w:'Barolo Cannubi, Bartolo Serra',v:2013,g:'Nebbiolo',a:['Rose','Tar','Red cherry','Liquorice'],n:'Brick at the rim already. Roses and tar, just like the textbooks promise. Tannin still a wall — give it five more years. Beautiful length.',s:18,st:{Acidity:5,Tannin:5,Body:3,Alcohol:4,Finish:5},d:'12 Mar'},
+ {w:'Sancerre “Les Caillottes”, Dom. Péry',v:2022,g:'Sauvignon Blanc',a:['Grapefruit','Flint','Cut grass'],n:'Struck match on opening, then grapefruit pith and chalk. Racy. Poured with goat’s cheese at the staff lunch; gone in ten minutes.',s:16,st:{Acidity:5,Tannin:1,Body:2,Alcohol:3,Finish:3},d:'2 Apr'},
+ {w:'Riesling Spätlese, Weingut Arnoldi',v:2009,g:'Riesling',a:['Petrol','Apricot','Honey','Lime'],n:'Golden. Petrol first — the table was divided — then apricot, lime marmalade. Sweetness perfectly carried by the acid. Still young!',s:17.5,st:{Acidity:5,Tannin:1,Body:2,Alcohol:2,Finish:5},d:'19 May'},
+];
+const KEY='cellarbook.entries.v1';
+let entries=[];
+try{const raw=localStorage.getItem(KEY);entries=raw?JSON.parse(raw):SEED.slice();}catch(e){entries=SEED.slice();}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(entries));}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function renderEntries(){
+  $('entries').innerHTML=entries.map((e,i)=>`<article class="entry" style="--r:${((i*37)%5-2)*.4}deg">
+    <h4>${esc(e.w)}</h4><div class="m">${esc(e.v)} · ${esc(e.g)} · ${esc(e.d)}</div>
+    <div class="n">${esc(e.n)}</div><div class="tags">${e.a.map(esc).join(' · ')}</div>
+    <div class="foot"><span class="score">${esc(e.s)}<small> /20</small></span><button type="button" data-i="${i}" aria-label="Tear out note for ${esc(e.w)}">Tear out</button></div></article>`).join('')||'<p class="sub">The book is empty.</p>';
+}
+$('entries').addEventListener('click',e=>{const b=e.target.closest('button[data-i]');if(!b)return;entries.splice(+b.dataset.i,1);persist();renderEntries();});
+$('noteForm').addEventListener('submit',e=>{e.preventDefault();
+  const st={};STRUCT.forEach(k=>st[k]=+$('s-'+k.toLowerCase()).value);
+  entries.unshift({w:$('wine').value||'Unnamed wine',v:$('vintage').value||'NV',g:gsel.value,a:[...selected],n:$('notes').value,s:$('score').value||'–',st,d:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'})});
+  persist();renderEntries();$('saved').textContent='entered ✓';setTimeout(()=>$('saved').textContent='',2200);
+});
+$('clearNote').addEventListener('click',()=>{$('wine').value='';$('vintage').value='';$('notes').value='';$('score').value='';selected.clear();renderChips();render();$('wine').focus();});
+
+/* ---------- grapes ---------- */
+const tabs=$('tabs');let gi=0;
+GRAPES.forEach((g,i)=>{const b=document.createElement('button');b.type='button';b.role='tab';b.id='tab-'+i;b.setAttribute('aria-selected',i===0);b.setAttribute('aria-controls','gpanel');b.textContent=g.n;b.onclick=()=>showGrape(i,true);tabs.appendChild(b);});
+tabs.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const n=(gi+(e.key==='ArrowRight'?1:-1)+GRAPES.length)%GRAPES.length;showGrape(n,true);$('tab-'+n).focus();}});
+function showGrape(i,apply){
+  gi=i;const g=GRAPES[i];tabs.querySelectorAll('button').forEach((b,k)=>{b.setAttribute('aria-selected',k===i);b.tabIndex=k===i?0:-1;});
+  $('gpanel').innerHTML=`<div class="gp"><div><h3>${g.n}</h3><div class="origin">${g.o}</div><p>${g.t}</p><div class="aromas">${g.a.map(a=>`<span>${a}</span>`).join('')}</div></div>
+   <div><div class="bars">${STRUCT.map(k=>`<div>${k}<i style="--v:${g.s[k]}" aria-label="${k} ${g.s[k]} of 5"></i></div>`).join('')}</div><p class="serve">${g.serve}</p>
+   <div class="actions"><button class="btn ghost" type="button" id="useGrape">Use for tonight's note</button><button class="btn ghost" type="button" id="clearHl">Clear tracing</button></div></div></div>`;
+  $('useGrape').onclick=()=>{gsel.value=g.n;STRUCT.forEach(k=>{$('s-'+k.toLowerCase()).value=g.s[k];$('s-'+k.toLowerCase()+'-o').textContent=g.s[k];});$('noteTitle').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});};
+  $('clearHl').onclick=()=>{highlight=null;render();};
+  if(apply){highlight=new Set(g.a);if(focus!==TREE)zoomTo(TREE);else render();}
+}
+showGrape(0,false);
+render();renderChips();renderEntries();
+})();
+</script>
+</body>
+</html>

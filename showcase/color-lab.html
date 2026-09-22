@@ -256,7 +256,9 @@ pre.out{margin:0;background:var(--card);border:1px solid var(--hair);border-radi
   function previewCard(){
     const c=[...st.cols].sort((a,b)=>lum(a)-lum(b));const dark=c[0],light=c[4],mid=c[2];
     const accent=st.cols.slice().sort((a,b)=>hex2hsl(b)[1]-hex2hsl(a)[1])[0];
-    $('preview').innerHTML=`<div class="pa" style="background:${dark};color:${light}"><h3>Tidewater Supper Club</h3><p style="color:${contrast(c[3],dark)>4.5?c[3]:light}">Seasonal plates, a long table by the water, and a playlist someone’s uncle made in 1994. Thursdays from seven.</p><span class="cta" style="background:${accent};color:${onColor(accent)}">Book a seat →</span></div>
+    const best=st.cols.filter(x=>x!==dark).sort((a,b)=>contrast(b,dark)-contrast(a,dark))[0];const head=contrast(best,dark)>=4.5?best:onColor(dark);
+    const body=contrast(c[3],dark)>=4.5&&c[3]!==head?c[3]:onColor(dark);
+    $('preview').innerHTML=`<div class="pa" style="background:${dark};color:${head}"><h3>Tidewater Supper Club</h3><p style="color:${body}">Seasonal plates, a long table by the water, and a playlist someone’s uncle made in 1994. Thursdays from seven.</p><span class="cta" style="background:${accent};color:${onColor(accent)}">Book a seat →</span></div>
     <div class="pb"><div style="background:${mid};color:${onColor(mid)}">${mid} · surface</div><div style="background:${light};color:${onColor(light)}">${light} · paper</div></div>`;
   }
   function matrix(){

@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grainworks Deluxe</title>
+<meta name="description" content="A falling-sand toy in the style of a 1997 shareware app: pour sand, water, oil, fire, wood, steam and plants into a pixel diorama and watch them react.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --desk-a:#8f8aa3;
+  --desk-b:#98939f;
+  --plat:#d9d6de;
+  --plat-hi:#ffffff;
+  --plat-lo:#8a8694;
+  --plat-dk:#3d3a45;
+  --ink:#1c1a22;
+  --sel:#3b3f8c;
+  --pix:"Silkscreen","Press Start 2P","Courier New",monospace;
+  --term:"VT323","Courier New",Courier,monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--desk-a)}
+body{
+  margin:0;min-height:100vh;color:var(--ink);font-family:var(--term);font-size:18px;
+  background:repeating-conic-gradient(var(--desk-a) 0 25%,var(--desk-b) 0 50%) 0 0/4px 4px;
+  padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 28px max(16px,env(safe-area-inset-left));
+}
+:focus-visible{outline:2px dotted var(--ink);outline-offset:2px}
+.menubar{
+  display:flex;align-items:center;gap:18px;background:var(--plat);border-bottom:1px solid var(--plat-dk);
+  margin:calc(-1 * max(14px,env(safe-area-inset-top))) calc(-1 * max(16px,env(safe-area-inset-right))) 18px calc(-1 * max(16px,env(safe-area-inset-left)));
+  padding:4px 16px;font-family:var(--pix);font-size:11px;position:sticky;top:0;z-index:5;flex-wrap:wrap;
+}
+.menubar a{color:var(--ink);text-decoration:none;padding:2px 6px}
+.menubar a:hover,.menubar a:focus-visible{background:var(--sel);color:#fff}
+.menubar .apple{width:14px;height:14px;background:
+  linear-gradient(#5aa05a 0 20%,#e8c63a 20% 40%,#e2863a 40% 60%,#c9433f 60% 80%,#5b5fb0 80%);border-radius:40% 40% 45% 45%}
+.menubar .clock{margin-left:auto}
+.desk{max-width:1220px;margin:0 auto;display:grid;grid-template-columns:190px minmax(0,1fr) 250px;gap:16px;align-items:start}
+.win{background:var(--plat);border:1px solid var(--plat-dk);box-shadow:inset 1px 1px 0 var(--plat-hi),inset -1px -1px 0 var(--plat-lo),2px 2px 0 rgba(0,0,0,.35)}
+.titlebar{
+  display:flex;align-items:center;gap:8px;height:22px;padding:0 6px;font-family:var(--pix);font-size:11px;
+  background:repeating-linear-gradient(var(--plat) 0 1px,var(--plat-lo) 1px 2px);
+  border-bottom:1px solid var(--plat-dk);
+}
+.titlebar span{background:var(--plat);padding:0 6px;margin:0 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.box{width:12px;height:12px;flex:none;border:1px solid var(--plat-dk);background:var(--plat);box-shadow:inset 1px 1px 0 var(--plat-hi)}
+.pane{padding:10px}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.tool{
+  display:flex;align-items:center;gap:6px;padding:5px 5px;background:var(--plat);border:1px solid var(--plat-dk);
+  box-shadow:inset 1px 1px 0 var(--plat-hi),inset -1px -1px 0 var(--plat-lo);font-family:var(--pix);font-size:9.5px;cursor:pointer;color:var(--ink);text-align:left
+}
+.tool i{width:14px;height:14px;flex:none;border:1px solid var(--plat-dk);image-rendering:pixelated}
+.tool[aria-pressed="true"]{background:var(--sel);color:#fff;box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #7478c7}
+.tool kbd{margin-left:auto;font-family:var(--term);font-size:14px;opacity:.6}
+.group{margin-top:12px;border-top:1px solid var(--plat-lo);box-shadow:0 -1px 0 var(--plat-hi) inset;padding-top:8px}
+.group label,.group .lbl{display:flex;justify-content:space-between;font-family:var(--pix);font-size:9.5px;margin-bottom:4px}
+input[type=range]{width:100%;accent-color:var(--sel)}
+input[type=text]{width:100%;font-family:var(--term);font-size:18px;border:1px solid var(--plat-dk);box-shadow:inset 1px 1px 0 var(--plat-lo);background:#fff;padding:1px 4px}
+select{width:100%;font-family:var(--term);font-size:17px;border:1px solid var(--plat-dk);background:#fff;padding:1px 2px}
+.btn{
+  font-family:var(--pix);font-size:10px;padding:6px 8px;background:var(--plat);border:1px solid var(--plat-dk);border-radius:4px;
+  box-shadow:inset 1px 1px 0 var(--plat-hi),inset -1px -1px 0 var(--plat-lo);cursor:pointer;color:var(--ink)
+}
+.btn:active{background:var(--plat-lo);box-shadow:inset 1px 1px 0 var(--plat-dk)}
+.btn.def{box-shadow:0 0 0 2px var(--plat),0 0 0 3px var(--plat-dk),inset 1px 1px 0 var(--plat-hi),inset -1px -1px 0 var(--plat-lo)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.stage{padding:8px}
+.well{border:1px solid var(--plat-dk);box-shadow:inset 1px 1px 0 var(--plat-lo);background:#000;line-height:0}
+canvas{width:100%;height:auto;display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:crosshair;touch-action:none}
+.status{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--term);font-size:17px;padding:4px 10px 6px;border-top:1px solid var(--plat-lo)}
+.status b{font-weight:400;color:var(--sel)}
+.about .logo{display:grid;grid-template-columns:repeat(8,8px);gap:0;width:64px;margin:4px auto 10px}
+.about .logo i{width:8px;height:8px;display:block}
+.about h1{font-family:var(--pix);font-weight:700;font-size:17px;text-align:center;margin:0;letter-spacing:.02em}
+.about .ver{text-align:center;font-family:var(--pix);font-size:9.5px;margin:4px 0 10px}
+.about p{margin:6px 0;line-height:1.05}
+.about .reg{border:1px solid var(--plat-dk);background:#fff;padding:6px 8px;margin-top:10px;box-shadow:inset 1px 1px 0 var(--plat-lo)}
+.about .fine{font-size:15px;color:#4a4655}
+.help{margin-top:16px}
+.help ul{margin:0;padding:0 0 0 16px;line-height:1.05}
+@media (max-width:1000px){
+  .desk{grid-template-columns:1fr}
+  .toolwin{order:2}.mainwin{order:1}.side{order:3}
+  .tools{grid-template-columns:repeat(4,1fr)}
+  .tool kbd{display:none}
+}
+@media (max-width:520px){
+  .tools{grid-template-columns:repeat(3,1fr)}
+  .menubar .hide-sm{display:none}
+}
+</style>
+</head>
+<body>
+<nav class="menubar" aria-label="Menu bar">
+  <span class="apple" aria-hidden="true"></span>
+  <a href="index.html">← Showcase</a>
+  <span class="hide-sm">File</span><span class="hide-sm">Edit</span><span class="hide-sm">Elements</span><span class="hide-sm">Special</span>
+  <span class="clock" id="clock">4:12 PM</span>
+</nav>
+
+<div class="desk">
+  <section class="win toolwin" aria-label="Toolbox">
+    <div class="titlebar"><div class="box"></div><span>Elements</span></div>
+    <div class="pane">
+      <div class="tools" id="tools" role="group" aria-label="Element"></div>
+      <div class="group">
+        <label for="brush">Brush <span id="brushOut">4</span></label>
+        <input id="brush" type="range" min="1" max="18" value="4">
+      </div>
+      <div class="group">
+        <label for="speed">Speed <span id="speedOut">2×</span></label>
+        <input id="speed" type="range" min="1" max="4" value="2">
+      </div>
+      <div class="group">
+        <label for="theme">Palette</label>
+        <select id="theme">
+          <option value="natural">Natural (256 colours)</option>
+          <option value="pastel">Platinum Pastel</option>
+          <option value="handheld">Handheld 4-shade</option>
+          <option value="blueprint">Blueprint</option>
+        </select>
+      </div>
+      <div class="group">
+        <label for="seed">Diorama seed</label>
+        <input id="seed" type="text" inputmode="numeric" value="1997" autocomplete="off">
+        <div class="btns">
+          <button class="btn" id="pauseBtn">Pause</button>
+          <button class="btn" id="stepBtn">Step</button>
+          <button class="btn" id="clearBtn">Clear</button>
+          <button class="btn def" id="resetBtn">Reset</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="win mainwin" aria-label="Sandbox">
+    <div class="titlebar"><div class="box"></div><span id="docTitle">Untitled Diorama 1997.grn</span><div class="box"></div></div>
+    <div class="stage"><div class="well"><canvas id="sim" aria-label="Falling sand sandbox. Drag to pour the selected element; right-click to erase."></canvas></div></div>
+    <div class="status" aria-live="off">
+      <span>Sand <b id="nSand">0</b></span><span>Water <b id="nWater">0</b></span><span>Fire <b id="nFire">0</b></span><span>Plant <b id="nPlant">0</b></span><span>FPS <b id="fps">60</b></span>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="win about" aria-label="About">
+      <div class="titlebar"><div class="box"></div><span>About Grainworks</span></div>
+      <div class="pane">
+        <div class="logo" id="logo" aria-hidden="true"></div>
+        <h1>Grainworks Deluxe</h1>
+        <div class="ver">Version 2.1 · © 1997 Pixel Orchard Software</div>
+        <p>Every grain obeys four rules: fall if you can, slide if you must, flow if you're wet, rise if you're hot. The rest is chemistry.</p>
+        <div class="reg">
+          <p>Registered to:<br><b>You, the Player</b></p>
+          <p class="fine">Serial GW-2197-ORCH · 64 MB RAM recommended</p>
+        </div>
+      </div>
+    </section>
+    <section class="win help" aria-label="Recipes">
+      <div class="titlebar"><div class="box"></div><span>Recipes.txt</span></div>
+      <div class="pane">
+        <ul>
+          <li>Fire + Wood = slow embers, then ash</li>
+          <li>Fire + Oil = flash burn</li>
+          <li>Fire + Water = steam</li>
+          <li>Steam, cooled = rain</li>
+          <li>Plant + Water = more Plant</li>
+          <li>Sand sinks; oil floats</li>
+        </ul>
+        <p class="fine" style="margin-top:8px">Keys 1–0 pick elements. Right-click erases. Hold still to keep pouring.</p>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const E = { EMPTY:0, WALL:1, SAND:2, WATER:3, WOOD:4, FIRE:5, OIL:6, STEAM:7, PLANT:8, SMOKE:9, EMBER:10, ASH:11 };
+const TOOLS = [
+  { id:'sand', t:E.SAND, name:'Sand', key:'1' }, { id:'water', t:E.WATER, name:'Water', key:'2' },
+  { id:'fire', t:E.FIRE, name:'Fire', key:'3' }, { id:'wood', t:E.WOOD, name:'Wood', key:'4' },
+  { id:'oil', t:E.OIL, name:'Oil', key:'5' }, { id:'steam', t:E.STEAM, name:'Steam', key:'6' },
+  { id:'plant', t:E.PLANT, name:'Plant', key:'7' }, { id:'stone', t:E.WALL, name:'Stone', key:'8' },
+  { id:'ash', t:E.ASH, name:'Ash', key:'9' }, { id:'erase', t:E.EMPTY, name:'Eraser', key:'0' }
+];
+const THEMES = {
+  natural: { bg:'#0d0c14', c:{1:['#6b6874','#75727e','#5f5c68','#807d89'],2:['#e2c178','#d8b56a','#ebcb85','#cfa95d'],3:['#2f6fd6','#3677e0','#2966c9','#3f82e8'],4:['#7a4a26','#6d4120','#85532c','#643b1c'],6:['#3b2a14','#45321a','#33240f','#4d3a20'],7:['#c7d3e0','#b8c6d6','#d4dee8','#aebed0'],8:['#3f9b3a','#35872f','#4aad43','#2f7a2a'],9:['#4a4650','#524e59','#423e48','#5a5662'],11:['#8d8a90','#7f7c82','#9a979d','#737076']}, fire:['#fff3b0','#ffd35a','#ff9f2e','#f0592a','#b8261e'], ember:['#ff7a1f','#e94e1b','#ffb03a','#c53516'] },
+  pastel: { bg:'#f4f1f6', c:{1:['#9f9bb0','#aaa6ba','#948fa6','#b3afc2'],2:['#f1d49a','#ebcb8c','#f6ddab','#e5c47f'],3:['#8fb4f0','#9abdf3','#86abe9','#a6c6f5'],4:['#b98a6a','#ad7f5f','#c49676','#a37656'],6:['#6d5a7a','#76638a','#645370','#806c92'],7:['#e6ecf5','#dde5f0','#eef3f9','#d4dded'],8:['#8fd08a','#84c47f','#9bdb96','#78b874'],9:['#c8c3d2','#d0cbd9','#bfbac9','#d8d3e0'],11:['#bdbac4','#b3b0ba','#c7c4ce','#aaa7b1']}, fire:['#fff6d6','#ffe08a','#ffb877','#ff8c7a','#e2687a'], ember:['#ff9f80','#f28a6c','#ffb896','#e57a5e'] },
+  handheld: { bg:'#0f380f', c:{1:['#306230','#306230','#306230','#306230'],2:['#9bbc0f','#8bac0f','#9bbc0f','#8bac0f'],3:['#306230','#3a6e30','#306230','#2a582a'],4:['#8bac0f','#7a9a0e','#8bac0f','#7a9a0e'],6:['#1e4a1e','#1e4a1e','#255225','#1e4a1e'],7:['#8bac0f','#9bbc0f','#8bac0f','#9bbc0f'],8:['#8bac0f','#9bbc0f','#8bac0f','#9bbc0f'],9:['#306230','#306230','#306230','#306230'],11:['#306230','#306230','#306230','#306230']}, fire:['#9bbc0f','#9bbc0f','#8bac0f','#8bac0f','#306230'], ember:['#9bbc0f','#8bac0f','#9bbc0f','#8bac0f'] },
+  blueprint: { bg:'#123a6b', c:{1:['#e9f1fb','#dce8f7','#f3f8fd','#d0e0f3'],2:['#8fb6e8','#83ade3','#9bbfec','#77a3dd'],3:['#2d62a8','#3469b0','#285b9f','#3a72b8'],4:['#c9daf0','#bfd2ec','#d3e2f4','#b5cbe8'],6:['#0c2a52','#0f2f5a','#0a254a','#12345f'],7:['#5b86c2','#6690c8','#5280bc','#7098cd'],8:['#a9c7ee','#9dbeea','#b5d0f1','#91b6e6'],9:['#23507f','#285687','#1f4a77','#2c5b8d'],11:['#6f8fb8','#6788b2','#7796be','#5f81ac']}, fire:['#ffffff','#ffe9a8','#ffc46b','#ff9a4d','#e86a3a'], ember:['#ffd08a','#ffb85c','#ffe0a8','#f5a04a'] }
+};
+const narrow = window.innerWidth < 640;
+const GW = narrow ? 120 : 220, GH = narrow ? 150 : 140, N = GW * GH;
+const canvas = $('sim'); canvas.width = GW; canvas.height = GH;
+const ctx = canvas.getContext('2d');
+const img = ctx.createImageData(GW, GH); const px = new Uint32Array(img.data.buffer);
+let type = new Uint8Array(N), life = new Uint8Array(N), shade = new Uint8Array(N), stamp = new Uint8Array(N);
+let tick = 1, tool = TOOLS[0], brush = 4, speed = 2, running = true, theme = 'natural', seed = 1997;
+let COL = {}, FIRE = [], EMB = [], BG = 0;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+if (reduce.matches) speed = 1;
+
+// density: movable things only; static = 99
+const DENS = new Float32Array(16).fill(99);
+DENS[E.EMPTY] = 0; DENS[E.SAND] = 3; DENS[E.ASH] = 2.4; DENS[E.WATER] = 2; DENS[E.OIL] = 1; DENS[E.STEAM] = -1; DENS[E.SMOKE] = -.8; DENS[E.FIRE] = -1.2;
+const FLAM = new Float32Array(16); FLAM[E.WOOD] = .015; FLAM[E.OIL] = .35; FLAM[E.PLANT] = .06;
+
+function rgba(hex) { const n = parseInt(hex.slice(1), 16); return (255 << 24) | ((n & 255) << 16) | (((n >> 8) & 255) << 8) | (n >> 16); }
+function setTheme(name) {
+  theme = name; const T = THEMES[name]; COL = {};
+  for (const k in T.c) COL[k] = T.c[k].map(rgba);
+  FIRE = T.fire.map(rgba); EMB = T.ember.map(rgba); BG = rgba(T.bg);
+  document.querySelectorAll('.tool i').forEach(i => { const t = +i.dataset.t; i.style.background = t === E.EMPTY ? `repeating-linear-gradient(45deg,#fff 0 3px,${T.bg} 3px 6px)` : t === E.FIRE ? T.fire[2] : T.c[t][0]; });
+}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const R = Math.random;
+
+function put(i, t, l) { type[i] = t; shade[i] = (R() * 4) | 0; life[i] = l !== undefined ? l : t === E.FIRE ? 25 + (R() * 30 | 0) : t === E.STEAM ? 140 + (R() * 100 | 0) : t === E.SMOKE ? 50 + (R() * 50 | 0) : t === E.EMBER ? 90 + (R() * 120 | 0) : 0; stamp[i] = tick; }
+function swap(a, b) {
+  const t = type[a]; type[a] = type[b]; type[b] = t;
+  const l = life[a]; life[a] = life[b]; life[b] = l;
+  const s = shade[a]; shade[a] = shade[b]; shade[b] = s;
+  stamp[a] = tick; stamp[b] = tick;
+}
+const sinkable = (src, dst) => DENS[dst] !== 99 && DENS[src] > DENS[dst] && dst !== src;
+const risable = (src, dst) => DENS[dst] !== 99 && DENS[src] < DENS[dst] && dst !== src;
+
+function stepPowder(i, x, y, t) {
+  if (y >= GH - 1) return;
+  const b = i + GW;
+  if (sinkable(t, type[b]) && (type[b] === E.EMPTY || R() < .6)) { swap(i, b); return; }
+  const d = R() < .5 ? -1 : 1;
+  for (const dx of [d, -d]) {
+    const nx = x + dx; if (nx < 0 || nx >= GW) continue;
+    const j = b + dx; if (sinkable(t, type[j]) && type[i + dx] !== E.WALL) { swap(i, j); return; }
+  }
+}
+function stepLiquid(i, x, y, t) {
+  if (y < GH - 1) {
+    const b = i + GW;
+    if (sinkable(t, type[b])) { swap(i, b); return; }
+    const d = R() < .5 ? -1 : 1;
+    for (const dx of [d, -d]) { const nx = x + dx; if (nx < 0 || nx >= GW) continue; if (sinkable(t, type[b + dx])) { swap(i, b + dx); return; } }
+  }
+  const d = R() < .5 ? -1 : 1, disp = t === E.OIL ? 2 : 4;
+  let best = -1;
+  for (let k = 1; k <= disp; k++) { const nx = x + d * k; if (nx < 0 || nx >= GW) break; const j = i + d * k; if (type[j] === E.EMPTY || (sinkable(t, type[j]) && DENS[type[j]] > 0)) best = j; else break; }
+  if (best >= 0) swap(i, best);
+}
+function stepGas(i, x, y, t) {
+  if (life[i] > 0) life[i]--;
+  if (life[i] === 0) {
+    if (t === E.STEAM) { if (R() < .45) { type[i] = E.WATER; shade[i] = (R() * 4) | 0; } else type[i] = E.EMPTY; }
+    else type[i] = E.EMPTY;
+    return;
+  }
+  if (t === E.STEAM && y < 3 && R() < .02) { type[i] = E.WATER; return; } // condenses at the ceiling
+  const r = R();
+  if (y > 0 && r < .75) {
+    const u = i - GW; const dx = r < .35 ? 0 : (R() < .5 ? -1 : 1); const nx = x + dx;
+    if (nx >= 0 && nx < GW && risable(t, type[u + dx])) { swap(i, u + dx); return; }
+  }
+  const dx = R() < .5 ? -1 : 1, nx = x + dx;
+  if (nx >= 0 && nx < GW && type[i + dx] === E.EMPTY) swap(i, i + dx);
+}
+function neighbours(i, x, y, fn) {
+  if (y > 0) fn(i - GW); if (y < GH - 1) fn(i + GW); if (x > 0) fn(i - 1); if (x < GW - 1) fn(i + 1);
+}
+function stepFire(i, x, y) {
+  life[i]--;
+  let quenched = false;
+  neighbours(i, x, y, j => {
+    const n = type[j];
+    if (n === E.WATER) { quenched = true; if (R() < .5) put(j, E.STEAM); }
+    else if (FLAM[n] && R() < FLAM[n] * (n === E.OIL ? 4 : 1.5)) put(j, n === E.OIL ? E.FIRE : E.EMBER, n === E.OIL ? 30 + (R() * 30 | 0) : n === E.PLANT ? 30 + (R() * 40 | 0) : undefined);
+  });
+  if (quenched) { put(i, E.STEAM, 60); return; }
+  if (life[i] <= 0) { if (R() < .3) put(i, E.SMOKE); else type[i] = E.EMPTY; return; }
+  stepGas(i, x, y, E.FIRE);
+}
+function stepEmber(i, x, y) {
+  life[i]--;
+  let quenched = false;
+  neighbours(i, x, y, j => {
+    const n = type[j];
+    if (n === E.WATER) { quenched = true; if (R() < .3) put(j, E.STEAM); }
+    else if (FLAM[n] && R() < FLAM[n]) put(j, n === E.OIL ? E.FIRE : E.EMBER, n === E.PLANT ? 30 + (R() * 40 | 0) : undefined);
+  });
+  if (quenched && R() < .2) { type[i] = E.WOOD; return; }
+  if (y > 0 && type[i - GW] === E.EMPTY && R() < .18) put(i - GW, E.FIRE, 10 + (R() * 20 | 0));
+  if (life[i] <= 0) { if (R() < .45) put(i, E.ASH); else if (R() < .5) put(i, E.SMOKE); else type[i] = E.EMPTY; }
+}
+function stepPlant(i, x, y) {
+  if (R() > .08) return;
+  const dirs = [-GW, -1, 1, GW, -GW - 1, -GW + 1];
+  const d = dirs[(R() * dirs.length) | 0], j = i + d, nx = x + (d === -1 || d === -GW - 1 ? -1 : d === 1 || d === -GW + 1 ? 1 : 0);
+  if (j < 0 || j >= N || nx < 0 || nx >= GW) return;
+  if (type[j] === E.WATER && R() < .35) put(j, E.PLANT);
+}
+
+function step() {
+  tick = tick === 255 ? 1 : tick + 1;
+  const flip = tick & 1;
+  for (let y = GH - 1; y >= 0; y--) {
+    const row = y * GW;
+    for (let k = 0; k < GW; k++) {
+      const x = flip ? k : GW - 1 - k, i = row + x;
+      const t = type[i];
+      if (t === E.EMPTY || t === E.WALL || t === E.WOOD || stamp[i] === tick) continue;
+      switch (t) {
+        case E.SAND: case E.ASH: stepPowder(i, x, y, t); break;
+        case E.WATER: case E.OIL: stepLiquid(i, x, y, t); break;
+        case E.STEAM: case E.SMOKE: stepGas(i, x, y, t); break;
+        case E.FIRE: stepFire(i, x, y); break;
+        case E.EMBER: stepEmber(i, x, y); break;
+        case E.PLANT: stepPlant(i, x, y); break;
+      }
+    }
+  }
+}
+function draw() {
+  for (let i = 0; i < N; i++) {
+    const t = type[i];
+    if (t === E.EMPTY) px[i] = BG;
+    else if (t === E.FIRE) px[i] = FIRE[Math.min(4, Math.max(0, 4 - (life[i] >> 3)))];
+    else if (t === E.EMBER) px[i] = EMB[(R() * 4) | 0];
+    else if (t === E.WATER) px[i] = COL[3][R() < .02 ? (shade[i] = (R() * 4) | 0) : shade[i]];
+    else px[i] = COL[t][shade[i]];
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// ---------- diorama ----------
+function diorama() {
+  type.fill(0); life.fill(0);
+  const r = mulberry32(seed);
+  const set = (x, y, t) => { if (x >= 0 && x < GW && y >= 0 && y < GH) { const i = y * GW + x; type[i] = t; shade[i] = (r() * 4) | 0; life[i] = t === E.EMBER ? 200 + (r() * 55 | 0) : 0; } };
+  // rolling stone floor
+  const ph = r() * 10;
+  for (let x = 0; x < GW; x++) { const h = 4 + Math.round(3 * Math.sin(x * .07 + ph) + 2 * Math.sin(x * .19)); for (let y = GH - h; y < GH; y++) set(x, y, E.WALL); }
+  // stone basin with water and a skin of oil
+  const bx = Math.round(GW * (.08 + r() * .08)), bw = Math.round(GW * .34), by = Math.round(GH * .62), bh = Math.round(GH * .26);
+  for (let y = by; y < by + bh; y++) { set(bx, y, E.WALL); set(bx + 1, y, E.WALL); set(bx + bw, y, E.WALL); set(bx + bw - 1, y, E.WALL); }
+  for (let x = bx; x <= bx + bw; x++) { set(x, by + bh, E.WALL); set(x, by + bh - 1, E.WALL); }
+  for (let y = by + 5; y < by + bh - 1; y++) for (let x = bx + 2; x < bx + bw - 1; x++) set(x, y, E.WATER);
+  for (let y = by + 3; y < by + 5; y++) for (let x = bx + 2; x < bx + bw - 1; x++) set(x, y, E.OIL);
+  // pondweed rising from the basin floor
+  for (let k = 0; k < 4; k++) { const x = bx + 4 + Math.round(r() * (bw - 8)); for (let y = by + bh - 2; y > by + bh - 6 - r() * 8; y--) set(x + Math.round(Math.sin(y * .5) * .8), y, E.PLANT); }
+  // dunes on the right
+  const dx0 = Math.round(GW * .55);
+  for (let x = dx0; x < GW; x++) { const h = Math.round(GH * (.12 + .1 * Math.sin((x - dx0) * .05 + ph) + .06 * Math.sin(x * .13))); for (let y = GH - 7 - h; y < GH - 4; y++) if (type[y * GW + x] === 0) set(x, y, E.SAND); }
+  // an hourglass funnel pouring sand
+  const fx = Math.round(GW * (.62 + r() * .15)), fy = Math.round(GH * .1), fw = Math.round(GW * .12);
+  for (let k = 0; k <= fw; k++) { set(fx - fw + k, fy + Math.round(k * .7), E.WALL); set(fx + fw - k, fy + Math.round(k * .7), E.WALL); }
+  set(fx, fy + Math.round(fw * .7), E.EMPTY); set(fx - 1, fy + Math.round(fw * .7), E.EMPTY);
+  for (let y = fy - 12; y < fy + Math.round(fw * .7); y++) for (let x = fx - fw; x <= fx + fw; x++) { const yy = y - fy; if (yy < 0 || Math.abs(x - fx) < fw - yy / .7 - 1) if (type[y * GW + x] === 0) set(x, y, E.SAND); }
+  // logs, one already smouldering
+  const lx = Math.round(GW * .42), ly = Math.round(GH * .5);
+  for (let x = lx; x < lx + Math.round(GW * .14); x++) for (let y = ly; y < ly + 3; y++) set(x, y, E.WOOD);
+  for (let x = lx + 4; x < lx + 8; x++) for (let y = ly - 6; y < ly; y++) set(x, y, E.WOOD);
+  for (let x = lx + 2; x < lx + 5; x++) set(x, ly - 1, E.EMBER);
+  const l2 = Math.round(GW * .05);
+  for (let x = l2; x < l2 + Math.round(GW * .18); x++) for (let y = Math.round(GH * .3); y < Math.round(GH * .3) + 3; y++) set(x, y, E.WOOD);
+  // a hanging planter on the log
+  for (let k = 0; k < 6; k++) set(l2 + 6 + k, Math.round(GH * .3) - 1 - (k % 2), E.PLANT);
+  // rain cloud of steam
+  for (let k = 0; k < 90; k++) set(Math.round(GW * .2 + r() * GW * .25), Math.round(4 + r() * 6), E.STEAM);
+  for (let i = 0; i < N; i++) if (type[i] === E.STEAM) life[i] = 80 + (r() * 200 | 0);
+  $('docTitle').textContent = `Diorama ${seed}.grn`;
+}
+
+// ---------- brush ----------
+let down = false, erasing = false, cx = -1, cy = -1, lastX = -1, lastY = -1;
+function paintAt(gx, gy) {
+  const t = erasing ? E.EMPTY : tool.t, rr = brush;
+  for (let y = -rr; y <= rr; y++) for (let x = -rr; x <= rr; x++) {
+    if (x * x + y * y > rr * rr + rr * .5) continue;
+    const X = gx + x, Y = gy + y; if (X < 0 || X >= GW || Y < 0 || Y >= GH) continue;
+    const i = Y * GW + X;
+    if (t === E.EMPTY) { type[i] = 0; continue; }
+    const loose = t === E.SAND || t === E.ASH || t === E.WATER || t === E.OIL || t === E.STEAM || t === E.FIRE;
+    if (loose && R() > .45) continue;
+    if (type[i] !== E.EMPTY && t !== E.WALL && t !== E.WOOD && t !== E.FIRE) continue;
+    if (t === E.FIRE && type[i] !== E.EMPTY) { if (FLAM[type[i]]) put(i, E.EMBER); continue; }
+    put(i, t);
+  }
+}
+function toGrid(e) { const r = canvas.getBoundingClientRect(); return [Math.floor((e.clientX - r.left) / r.width * GW), Math.floor((e.clientY - r.top) / r.height * GH)]; }
+function line(x0, y0, x1, y1) {
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+  for (let k = 0; k <= n; k += Math.max(1, brush / 2)) paintAt(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n));
+  paintAt(x1, y1);
+}
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); down = true; erasing = e.button === 2; [cx, cy] = toGrid(e); lastX = cx; lastY = cy; paintAt(cx, cy); if (!running) draw(); });
+canvas.addEventListener('pointermove', e => { if (!down) return; [cx, cy] = toGrid(e); line(lastX, lastY, cx, cy); lastX = cx; lastY = cy; if (!running) draw(); });
+const up = () => { down = false; erasing = false; };
+canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+
+// ---------- loop ----------
+let raf = 0, last = 0, fAcc = 0, fN = 0, statN = 0;
+function frame(t) {
+  raf = 0; if (document.hidden) return;
+  if (down) paintAt(cx, cy);
+  if (running) for (let s = 0; s < speed; s++) step();
+  draw();
+  if (last) { fAcc += t - last; fN++; } last = t;
+  if (fN >= 30) { $('fps').textContent = Math.round(1000 / (fAcc / fN)); fAcc = 0; fN = 0; }
+  if (++statN >= 20) { statN = 0; stats(); }
+  raf = requestAnimationFrame(frame);
+}
+function kick() { if (!raf && !document.hidden) { last = 0; raf = requestAnimationFrame(frame); } }
+document.addEventListener('visibilitychange', kick);
+function stats() {
+  let s = 0, w = 0, f = 0, p = 0;
+  for (let i = 0; i < N; i++) { const t = type[i]; if (t === E.SAND) s++; else if (t === E.WATER) w++; else if (t === E.FIRE || t === E.EMBER) f++; else if (t === E.PLANT) p++; }
+  $('nSand').textContent = s.toLocaleString('en-US'); $('nWater').textContent = w.toLocaleString('en-US'); $('nFire').textContent = f; $('nPlant').textContent = p;
+}
+
+// ---------- UI ----------
+const toolsEl = $('tools');
+TOOLS.forEach(tl => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'tool'; b.id = 'el-' + tl.id;
+  b.innerHTML = `<i data-t="${tl.t}"></i>${tl.name}<kbd>${tl.key}</kbd>`;
+  b.addEventListener('click', () => { tool = tl; syncTools(); });
+  toolsEl.appendChild(b);
+});
+function syncTools() { [...toolsEl.children].forEach(b => b.setAttribute('aria-pressed', b.id === 'el-' + tool.id)); }
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  const tl = TOOLS.find(x => x.key === e.key); if (tl) { tool = tl; syncTools(); }
+  if (e.key === ' ') { e.preventDefault(); $('pauseBtn').click(); }
+});
+$('brush').addEventListener('input', e => { brush = +e.target.value; $('brushOut').textContent = brush; });
+$('speed').addEventListener('input', e => { speed = +e.target.value; $('speedOut').textContent = speed + '×'; });
+$('theme').addEventListener('change', e => { setTheme(e.target.value); draw(); try { localStorage.setItem('grainworks.theme', e.target.value); } catch (x) {} });
+$('seed').addEventListener('change', e => { seed = parseInt(String(e.target.value).replace(/\D/g, ''), 10) || 0; e.target.value = seed; diorama(); draw(); });
+$('pauseBtn').addEventListener('click', e => { running = !running; e.currentTarget.textContent = running ? 'Pause' : 'Run'; });
+$('stepBtn').addEventListener('click', () => { step(); draw(); });
+$('clearBtn').addEventListener('click', () => { type.fill(0); for (let x = 0; x < GW; x++) for (let y = GH - 3; y < GH; y++) type[y * GW + x] = E.WALL; draw(); });
+$('resetBtn').addEventListener('click', () => { seed = (Math.random() * 9999) | 0; $('seed').value = seed; diorama(); draw(); });
+
+// pixel logo: a little hourglass
+(() => {
+  const m = ['11111111','.1....1.','..1221..','...22...','...12...','..1..1..','.1.22.1.','11111111'];
+  const c = { '1':'#3d3a45', '2':'#e2c178', '.':'transparent' };
+  $('logo').innerHTML = m.join('').split('').map(ch => `<i style="background:${c[ch]}"></i>`).join('');
+})();
+setInterval(() => { const d = new Date(); let h = d.getHours() % 12 || 12; $('clock').textContent = `${h}:${String(d.getMinutes()).padStart(2, '0')} ${d.getHours() < 12 ? 'AM' : 'PM'}`; }, 10000);
+
+try { const s = localStorage.getItem('grainworks.theme'); if (s && THEMES[s]) { theme = s; $('theme').value = s; } } catch (e) {}
+$('speed').value = speed; $('speedOut').textContent = speed + '×';
+syncTools(); setTheme(theme); diorama();
+for (let k = 0; k < 40; k++) step();
+draw(); stats(); kick();
+})();
+</script>
+</body>
+</html>

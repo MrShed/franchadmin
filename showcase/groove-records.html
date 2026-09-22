@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Low Tide Records</title>
+<meta name="description" content="An indie jazz vinyl label with generated two-colour album covers and spinning records that each play their own WebAudio-synthesised loop when clicked.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;900&family=Work+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --black:#111111; --char:#1b1b1b; --paper:#d9d4c7; --white:#f4f2ec; --blue:#1d5cc8; --yellow:#f2c230; --red:#e04b2a; --green:#3f9b73; --sky:#8fc3e8;
+  --cond:"Big Shoulders Display","Oswald","Arial Narrow","Impact",sans-serif;
+  --sans:"Work Sans","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--black);color:var(--white);font-family:var(--sans);font-size:17px;line-height:1.55;overflow-x:hidden;padding-bottom:84px}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.cap{font-family:var(--cond);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:14px}
+.back{position:fixed;top:14px;left:16px;z-index:50;font-family:var(--cond);font-weight:700;font-size:15px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--black);background:var(--yellow);padding:6px 12px}
+.back:hover{background:var(--white)}
+/* hero */
+.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:clamp(20px,4vw,60px);padding:80px clamp(16px,5vw,72px) 60px;background:var(--paper);color:var(--black);position:relative;overflow:hidden}
+.hero h1{font-family:var(--cond);font-weight:900;font-size:clamp(90px,15vw,250px);line-height:.8;margin:0;text-transform:uppercase;color:var(--black);letter-spacing:-.01em}
+.hero h1 span{display:block;color:var(--blue)}
+.hero .tag{margin-top:24px;max-width:36ch;font-size:19px;color:#2a2a2a}
+.hero .kick{color:var(--red)}
+.hero .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.btn{font-family:var(--cond);font-weight:900;font-size:22px;letter-spacing:.08em;text-transform:uppercase;border:0;padding:14px 22px 12px;cursor:pointer;background:var(--black);color:var(--yellow);text-decoration:none;display:inline-flex;align-items:center;gap:10px}
+.btn:hover{background:var(--yellow);color:var(--black)}
+.btn.ghost{background:transparent;color:var(--black);box-shadow:inset 0 0 0 3px var(--black)}
+.btn.ghost:hover{background:var(--black);color:var(--paper)}
+.deck{position:relative;width:min(560px,100%);aspect-ratio:1.25/1;justify-self:center}
+.deck .sleeve{position:absolute;left:0;top:6%;width:72%;aspect-ratio:1;box-shadow:20px 24px 0 rgba(0,0,0,.25);z-index:2}
+.deck .sleeve svg{width:100%;height:100%;display:block}
+.vinyl{position:absolute;right:0;top:9%;width:66%;aspect-ratio:1;border-radius:50%;z-index:1;transition:transform 1s cubic-bezier(.2,.8,.2,1)}
+.vinyl svg{width:100%;height:100%;display:block}
+.spin{animation:spin 1.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.arm{position:absolute;right:3%;top:0;width:14%;height:70%;z-index:3;transform-origin:70% 8%;transform:rotate(-24deg);transition:transform .9s cubic-bezier(.2,.8,.2,1)}
+.arm.on{transform:rotate(4deg)}
+/* marquee */
+.marquee{background:var(--yellow);color:var(--black);overflow:hidden;white-space:nowrap;font-family:var(--cond);font-weight:900;font-size:34px;text-transform:uppercase;padding:8px 0;border-top:4px solid var(--black);border-bottom:4px solid var(--black)}
+.marquee div{display:inline-block;animation:mq 30s linear infinite}
+@keyframes mq{to{transform:translateX(-50%)}}
+/* catalogue */
+section{padding:clamp(70px,9vw,120px) clamp(16px,5vw,72px)}
+.wrap{max-width:1280px;margin:0 auto}
+h2{font-family:var(--cond);font-weight:900;font-size:clamp(56px,9vw,130px);line-height:.85;text-transform:uppercase;margin:6px 0 20px}
+.head{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;margin-bottom:40px}
+.head p{max-width:44ch;margin:0;color:#bdb8ac}
+.cat{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(18px,2.5vw,34px) clamp(14px,2vw,26px)}
+.rec{position:relative;background:none;border:0;padding:0;color:inherit;text-align:left;cursor:pointer;font:inherit}
+.rec .stage{position:relative;aspect-ratio:1;margin-bottom:12px}
+.rec .cov{position:relative;z-index:2;width:100%;height:100%;display:block;box-shadow:0 12px 30px rgba(0,0,0,.5);transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.rec .disc{position:absolute;inset:3%;z-index:1;border-radius:50%;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.rec .disc svg{width:100%;height:100%;display:block}
+.rec:hover .disc,.rec:focus-visible .disc{transform:translateX(24%)}
+.rec.playing .disc{transform:translateX(36%)}
+.rec.playing .disc svg{animation:spin 1.8s linear infinite}
+.rec:hover .cov{transform:translateX(-4%)}
+.rec.playing .cov{transform:translateX(-10%)}
+.rec b{display:block;font-family:var(--cond);font-weight:900;font-size:26px;line-height:1;text-transform:uppercase}
+.rec span{display:block;color:#bdb8ac;font-size:14px;margin-top:4px}
+.rec .num{font-family:var(--cond);font-weight:700;letter-spacing:.14em;font-size:13px;color:var(--yellow)}
+.rec .pb{position:absolute;z-index:3;left:10px;bottom:10px;width:44px;height:44px;border-radius:50%;background:var(--black);color:var(--yellow);display:grid;place-items:center;opacity:0;transform:scale(.8);transition:.3s}
+.rec:hover .pb,.rec:focus-visible .pb,.rec.playing .pb{opacity:1;transform:none}
+.rec:focus-visible{outline:none}
+.rec:focus-visible .cov{outline:3px solid var(--yellow);outline-offset:3px}
+/* story */
+.story{background:var(--sky);color:var(--black)}
+.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,90px)}
+.story p{font-size:19px;margin:0 0 1em;max-width:52ch}
+.story .big{font-family:var(--cond);font-weight:700;font-size:clamp(30px,3.2vw,46px);line-height:1.05;text-transform:uppercase}
+.facts{display:grid;grid-template-columns:1fr 1fr;border-top:4px solid var(--black);margin-top:20px}
+.facts div{padding:16px 0;border-bottom:2px solid var(--black)}
+.facts b{font-family:var(--cond);font-weight:900;font-size:56px;line-height:1;display:block;color:var(--blue)}
+/* club */
+.club{background:var(--red);color:var(--black)}
+.club-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:end}
+.club h2{color:var(--white)}
+.club form{display:flex;flex-wrap:wrap;gap:0}
+.club input{flex:1;min-width:0;border:0;padding:16px;font:500 18px var(--sans);background:var(--white);color:var(--black)}
+.club button{border:0;background:var(--black);color:var(--yellow);font-family:var(--cond);font-weight:900;font-size:20px;letter-spacing:.08em;text-transform:uppercase;padding:0 22px;cursor:pointer}
+#clubMsg{margin-top:12px;min-height:1.5em;font-weight:600}
+footer{padding:36px clamp(16px,5vw,72px) 40px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:#8a867c;font-size:14px}
+/* now playing */
+.np{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--char);border-top:3px solid var(--yellow);display:grid;grid-template-columns:auto 1fr auto auto;gap:16px;align-items:center;padding:10px clamp(16px,3vw,32px);padding-bottom:max(10px,env(safe-area-inset-bottom))}
+.np .mini{width:52px;height:52px}
+.np .mini svg{width:100%;height:100%}
+.np .t b{display:block;font-family:var(--cond);font-weight:900;font-size:22px;line-height:1;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np .t span{font-size:13px;color:#a8a39a}
+.np canvas{width:180px;height:40px;display:block}
+#stopBtn{background:var(--yellow);color:var(--black);border:0;font-family:var(--cond);font-weight:900;font-size:18px;letter-spacing:.08em;text-transform:uppercase;padding:10px 16px;cursor:pointer}
+#stopBtn[disabled]{opacity:.4;cursor:default}
+@media (max-width:1000px){ .cat{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr;padding-top:70px}
+  .deck{order:-1;width:min(420px,100%)}
+  .story-grid,.club-grid{grid-template-columns:1fr}
+  .cat{grid-template-columns:1fr 1fr}
+  .np canvas{display:none}
+  .np{grid-template-columns:auto 1fr auto}
+}
+@media (prefers-reduced-motion:reduce){
+  .spin,.rec.playing .disc svg{animation:none}
+  .marquee div{animation:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<header class="hero">
+  <div>
+    <div class="cap kick">Independent jazz on 180g vinyl · Est. 2011</div>
+    <h1>Low<span>Tide</span></h1>
+    <p class="tag">Small-batch records cut to lacquer in a converted boathouse. Every sleeve printed in two inks, every loop on this page synthesised live in your browser.</p>
+    <div class="row">
+      <button class="btn" id="heroPlay" type="button">▶ Drop the needle</button>
+      <a class="btn ghost" href="#catalogue">Catalogue</a>
+    </div>
+  </div>
+  <div class="deck" aria-label="Featured record: Harbour Lights by the Mae Okonjo Quintet">
+    <div class="vinyl" id="heroVinyl"></div>
+    <div class="sleeve" id="heroSleeve"></div>
+    <svg class="arm" id="arm" viewBox="0 0 60 300" aria-hidden="true"><circle cx="42" cy="22" r="18" fill="#111"/><circle cx="42" cy="22" r="8" fill="#f2c230"/><path d="M42 22 L42 230 L20 270" stroke="#111" stroke-width="6" fill="none" stroke-linecap="round"/><rect x="8" y="262" width="22" height="34" rx="3" fill="#111" transform="rotate(28 19 279)"/></svg>
+  </div>
+</header>
+
+<div class="marquee" aria-hidden="true"><div id="mq"></div></div>
+
+<section id="catalogue">
+  <div class="wrap">
+    <div class="head"><div><div class="cap" style="color:var(--yellow)">Catalogue · LT-001 to LT-012</div><h2>Pull one out</h2></div><p>Click any sleeve to slide the record out and hear a loop from it. Each one is a tiny generative band: drums, bass and keys, played by your speakers, never the same twice.</p></div>
+    <div class="cat" id="cat"></div>
+  </div>
+</section>
+
+<section class="story">
+  <div class="wrap story-grid">
+    <div>
+      <div class="cap" style="color:var(--red)">The Label</div>
+      <h2>Two inks. One take.</h2>
+      <p class="big">We record live to two-track in a single room with no headphones. What the band played is what you get.</p>
+    </div>
+    <div>
+      <p>Low Tide started in 2011 when bassist Colm Reddy bought a 1962 lathe from a closing BBC studio and set it up in a boathouse on the Shannon estuary. The first release, pressed in an edition of 300, sold out at a single gig.</p>
+      <p>We still work the same way. Sessions happen on Sunday afternoons when the tide is out and the boathouse is quiet. Sleeves are screen-printed by Aoife Brennan in two inks — always two — on uncoated board, and every record is inspected by ear before it's posted.</p>
+      <div class="facts">
+        <div><b>12</b>albums in print</div>
+        <div><b>300</b>copies per first pressing</div>
+        <div><b>1</b>microphone per instrument</div>
+        <div><b>0</b>overdubs, ever</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="club">
+  <div class="wrap club-grid">
+    <div><div class="cap">Subscription</div><h2>The Tide Table</h2><p style="font-size:19px;max-width:46ch;margin:0">Every new Low Tide release, numbered and posted to your door before general sale. Four records a year, €96, cancel whenever.</p></div>
+    <div>
+      <form id="clubForm" novalidate><input id="clubEmail" type="email" aria-label="Email address" placeholder="you@example.com" value="miles.okafor@example.com"><button id="clubBtn" type="submit">Join</button></form>
+      <div id="clubMsg" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<footer><span>Low Tide Records · The Boathouse, Foynes, Co. Limerick</span><span>All loops synthesised in-browser with the Web Audio API</span></footer>
+
+<div class="np" role="region" aria-label="Now playing">
+  <div class="mini" id="npMini" aria-hidden="true"></div>
+  <div class="t"><b id="npTitle">Silence</b><span id="npSub">Pick a record to start the turntable</span></div>
+  <canvas id="viz" width="360" height="80" aria-hidden="true"></canvas>
+  <button id="stopBtn" type="button" disabled>■ Stop</button>
+</div>
+
+<script>
+(function(){
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* ---------------- records ---------------- */
+  var C={blue:'#1d5cc8',yellow:'#f2c230',red:'#e04b2a',green:'#3f9b73',paper:'#d9d4c7',sky:'#8fc3e8',black:'#111111',white:'#f4f2ec'};
+  // bass/chord degrees are semitones from root
+  var R=[
+    {no:'LT-001',t:'Harbour Lights',a:'Mae Okonjo Quintet',y:1,cols:['blue','yellow'],lay:'crop',bpm:132,root:38,swing:.33,osc:'triangle',style:'bop',
+      chords:[[0,3,7,10,14],[5,9,12,15],[-2,2,5,9],[3,7,10,14]],bass:[0,null,7,null,10,null,12,null,0,null,3,null,5,null,7,null]},
+    {no:'LT-002',t:'Slow Tide',a:'The Ferris Trio',y:2,cols:['paper','blue'],lay:'halftone',bpm:72,root:39,swing:.25,osc:'sine',style:'ballad',
+      chords:[[0,4,7,11,14],[5,9,12,16],[2,5,9,12],[7,11,14,17]],bass:[0,null,null,null,7,null,null,null,5,null,null,null,4,null,2,null]},
+    {no:'LT-003',t:'Night Ferry',a:'Jun Arakawa',y:3,cols:['green','white'],lay:'stripes',bpm:100,root:41,swing:0,osc:'sine',style:'bossa',
+      chords:[[0,4,7,11],[2,5,9,12],[7,11,14,17],[0,4,7,11]],bass:[0,null,null,7,null,null,0,null,7,null,null,0,null,null,7,null]},
+    {no:'LT-004',t:'Blue Kiln',a:'Delphine Castor Sextet',y:4,cols:['red','black'],lay:'stack',bpm:118,root:36,swing:.3,osc:'triangle',style:'modal',
+      chords:[[0,5,10,15],[0,5,10,15],[2,7,12,17],[2,7,12,17]],bass:[0,null,0,12,null,10,null,7,0,null,0,12,null,10,5,null]},
+    {no:'LT-005',t:'Undertow',a:'Ray Ambler',y:5,cols:['yellow','red'],lay:'halftone',bpm:88,root:40,swing:.2,osc:'sawtooth',style:'soul',
+      chords:[[0,3,7,10],[0,3,7,10],[5,9,12,15],[5,9,12,15]],bass:[0,null,null,0,null,null,3,null,5,null,null,5,null,7,null,3]},
+    {no:'LT-006',t:'Saltwater Hymns',a:'Ola Brandvold',y:6,cols:['sky','black'],lay:'crop',bpm:64,root:43,swing:.15,osc:'sine',style:'spiritual',
+      chords:[[0,7,14,16],[5,12,16,21],[-3,4,9,12],[2,9,14,17]],bass:[0,null,null,null,null,null,null,null,5,null,null,null,-3,null,null,null]},
+    {no:'LT-007',t:'Pier 9',a:'The Low Tide Allstars',y:7,cols:['red','yellow'],lay:'stripes',bpm:124,root:43,swing:.1,osc:'square',style:'boogaloo',
+      chords:[[0,4,7,10],[5,9,12,15],[0,4,7,10],[7,11,14,17]],bass:[0,null,0,null,7,null,10,null,0,null,0,12,10,null,7,null]},
+    {no:'LT-008',t:'Gull Theory',a:'Nima Sato',y:8,cols:['white','blue'],lay:'stack',bpm:104,root:37,swing:.18,osc:'triangle',style:'broken',
+      chords:[[0,3,7,10,14],[-4,0,3,7],[-2,2,5,9],[-5,-2,2,5]],bass:[0,null,null,0,null,12,null,null,-4,null,-4,null,null,-2,null,-5]}
+  ];
+  var DR={ // x=kick s=snare h=hat o=open hat r=ride k=rim
+    bop:     {k:'x.........x.....',s:'....k.......k..k',h:'....x.......x...',r:'x..xx..xx..xx..x'},
+    ballad:  {k:'x...............',s:'........k.......',h:'....x.......x...',r:'x...x.x.x...x.x.'},
+    bossa:   {k:'x..x..x.x..x..x.',s:'..k..k....k..k..',h:'x.x.x.x.x.x.x.x.',r:''},
+    modal:   {k:'x.....x.........',s:'....s.......s..s',h:'....x.......x...',r:'x..xx..xx..xx..x'},
+    soul:    {k:'x......x..x.....',s:'....s.......s...',h:'x.x.x.x.x.x.x.xo',r:''},
+    spiritual:{k:'x.......x.......',s:'........k.......',h:'',r:'x.x.x.x.x.x.x.x.'},
+    boogaloo:{k:'x..x....x..x....',s:'....s.......s...',h:'xxxxxxxxxxxxxxxx',r:''},
+    broken:  {k:'x.....x...x.....',s:'....s......s.s..',h:'x.xxx.x.x.xxx.x.',r:''}
+  };
+
+  /* ---------------- cover generator ---------------- */
+  function rng(seed){ return function(){ seed=(seed*16807)%2147483647; return (seed-1)/2147483646; }; }
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  var FF="Big Shoulders Display, Oswald, Arial Narrow, Impact, sans-serif";
+  function cover(r){
+    var A=C[r.cols[0]], B=C[r.cols[1]], K=C.black, W=C.white, rnd=rng(r.y*977+13);
+    var s='<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cover of '+esc(r.t)+'"><defs><clipPath id="cc'+r.y+'"><rect width="300" height="300"/></clipPath></defs><g clip-path="url(#cc'+r.y+')">';
+    var title=r.t.toUpperCase(), words=title.split(' ');
+    if(r.lay==='crop'){
+      s+='<rect width="300" height="300" fill="'+A+'"/>';
+      s+='<text x="-12" y="250" font-family="'+FF+'" font-weight="900" font-size="300" fill="'+K+'" letter-spacing="-8">'+esc(words[0].slice(0,3))+'</text>';
+      s+='<rect x="0" y="0" width="300" height="56" fill="'+B+'"/>';
+      s+='<text x="16" y="40" font-family="'+FF+'" font-weight="900" font-size="30" fill="'+K+'"'+(title.length>12?' textLength="268" lengthAdjust="spacingAndGlyphs"':'')+'>'+esc(title)+'</text>';
+      s+='<text x="284" y="286" text-anchor="end" font-family="'+FF+'" font-weight="700" font-size="16" letter-spacing="2" fill="'+W+'">'+esc(r.a.toUpperCase())+'</text>';
+    } else if(r.lay==='halftone'){
+      s+='<rect width="300" height="300" fill="'+K+'"/>';
+      // silhouette field: head + shoulders + horn
+      for(var y=0;y<300;y+=10) for(var x=0;x<300;x+=10){
+        var dx=x-150, dy=y-120, head=Math.max(0,1-Math.hypot(dx,dy*1.1)/62);
+        var sh=y>175?Math.max(0,1-Math.abs(dx)/(80+(y-175)*.9)):0;
+        var horn=(Math.abs((x-205)-(y-150)*.55)<14&&y>140&&y<290)?.9:0;
+        var v=Math.min(1,Math.max(head*1.6,sh*1.1,horn)+(rnd()-.5)*.12);
+        if(v>.06) s+='<circle cx="'+(x+5)+'" cy="'+(y+5)+'" r="'+(v*5.2).toFixed(2)+'" fill="'+A+'"/>';
+      }
+      s+='<rect x="0" y="236" width="300" height="64" fill="'+B+'"/>';
+      s+='<text x="14" y="282" font-family="'+FF+'" font-weight="900" font-size="46" fill="'+K+'" textLength="'+Math.min(272,title.length*23)+'" lengthAdjust="spacingAndGlyphs">'+esc(title)+'</text>';
+      s+='<text x="14" y="30" font-family="'+FF+'" font-weight="700" font-size="16" letter-spacing="2" fill="'+W+'">'+esc(r.a.toUpperCase())+'</text>';
+    } else if(r.lay==='stripes'){
+      s+='<rect width="300" height="300" fill="'+W+'"/>';
+      var yy=0, i=0; while(yy<300){ var h=8+Math.floor(rnd()*30); s+='<rect x="0" y="'+yy+'" width="300" height="'+h+'" fill="'+(i%2?B:A)+'"/>'; yy+=h+4; i++; }
+      s+='<rect x="24" y="96" width="252" height="108" fill="'+K+'"/>';
+      s+='<text x="150" y="168" text-anchor="middle" font-family="'+FF+'" font-weight="900" font-size="60" fill="'+W+'" textLength="'+Math.min(230,title.length*28)+'" lengthAdjust="spacingAndGlyphs">'+esc(title)+'</text>';
+      s+='<text x="150" y="192" text-anchor="middle" font-family="'+FF+'" font-weight="700" font-size="14" letter-spacing="3" fill="'+A+'">'+esc(r.a.toUpperCase())+'</text>';
+    } else {
+      s+='<rect width="300" height="300" fill="'+A+'"/>';
+      s+='<rect x="0" y="0" width="92" height="300" fill="'+K+'"/>';
+      var yy2=90; words.forEach(function(w,j){ var fs=Math.min(110, 330/Math.max(3,w.length)); s+='<text x="104" y="'+yy2+'" font-family="'+FF+'" font-weight="900" font-size="'+fs.toFixed(0)+'" fill="'+(j%2?K:B)+'" textLength="'+Math.min(182,w.length*fs*.5).toFixed(0)+'" lengthAdjust="spacingAndGlyphs">'+esc(w)+'</text>'; yy2+=fs*.86; });
+      s+='<text x="46" y="286" text-anchor="middle" font-family="'+FF+'" font-weight="700" font-size="14" fill="'+A+'" transform="rotate(-90 46 286)" letter-spacing="2">'+esc(r.a.toUpperCase())+'</text>';
+      s+='<circle cx="46" cy="60" r="22" fill="'+B+'"/>';
+    }
+    s+='<text x="'+(r.lay==='stack'?'290':'284')+'" y="'+(r.lay==='crop'?'80':r.lay==='halftone'?'30':'20')+'" text-anchor="end" font-family="'+FF+'" font-weight="700" font-size="12" letter-spacing="2" fill="'+(r.lay==='halftone'?A:K)+'">'+r.no+'</text>';
+    return s+'</g></svg>';
+  }
+  function disc(r){
+    var A=C[r.cols[0]], B=C[r.cols[1]];
+    var g='<svg viewBox="0 0 200 200" aria-hidden="true"><defs><radialGradient id="dg'+r.y+Math.random().toString(36).slice(2,6)+'"></radialGradient></defs><circle cx="100" cy="100" r="99" fill="#0b0b0b"/>';
+    for(var i=0;i<22;i++) g+='<circle cx="100" cy="100" r="'+(40+i*2.7)+'" fill="none" stroke="#fff" stroke-opacity="'+(i%3?.05:.1)+'" stroke-width=".6"/>';
+    g+='<path d="M30 60 A80 80 0 0 1 90 22" stroke="#fff" stroke-opacity=".18" stroke-width="10" fill="none"/>';
+    g+='<circle cx="100" cy="100" r="34" fill="'+A+'"/><path d="M66 100 A34 34 0 0 1 134 100Z" fill="'+(A===B?C.black:B)+'" opacity=".9"/>';
+    g+='<text x="100" y="92" text-anchor="middle" font-family="'+FF+'" font-weight="900" font-size="9" fill="#111">LOW TIDE</text>';
+    g+='<text x="100" y="118" text-anchor="middle" font-family="'+FF+'" font-weight="700" font-size="7" fill="#111">'+r.no+' · 33⅓</text><circle cx="100" cy="100" r="3" fill="#111"/></svg>';
+    return g;
+  }
+
+  // hero
+  var hero=R[0];
+  document.getElementById('heroSleeve').innerHTML=cover(hero);
+  document.getElementById('heroVinyl').innerHTML=disc(hero);
+  // marquee
+  var mqText=R.map(function(r){return r.t+' · '+r.a+' ✦ ';}).join('');
+  document.getElementById('mq').textContent=mqText+mqText;
+  // catalogue
+  var cat=document.getElementById('cat');
+  cat.innerHTML=R.map(function(r,i){ return '<button class="rec" id="rec-'+i+'" data-i="'+i+'" aria-pressed="false" aria-label="Play a loop from '+esc(r.t)+' by '+esc(r.a)+'"><div class="stage"><div class="disc">'+disc(r)+'</div><div class="cov">'+cover(r)+'</div><span class="pb" aria-hidden="true">▶</span></div><div class="num">'+r.no+' · '+r.bpm+' BPM</div><b>'+esc(r.t)+'</b><span>'+esc(r.a)+'</span></button>'; }).join('');
+
+  /* ---------------- audio engine ---------------- */
+  var ac=null, master, analyser, noiseBuf, bus=null, timer=null, current=-1, step=0, nextT=0;
+  function init(){
+    if(ac) return;
+    var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    ac=new AC();
+    var comp=ac.createDynamicsCompressor(); comp.threshold.value=-14; comp.ratio.value=4;
+    master=ac.createGain(); master.gain.value=.8;
+    analyser=ac.createAnalyser(); analyser.fftSize=512;
+    master.connect(comp); comp.connect(analyser); analyser.connect(ac.destination);
+    noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate); var d=noiseBuf.getChannelData(0); for(var i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  }
+  function mtof(m){ return 440*Math.pow(2,(m-69)/12); }
+  function env(g,t,a,peak,dec){ g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+a); g.gain.exponentialRampToValueAtTime(0.0001,t+a+dec); }
+  function kick(t){ var o=ac.createOscillator(), g=ac.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(42,t+.14); env(g,t,.003,.9,.32); o.connect(g); g.connect(bus); o.start(t); o.stop(t+.4); }
+  function noise(t,type,f,q,peak,dec){ var s=ac.createBufferSource(); s.buffer=noiseBuf; var fl=ac.createBiquadFilter(); fl.type=type; fl.frequency.value=f; fl.Q.value=q; var g=ac.createGain(); env(g,t,.002,peak,dec); s.connect(fl); fl.connect(g); g.connect(bus); s.start(t,Math.random()*.5); s.stop(t+dec+.05); }
+  function snare(t){ noise(t,'bandpass',1900,.8,.45,.16); var o=ac.createOscillator(),g=ac.createGain(); o.type='triangle'; o.frequency.value=190; env(g,t,.002,.25,.08); o.connect(g); g.connect(bus); o.start(t); o.stop(t+.12); }
+  function rim(t){ var o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=900; o.type='square'; o.frequency.value=820; env(g,t,.001,.18,.03); o.connect(f); f.connect(g); g.connect(bus); o.start(t); o.stop(t+.06); noise(t,'bandpass',3200,2,.12,.03); }
+  function hat(t,open){ noise(t,'highpass',7500,.7,open?.14:.1,open?.22:.035); }
+  function ride(t){ noise(t,'bandpass',6200,1.4,.08,.28); var o=ac.createOscillator(),g=ac.createGain(); o.type='square'; o.frequency.value=5300; env(g,t,.001,.012,.25); o.connect(g); g.connect(bus); o.start(t); o.stop(t+.3); }
+  function bass(t,m,dur,type){ var o=ac.createOscillator(),f=ac.createBiquadFilter(),g=ac.createGain(); o.type=type==='square'?'square':'triangle'; o.frequency.value=mtof(m); f.type='lowpass'; f.frequency.setValueAtTime(900,t); f.frequency.exponentialRampToValueAtTime(220,t+dur); env(g,t,.008,.55,dur); o.connect(f); f.connect(g); g.connect(bus); o.start(t); o.stop(t+dur+.05); }
+  function keys(t,notes,dur,type){ var f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=type==='sawtooth'?1400:2600; var g=ac.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(.16,t+.02); g.gain.setTargetAtTime(.0001,t+.05,dur*.45); f.connect(g); g.connect(bus);
+    notes.forEach(function(m,i){ var o=ac.createOscillator(); o.type=type; o.frequency.value=mtof(m); o.detune.value=(i%2?4:-4); var og=ac.createGain(); og.gain.value=.22/notes.length*(type==='sawtooth'||type==='square'?.5:1.4); o.connect(og); og.connect(f); o.start(t+i*.008); o.stop(t+dur*2.2);
+      if(type==='sine'){ var o2=ac.createOscillator(); o2.type='sine'; o2.frequency.value=mtof(m)*2; var g2=ac.createGain(); g2.gain.value=.05/notes.length; o2.connect(g2); g2.connect(f); o2.start(t); o2.stop(t+dur*1.2); } }); }
+  function crackle(t){ if(Math.random()<.35) noise(t+Math.random()*.1,'highpass',2500,.5,.03+Math.random()*.05,.008); }
+  var comp8={bop:[0,6,10],ballad:[0],bossa:[0,3,6,10,12],modal:[0,3,8,14],soul:[0,7,10],spiritual:[0,8],boogaloo:[0,3,8,11],broken:[0,5,10,13]};
+  function schedule(r,st,t){
+    var sd=60/r.bpm/4, pat=DR[r.style], i=st%16, bar=Math.floor(st/16)%r.chords.length;
+    if(pat.k[i]==='x') kick(t);
+    if(pat.s[i]==='s') snare(t); else if(pat.s[i]==='k') rim(t);
+    if(pat.h[i]==='x') hat(t,false); else if(pat.h[i]==='o') hat(t,true);
+    if(pat.r[i]==='x') ride(t);
+    var b=r.bass[i]; if(b!==null && b!==undefined) bass(t,r.root+b+(r.chords[bar][0]<0?r.chords[bar][0]:0),sd*(r.style==='ballad'||r.style==='spiritual'?6:1.8),r.osc);
+    if(comp8[r.style].indexOf(i)>=0) keys(t,r.chords[bar].map(function(x){return r.root+24+x;}),sd*(r.style==='spiritual'||r.style==='ballad'?8:2.2),r.osc);
+    crackle(t);
+  }
+  function tick(){
+    var r=R[current]; if(!r) return;
+    var sd=60/r.bpm/4;
+    while(nextT < ac.currentTime+.14){
+      var swingOff=(step%2)?sd*r.swing:0;
+      schedule(r,step,nextT+swingOff);
+      nextT+=sd; step++;
+    }
+  }
+  function play(i){
+    init(); if(!ac) { document.getElementById('npSub').textContent='Web Audio is not available in this browser.'; return; }
+    if(ac.state==='suspended') ac.resume();
+    if(current===i){ stop(); return; }
+    stop(true);
+    bus=ac.createGain(); bus.gain.setValueAtTime(0,ac.currentTime); bus.gain.linearRampToValueAtTime(1,ac.currentTime+.4); bus.connect(master);
+    current=i; step=0; nextT=ac.currentTime+.08;
+    timer=setInterval(tick,25); tick();
+    var r=R[i];
+    document.getElementById('npTitle').textContent=r.t;
+    document.getElementById('npSub').textContent=r.a+' · '+r.no+' · '+r.bpm+' BPM · '+r.style;
+    document.getElementById('npMini').innerHTML=cover(r);
+    document.getElementById('stopBtn').disabled=false;
+    cat.querySelectorAll('.rec').forEach(function(el,j){ var on=j===i; el.classList.toggle('playing',on); el.setAttribute('aria-pressed',on); el.querySelector('.pb').textContent=on?'■':'▶'; });
+    var heroOn=i===0; document.getElementById('arm').classList.toggle('on',heroOn);
+    document.querySelector('#heroVinyl svg').classList.toggle('spin',heroOn && !reduce);
+    document.getElementById('heroPlay').textContent=heroOn?'■ Lift the needle':'▶ Drop the needle';
+  }
+  function stop(silent){
+    if(timer){ clearInterval(timer); timer=null; }
+    if(bus){ var b=bus; b.gain.cancelScheduledValues(ac.currentTime); b.gain.setValueAtTime(b.gain.value,ac.currentTime); b.gain.linearRampToValueAtTime(0,ac.currentTime+.25); setTimeout(function(){ try{b.disconnect();}catch(e){} },400); bus=null; }
+    current=-1;
+    if(silent) return;
+    document.getElementById('npTitle').textContent='Silence';
+    document.getElementById('npSub').textContent='Pick a record to start the turntable';
+    document.getElementById('stopBtn').disabled=true;
+    cat.querySelectorAll('.rec').forEach(function(el){ el.classList.remove('playing'); el.setAttribute('aria-pressed','false'); el.querySelector('.pb').textContent='▶'; });
+    document.getElementById('arm').classList.remove('on');
+    document.querySelector('#heroVinyl svg').classList.remove('spin');
+    document.getElementById('heroPlay').textContent='▶ Drop the needle';
+  }
+  cat.addEventListener('click',function(e){ var b=e.target.closest('.rec'); if(b) play(+b.dataset.i); });
+  document.getElementById('heroPlay').addEventListener('click',function(){ play(0); });
+  document.getElementById('heroVinyl').addEventListener('click',function(){ play(0); });
+  document.getElementById('stopBtn').addEventListener('click',function(){ stop(); });
+  document.getElementById('npMini').innerHTML=disc(R[0]);
+
+  // visualiser
+  var cv=document.getElementById('viz'), cx=cv.getContext('2d'), buf=new Uint8Array(256);
+  function viz(){
+    cx.clearRect(0,0,cv.width,cv.height);
+    if(analyser && current>=0){ analyser.getByteFrequencyData(buf); var n=36, w=cv.width/n;
+      for(var i=0;i<n;i++){ var v=buf[Math.floor(i*2.2)]/255; cx.fillStyle=i%2?'#f2c230':'#1d5cc8'; cx.fillRect(i*w+1,cv.height-v*cv.height,w-2,v*cv.height); } }
+    else { cx.fillStyle='#333'; for(var j=0;j<36;j++) cx.fillRect(j*10+1,cv.height-3,8,3); }
+    requestAnimationFrame(viz);
+  }
+  viz();
+
+  document.getElementById('clubForm').addEventListener('submit',function(e){ e.preventDefault(); var v=document.getElementById('clubEmail').value.trim();
+    document.getElementById('clubMsg').textContent=/.+@.+\..+/.test(v)?'You\'re on the Tide Table. First record ships with the spring tide.':'That email looks a little waterlogged — try again?'; });
+})();
+</script>
+</body>
+</html>

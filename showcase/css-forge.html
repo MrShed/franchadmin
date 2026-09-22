@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lensbench CSS Forge</title>
+<meta name="description" content="An optics-bench CSS generator for layered box-shadows, linear, radial and conic gradients, eight-point border-radius blobs and glassmorphism, with a live specimen and copyable code.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Red+Hat+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --table:#d9dde2; --table-2:#cdd2d8; --hole:#aab1ba; --panel:#f4f6f8; --ink:#111418; --ink-2:#3c434c; --muted:#6a737e; --hair:#c3c9d0;
+  --laser:#e0162b; --laser-glow:rgba(224,22,43,.35); --steel:linear-gradient(180deg,#f2f4f6,#b9c0c8); --field:#fff;
+  --tech:"Chakra Petch","Eurostile","Bank Gothic","Segoe UI",sans-serif; --mono:"Red Hat Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--table:#101215;--table-2:#15181c;--hole:#050607;--panel:#1a1e23;--ink:#e6e9ee;--ink-2:#b4bbc5;--muted:#7c8591;--hair:#2c323a;--laser:#ff3b4d;--laser-glow:rgba(255,59,77,.45);--steel:linear-gradient(180deg,#4a515a,#262b31);--field:#12151a;color-scheme:dark}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--table);color:var(--ink);font-family:var(--tech);font-size:15px;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh;
+  background-image:radial-gradient(circle,var(--hole) 2.2px,transparent 2.8px);background-size:25px 25px;background-position:12px 12px}
+:focus-visible{outline:2px solid var(--laser);outline-offset:2px}
+button{font:inherit;color:inherit}
+.wrap{max-width:1280px;margin:0 auto;padding:14px max(16px,env(safe-area-inset-right)) 60px max(16px,env(safe-area-inset-left))}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.back{font:500 12px var(--mono);color:var(--ink-2);text-decoration:none;background:var(--panel);border:1px solid var(--hair);padding:5px 10px;border-radius:3px}
+.back:hover{color:var(--laser)}
+h1{font:700 clamp(30px,5vw,54px)/1 var(--tech);letter-spacing:.02em;margin:18px 0 4px;text-transform:uppercase;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+h1 .dot{width:14px;height:14px;border-radius:50%;background:var(--laser);box-shadow:0 0 12px var(--laser-glow),0 0 0 4px var(--panel)}
+.sub{font:13px var(--mono);color:var(--muted);margin:0 0 20px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{font:600 14px var(--tech);letter-spacing:.08em;text-transform:uppercase;padding:9px 16px;border:1px solid var(--hair);background:var(--panel);border-radius:3px;cursor:pointer;color:var(--ink-2);display:flex;gap:8px;align-items:center}
+.tabs button i{width:8px;height:8px;border-radius:50%;background:var(--hair)}
+.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--ink)}
+.tabs button[aria-selected=true] i{background:var(--laser);box-shadow:0 0 8px var(--laser-glow)}
+.bench{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:920px){.bench{grid-template-columns:minmax(0,1fr)}}
+/* stage */
+.stage{position:relative;background:var(--panel);border:1px solid var(--hair);border-radius:6px;overflow:hidden;box-shadow:0 20px 40px -28px rgba(0,0,0,.6)}
+.stage .hdr{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--hair);font:12px var(--mono);color:var(--muted);gap:10px;flex-wrap:wrap}
+.bgsel{display:flex;gap:4px}
+.bgsel button{width:22px;height:22px;border-radius:50%;border:1px solid var(--hair);cursor:pointer;padding:0}
+.bgsel button[aria-pressed=true]{outline:2px solid var(--laser);outline-offset:1px}
+.view{position:relative;height:clamp(320px,46vw,470px);display:grid;place-items:center;overflow:hidden}
+.view.bg-light{background:#eef1f4}
+.view.bg-dark{background:#15181d}
+.view.bg-check{background:repeating-conic-gradient(#d7dce2 0 25%,#f4f6f8 0 50%) 0 0/22px 22px}
+.view.bg-scene{background:#0f1830}
+.scene{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s}
+.view.bg-scene .scene,.view.glass .scene{opacity:1}
+.scene i{position:absolute;border-radius:50%;filter:blur(2px)}
+.reticle{position:absolute;inset:0;pointer-events:none}
+.reticle::before,.reticle::after{content:"";position:absolute;background:var(--laser);opacity:.35}
+.reticle::before{left:0;right:0;top:50%;height:1px}
+.reticle::after{top:0;bottom:0;left:50%;width:1px}
+.ticks{position:absolute;left:0;right:0;bottom:0;height:14px;background:repeating-linear-gradient(90deg,var(--muted) 0 1px,transparent 1px 10px);opacity:.35;mask:linear-gradient(0deg,#000 40%,transparent)}
+.specimen{position:relative;width:min(52%,260px);aspect-ratio:1;background:#fff;border-radius:18px;display:grid;place-items:center;color:#111;font:600 14px var(--tech);letter-spacing:.1em;text-transform:uppercase;transition:border-radius .5s cubic-bezier(.3,1.3,.5,1)}
+.specimen.morph{animation:morph 6s ease-in-out infinite alternate}
+@keyframes morph{50%{transform:rotate(8deg) scale(1.04)}}
+@media (prefers-reduced-motion:reduce){.specimen{transition:none}.specimen.morph{animation:none}.beam{animation:none!important}}
+.beam{position:absolute;left:-10%;right:-10%;top:50%;height:2px;background:linear-gradient(90deg,transparent,var(--laser) 20%,var(--laser) 80%,transparent);box-shadow:0 0 10px var(--laser-glow);opacity:.0;pointer-events:none}
+.flash .beam{animation:beam .7s ease-out}
+@keyframes beam{0%{opacity:.9;transform:scaleX(0)}60%{opacity:.8;transform:scaleX(1)}100%{opacity:0}}
+/* blob handles */
+.handles{position:absolute;inset:0;pointer-events:none}
+.hnd{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--panel);border:2px solid var(--laser);cursor:grab;pointer-events:auto;touch-action:none;box-shadow:0 0 8px var(--laser-glow)}
+.hnd:focus-visible{outline:2px solid var(--ink)}
+/* code */
+.code{margin:0;border-top:1px solid var(--hair);background:var(--field);padding:12px 14px;font:12.5px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;color:var(--ink);max-height:220px;overflow:auto}
+.code .p{color:var(--laser)}
+.codebar{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--hair);align-items:center;flex-wrap:wrap}
+/* controls */
+.ctl{background:var(--panel);border:1px solid var(--hair);border-radius:6px;padding:14px;display:grid;gap:12px}
+.ctl h2{margin:0;font:600 13px var(--tech);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.sl{display:grid;grid-template-columns:92px minmax(0,1fr) 64px;gap:10px;align-items:center}
+.sl label{font:500 12px var(--mono);color:var(--ink-2)}
+.sl input[type=range]{width:100%;accent-color:var(--laser)}
+.sl input[type=number]{width:100%;font:12px var(--mono);padding:4px 6px;border:1px solid var(--hair);background:var(--field);color:var(--ink);border-radius:3px}
+.colrow{display:grid;grid-template-columns:92px 44px minmax(0,1fr) 64px;gap:10px;align-items:center}
+.colrow label{font:500 12px var(--mono);color:var(--ink-2)}
+.colrow input[type=color]{width:44px;height:30px;border:1px solid var(--hair);border-radius:3px;background:var(--field);padding:2px;cursor:pointer}
+.colrow input[type=range]{accent-color:var(--laser);width:100%}
+.colrow output{font:12px var(--mono);color:var(--muted);text-align:right}
+.btn{font:600 12px var(--tech);letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;border:1px solid var(--ink);background:var(--panel);color:var(--ink);cursor:pointer;border-radius:3px}
+.btn.l{background:var(--laser);border-color:var(--laser);color:#fff}
+.btn:hover{border-color:var(--laser)}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.layers{display:flex;gap:6px;flex-wrap:wrap}
+.layers button{font:500 12px var(--mono);padding:6px 10px;border:1px solid var(--hair);background:var(--field);border-radius:3px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.layers button i{width:12px;height:12px;border-radius:2px;border:1px solid var(--hair)}
+.layers button[aria-pressed=true]{border-color:var(--laser);color:var(--laser)}
+.chip{font:500 12px var(--mono);padding:6px 10px;border:1px dashed var(--hair);background:transparent;border-radius:3px;cursor:pointer;color:var(--ink-2)}
+.chip:hover{border-color:var(--laser);color:var(--laser)}
+.seg{display:inline-flex;border:1px solid var(--ink);border-radius:3px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;font:600 12px var(--tech);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--panel)}
+.gbar{position:relative;height:34px;border-radius:4px;border:1px solid var(--hair);cursor:copy;margin:8px 0 18px}
+.gstop{position:absolute;top:100%;width:16px;height:18px;margin-left:-8px;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--ink-2);border-radius:2px 2px 8px 8px;cursor:grab;touch-action:none;padding:0}
+.gstop[aria-pressed=true]{box-shadow:0 0 0 2px var(--laser)}
+.hint{font:12px var(--mono);color:var(--muted);margin:0}
+.toggle{display:flex;align-items:center;gap:8px;font:500 12px var(--mono);color:var(--ink-2)}
+.toggle input{accent-color:var(--laser)}
+.toast{font:12px var(--mono);color:var(--laser)}
+.panel[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="index.html" id="backLink">← Showcase</a><span class="sub" style="margin:0">bench 04 · CSS optics</span></div>
+  <h1><span class="dot" aria-hidden="true"></span>Lensbench Forge</h1>
+  <p class="sub">Four instruments for light and form. Shape the specimen, then copy the prescription.</p>
+
+  <div class="tabs" role="tablist" aria-label="Instrument">
+    <button role="tab" id="tab-shadow" aria-selected="true" type="button"><i></i>Shadow</button>
+    <button role="tab" id="tab-gradient" aria-selected="false" type="button"><i></i>Gradient</button>
+    <button role="tab" id="tab-blob" aria-selected="false" type="button"><i></i>Blob radius</button>
+    <button role="tab" id="tab-glass" aria-selected="false" type="button"><i></i>Glass</button>
+  </div>
+
+  <div class="bench">
+    <div class="stage" id="stage">
+      <div class="hdr"><span id="stageLbl">SPECIMEN · shadow</span>
+        <div class="bgsel" role="group" aria-label="Stage background">
+          <button type="button" id="bgLight" style="background:#eef1f4" aria-label="Light stage" aria-pressed="true"></button>
+          <button type="button" id="bgDark" style="background:#15181d" aria-label="Dark stage" aria-pressed="false"></button>
+          <button type="button" id="bgCheck" style="background:repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/8px 8px" aria-label="Checker stage" aria-pressed="false"></button>
+          <button type="button" id="bgScene" style="background:linear-gradient(135deg,#ff5f6d,#3a7bd5)" aria-label="Colour scene stage" aria-pressed="false"></button>
+        </div></div>
+      <div class="view bg-light" id="view">
+        <div class="scene" aria-hidden="true"><i style="width:46%;height:60%;left:6%;top:8%;background:radial-gradient(circle at 30% 30%,#ffb46b,#ff4f6d)"></i><i style="width:40%;height:52%;right:4%;bottom:4%;background:radial-gradient(circle at 60% 40%,#63e0ff,#3b5bdb)"></i><i style="width:22%;height:28%;right:30%;top:6%;background:#ffe066"></i></div>
+        <div class="reticle" aria-hidden="true"></div><div class="beam" aria-hidden="true"></div>
+        <div class="specimen" id="spec"><span id="specTxt">Specimen</span></div>
+        <div class="handles" id="handles"></div>
+        <div class="ticks" aria-hidden="true"></div>
+      </div>
+      <pre class="code" id="code" aria-label="Generated CSS"></pre>
+      <div class="codebar"><button class="btn l" id="copy" type="button">Copy CSS</button><button class="btn" id="copyVal" type="button">Copy value only</button><span class="toast" id="toast" role="status"></span></div>
+    </div>
+
+    <div>
+      <!-- SHADOW -->
+      <section class="ctl panel" id="p-shadow">
+        <h2>Layers <span class="row"><button class="btn" id="shAdd" type="button">+ Layer</button><button class="btn" id="shDel" type="button">Remove</button></span></h2>
+        <div class="layers" id="shLayers"></div>
+        <div id="shCtl"></div>
+        <h2>Presets</h2>
+        <div class="row" id="shPresets"></div>
+        <p class="hint">Smooth shadows stack several soft layers with eased offsets — they read far more natural than one big blur.</p>
+      </section>
+      <!-- GRADIENT -->
+      <section class="ctl panel" id="p-gradient" hidden>
+        <h2>Type <span class="seg" role="group" aria-label="Gradient type"><button type="button" id="gLin" aria-pressed="true">Linear</button><button type="button" id="gRad" aria-pressed="false">Radial</button><button type="button" id="gCon" aria-pressed="false">Conic</button></span></h2>
+        <div id="gGeom"></div>
+        <h2>Stops <span class="row"><button class="btn" id="gAdd" type="button">+ Stop</button><button class="btn" id="gDel" type="button">Remove</button><button class="btn" id="gRev" type="button">Reverse</button></span></h2>
+        <div class="gbar" id="gbar" title="Click to add a stop"></div>
+        <div id="gStop"></div>
+        <h2>Presets</h2><div class="row" id="gPresets"></div>
+      </section>
+      <!-- BLOB -->
+      <section class="ctl panel" id="p-blob" hidden>
+        <h2>Eight-point radius <span class="row"><button class="btn l" id="bRand" type="button">Randomise</button><button class="btn" id="bReset" type="button">Square</button></span></h2>
+        <p class="hint">Drag the red handles on the stage, or use the sliders. Horizontal values sit on the top/bottom edges; vertical on the sides.</p>
+        <div id="bCtl"></div>
+        <label class="toggle"><input type="checkbox" id="bMorph"> Gentle drift animation on the specimen</label>
+        <div class="colrow"><label for="bCol">Fill</label><input type="color" id="bCol"><span></span><output></output></div>
+      </section>
+      <!-- GLASS -->
+      <section class="ctl panel" id="p-glass" hidden>
+        <h2>Glass pane</h2>
+        <div id="glCtl"></div>
+        <div class="colrow"><label for="glTint">Tint</label><input type="color" id="glTint"><span></span><output></output></div>
+        <p class="hint">backdrop-filter needs something behind it — the stage switches to the colour scene for this instrument.</p>
+      </section>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const KEY='lensbench-forge-v1';
+  const ls={get(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}},set(v){try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}};
+  const hexA=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255}, ${n>>8&255}, ${n&255}, ${+(+a).toFixed(2)})`};
+  const DEF={
+    mode:'shadow',bg:'light',
+    shadow:{sel:0,layers:[{x:0,y:1,b:2,s:0,c:'#0b1a33',a:.06,i:false},{x:0,y:4,b:8,s:-1,c:'#0b1a33',a:.08,i:false},{x:0,y:12,b:24,s:-4,c:'#0b1a33',a:.12,i:false},{x:0,y:28,b:48,s:-12,c:'#0b1a33',a:.18,i:false}]},
+    gradient:{type:'linear',angle:128,shape:'ellipse',px:30,py:30,from:0,sel:1,stops:[{c:'#ff5f6d',a:1,p:0},{c:'#ffc371',a:1,p:48},{c:'#3a7bd5',a:1,p:100}]},
+    blob:{r:[58,42,70,30,44,62,38,56],fill:'#3a7bd5',morph:false},
+    glass:{blur:16,sat:160,alpha:.18,border:.35,radius:22,tint:'#ffffff',shadow:.25}
+  };
+  let st=Object.assign(JSON.parse(JSON.stringify(DEF)),ls.get()||{});
+  ['shadow','gradient','blob','glass'].forEach(k=>{if(typeof st[k]!=='object')st[k]=JSON.parse(JSON.stringify(DEF[k]))});
+  const save=()=>ls.set(st);
+  const spec=$('spec'),view=$('view');
+  function slider(parent,id,label,min,max,step,get,set,unit){
+    const d=document.createElement('div');d.className='sl';
+    d.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" aria-label="${label}"><input type="number" id="${id}n" min="${min}" max="${max}" step="${step}" aria-label="${label} value">`;
+    const r=d.children[1],n=d.children[2];r.value=n.value=get();
+    const on=v=>{v=Math.max(min,Math.min(max,+v));set(v);r.value=v;if(document.activeElement!==n)n.value=v;apply()};
+    r.oninput=e=>on(e.target.value);n.oninput=e=>{if(e.target.value!=='')on(e.target.value)};parent.appendChild(d);return d;
+  }
+  function colorRow(parent,id,label,getC,setC,getA,setA){
+    const d=document.createElement('div');d.className='colrow';
+    d.innerHTML=`<label for="${id}">${label}</label><input type="color" id="${id}"><input type="range" id="${id}a" min="0" max="1" step="0.01" aria-label="${label} opacity"><output>${Math.round(getA()*100)}%</output>`;
+    d.children[1].value=getC();d.children[2].value=getA();
+    d.children[1].oninput=e=>{setC(e.target.value);apply()};d.children[2].oninput=e=>{setA(+e.target.value);d.children[3].textContent=Math.round(e.target.value*100)+'%';apply()};
+    parent.appendChild(d);return d;
+  }
+  // ---------- SHADOW ----------
+  const shCss=()=>st.shadow.layers.map(l=>`${l.i?'inset ':''}${l.x}px ${l.y}px ${l.b}px ${l.s}px ${hexA(l.c,l.a)}`).join(',\n    ')||'none';
+  function shUI(){
+    const L=st.shadow.layers;st.shadow.sel=Math.min(st.shadow.sel,L.length-1);
+    $('shLayers').innerHTML='';L.forEach((l,i)=>{const b=document.createElement('button');b.type='button';b.id='shl'+i;b.setAttribute('aria-pressed',i===st.shadow.sel);b.innerHTML=`<i style="background:${hexA(l.c,Math.max(.25,l.a))}"></i>L${i+1}${l.i?' inset':''}`;b.onclick=()=>{st.shadow.sel=i;shUI()};$('shLayers').appendChild(b)});
+    const c=$('shCtl');c.innerHTML='';const l=L[st.shadow.sel];if(!l){c.innerHTML='<p class="hint">No layers — add one.</p>';return}
+    c.style.display='grid';c.style.gap='10px';
+    slider(c,'shX','Offset X',-100,100,1,()=>l.x,v=>l.x=v);slider(c,'shY','Offset Y',-100,100,1,()=>l.y,v=>l.y=v);
+    slider(c,'shB','Blur',0,200,1,()=>l.b,v=>l.b=v);slider(c,'shS','Spread',-80,80,1,()=>l.s,v=>l.s=v);
+    colorRow(c,'shC','Colour',()=>l.c,v=>{l.c=v;shLayerChips()},()=>l.a,v=>l.a=v);
+    const t=document.createElement('label');t.className='toggle';t.innerHTML='<input type="checkbox" id="shI"> Inset';t.firstChild.checked=l.i;t.firstChild.onchange=e=>{l.i=e.target.checked;shUI();apply()};c.appendChild(t);
+  }
+  function shLayerChips(){st.shadow.layers.forEach((l,i)=>{const b=$('shl'+i);if(b)b.querySelector('i').style.background=hexA(l.c,Math.max(.25,l.a))})}
+  $('shAdd').onclick=()=>{const last=st.shadow.layers[st.shadow.layers.length-1]||{x:0,y:8,b:16,s:0,c:'#0b1a33',a:.2,i:false};st.shadow.layers.push({...last,y:last.y*1.6|0,b:last.b*1.6|0});st.shadow.sel=st.shadow.layers.length-1;shUI();apply()};
+  $('shDel').onclick=()=>{st.shadow.layers.splice(st.shadow.sel,1);shUI();apply()};
+  const SHP={
+    'Smooth 4':()=>DEF.shadow.layers.map(x=>({...x})),
+    'Smooth 6':()=>Array.from({length:6},(_,i)=>{const t=Math.pow(2,i);return {x:0,y:Math.round(t*1.1),b:Math.round(t*2.2),s:0,c:'#0b1a33',a:+(0.02+0.03*i/5).toFixed(3)*1.4,i:false}}),
+    'Hairline + lift':()=>[{x:0,y:0,b:0,s:1,c:'#0b1a33',a:.08,i:false},{x:0,y:2,b:4,s:0,c:'#0b1a33',a:.06,i:false},{x:0,y:16,b:32,s:-8,c:'#0b1a33',a:.22,i:false}],
+    'Neumorph':()=>[{x:12,y:12,b:24,s:0,c:'#a3b1c6',a:.6,i:false},{x:-12,y:-12,b:24,s:0,c:'#ffffff',a:.9,i:false}],
+    'Pressed':()=>[{x:6,y:6,b:12,s:0,c:'#a3b1c6',a:.6,i:true},{x:-6,y:-6,b:12,s:0,c:'#ffffff',a:.9,i:true}],
+    'Long cast':()=>Array.from({length:8},(_,i)=>({x:(i+1)*4,y:(i+1)*4,b:0,s:0,c:'#e0162b',a:+(0.5-i*0.05).toFixed(2),i:false})),
+    'Glow':()=>[{x:0,y:0,b:12,s:0,c:'#ff3b4d',a:.6,i:false},{x:0,y:0,b:40,s:4,c:'#ff3b4d',a:.35,i:false}]
+  };
+  Object.keys(SHP).forEach((k,i)=>{const b=document.createElement('button');b.className='chip';b.type='button';b.id='shp'+i;b.textContent=k;b.onclick=()=>{st.shadow.layers=SHP[k]();st.shadow.sel=0;if(k==='Neumorph'||k==='Pressed')setBg('light');shUI();apply(true)};$('shPresets').appendChild(b)});
+  // ---------- GRADIENT ----------
+  const gCss=()=>{const g=st.gradient;const stops=g.stops.slice().sort((a,b)=>a.p-b.p).map(s=>`${s.a<1?hexA(s.c,s.a):s.c} ${s.p}%`).join(', ');
+    if(g.type==='radial')return `radial-gradient(${g.shape} at ${g.px}% ${g.py}%, ${stops})`;
+    if(g.type==='conic')return `conic-gradient(from ${g.from}deg at ${g.px}% ${g.py}%, ${stops})`;
+    return `linear-gradient(${g.angle}deg, ${stops})`};
+  function gUI(){
+    const g=st.gradient;['Lin','Rad','Con'].forEach((k,i)=>$('g'+k).setAttribute('aria-pressed',g.type===['linear','radial','conic'][i]));
+    const c=$('gGeom');c.innerHTML='';c.style.display='grid';c.style.gap='10px';
+    if(g.type==='linear')slider(c,'gA','Angle',0,360,1,()=>g.angle,v=>g.angle=v);
+    else{if(g.type==='conic')slider(c,'gF','From',0,360,1,()=>g.from,v=>g.from=v);
+      if(g.type==='radial'){const s=document.createElement('div');s.className='row';s.innerHTML='<span class="hint" style="width:92px">Shape</span><span class="seg"><button type="button" id="gsE">Ellipse</button><button type="button" id="gsC">Circle</button></span>';c.appendChild(s);
+        const sync=()=>{$('gsE').setAttribute('aria-pressed',g.shape==='ellipse');$('gsC').setAttribute('aria-pressed',g.shape==='circle')};sync();$('gsE').onclick=()=>{g.shape='ellipse';sync();apply()};$('gsC').onclick=()=>{g.shape='circle';sync();apply()}}
+      slider(c,'gX','Centre X',0,100,1,()=>g.px,v=>g.px=v);slider(c,'gY','Centre Y',0,100,1,()=>g.py,v=>g.py=v)}
+    gStops();
+  }
+  function gStops(){
+    const g=st.gradient,bar=$('gbar');g.sel=Math.min(g.sel,g.stops.length-1);
+    bar.style.background=`linear-gradient(90deg, ${g.stops.slice().sort((a,b)=>a.p-b.p).map(s=>hexA(s.c,s.a)+' '+s.p+'%').join(', ')}), repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/10px 10px`;
+    bar.querySelectorAll('.gstop').forEach(x=>x.remove());
+    g.stops.forEach((s,i)=>{const h=document.createElement('button');h.type='button';h.className='gstop';h.id='gs'+i;h.style.left=s.p+'%';h.style.background=s.c;h.setAttribute('aria-pressed',i===g.sel);h.setAttribute('aria-label','Stop '+(i+1)+' at '+s.p+'%');
+      h.addEventListener('pointerdown',e=>{e.stopPropagation();g.sel=i;h.setPointerCapture(e.pointerId);const r=bar.getBoundingClientRect();const mv=ev=>{s.p=Math.round(Math.max(0,Math.min(100,(ev.clientX-r.left)/r.width*100)));h.style.left=s.p+'%';apply();const pn=$('gPn');if(pn)pn.value=s.p;const pr=$('gP');if(pr)pr.value=s.p};const up=()=>{h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up);gStops()};h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up);gStopCtl()});
+      h.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();s.p=Math.max(0,Math.min(100,s.p+(e.key==='ArrowRight'?1:-1)*(e.shiftKey?10:1)));g.sel=i;gStops();apply();$('gs'+i).focus()}});
+      bar.appendChild(h)});
+    gStopCtl();
+  }
+  function gStopCtl(){const g=st.gradient,s=g.stops[g.sel];const c=$('gStop');c.innerHTML='';c.style.display='grid';c.style.gap='10px';if(!s)return;
+    colorRow(c,'gC','Stop '+(g.sel+1),()=>s.c,v=>{s.c=v;const h=$('gs'+g.sel);if(h)h.style.background=v;refreshBar()},()=>s.a,v=>{s.a=v;refreshBar()});
+    slider(c,'gP','Position',0,100,1,()=>s.p,v=>{s.p=v;const h=$('gs'+g.sel);if(h)h.style.left=v+'%';refreshBar()});
+  }
+  function refreshBar(){const g=st.gradient;$('gbar').style.background=`linear-gradient(90deg, ${g.stops.slice().sort((a,b)=>a.p-b.p).map(s=>hexA(s.c,s.a)+' '+s.p+'%').join(', ')}), repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/10px 10px`}
+  $('gbar').addEventListener('pointerdown',e=>{if(e.target!==$('gbar'))return;const r=$('gbar').getBoundingClientRect();const p=Math.round((e.clientX-r.left)/r.width*100);const g=st.gradient;const near=g.stops.slice().sort((a,b)=>Math.abs(a.p-p)-Math.abs(b.p-p))[0];g.stops.push({c:near.c,a:near.a,p});g.sel=g.stops.length-1;gStops();apply()});
+  $('gLin').onclick=()=>{st.gradient.type='linear';gUI();apply()};$('gRad').onclick=()=>{st.gradient.type='radial';gUI();apply()};$('gCon').onclick=()=>{st.gradient.type='conic';gUI();apply()};
+  $('gAdd').onclick=()=>{const g=st.gradient;const s=g.stops.slice().sort((a,b)=>a.p-b.p);let best=0,at=50;for(let i=0;i<s.length-1;i++){if(s[i+1].p-s[i].p>best){best=s[i+1].p-s[i].p;at=Math.round((s[i].p+s[i+1].p)/2)}}g.stops.push({c:'#ffffff',a:1,p:at});g.sel=g.stops.length-1;gStops();apply()};
+  $('gDel').onclick=()=>{const g=st.gradient;if(g.stops.length<=2)return;g.stops.splice(g.sel,1);g.sel=0;gStops();apply()};
+  $('gRev').onclick=()=>{st.gradient.stops.forEach(s=>s.p=100-s.p);gStops();apply()};
+  const GP={
+    'Sunset strip':{type:'linear',angle:128,stops:[['#ff5f6d',0],['#ffc371',48],['#3a7bd5',100]]},
+    'Aperture':{type:'conic',from:0,px:50,py:50,stops:[['#111418',0],['#e0162b',12],['#111418',25],['#3c434c',37],['#111418',50],['#e0162b',62],['#111418',75],['#3c434c',87],['#111418',100]]},
+    'Lens flare':{type:'radial',shape:'circle',px:35,py:30,stops:[['#ffffff',0],['#ffe066',12],['#ff7b54',34],['#1a1036',78],['#07060d',100]]},
+    'Colour wheel':{type:'conic',from:90,px:50,py:50,stops:[['#ff0000',0],['#ffff00',17],['#00ff00',33],['#00ffff',50],['#0000ff',67],['#ff00ff',83],['#ff0000',100]]},
+    'Steel':{type:'linear',angle:180,stops:[['#f2f4f6',0],['#b9c0c8',45],['#8a929c',50],['#dfe3e8',100]]},
+    'Deep water':{type:'radial',shape:'ellipse',px:50,py:0,stops:[['#4fd1c5',0],['#2b6cb0',45],['#0b1a33',100]]}
+  };
+  Object.keys(GP).forEach((k,i)=>{const b=document.createElement('button');b.className='chip';b.type='button';b.id='gp'+i;b.textContent=k;b.onclick=()=>{const p=GP[k];Object.assign(st.gradient,{type:p.type,angle:p.angle??st.gradient.angle,from:p.from??0,px:p.px??50,py:p.py??50,shape:p.shape??'ellipse',sel:0,stops:p.stops.map(([c,pp])=>({c,a:1,p:pp}))});gUI();apply(true)};$('gPresets').appendChild(b)});
+  // ---------- BLOB ----------
+  const bCss=()=>{const r=st.blob.r;return `${r[0]}% ${100-r[0]}% ${100-r[1]}% ${r[1]}% / ${r[2]}% ${r[3]}% ${100-r[3]}% ${100-r[2]}%`};
+  // r[0]=top edge handle (x%), r[1]=bottom edge handle (x%), r[2]=left edge (y%), r[3]=right edge (y%) ; plus r[4..7] unused kept for sliders of fine asymmetry
+  const BL=[['Top','x',0],['Bottom','x',1],['Left','y',2],['Right','y',3]];
+  function bUI(){const c=$('bCtl');c.innerHTML='';c.style.display='grid';c.style.gap='10px';BL.forEach(([n,ax,i])=>slider(c,'b'+i,n+' edge',0,100,1,()=>st.blob.r[i],v=>st.blob.r[i]=v));$('bCol').value=st.blob.fill;$('bMorph').checked=!!st.blob.morph}
+  function handles(){
+    const H=$('handles');H.innerHTML='';if(st.mode!=='blob')return;
+    const vr=view.getBoundingClientRect(),sr=spec.getBoundingClientRect();const ox=sr.left-vr.left,oy=sr.top-vr.top,w=sr.width,h=sr.height;
+    BL.forEach(([n,ax,i])=>{const d=document.createElement('button');d.type='button';d.className='hnd';d.id='h'+i;d.setAttribute('aria-label',n+' edge handle, '+st.blob.r[i]+'%');
+      const place=()=>{const v=st.blob.r[i]/100;if(i===0){d.style.left=ox+w*v+'px';d.style.top=oy+'px'}if(i===1){d.style.left=ox+w*v+'px';d.style.top=oy+h+'px'}if(i===2){d.style.left=ox+'px';d.style.top=oy+h*v+'px'}if(i===3){d.style.left=ox+w+'px';d.style.top=oy+h*v+'px'}};place();
+      d.addEventListener('pointerdown',e=>{d.setPointerCapture(e.pointerId);const mv=ev=>{const v=ax==='x'?(ev.clientX-vr.left-ox)/w:(ev.clientY-vr.top-oy)/h;st.blob.r[i]=Math.round(Math.max(0,Math.min(100,v*100)));place();apply();const sl=$('b'+i);if(sl){sl.value=st.blob.r[i];$('b'+i+'n').value=st.blob.r[i]}};const up=()=>{d.removeEventListener('pointermove',mv);d.removeEventListener('pointerup',up)};d.addEventListener('pointermove',mv);d.addEventListener('pointerup',up)});
+      d.addEventListener('keydown',e=>{const k={ArrowLeft:-1,ArrowUp:-1,ArrowRight:1,ArrowDown:1}[e.key];if(!k)return;e.preventDefault();st.blob.r[i]=Math.max(0,Math.min(100,st.blob.r[i]+k*(e.shiftKey?10:1)));place();apply();bUI()});
+      H.appendChild(d)});
+  }
+  $('bRand').onclick=()=>{st.blob.r=st.blob.r.map(()=>Math.round(20+Math.random()*60));bUI();apply(true);handles()};
+  $('bReset').onclick=()=>{st.blob.r=[0,0,0,0,0,0,0,0].map((_,i)=>i<4?0:50);bUI();apply();handles()};
+  $('bMorph').onchange=e=>{st.blob.morph=e.target.checked;apply()};
+  $('bCol').oninput=e=>{st.blob.fill=e.target.value;apply()};
+  // ---------- GLASS ----------
+  function glUI(){const c=$('glCtl');c.innerHTML='';c.style.display='grid';c.style.gap='10px';const g=st.glass;
+    slider(c,'glB','Blur px',0,40,1,()=>g.blur,v=>g.blur=v);slider(c,'glS','Saturate %',50,250,5,()=>g.sat,v=>g.sat=v);
+    slider(c,'glA','Fill alpha',0,0.8,0.01,()=>g.alpha,v=>g.alpha=v);slider(c,'glE','Edge alpha',0,1,0.01,()=>g.border,v=>g.border=v);
+    slider(c,'glR','Radius px',0,60,1,()=>g.radius,v=>g.radius=v);slider(c,'glD','Shadow',0,0.6,0.01,()=>g.shadow,v=>g.shadow=v);$('glTint').value=g.tint}
+  $('glTint').oninput=e=>{st.glass.tint=e.target.value;apply()};
+  // ---------- apply ----------
+  function props(){
+    switch(st.mode){
+      case 'shadow':return [['box-shadow',shCss()]];
+      case 'gradient':return [['background',gCss()]];
+      case 'blob':return [['border-radius',bCss()]];
+      case 'glass':{const g=st.glass;return [['background',hexA(g.tint,g.alpha)],['backdrop-filter',`blur(${g.blur}px) saturate(${g.sat}%)`],['-webkit-backdrop-filter',`blur(${g.blur}px) saturate(${g.sat}%)`],['border',`1px solid ${hexA(g.tint,g.border)}`],['border-radius',g.radius+'px'],['box-shadow',`0 8px 32px ${hexA('#000000',g.shadow)}`]]}
+    }
+  }
+  function apply(flash){
+    spec.removeAttribute('style');spec.classList.toggle('morph',st.mode==='blob'&&st.blob.morph);
+    const P=props();
+    if(st.mode==='shadow'){spec.style.background=st.bg==='dark'?'#262b33':st.bg==='light'?'#eef1f4':'#fff';spec.style.color=st.bg==='dark'?'#e6e9ee':'#111';spec.style.borderRadius='18px'}
+    if(st.mode==='gradient'){spec.style.width='min(78%,440px)';spec.style.aspectRatio='16/10';spec.style.color='transparent'}
+    if(st.mode==='blob'){spec.style.background=st.blob.fill;spec.style.color='#fff'}
+    if(st.mode==='glass'){spec.style.color='#fff';spec.style.width='min(64%,320px)';spec.style.aspectRatio='1.5'}
+    P.forEach(([k,v])=>spec.style.setProperty(k,v));
+    $('specTxt').textContent=st.mode==='glass'?'Frosted · f/1.4':st.mode==='blob'?'':'Specimen';
+    $('code').innerHTML='<span class="p">.specimen</span> {\n'+P.map(([k,v])=>`  ${k}: ${v.replace(/</g,'&lt;')};`).join('\n')+'\n}';
+    $('stageLbl').textContent='SPECIMEN · '+st.mode;
+    if(flash&&!matchMedia('(prefers-reduced-motion: reduce)').matches){view.classList.remove('flash');void view.offsetWidth;view.classList.add('flash')}
+    save();
+  }
+  // bg & tabs
+  function setBg(b){st.bg=b;view.className='view bg-'+b+(st.mode==='glass'?' glass':'');['Light','Dark','Check','Scene'].forEach(k=>$('bg'+k).setAttribute('aria-pressed',b===k.toLowerCase()));apply()}
+  ['Light','Dark','Check','Scene'].forEach(k=>$('bg'+k).onclick=()=>setBg(k.toLowerCase()));
+  const MODES=['shadow','gradient','blob','glass'];
+  function setMode(m){st.mode=m;MODES.forEach(k=>{$('tab-'+k).setAttribute('aria-selected',k===m);$('p-'+k).hidden=k!==m});
+    if(m==='glass'&&st.bg!=='scene')st.bg='scene';setBg(st.bg);
+    if(m==='shadow')shUI();if(m==='gradient')gUI();if(m==='blob')bUI();if(m==='glass')glUI();
+    apply(true);requestAnimationFrame(()=>setTimeout(handles,20));}
+  MODES.forEach(m=>$('tab-'+m).onclick=()=>setMode(m));
+  document.querySelector('.tabs').addEventListener('keydown',e=>{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;const i=MODES.indexOf(st.mode);const n=MODES[(i+(e.key==='ArrowRight'?1:3))%4];setMode(n);$('tab-'+n).focus()});
+  // copy
+  async function copy(t){try{await navigator.clipboard.writeText(t);$('toast').textContent='Prescription copied'}catch(e){$('toast').textContent='Clipboard blocked — select the code'}setTimeout(()=>$('toast').textContent='',1500)}
+  $('copy').onclick=()=>copy($('code').textContent);
+  $('copyVal').onclick=()=>copy(props().map(([k,v])=>v).filter((v,i,a)=>a.indexOf(v)===i).join('\n'));
+  let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(handles,100)});
+  spec.addEventListener('transitionend',()=>{if(st.mode==='blob')handles()});
+  setMode(MODES.includes(st.mode)?st.mode:'shadow');
+})();
+</script>
+</body>
+</html>

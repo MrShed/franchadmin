@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Salvia &amp; Lilas</title>
+<meta name="description" content="A pale sage and lilac site for a fictional botanical perfume house, with an interactive scent pyramid and dry-down timeline, hand-drawn SVG ingredients and soft glass bottles.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400;1,6..96,500&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sage:#dfe6d9; --sage2:#c7d3c0; --sage3:#8fa287; --lilac:#d8cdea; --lilac2:#b7a6d6; --plum:#4a3b63; --ink:#26222e; --mist:#f2f4ef;
+  --didone:"Bodoni Moda","Didot","Bodoni 72","Playfair Display",Georgia,serif;
+  --sans:"Manrope","Avenir Next","Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--sage);color:var(--ink);font-family:var(--sans);font-weight:400;font-size:16px;line-height:1.65;overflow-x:hidden}
+a{color:var(--plum)}
+:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+.small{font-size:11px;letter-spacing:.28em;text-transform:uppercase;font-weight:600;color:var(--plum)}
+.back{position:fixed;top:16px;left:16px;z-index:30;font-family:var(--didone);font-style:italic;font-size:16px;color:var(--ink);text-decoration:none;padding:4px 12px;border-radius:999px;background:rgba(242,244,239,.7);backdrop-filter:blur(8px)}
+.back:hover{background:var(--lilac)}
+/* hero */
+.hero{position:relative;min-height:100vh;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;padding:80px clamp(16px,6vw,96px) 60px;overflow:hidden;
+  background:radial-gradient(60% 70% at 78% 55%,var(--lilac) 0%,rgba(216,205,234,0) 70%),radial-gradient(50% 60% at 10% 20%,#eef2ea 0%,rgba(238,242,234,0) 70%),var(--sage)}
+.amp{position:absolute;right:-4vw;top:50%;transform:translateY(-52%);font-family:var(--didone);font-style:italic;font-size:clamp(420px,62vw,980px);line-height:.7;color:rgba(74,59,99,.07);pointer-events:none;user-select:none}
+.hero h1{position:relative;font-family:var(--didone);font-weight:400;font-size:clamp(64px,9.4vw,152px);line-height:.86;letter-spacing:-.025em;margin:22px 0 26px}
+.hero h1 i{font-weight:400;color:var(--plum)}
+.hero p{max-width:40ch;font-size:18px;margin:0 0 32px;position:relative}
+.cta{display:inline-flex;gap:14px;align-items:center;font-size:12px;letter-spacing:.24em;text-transform:uppercase;font-weight:600;color:var(--mist);background:var(--ink);padding:16px 26px;border-radius:999px;text-decoration:none}
+.cta:hover{background:var(--plum)}
+.bottle-stage{position:relative;height:min(76vh,660px);display:grid;place-items:center}
+#heroBottle{height:100%;width:auto;max-width:100%;overflow:visible}
+/* sections */
+section{padding:clamp(80px,10vw,150px) clamp(16px,6vw,96px)}
+.wrap{max-width:1200px;margin:0 auto}
+h2{font-family:var(--didone);font-weight:400;font-size:clamp(44px,6vw,92px);line-height:.95;letter-spacing:-.02em;margin:16px 0 22px}
+h2 i{color:var(--plum)}
+.house{background:var(--mist)}
+.house-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,6vw,110px)}
+.house-grid p{font-size:18px;max-width:50ch;margin:0 0 1em}
+.house-grid .lead{font-family:var(--didone);font-size:clamp(26px,2.5vw,34px);line-height:1.3}
+/* pyramid */
+.pyr{background:linear-gradient(180deg,var(--mist),var(--lilac) 120%)}
+.tabs{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid rgba(38,34,46,.2);margin:10px 0 40px}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:14px 22px 14px 0;margin-right:22px;cursor:pointer;text-align:left;color:rgba(38,34,46,.55);font:inherit}
+.tabs button b{display:block;font-family:var(--didone);font-weight:400;font-size:26px;line-height:1.1;color:inherit}
+.tabs button span{font-size:11px;letter-spacing:.22em;text-transform:uppercase}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--plum)}
+.pyr-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,5vw,80px);align-items:start}
+#pyramid{width:100%;max-width:520px;display:block;margin:0 auto}
+#pyramid .tier{cursor:pointer;transition:opacity .5s}
+#pyramid .tier:focus{outline:none}
+#pyramid .tier:focus-visible path.band{stroke:var(--plum);stroke-width:3}
+#pyramid .label{font-family:"Bodoni Moda",Didot,Georgia,serif;font-style:italic;pointer-events:none}
+.notes h3{font-family:var(--didone);font-weight:400;font-size:40px;margin:6px 0 4px;line-height:1}
+.notes .desc{margin:0 0 24px;max-width:46ch}
+.note-list{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.note-list li{background:rgba(242,244,239,.65);border:1px solid rgba(255,255,255,.8);border-radius:120px 120px 16px 16px;padding:14px 10px 16px;text-align:center;animation:bloom .7s cubic-bezier(.2,.8,.2,1) both}
+.note-list li:nth-child(2){animation-delay:.08s}.note-list li:nth-child(3){animation-delay:.16s}
+@keyframes bloom{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
+.note-list svg{width:84px;height:84px;display:block;margin:0 auto 4px}
+.note-list b{display:block;font-family:var(--didone);font-weight:400;font-size:20px;line-height:1.1}
+.note-list span{font-size:12px;color:rgba(38,34,46,.65)}
+.drydown{margin-top:34px;padding-top:22px;border-top:1px solid rgba(38,34,46,.2)}
+.drydown label{display:flex;justify-content:space-between;align-items:baseline}
+.drydown output{font-family:var(--didone);font-style:italic;font-size:24px}
+.drydown input{width:100%;accent-color:var(--plum);margin:10px 0}
+#dryText{margin:0;font-size:15px;min-height:3.2em}
+/* atlas */
+.atlas{background:var(--sage)}
+.atlas-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid rgba(38,34,46,.25)}
+.ing{padding:26px 18px 26px 0;border-bottom:1px solid rgba(38,34,46,.25);display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center}
+.ing svg{width:72px;height:72px}
+.ing b{font-family:var(--didone);font-weight:400;font-size:21px;display:block;line-height:1.1}
+.ing span{font-size:12px;color:rgba(38,34,46,.7)}
+/* collection */
+.coll{background:var(--ink);color:var(--mist)}
+.coll h2 i{color:var(--lilac)}
+.coll .small{color:var(--lilac)}
+.bottles{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(20px,4vw,60px);margin-top:50px}
+.bot{text-align:center}
+.glass{position:relative;height:300px;display:grid;place-items:end center;margin-bottom:26px}
+.flacon{position:relative;width:150px;height:200px;border-radius:26px 26px 34px 34px;background:linear-gradient(115deg,rgba(255,255,255,.28),rgba(255,255,255,.06) 40%,rgba(255,255,255,.14));border:1px solid rgba(255,255,255,.35);box-shadow:inset 0 0 30px rgba(255,255,255,.12),0 30px 60px rgba(0,0,0,.4);overflow:hidden;backdrop-filter:blur(4px);transition:transform .8s cubic-bezier(.2,.8,.2,1)}
+.bot:hover .flacon{transform:translateY(-8px) rotate(-2deg)}
+.flacon::before{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--fill,70%);background:linear-gradient(180deg,var(--liq1),var(--liq2));opacity:.85}
+.flacon::after{content:"";position:absolute;left:14px;top:10px;width:16px;height:70%;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0))}
+.flacon .lab{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:var(--mist);color:var(--ink);padding:10px 12px;min-width:90px;font-family:var(--didone);font-size:14px;line-height:1.1;z-index:1}
+.flacon .lab small{display:block;font-family:var(--sans);font-size:8px;letter-spacing:.2em;margin-top:4px}
+.cap{position:absolute;bottom:200px;left:50%;transform:translateX(-50%);width:62px;height:60px;border-radius:8px 8px 2px 2px;background:linear-gradient(90deg,#8d7fa8,#e8e0f5 45%,#8d7fa8)}
+.cap.round{border-radius:50% 50% 6px 6px;width:70px;height:70px}
+.cap.tall{height:84px;width:44px}
+.flacon.round{border-radius:50%/46%;width:180px;height:190px}
+.flacon.slim{width:110px;height:220px;border-radius:10px}
+.bot h3{font-family:var(--didone);font-weight:400;font-size:30px;margin:0;line-height:1.1}
+.bot p{margin:6px 0 0;color:#b9b3c7;font-size:14px}
+.bot .price{margin-top:12px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--lilac)}
+.bot button{margin-top:16px;background:none;border:1px solid rgba(216,205,234,.5);color:var(--mist);border-radius:999px;padding:10px 18px;font:600 11px var(--sans);letter-spacing:.2em;text-transform:uppercase;cursor:pointer}
+.bot button:hover,.bot button[aria-pressed="true"]{background:var(--lilac);color:var(--ink)}
+.bag{margin-top:40px;text-align:center;font-family:var(--didone);font-style:italic;font-size:20px;color:var(--lilac);min-height:1.5em}
+footer{background:var(--ink);color:#8e889c;padding:30px clamp(16px,6vw,96px) 50px;border-top:1px solid #3a3446;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px}
+footer b{font-family:var(--didone);font-weight:400;font-size:22px;color:var(--mist)}
+@media (max-width:900px){
+  .hero{grid-template-columns:1fr;padding-top:70px}
+  .bottle-stage{height:420px;order:-1}
+  .house-grid,.pyr-grid{grid-template-columns:1fr}
+  .atlas-grid{grid-template-columns:1fr 1fr}
+  .bottles{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .atlas-grid{grid-template-columns:1fr}
+  .note-list{grid-template-columns:1fr 1fr}
+  .bottle-stage{height:340px}
+}
+@media (prefers-reduced-motion:reduce){ .note-list li{animation:none} .flacon{transition:none} }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<header class="hero">
+  <div class="amp" aria-hidden="true">&amp;</div>
+  <div>
+    <div class="small">Parfumerie botanique · Grasse &amp; Edinburgh</div>
+    <h1>Salvia<br><i>&amp; Lilas</i></h1>
+    <p>Perfumes distilled from a walled garden: clary sage from the south wall, lilac from the old tree by the gate, iris root dried for three years in the potting shed.</p>
+    <a class="cta" href="#pyramid-sec">Explore the notes <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="bottle-stage"><svg id="heroBottle" viewBox="0 0 300 460" role="img" aria-label="A faceted glass perfume bottle filled with pale lilac liquid, tilting as you move."></svg></div>
+</header>
+
+<section class="house">
+  <div class="wrap house-grid">
+    <div>
+      <div class="small">The House</div>
+      <h2>Grown, <i>then</i> worn</h2>
+    </div>
+    <div>
+      <p class="lead">We are gardeners before we are perfumers. Every fragrance starts as a bed we plant, and ends in a bottle eighteen months later.</p>
+      <p>Isobel Marr and Théo Castagne founded Salvia &amp; Lilas in 2014 in a Victorian kitchen garden outside Edinburgh, with a copper alembic bought from a retiring lavender farmer in Valensole. Today half of our materials come from our own beds; the rest from four growers we visit every harvest.</p>
+      <p>Our fragrances are composed in a single sitting and then left alone for six months to settle. Nothing synthetic is used to imitate what the garden already makes.</p>
+    </div>
+  </div>
+</section>
+
+<section class="pyr" id="pyramid-sec">
+  <div class="wrap">
+    <div class="small">The Scent Pyramid</div>
+    <h2>How a perfume <i>unfolds</i></h2>
+    <div class="tabs" role="tablist" id="tabs" aria-label="Choose a fragrance"></div>
+    <div class="pyr-grid">
+      <div>
+        <svg id="pyramid" viewBox="0 0 500 440" role="group" aria-label="Scent pyramid: select a tier to see its notes"></svg>
+        <div class="drydown">
+          <label for="dry"><span class="small">Dry-down on skin</span><output id="dryOut" for="dry">15 minutes</output></label>
+          <input type="range" id="dry" min="0" max="100" value="6">
+          <p id="dryText"></p>
+        </div>
+      </div>
+      <div class="notes" aria-live="polite">
+        <div class="small" id="tierKicker">Top notes · 0 – 30 min</div>
+        <h3 id="tierName">The opening</h3>
+        <p class="desc" id="tierDesc"></p>
+        <ul class="note-list" id="noteList"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="atlas">
+  <div class="wrap">
+    <div class="small">Ingredient Atlas</div>
+    <h2>From the garden &amp; <i>further</i></h2>
+    <div class="atlas-grid" id="atlas"></div>
+  </div>
+</section>
+
+<section class="coll">
+  <div class="wrap">
+    <div class="small">The Collection</div>
+    <h2>Three <i>eaux de parfum</i></h2>
+    <div class="bottles" id="bottles"></div>
+    <div class="bag" id="bag" aria-live="polite">Your discovery set is empty — choose up to three.</div>
+  </div>
+</section>
+
+<footer><b>Salvia &amp; Lilas</b><span>The Walled Garden, Colinton · Edinburgh · Atelier à Grasse</span></footer>
+
+<script>
+(function(){
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* ------- ingredient illustrations ------- */
+  var st='fill="none" stroke="#26222e" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"';
+  var ING={
+    bergamot:{n:'Bergamot',o:'Calabria, Italy',s:'<circle cx="50" cy="54" r="30" fill="#e7ebb0"/><circle cx="50" cy="54" r="30" '+st+'/><circle cx="50" cy="54" r="22" '+st+' opacity=".4"/><path d="M50 32 v44 M28 54 h44 M34 38 l32 32 M66 38 l-32 32" '+st+' opacity=".35"/><path d="M50 24 q10 -14 22 -12 q-6 12 -22 12" fill="#b5c79a" stroke="#26222e" stroke-width="1.2"/>'},
+    pinkpepper:{n:'Pink pepper',o:'Réunion',s:'<path d="M50 90 C50 60 40 40 30 20 M50 60 C60 45 70 30 76 18" '+st+'/>'+[[34,34],[42,26],[30,44],[60,40],[68,30],[72,20],[44,46],[56,52]].map(function(p){return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="5" fill="#e6a1b5" stroke="#26222e" stroke-width="1"/>';}).join('')},
+    sage:{n:'Clary sage',o:'Our south wall',s:'<path d="M50 94 V24" '+st+'/>'+[0,1,2,3].map(function(i){var y=30+i*14;return '<path d="M50 '+y+' q-18 -6 -22 6 q12 6 22 -6Z M50 '+(y+4)+' q18 -6 22 6 q-12 6 -22 -6Z" fill="#c7d3c0" stroke="#26222e" stroke-width="1.1"/>';}).join('')+'<path d="M50 24 q-6 -8 0 -14 q6 6 0 14" fill="#cbb8e6" stroke="#26222e" stroke-width="1"/>'},
+    lilac:{n:'Lilac',o:'The gate tree',s:'<path d="M50 94 V60" '+st+'/>'+(function(){var o='';for(var i=0;i<22;i++){var a=i*2.4,r=Math.sqrt(i)*5.5;o+='<g transform="translate('+(50+Math.cos(a)*r*.9).toFixed(1)+','+(40+Math.sin(a)*r*1.15 - i*.6).toFixed(1)+')"><path d="M0 -4 L1.4 -1.4 L4 0 L1.4 1.4 L0 4 L-1.4 1.4 L-4 0 L-1.4 -1.4Z" fill="#b7a6d6" stroke="#4a3b63" stroke-width=".6"/></g>';}return o;})()+'<path d="M50 70 q-20 0 -26 14 q18 2 26 -14Z" fill="#c7d3c0" stroke="#26222e" stroke-width="1.1"/>'},
+    iris:{n:'Orris root',o:'Florence, dried 3 yrs',s:'<path d="M50 94 V52" '+st+'/><path d="M50 52 C30 50 26 30 38 22 C44 34 50 40 50 52Z M50 52 C70 50 74 30 62 22 C56 34 50 40 50 52Z" fill="#cbb8e6" stroke="#26222e" stroke-width="1.1"/><path d="M50 50 C44 38 44 22 50 12 C56 22 56 38 50 50Z" fill="#b7a6d6" stroke="#26222e" stroke-width="1.1"/><path d="M50 52 C38 60 32 70 30 80 M50 52 C62 60 68 70 70 80" '+st+'/><path d="M36 92 q14 -8 28 0" '+st+'/>'},
+    rose:{n:'Rose de mai',o:'Grasse',s:'<path d="M50 94 V58" '+st+'/><circle cx="50" cy="42" r="20" fill="#efc4cf" stroke="#26222e" stroke-width="1.2"/><path d="M50 42 m-6 0 a6 6 0 1 1 6 6 a10 10 0 1 1 -10 -10 a14 14 0 1 1 14 14" '+st+'/><path d="M50 72 q-16 -8 -22 2 q12 8 22 -2" fill="#c7d3c0" stroke="#26222e" stroke-width="1.1"/>'},
+    fig:{n:'Fig leaf',o:'Our glasshouse',s:'<path d="M50 90 C30 86 16 70 20 52 C12 46 14 34 24 32 C22 20 36 14 44 22 C46 12 56 12 58 22 C66 14 80 20 76 32 C86 34 88 46 80 52 C84 70 70 86 50 90Z" fill="#b5c79a" stroke="#26222e" stroke-width="1.2"/><path d="M50 90 V26 M50 60 L28 40 M50 60 L72 40 M50 74 L32 68 M50 74 L68 68" '+st+' opacity=".6"/>'},
+    violetleaf:{n:'Violet leaf',o:'Egypt',s:'<path d="M50 90 C24 80 18 50 34 30 C42 22 50 28 50 36 C50 28 58 22 66 30 C82 50 76 80 50 90Z" fill="#9fb592" stroke="#26222e" stroke-width="1.2"/><path d="M50 36 V90 M50 56 L36 44 M50 56 L64 44 M50 72 L34 64 M50 72 L66 64" '+st+' opacity=".5"/>'},
+    vetiver:{n:'Vetiver',o:'Haiti',s:(function(){var o='';for(var i=0;i<9;i++){var x=30+i*5;o+='<path d="M'+x+' 50 C'+(x-6+i)+' 64 '+(x+6-i)+' 78 '+(x-2)+' 94" '+st+' stroke="#7a5c3a"/>';}return o;})()+'<path d="M28 50 L72 50" '+st+'/>'+[0,1,2,3,4].map(function(i){return '<path d="M'+(36+i*7)+' 50 C'+(30+i*9)+' 30 '+(34+i*8)+' 16 '+(40+i*6)+' 8" '+st+' stroke="#6a8a5a"/>';}).join('')},
+    sandal:{n:'Sandalwood',o:'Mysore, reclaimed',s:'<rect x="22" y="34" width="56" height="36" rx="4" fill="#e3c9a2" stroke="#26222e" stroke-width="1.2"/><ellipse cx="22" cy="52" rx="8" ry="18" fill="#d6b27e" stroke="#26222e" stroke-width="1.2"/><ellipse cx="22" cy="52" rx="4" ry="10" '+st+'/><path d="M34 42 q20 4 38 -2 M34 52 q20 4 38 -2 M34 62 q20 4 38 -2" '+st+' opacity=".45"/>'},
+    ambrette:{n:'Ambrette seed',o:'Ecuador',s:[[40,40],[56,36],[48,52],[62,54],[36,58],[52,68],[66,70],[40,74]].map(function(p){return '<path d="M'+p[0]+' '+p[1]+' q6 -8 10 0 q-4 8 -10 0Z" fill="#c9a07a" stroke="#26222e" stroke-width="1"/>';}).join('')},
+    oakmoss:{n:'Oakmoss',o:'Balkans',s:(function(){var o='<path d="M16 80 Q50 70 84 80" '+st+'/>';for(var i=0;i<14;i++){var x=20+i*4.6,h=18+((i*37)%22);o+='<path d="M'+x+' 78 v-'+h+' m0 0 l-4 -5 m4 5 l4 -5 m-4 8 l-3 -3 m3 3 l3 -3" stroke="#6a8a5a" stroke-width="1.2" fill="none" stroke-linecap="round"/>';}return o;})()},
+    tonka:{n:'Tonka bean',o:'Venezuela',s:'<path d="M26 60 C22 40 50 26 72 36 C84 42 80 64 60 70 C44 74 30 72 26 60Z" fill="#5b3a2a" stroke="#26222e" stroke-width="1.2"/><path d="M34 56 C46 44 60 42 72 46" stroke="#8a6a52" stroke-width="1.2" fill="none"/>'},
+    cedar:{n:'Atlas cedar',o:'Morocco',s:'<path d="M50 94 V20" '+st+'/>'+[0,1,2,3].map(function(i){var y=30+i*14,w=12+i*7;return '<path d="M50 '+y+' L'+(50-w)+' '+(y+12)+' L'+(50+w)+' '+(y+12)+'Z" fill="#9fb592" stroke="#26222e" stroke-width="1.1"/>';}).join('')},
+    neroli:{n:'Neroli',o:'Tunisia',s:[0,1,2,3,4].map(function(i){var a=i/5*Math.PI*2;return '<ellipse cx="'+(50+Math.cos(a)*14).toFixed(1)+'" cy="'+(48+Math.sin(a)*14).toFixed(1)+'" rx="12" ry="7" transform="rotate('+(a*180/Math.PI).toFixed(0)+' '+(50+Math.cos(a)*14).toFixed(1)+' '+(48+Math.sin(a)*14).toFixed(1)+')" fill="#f7f4ec" stroke="#26222e" stroke-width="1.1"/>';}).join('')+'<circle cx="50" cy="48" r="6" fill="#e7ebb0" stroke="#26222e" stroke-width="1"/><path d="M50 66 V94" '+st+'/>'},
+    musk:{n:'White musk',o:'Botanical accord',s:'<path d="M24 64 C14 64 14 48 26 48 C26 34 44 30 50 42 C56 30 78 32 76 48 C88 48 88 64 76 64Z" fill="#f2f4ef" stroke="#26222e" stroke-width="1.2"/><path d="M34 76 q16 6 32 0 M40 84 q10 4 20 0" '+st+' opacity=".5"/>'}
+  };
+  function ingSVG(k){ return '<svg viewBox="0 0 100 100" aria-hidden="true">'+ING[k].s+'</svg>'; }
+
+  /* ------- fragrances ------- */
+  var F=[
+    {n:'No. 3 Sauge Grise',t:'Aromatic · green',liq:['#d9e3c9','#9fb592'],
+     tiers:[{k:['bergamot','sage','pinkpepper'],d:'Cold bright citrus and the resinous hum of clary sage bruised between fingers.'},
+            {k:['violetleaf','iris','lilac'],d:'Green violet leaf and powdery orris. The garden after rain.'},
+            {k:['vetiver','oakmoss','musk'],d:'Smoky roots and damp stone — the base of the south wall at dusk.'}]},
+    {n:'No. 7 Lilas Nocturne',t:'Floral · powdery',liq:['#e5dbf3','#b7a6d6'],
+     tiers:[{k:['neroli','bergamot','pinkpepper'],d:'A flash of orange blossom and pepper, like a window opened at night.'},
+            {k:['lilac','rose','iris'],d:'Lilac in full bloom, softened by rose and cool iris butter.'},
+            {k:['ambrette','musk','sandal'],d:'Skin-warm ambrette and creamy sandalwood. Close, quiet, lasting.'}]},
+    {n:'No. 11 Figuier d’Été',t:'Green · milky',liq:['#eef0d4','#c7d3a0'],
+     tiers:[{k:['fig','bergamot','sage'],d:'Crushed fig leaf with its green, coconut-milk sap.'},
+            {k:['violetleaf','neroli','rose'],d:'Sun on leaves; the glasshouse door propped open.'},
+            {k:['cedar','tonka','sandal'],d:'Warm wood of the potting bench, a trace of hay-sweet tonka.'}]}
+  ];
+  var TIER=[{n:'The opening',k:'Top notes · 0 – 30 min'},{n:'The heart',k:'Heart notes · 30 min – 4 h'},{n:'The trail',k:'Base notes · 4 h – 12 h'}];
+  var cur=0, tier=0, NS='http://www.w3.org/2000/svg';
+  var tabs=document.getElementById('tabs');
+  F.forEach(function(f,i){ var b=document.createElement('button'); b.id='frag-'+i; b.setAttribute('role','tab'); b.innerHTML='<b>'+f.n+'</b><span>'+f.t+'</span>'; b.addEventListener('click',function(){cur=i;render();}); tabs.appendChild(b); });
+
+  var pyr=document.getElementById('pyramid');
+  // tiers geometry: apex (250,20), base y=420, width 460
+  function xAt(y){ var t=(y-20)/400; return [250-230*t, 250+230*t]; }
+  var cuts=[20,150,280,420];
+  var fills=['#eef2ea','#d8cdea','#b7a6d6'];
+  pyr.innerHTML='<defs><linearGradient id="gl" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>';
+  var tierEls=[];
+  for(var i=0;i<3;i++){
+    var y0=cuts[i]+ (i?4:0), y1=cuts[i+1]-4, a=xAt(y0), b=xAt(y1);
+    var g=document.createElementNS(NS,'g'); g.setAttribute('class','tier'); g.setAttribute('tabindex','0'); g.setAttribute('role','button'); g.setAttribute('id','tier-'+i); g.setAttribute('aria-label',TIER[i].k);
+    var d = i===0 ? 'M250 '+y0+' L'+b[1]+' '+y1+' L'+b[0]+' '+y1+'Z' : 'M'+a[0]+' '+y0+' L'+a[1]+' '+y0+' L'+b[1]+' '+y1+' L'+b[0]+' '+y1+'Z';
+    g.innerHTML='<path class="band" d="'+d+'" fill="'+fills[i]+'" stroke="#26222e" stroke-width="1"/><path d="'+d+'" fill="url(#gl)"/>'+
+      '<text class="label" x="250" y="'+((y0+y1)/2+ (i===0?22:8))+'" text-anchor="middle" font-size="'+(i===0?22:26)+'" fill="#26222e">'+['Top','Heart','Base'][i]+'</text>';
+    (function(i){ g.addEventListener('click',function(){ tier=i; syncDry(i); render(); }); g.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault(); tier=i; syncDry(i); render();} }); g.addEventListener('mouseenter',function(){ if(window.matchMedia('(hover:hover)').matches){ tier=i; render(); } }); })(i);
+    pyr.appendChild(g); tierEls.push(g);
+  }
+  // intensity markers
+  var marker=document.createElementNS(NS,'g'); pyr.appendChild(marker);
+  var dry=document.getElementById('dry'), dryOut=document.getElementById('dryOut'), dryText=document.getElementById('dryText');
+  function mins(v){ // 0..100 → 0..720 min, eased
+    return Math.round(Math.pow(v/100,2)*720); }
+  function fmt(m){ return m<60? m+' minutes' : (m/60).toFixed(m<600?1:0).replace('.0','')+' hours'; }
+  function intens(m){ // returns [top,heart,base] 0..1
+    var top=Math.max(0,1-m/45), heart=m<10?m/10*.6: m<240?Math.min(1,.6+m/100): Math.max(0,1-(m-240)/200), base=Math.min(1,.15+m/300);
+    return [top,Math.max(0,Math.min(1,heart)),base]; }
+  function syncDry(i){ dry.value=[6,40,80][i]; }
+  function render(){
+    Array.prototype.forEach.call(tabs.children,function(b,j){ b.setAttribute('aria-selected',j===cur); });
+    var f=F[cur], T=f.tiers[tier];
+    document.getElementById('tierKicker').textContent=TIER[tier].k;
+    document.getElementById('tierName').textContent=TIER[tier].n;
+    document.getElementById('tierDesc').textContent=T.d;
+    document.getElementById('noteList').innerHTML=T.k.map(function(k){ return '<li>'+ingSVG(k)+'<b>'+ING[k].n+'</b><span>'+ING[k].o+'</span></li>'; }).join('');
+    var m=mins(+dry.value), I=intens(m);
+    tierEls.forEach(function(g,j){ g.style.opacity=(0.25+I[j]*.75).toFixed(2); g.querySelector('.band').setAttribute('stroke-width', j===tier?3:1); });
+    dryOut.textContent=fmt(m);
+    var dom=I.indexOf(Math.max.apply(null,I));
+    var names=f.tiers[dom].k.map(function(k){return ING[k].n.toLowerCase();});
+    dryText.textContent='At '+fmt(m)+', '+f.n.split(' ').slice(2).join(' ')+' is mostly its '+['top','heart','base'][dom]+': '+names[0]+' and '+names[1]+(I[(dom+1)%3]>.4?', with the '+['top','heart','base'][(dom+1)%3]+' still present.':'.');
+  }
+  dry.addEventListener('input',function(){ var m=mins(+dry.value), I=intens(m); tier=I.indexOf(Math.max.apply(null,I)); render(); });
+  render();
+
+  /* ------- atlas ------- */
+  document.getElementById('atlas').innerHTML=Object.keys(ING).map(function(k){ return '<div class="ing">'+ingSVG(k)+'<div><b>'+ING[k].n+'</b><span>'+ING[k].o+'</span></div></div>'; }).join('');
+
+  /* ------- hero bottle ------- */
+  var hb=document.getElementById('heroBottle');
+  hb.innerHTML='<defs>'+
+   '<linearGradient id="glass" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".18" stop-color="#fff" stop-opacity=".12"/><stop offset=".7" stop-color="#fff" stop-opacity=".05"/><stop offset=".92" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity=".2"/></linearGradient>'+
+   '<linearGradient id="liq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3d8f2"/><stop offset="1" stop-color="#a893cf"/></linearGradient>'+
+   '<linearGradient id="capG" x1="0" x2="1"><stop offset="0" stop-color="#6d5f88"/><stop offset=".45" stop-color="#e8e0f5"/><stop offset=".6" stop-color="#b8a9d6"/><stop offset="1" stop-color="#4a3b63"/></linearGradient>'+
+   '<clipPath id="bodyClip"><path d="M60 170 Q60 150 80 150 L220 150 Q240 150 240 170 L250 400 Q250 430 220 430 L80 430 Q50 430 50 400Z"/></clipPath>'+
+   '<filter id="soft"><feGaussianBlur stdDeviation="8"/></filter></defs>'+
+   '<ellipse cx="150" cy="446" rx="120" ry="12" fill="#4a3b63" opacity=".18" filter="url(#soft)"/>'+
+   '<g id="tilt">'+
+   '<g clip-path="url(#bodyClip)"><rect x="0" y="0" width="300" height="460" fill="#fff" opacity=".18"/><path id="liquid" d="" fill="url(#liq)" opacity=".85"/>'+
+   '<path d="M150 260 L90 330 L150 400 L210 330Z" fill="#fff" opacity=".12"/></g>'+
+   '<path d="M60 170 Q60 150 80 150 L220 150 Q240 150 240 170 L250 400 Q250 430 220 430 L80 430 Q50 430 50 400Z" fill="url(#glass)" stroke="#fff" stroke-opacity=".9" stroke-width="1.5"/>'+
+   '<path d="M76 170 L68 400" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".5"/>'+
+   '<rect x="110" y="236" width="80" height="72" fill="#f2f4ef" opacity=".95"/>'+
+   '<text x="150" y="266" text-anchor="middle" font-family="Bodoni Moda, Didot, serif" font-size="15" fill="#26222e">Lilas</text>'+
+   '<text x="150" y="284" text-anchor="middle" font-family="Bodoni Moda, Didot, serif" font-style="italic" font-size="13" fill="#4a3b63">Nocturne</text>'+
+   '<text x="150" y="300" text-anchor="middle" font-family="Manrope, sans-serif" font-size="6" letter-spacing="2" fill="#26222e">No. 7 · 50 ML</text>'+
+   '<rect x="130" y="126" width="40" height="26" fill="#e6e0ee" stroke="#fff" stroke-opacity=".8"/>'+
+   '<path d="M104 30 L196 30 L206 128 L94 128Z" fill="url(#capG)"/>'+
+   '<path d="M112 36 L120 122" stroke="#fff" stroke-width="3" opacity=".6"/>'+
+   '</g>';
+  var liquid=document.getElementById('liquid'), tiltG=document.getElementById('tilt');
+  var tx=0, cx=0, t0=performance.now();
+  function surf(angle,phase){
+    // liquid surface stays level while bottle tilts: counter-rotate slope
+    var level=222, slope=Math.tan(-angle*Math.PI/180), d='M0 '+(level+slope*-150).toFixed(1);
+    for(var x=0;x<=300;x+=15){ var y=level+slope*(x-150)+Math.sin(x/28+phase)*2.2; d+=' L'+x+' '+y.toFixed(1); }
+    return d+' L300 460 L0 460Z';
+  }
+  window.addEventListener('pointermove',function(e){ tx=(e.clientX/window.innerWidth-.5)*10; },{passive:true});
+  function anim(now){
+    cx+=(tx-cx)*.06;
+    var ph=reduce?0:(now-t0)/600;
+    tiltG.setAttribute('transform','rotate('+cx.toFixed(2)+' 150 440)');
+    liquid.setAttribute('d',surf(cx,ph));
+    if(!reduce) requestAnimationFrame(anim);
+  }
+  requestAnimationFrame(anim);
+
+  /* ------- bottles ------- */
+  var B=[
+    {f:0,cls:'',cap:'',fill:'72%',p:'£145 · 50 ml',d:'Clary sage, orris, vetiver'},
+    {f:1,cls:'round',cap:'round',fill:'64%',p:'£165 · 50 ml',d:'Lilac, rose, ambrette'},
+    {f:2,cls:'slim',cap:'tall',fill:'80%',p:'£150 · 50 ml',d:'Fig leaf, neroli, cedar'}
+  ];
+  var bot=document.getElementById('bottles');
+  bot.innerHTML=B.map(function(b,i){ var f=F[b.f];
+    return '<div class="bot"><div class="glass"><div class="flacon '+b.cls+'" style="--liq1:'+f.liq[0]+';--liq2:'+f.liq[1]+';--fill:'+b.fill+'"><div class="lab">'+f.n.split(' ').slice(2).join(' ')+'<small>'+f.n.split(' ').slice(0,2).join(' ')+'</small></div></div><div class="cap '+b.cap+'" style="'+(b.cls==='round'?'bottom:190px':b.cls==='slim'?'bottom:220px':'')+'"></div></div>'+
+      '<h3>'+f.n+'</h3><p>'+b.d+'</p><div class="price">'+b.p+'</div><button id="sample-'+i+'" aria-pressed="false">Add sample</button></div>'; }).join('');
+  var chosen=[];
+  bot.addEventListener('click',function(e){ var btn=e.target.closest('button'); if(!btn) return; var i=+btn.id.split('-')[1];
+    var k=chosen.indexOf(i); if(k>=0) chosen.splice(k,1); else chosen.push(i);
+    bot.querySelectorAll('button').forEach(function(x,j){ var on=chosen.indexOf(j)>=0; x.setAttribute('aria-pressed',on); x.textContent=on?'In your set':'Add sample'; });
+    document.getElementById('bag').textContent = chosen.length? 'Discovery set: '+chosen.map(function(j){return F[B[j].f].n;}).join(', ')+' — £'+(chosen.length*9)+', redeemable against a full bottle.' : 'Your discovery set is empty — choose up to three.';
+  });
+})();
+</script>
+</body>
+</html>

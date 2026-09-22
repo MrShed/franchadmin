@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orizuru Folding Book</title>
+<meta name="description" content="Fold a paper crane step by step with animated 3D flaps, valley and mountain lines, then read the legend of the thousand cranes and add yours to the string.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Tokumin:wght@400;700;800&family=Karla:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --lacquer:#0f2e2b;
+  --lacquer2:#153c38;
+  --card:#eef0ea;
+  --ink:#1c2626;
+  --ink2:#51605d;
+  --shu:#d9432b;
+  --shu2:#a8321f;
+  --gold:#c9a45c;
+  --line:rgba(28,38,38,.18);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--lacquer);color:var(--card);font-family:Karla,"Helvetica Neue",Arial,sans-serif;font-weight:300;line-height:1.6;overflow-x:hidden;
+  background-image:radial-gradient(120% 60% at 80% -10%,#1d4a45 0,transparent 60%),repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 1px,transparent 1px 90px)}
+a{color:inherit}
+.back{position:absolute;top:18px;right:20px;font-family:"Kaisei Tokumin",serif;font-size:14px;text-decoration:none;color:var(--gold);border-bottom:1px solid rgba(201,164,92,.4)}
+.back:hover,.back:focus-visible{color:#fff;border-color:#fff;outline:none}
+header{max-width:1240px;margin:0 auto;padding:44px 24px 20px;display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:end}
+.hanko{width:74px;height:74px;border:2px solid var(--shu);color:var(--shu);display:grid;place-items:center;font-family:"Kaisei Tokumin",serif;font-weight:800;font-size:30px;line-height:1;transform:rotate(-4deg);border-radius:6px;box-shadow:inset 0 0 0 3px var(--lacquer),inset 0 0 0 4px rgba(217,67,43,.5)}
+h1{font-family:"Kaisei Tokumin",serif;font-weight:800;font-size:clamp(34px,5.4vw,70px);line-height:1;margin:0;letter-spacing:-.01em}
+h1 em{font-style:normal;color:var(--shu)}
+.lede{margin:10px 0 0;max-width:60ch;color:#b9c8c3;font-size:16px}
+.book{max-width:1240px;margin:0 auto;padding:10px 24px 40px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:28px}
+.sheet{position:relative;background:var(--card);color:var(--ink);border-radius:2px;box-shadow:0 1px 0 #fff inset,0 30px 70px rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.2);overflow:hidden}
+.sheet::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;mix-blend-mode:multiply;z-index:2;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .42 0 0 0 0 .36 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .09' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .47 0 0 0 0 .4 0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23f)'/%3E%3C/svg%3E")}
+.sheetHead{display:flex;justify-content:space-between;align-items:baseline;padding:16px 20px 0;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2);position:relative;z-index:3}
+.sheetHead b{font-family:"Kaisei Tokumin",serif;font-size:28px;letter-spacing:0;color:var(--shu);font-weight:800;text-transform:none}
+.diagram{position:relative;aspect-ratio:1/1;max-height:66vh;margin:0 auto;display:block;width:100%}
+#svg{width:100%;height:100%;display:block;transform-origin:50% 50%}
+.caption{position:relative;z-index:3;padding:0 22px 18px;min-height:96px}
+.caption h2{font-family:"Kaisei Tokumin",serif;font-size:22px;margin:0 0 4px;font-weight:700}
+.caption p{margin:0;color:var(--ink2);font-size:15px;max-width:58ch}
+.keyline{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--ink2);padding:0 22px 16px;position:relative;z-index:3}
+.keyline svg{vertical-align:middle;margin-right:6px}
+.controls{display:flex;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--line);position:relative;z-index:3;background:rgba(255,255,255,.35)}
+.cb{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;display:grid;place-items:center;flex:none;transition:background .2s,color .2s}
+.cb:hover{background:var(--ink);color:var(--card)}
+.cb.play{background:var(--shu);border-color:var(--shu);color:#fff;width:52px;height:52px}
+.cb.play:hover{background:var(--shu2)}
+.cb:focus-visible,#scrub:focus-visible,.stepBtn:focus-visible,.fold1:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.cb svg{width:18px;height:18px}
+#scrub{flex:1;min-width:0;accent-color:var(--shu)}
+.count{font-family:"Kaisei Tokumin",serif;font-size:15px;min-width:54px;text-align:right}
+
+.steps{list-style:none;margin:0;padding:0;counter-reset:s;align-self:start}
+.steps li{margin:0}
+.stepBtn{width:100%;text-align:left;display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;background:transparent;border:0;border-top:1px solid rgba(238,240,234,.12);color:#b9c8c3;padding:11px 6px;cursor:pointer;font:inherit;transition:background .25s,color .25s}
+.stepBtn .n{font-family:"Kaisei Tokumin",serif;font-size:22px;line-height:1;color:rgba(238,240,234,.35);text-align:center;padding-top:2px}
+.stepBtn .t{font-size:15px;line-height:1.35}
+.stepBtn .t small{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(238,240,234,.45);margin-top:3px}
+.stepBtn:hover{background:rgba(255,255,255,.04);color:#fff}
+.stepBtn[aria-current=step]{background:linear-gradient(90deg,rgba(217,67,43,.22),transparent);color:#fff}
+.stepBtn[aria-current=step] .n{color:var(--shu)}
+.stepBtn.done .n{color:var(--gold)}
+
+.legend{max-width:1240px;margin:0 auto;padding:40px 24px 70px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:40px;border-top:1px solid rgba(238,240,234,.12)}
+.legend h2{font-family:"Kaisei Tokumin",serif;font-weight:800;font-size:clamp(28px,3.6vw,46px);line-height:1.05;margin:0 0 16px}
+.legend h2 span{color:var(--gold);display:block;font-size:.45em;letter-spacing:.2em;margin-bottom:10px;font-weight:400}
+.legend p{color:#c7d3cf;font-size:16px;margin:0 0 14px;max-width:56ch}
+.legend blockquote{margin:18px 0;padding:0 0 0 18px;border-left:2px solid var(--shu);font-family:"Kaisei Tokumin",serif;font-size:19px;color:#fff;line-height:1.5}
+.stringBox{background:rgba(0,0,0,.18);border:1px solid rgba(238,240,234,.12);padding:18px}
+.stringHead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.stringHead b{font-family:"Kaisei Tokumin",serif;font-size:34px;color:#fff;font-weight:800}
+.stringHead span{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#9fb2ad}
+#thousand{width:100%;display:block;aspect-ratio:40/25}
+.fold1{margin-top:14px;background:var(--gold);color:var(--lacquer);border:0;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;letter-spacing:.06em}
+.fold1:hover{background:#dcb870}
+.small{font-size:12px!important;color:#8fa39e!important;margin-top:10px!important}
+footer{text-align:center;font-size:12px;color:#7f948f;padding:0 24px 40px}
+@media (max-width:900px){
+  .book,.legend{grid-template-columns:minmax(0,1fr)}
+  header{grid-template-columns:minmax(0,1fr);padding:56px 16px 16px;gap:14px}
+  .hanko{width:56px;height:56px;font-size:22px}
+  .book,.legend{padding-left:16px;padding-right:16px}
+  .diagram{max-height:none}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.stepBtn,.cb{transition:none}}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<header>
+  <div class="hanko" aria-hidden="true">鶴</div>
+  <div>
+    <h1>Orizuru <em>Folding</em> Book</h1>
+    <p class="lede">Twelve plates for the paper crane, the first fold most Japanese children learn. Each plate animates its flap in three dimensions; press play and the sheet will fold itself, or step through at your own pace.</p>
+  </div>
+</header>
+
+<main class="book">
+  <section class="sheet" aria-label="Folding diagram">
+    <div class="sheetHead"><span>Plate</span><b id="plateNo">一</b></div>
+    <div class="diagram"><svg id="svg" viewBox="-130 -130 260 260" role="img" aria-labelledby="capTitle capText">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1c2626"/></marker>
+        <linearGradient id="shuG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e2553b"/><stop offset="1" stop-color="#c63a24"/></linearGradient>
+      </defs>
+      <g id="g"></g>
+    </svg></div>
+    <div class="caption" aria-live="polite"><h2 id="capTitle"></h2><p id="capText"></p></div>
+    <div class="keyline" aria-hidden="true">
+      <span><svg width="34" height="6"><line x1="0" y1="3" x2="34" y2="3" stroke="#1c2626" stroke-width="1.5" stroke-dasharray="5 3"/></svg>valley fold</span>
+      <span><svg width="34" height="6"><line x1="0" y1="3" x2="34" y2="3" stroke="#1c2626" stroke-width="1.5" stroke-dasharray="7 2 1.5 2"/></svg>mountain fold</span>
+      <span><svg width="34" height="6"><line x1="0" y1="3" x2="34" y2="3" stroke="#1c2626" stroke-opacity=".35" stroke-width="1"/></svg>existing crease</span>
+    </div>
+    <div class="controls">
+      <button class="cb" id="btnPrev" aria-label="Previous step"><svg viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+      <button class="cb play" id="btnPlay" aria-label="Play all steps" aria-pressed="false"><svg viewBox="0 0 16 16"><path id="playIcon" d="M5 3v10l8-5z" fill="currentColor"/></svg></button>
+      <button class="cb" id="btnNext" aria-label="Next step"><svg viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+      <button class="cb" id="btnReplay" aria-label="Replay this step"><svg viewBox="0 0 16 16"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v3h3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <input id="scrub" type="range" min="0" max="12" step="1" value="0" aria-label="Step">
+      <span class="count" id="count">0 / 12</span>
+    </div>
+  </section>
+
+  <ol class="steps" id="steps" aria-label="Steps"></ol>
+</main>
+
+<section class="legend" aria-labelledby="legendTitle">
+  <div>
+    <h2 id="legendTitle"><span>千羽鶴 · SENBAZURU</span>The legend of a thousand cranes</h2>
+    <p>The crane, <i>tsuru</i>, was said to live for a thousand years. An old belief holds that anyone who folds a thousand of them, strung together on thread, will be granted a wish: recovery from illness, a long marriage, a safe return.</p>
+    <p>In 1955 Sadako Sasaki, twelve years old and ill with leukaemia a decade after the bombing of Hiroshima, began folding cranes from medicine wrappers and scraps of gift paper in her hospital bed. Her classmates kept folding after she died that October, and raised money for a statue of a girl holding a golden crane.</p>
+    <blockquote>This is our cry. This is our prayer. Peace in the world.</blockquote>
+    <p>Those words are carved beneath her statue in Hiroshima's Peace Memorial Park, where strings of cranes arrive from schools around the world every year, many millions of them, so many that the city now recycles the paper into new things.</p>
+  </div>
+  <div class="stringBox">
+    <div class="stringHead"><b><span id="myCount" style="font:inherit;color:inherit;letter-spacing:0;text-transform:none">0</span> / 1000</b><span>Your string, on this device</span></div>
+    <canvas id="thousand" aria-label="A grid of one thousand small cranes; folded ones are shown in vermilion."></canvas>
+    <button class="fold1" id="btnAdd">Add the crane I just folded</button>
+    <p class="small">Finishing plate twelve adds a crane automatically. Nothing leaves your browser.</p>
+  </div>
+</section>
+<footer>Orizuru Folding Book · plates drawn in live SVG, flaps rotated in true 3D and projected in perspective.</footer>
+
+<script>
+(function(){
+'use strict';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const COL={f:'url(#shuG)',f2:'#b8361f',f3:'#8f2616',b:'#fbfaf5',b2:'#e3e0d6'};
+const T=[0,-100],R=[100,0],B=[0,100],L=[-100,0];
+// square base, kite and bird base geometry (base diamond half-size 50)
+const bT=[0,-50],bR=[50,0],bB=[0,50],bL=[-50,0];
+const P=[-29.3,-20.7],Pp=[29.3,-20.7],C=[0,-20.7];
+const TOP=[0,-91.4],H=[-14.06,-20.7],Hp=[14.06,-20.7],PL=[0,-26.5];
+const poly=(pts,c,extra)=>Object.assign({pts,c},extra||{});
+const crease=(a,b,kind)=>({a,b,kind:kind||'crease'});
+const KANJI=['〇','一','二','三','四','五','六','七','八','九','十','十一','十二'];
+
+const STATES=[];
+STATES[0]={polys:[poly([T,R,B,L],'f')],lines:[],view:[1,0]};
+STATES[1]={polys:[poly([T,R,B,L],'f')],lines:[crease(L,R)],view:[1,0]};
+STATES[2]={polys:[poly([T,R,B,L],'f')],lines:[crease(L,R),crease(T,B)],view:[1,0]};
+STATES[3]={polys:[poly([T,R,B,L],'b')],lines:[crease(L,R),crease(T,B),crease([-50,-50],[50,50]),crease([50,-50],[-50,50])],view:[1,0]};
+STATES[4]={polys:[poly([bT,bR,bB,bL],'f')],lines:[crease(bT,bB,'edge')],view:[2,0]};
+STATES[5]={polys:[poly([bT,bR,bB,bL],'f2'),poly([P,bT,Pp,bB],'f'),poly([bB,P,C],'f2'),poly([bB,Pp,C],'f2')],lines:[crease(bT,C,'edge'),crease(bB,C,'edge')],view:[2,0]};
+STATES[6]={polys:[poly([bT,bR,bB,bL],'f')],lines:[crease(bT,bB,'edge'),crease(bB,P),crease(bB,Pp),crease(P,Pp)],view:[2,0]};
+STATES[7]={polys:[poly([bT,bR,bB,bL],'f2'),poly([TOP,Pp,bB,P],'f')],lines:[crease(TOP,C,'edge'),crease(P,Pp,'edge'),crease(C,bB,'edge')],view:[1.55,-24]};
+STATES[8]={polys:[poly([TOP,Pp,bB,P],'f')],lines:[crease(TOP,C,'edge'),crease(P,Pp,'edge'),crease(C,bB,'edge')],view:[1.55,-24]};
+STATES[9]={polys:[poly([TOP,Pp,Hp,bB,H,P],'f'),poly([bB,H,PL],'f2'),poly([bB,Hp,PL],'f2')],lines:[crease(TOP,C,'edge'),crease(P,Pp,'edge')],view:[1.55,-24]};
+const neck=[[-16,-18],[-96,-100],[-3,-24]],tail=[[16,-18],[96,-100],[3,-24]];
+const wingK=[TOP,Pp,[0,-4],P];
+STATES[10]={polys:[poly(neck,'f2'),poly(tail,'f2'),poly(wingK,'f'),poly([[-16,-18],[0,8],[16,-18]],'f3')],lines:[crease(TOP,C,'edge')],view:[1.05,-8]};
+const neckH=[[-16,-18],[-84,-88],[-3,-24]],head=[[-84,-88],[-101,-66],[-78,-81]];
+STATES[11]={polys:[poly(neckH,'f2'),poly(head,'f3'),poly(tail,'f2'),poly(wingK,'f'),poly([[-16,-18],[0,8],[16,-18]],'f3')],lines:[crease(TOP,C,'edge')],view:[1.05,-8]};
+STATES[12]={final:true,view:[1,0]};
+
+const STEPS=[
+  null,
+  {title:'Fold in half, corner to corner',text:'Coloured side up. Bring the top corner down to the bottom corner, crease sharply, then open the sheet again.',flaps:[{pts:[L,T,R],hinge:[L,R],back:'b',mode:'back'}],staticPolys:[poly([L,B,R],'f')],name:'Diagonal crease'},
+  {title:'And the other diagonal',text:'Bring the left corner across to the right corner, crease, unfold. Two diagonals now cross at the centre.',flaps:[{pts:[T,L,B],hinge:[T,B],back:'b',mode:'back'}],staticPolys:[poly([T,R,B],'f')],name:'Second diagonal'},
+  {title:'Turn over, fold edge to edge',text:'Flip the paper so the white side is up. Fold it in half edge to edge, unfold, and repeat the other way. These creases will collapse the base.',flip:true,flaps:[{pts:[[-50,-50],T,R,[50,50]],hinge:[[-50,-50],[50,50]],back:'f',mode:'back'}],staticPolys:[poly([[-50,-50],[50,50],B,L],'b')],name:'Book folds'},
+  {title:'Collapse into a square base',text:'Hold the sides and let the creases bring the three outer corners down to meet the bottom one. Flatten into a small square, open end pointing at you.',morph:true,name:'Square base'},
+  {title:'Kite folds',text:'Fold the lower edges of the top layer in to lie along the centre line. The shape becomes a kite.',flaps:[{pts:[bB,bL,P],hinge:[bB,P],back:'f2',mode:'fold'},{pts:[bB,bR,Pp],hinge:[bB,Pp],back:'f2',mode:'fold'}],staticPolys:[poly([bT,bR,bB,bL],'f')],name:'Kite'},
+  {title:'Fold the top down, then unfold all three',text:'Fold the top triangle down over the kite flaps and crease hard along its base. Then unfold the triangle and both kite flaps.',flaps:[{pts:[P,bT,Pp],hinge:[P,Pp],back:'f2',mode:'back'}],staticPolys:[poly([bT,bR,bB,bL],'f2'),poly([P,Pp,bB],'f'),poly([bB,P,C],'f2'),poly([bB,Pp,C],'f2')],name:'Crease the triangle'},
+  {title:'Petal fold',text:'Lift the bottom corner of the top layer up along the horizontal crease. The sides fold inwards on the kite creases and the point stretches up into a long petal.',flaps:[{pts:[P,bB,Pp],hinge:[P,Pp],back:'f',mode:'fold'}],staticPolys:[poly([bT,bR,bB,bL],'f2'),poly([P,bT,Pp],'f')],morphAfter:true,name:'Petal'},
+  {title:'Turn over, repeat. The bird base',text:'Flip the model and repeat the kite folds and petal fold on this side. You now have the bird base, the starting point for dozens of origami animals.',flip:true,morph:true,name:'Bird base'},
+  {title:'Narrow the legs',text:'Fold the lower edges of the top layer to the centre line. Turn over and do the same, so both legs become slim.',flaps:[{pts:[bB,P,H],hinge:[bB,H],back:'f2',mode:'fold'},{pts:[bB,Pp,Hp],hinge:[bB,Hp],back:'f2',mode:'fold'}],staticPolys:[poly([TOP,Pp,bB,P],'f')],name:'Thin legs'},
+  {title:'Inside-reverse-fold the neck and tail',text:'Open each leg slightly and push it up between the wing layers so it points out at an angle. One becomes the neck, the other the tail.',morph:true,name:'Neck and tail'},
+  {title:'Reverse-fold the head',text:'Pick one point and reverse-fold its tip downward to make the head. A small fold is more elegant than a large one.',morph:true,name:'Head'},
+  {title:'Spread the wings',text:'Fold the wings down on either side and pull them gently apart. Blow into the hole underneath to puff the body. Your crane is finished.',morph:true,name:'Orizuru'}
+];
+
+const g=document.getElementById('g'),svgEl=document.getElementById('svg');
+function ptsStr(ps){return ps.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');}
+function lineSVG(l,op){
+  const d=l.kind==='valley'?'stroke-dasharray="5 3"':l.kind==='mountain'?'stroke-dasharray="7 2 1.5 2"':'';
+  const w=l.kind==='edge'?.9:(l.kind==='crease'?.7:1.3);const o=l.kind==='crease'?.35:(l.kind==='edge'?.5:1);
+  return `<line x1="${l.a[0]}" y1="${l.a[1]}" x2="${l.b[0]}" y2="${l.b[1]}" stroke="#1c2626" stroke-opacity="${o*(op==null?1:op)}" stroke-width="${w}" ${d} vector-effect="non-scaling-stroke"/>`;
+}
+function polySVG(p,op,shade){
+  const fill=COL[p.c]||p.c;return `<polygon points="${ptsStr(p.pts)}" fill="${fill}" ${op!=null?`fill-opacity="${op}" stroke-opacity="${op}"`:''} stroke="#1c2626" stroke-width=".9" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`+(shade?`<polygon points="${ptsStr(p.pts)}" fill="#000" fill-opacity="${shade}"/>`:'');
+}
+function stateSVG(s,op,t){
+  if(s.final)return finalCrane(op,t);
+  let h='';
+  // soft drop shadow
+  for(const p of s.polys)h+=`<polygon points="${ptsStr(p.pts.map(q=>[q[0]+3,q[1]+5]))}" fill="#1c2626" fill-opacity="${.08*(op==null?1:op)}"/>`;
+  for(const p of s.polys)h+=polySVG(p,op);
+  for(const l of s.lines)h+=lineSVG(l,op);
+  return h;
+}
+function finalCrane(op,t){
+  const f=reduce?0:Math.sin((t||0)*2.2)*7;
+  const o=op==null?1:op;
+  const wl=[[-4,-14],[-112,-6+f],[-20,8]],wr=[[4,-14],[112,-6+f],[20,8]];
+  const parts=[poly([[-10,-8],[-66,-92],[-2,-20]],'f2'),poly([[-66,-92],[-84,-72],[-62,-84]],'f3'),poly([[10,-8],[74,-94],[2,-20]],'f2'),
+    poly(wl,'f'),poly([[-4,-14],[-20,8],[0,20]],'f3'),poly(wr,'f'),poly([[4,-14],[20,8],[0,20]],'f2'),poly([[-4,-14],[0,-30],[4,-14],[0,20]],'f')];
+  let h=`<ellipse cx="0" cy="92" rx="${70-f}" ry="6" fill="#1c2626" fill-opacity="${.12*o}"/>`;
+  for(const p of parts)h+=polySVG(p,o);
+  h+=`<line x1="-110" y1="${-6+f}" x2="-20" y2="8" stroke="#fff" stroke-opacity="${.25*o}" stroke-width=".8" vector-effect="non-scaling-stroke"/>`;
+  return h;
+}
+// 3D flap rotation (Rodrigues), perspective projection
+function rot(p,a,b,th){
+  const ux=b[0]-a[0],uy=b[1]-a[1];const L=Math.hypot(ux,uy);const kx=ux/L,ky=uy/L;
+  const vx=p[0]-a[0],vy=p[1]-a[1];const c=Math.cos(th),s=Math.sin(th);const dot=kx*vx+ky*vy;
+  // k=(kx,ky,0), v=(vx,vy,0): v c + (k×v) s + k (k·v)(1-c)
+  const cx=0,cy=0,cz=kx*vy-ky*vx;
+  return [a[0]+vx*c+cx*s+kx*dot*(1-c), a[1]+vy*c+cy*s+ky*dot*(1-c), cz*s];
+}
+function proj(q,view){const f=520;const s=f/(f-q[2]*view[0]);return[q[0]*s,q[1]*s];}
+function flapSVG(fl,th,view){
+  const q=fl.pts.map(p=>rot(p,fl.hinge[0],fl.hinge[1],th));
+  // sign chosen so the flap lifts toward the viewer
+  const pp=q.map(v=>proj(v,view));
+  const facingFront=Math.cos(th)>0;
+  const col=facingFront?(fl.front||'f'):fl.back;
+  const shade=Math.abs(Math.sin(th))*.18;
+  let h=`<polygon points="${ptsStr(pp.map(v=>[v[0]+4*Math.abs(Math.sin(th)),v[1]+7*Math.abs(Math.sin(th))]))}" fill="#1c2626" fill-opacity="${.1*Math.abs(Math.sin(th))}"/>`;
+  h+=polySVG({pts:pp,c:col},null,shade);
+  return h;
+}
+function liftSign(fl){const c=centroid(fl.pts);const q=rot(c,fl.hinge[0],fl.hinge[1],Math.PI/2);return q[2]>=0?1:-1;}
+function centroid(ps){let x=0,y=0;ps.forEach(p=>{x+=p[0];y+=p[1];});return[x/ps.length,y/ps.length];}
+function reflect(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1];const t=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy);const fx=a[0]+t*dx,fy=a[1]+t*dy;return[2*fx-p[0],2*fy-p[1]];}
+function arrowSVG(fl,op){
+  const c=centroid(fl.pts);const d=reflect(c,fl.hinge[0],fl.hinge[1]);const m=[(c[0]+d[0])/2,(c[1]+d[1])/2];
+  const hx=fl.hinge[1][0]-fl.hinge[0][0],hy=fl.hinge[1][1]-fl.hinge[0][1];const hl=Math.hypot(hx,hy);const off=Math.hypot(d[0]-c[0],d[1]-c[1])*.35;
+  const ctrl=[m[0]+hx/hl*off,m[1]+hy/hl*off];
+  return `<path d="M${c[0]},${c[1]} Q${ctrl[0]},${ctrl[1]} ${d[0]},${d[1]}" fill="none" stroke="#1c2626" stroke-width="1.3" stroke-opacity="${op}" marker-end="url(#ah)" vector-effect="non-scaling-stroke"/>`;
+}
+
+// playback
+let cur=0;let anim=null;let playing=false;let tNow=0;
+const scrub=document.getElementById('scrub');
+function setView(v){g.setAttribute('transform',`translate(0 ${-v[1]*v[0]}) scale(${v[0]})`);}
+function renderStatic(i){const s=STATES[i];setView(s.view);g.innerHTML=stateSVG(s,1,tNow);}
+function caption(i){
+  const s=STEPS[i];document.getElementById('plateNo').textContent=KANJI[i];
+  document.getElementById('capTitle').textContent=i===0?'A square of paper':s.title;
+  document.getElementById('capText').textContent=i===0?'Fifteen centimetres square is the classic size: vermilion on one side, white on the other. Press play, or step forward to begin.':s.text;
+  document.getElementById('count').textContent=i+' / 12';scrub.value=i;
+  document.querySelectorAll('.stepBtn').forEach((b,k)=>{b.toggleAttribute('aria-current',false);if(k+1===i)b.setAttribute('aria-current','step');b.classList.toggle('done',k+1<i);});
+}
+function ease(k){return k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;}
+function go(i,animate){
+  i=Math.max(0,Math.min(12,i));
+  if(anim){anim.cancel=true;anim=null;}
+  const from=cur;cur=i;caption(i);
+  if(!animate||reduce||i!==from+1||!STEPS[i]){renderStatic(i);if(i===12&&from!==12)completed();return Promise.resolve();}
+  return runStep(from,i);
+}
+function runStep(from,i){
+  const st=STEPS[i];const A={cancel:false};anim=A;
+  const phases=[];
+  if(st.flip)phases.push({d:700,f:k=>{const sx=Math.cos(k*Math.PI);svgEl.style.transform=`scaleX(${Math.abs(sx)<.02?.02:Math.abs(sx)})`;
+    if(k<.5){setView(STATES[from].view);g.innerHTML=stateSVG(STATES[from],1);}else{const fs=flippedState(from,i);setView(fs.view);g.innerHTML=stateSVG(fs,1);}},end:()=>{svgEl.style.transform='';}});
+  if(st.flaps){const base=st.flip?flippedState(from,i):STATES[from];const view=base.view;
+    const statics=st.staticPolys?{polys:st.staticPolys,lines:base.lines,view}:base;
+    phases.push({d:350,f:k=>{setView(view);g.innerHTML=stateSVG(base,1)+st.flaps.map(fl=>arrowSVG(fl,k)).join('')+st.flaps.map(fl=>lineSVG({a:fl.hinge[0],b:fl.hinge[1],kind:'valley'},k)).join('');}});
+    const dur=st.flaps[0].mode==='back'?2200:1500;
+    phases.push({d:dur,f:k=>{const e=ease(k);let h=stateSVG(statics,1);
+      for(const fl of st.flaps){const sg=liftSign(fl);const th=fl.mode==='back'?Math.sin(e*Math.PI)*Math.PI*.985:e*Math.PI*.985;h+=flapSVG(fl,th*sg,view);}
+      for(const fl of st.flaps)h+=lineSVG({a:fl.hinge[0],b:fl.hinge[1],kind:'valley'},1-k);
+      g.innerHTML=h;}});
+  }
+  // morph into the resulting plate
+  phases.push({d:st.morph||st.morphAfter||st.flaps?700:500,f:k=>{
+    const a=st.flaps?null:(st.flip?flippedState(from,i):STATES[from]);const b=STATES[i];const e=ease(k);
+    const v=[lerp((a||b).view[0],b.view[0],e),lerp((a||b).view[1],b.view[1],e)];
+    if(st.flaps&&!st.morphAfter){setView(b.view);g.innerHTML=stateSVG(b,1,tNow);return;}
+    const prev=a||lastFlapState(st,from);
+    setView(v);g.innerHTML=`<g transform="rotate(${(1-e)*-6}) scale(${1-(1-e)*.04})">`+stateSVG(prev,1-e)+'</g>'+`<g transform="scale(${.96+e*.04})">`+stateSVG(b,e,tNow)+'</g>';}});
+  let pi=0,t0=performance.now();
+  return new Promise(res=>{
+    function step(now){if(A.cancel){svgEl.style.transform='';res();return;}
+      const ph=phases[pi];let k=Math.min(1,(now-t0)/ph.d);ph.f(k);
+      if(k>=1){if(ph.end)ph.end();pi++;t0=now;if(pi>=phases.length){anim=null;if(i===12)completed();res();return;}}
+      requestAnimationFrame(step);}
+    requestAnimationFrame(step);});
+}
+function lastFlapState(st,from){const base=STATES[from];const polys=(st.staticPolys||base.polys).slice();
+  for(const fl of st.flaps){const pts=fl.pts.map(p=>reflect(p,fl.hinge[0],fl.hinge[1]));polys.push(poly(pts,fl.back));}return{polys,lines:base.lines,view:base.view};}
+function flippedState(from,i){
+  if(i===3)return{polys:[poly([T,R,B,L],'b')],lines:STATES[2].lines,view:[1,0]};
+  if(i===8)return{polys:[poly([bT,bR,bB,bL],'f2'),poly([TOP,Pp,bB,P],'f2')].map(p=>({pts:p.pts,c:p.c})),lines:[],view:STATES[7].view,flipped:true};
+  return STATES[from];
+}
+function lerp(a,b,t){return a+(b-a)*t;}
+
+// steps list
+const ol=document.getElementById('steps');
+STEPS.forEach((s,i)=>{if(!s)return;const li=document.createElement('li');li.innerHTML=`<button class="stepBtn" id="step${i}"><span class="n">${KANJI[i]}</span><span class="t">${s.title}<small>${s.name}</small></span></button>`;
+  li.firstChild.addEventListener('click',()=>{stopPlay();if(i===cur+1)go(i,true);else{go(i-1,false);go(i,true);}});ol.appendChild(li);});
+
+document.getElementById('btnNext').addEventListener('click',()=>{stopPlay();if(cur<12)go(cur+1,true);});
+document.getElementById('btnPrev').addEventListener('click',()=>{stopPlay();go(cur-1,false);});
+document.getElementById('btnReplay').addEventListener('click',()=>{stopPlay();if(cur===0){go(1,true);return;}const t=cur;go(t-1,false);go(t,true);});
+scrub.addEventListener('input',()=>{stopPlay();go(+scrub.value,false);});
+const playBtn=document.getElementById('btnPlay');
+playBtn.addEventListener('click',()=>{if(playing){stopPlay();return;}playing=true;setPlayIcon();(async()=>{if(cur===12)go(0,false);while(playing&&cur<12){await go(cur+1,true);if(!playing)break;await wait(reduce?1400:900);}stopPlay();})();});
+function stopPlay(){playing=false;setPlayIcon();}
+function setPlayIcon(){document.getElementById('playIcon').setAttribute('d',playing?'M4 3h3v10H4zM9 3h3v10H9z':'M5 3v10l8-5z');playBtn.setAttribute('aria-pressed',String(playing));playBtn.setAttribute('aria-label',playing?'Pause':'Play all steps');}
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowRight'){stopPlay();if(cur<12)go(cur+1,true);}if(e.key==='ArrowLeft'){stopPlay();go(cur-1,false);}});
+
+// idle crane flutter on final plate
+(function idle(now){tNow=now/1000;if(cur===12&&!anim&&!reduce){g.innerHTML=finalCrane(1,tNow);}requestAnimationFrame(idle);})(performance.now());
+
+// thousand cranes
+const tc=document.getElementById('thousand');let mine=0;
+try{mine=parseInt(localStorage.getItem('orizuru-count')||'0',10)||0;}catch(e){}
+function drawThousand(){
+  const r=tc.getBoundingClientRect();const dpr=Math.min(devicePixelRatio||1,2);tc.width=Math.max(1,r.width*dpr);tc.height=Math.max(1,r.height*dpr);
+  const x=tc.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);const cw=r.width/40,ch=r.height/25;
+  for(let i=0;i<1000;i++){const cx=(i%40+.5)*cw,cy=((i/40)|0)*ch+ch*.5;const on=i<mine;
+    x.fillStyle=on?'#d9432b':'rgba(238,240,234,.13)';const s=Math.min(cw,ch)*.36;
+    x.beginPath();x.moveTo(cx-s,cy-s*.2);x.lineTo(cx,cy-s*.05);x.lineTo(cx+s,cy-s*.2);x.lineTo(cx+s*.15,cy+s*.35);x.lineTo(cx-s*.15,cy+s*.35);x.closePath();x.fill();
+    if(on){x.fillStyle='#8f2616';x.beginPath();x.moveTo(cx-s*.15,cy);x.lineTo(cx-s*.75,cy-s*.8);x.lineTo(cx-s*.05,cy+s*.1);x.fill();}
+  }
+  // thread lines
+  x.strokeStyle='rgba(201,164,92,.18)';x.lineWidth=.6;for(let c=0;c<40;c++){x.beginPath();x.moveTo((c+.5)*cw,0);x.lineTo((c+.5)*cw,r.height);x.stroke();}
+  document.getElementById('myCount').textContent=mine;
+}
+function addCrane(){mine=Math.min(1000,mine+1);try{localStorage.setItem('orizuru-count',String(mine));}catch(e){}drawThousand();}
+let lastCompleted=0;function completed(){const n=Date.now();if(n-lastCompleted<3000)return;lastCompleted=n;addCrane();}
+document.getElementById('btnAdd').addEventListener('click',addCrane);
+addEventListener('resize',drawThousand);drawThousand();
+
+caption(0);renderStatic(0);
+// open on plate five so the book looks mid-fold
+go(4,false);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Velvet Keyhole</title>
+<meta name="description" content="A 1920s speakeasy cocktail list in gold deco on black lacquer: give the password at the door, then browse ten Prohibition-era drinks with real specs, history and calculated ABV.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Limelight&family=Poiret+One&family=Josefin+Slab:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --lacquer:#07070a;
+  --lacquer-2:#101014;
+  --gold:#d4af61;
+  --gold-hi:#f6e3a8;
+  --gold-lo:#8a6a2c;
+  --ivory:#efe6d0;
+  --muted:#9c8e70;
+  --jade:#1f5b4d;
+  --deco:"Limelight", "Broadway", Georgia, serif;
+  --thin:"Poiret One", "Futura", sans-serif;
+  --slab:"Josefin Slab", Rockwell, Georgia, serif;
+  --goldgrad:linear-gradient(180deg,#fff2c2 0%,#e8c877 38%,#a67c33 55%,#f1d690 75%,#b58a3c 100%);
+}
+*{box-sizing:border-box}
+html{background:var(--lacquer);scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--lacquer);color:var(--ivory);font-family:var(--slab);font-size:19px;line-height:1.55;overflow-x:hidden;
+  background-image:
+    linear-gradient(115deg, transparent 40%, rgba(255,255,255,.035) 48%, transparent 56%),
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(212,175,97,.12), transparent 70%);
+  background-attachment:fixed}
+:focus-visible{outline:2px solid var(--gold-hi);outline-offset:4px}
+.gold{background:var(--goldgrad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.back{position:absolute;z-index:50;left:16px;top:14px;font-family:var(--thin);font-size:15px;letter-spacing:.2em;color:var(--gold);text-decoration:none;text-transform:uppercase;padding:6px 12px;border:1px solid rgba(212,175,97,.45);background:rgba(7,7,10,.7)}
+.back:hover,.back:focus-visible{background:var(--gold);color:var(--lacquer)}
+
+/* ============ DOOR ============ */
+.foyer{position:relative;min-height:100vh;min-height:100svh;display:grid;place-items:center;padding:70px 16px 40px;overflow:hidden;
+  background:
+    radial-gradient(ellipse 40% 50% at 50% 55%, rgba(246,227,168,.28), transparent 70%),
+    repeating-linear-gradient(90deg, #120f0c 0 30px, #17130f 30px 32px)}
+.foyer .inside{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.0;transition:opacity 1.2s}
+.foyer.open .inside{opacity:1}
+.inside svg{width:min(90vw,700px);height:auto}
+.door-frame{position:relative;width:min(92vw,440px);aspect-ratio:440/640;perspective:1600px;z-index:2}
+.frame-arch{position:absolute;inset:-18px -18px -6px;border:3px solid var(--gold);border-bottom:0;
+  clip-path:polygon(0 12%,20% 0,80% 0,100% 12%,100% 100%,0 100%);background:transparent;pointer-events:none}
+.frame-arch::before{content:"";position:absolute;inset:6px 6px 0;border:1px solid var(--gold-lo);border-bottom:0;clip-path:inherit}
+.leaf{position:absolute;top:0;bottom:0;width:50%;background:
+    linear-gradient(90deg, rgba(255,255,255,.04), transparent 20%, transparent 80%, rgba(0,0,0,.4)),
+    linear-gradient(180deg,#141216,#0b0a0d);
+  border:2px solid var(--gold-lo);transition:transform 1.6s cubic-bezier(.6,.05,.2,1);box-shadow:inset 0 0 40px rgba(0,0,0,.8)}
+.leaf.l{left:0;transform-origin:0 50%}
+.leaf.r{right:0;transform-origin:100% 50%}
+.foyer.open .leaf.l{transform:rotateY(-105deg)}
+.foyer.open .leaf.r{transform:rotateY(105deg)}
+.leaf svg{position:absolute;inset:0;width:100%;height:100%}
+.peep{position:absolute;left:50%;top:22%;transform:translateX(-50%);width:34%;height:7%;background:#000;border:2px solid var(--gold);z-index:3;overflow:hidden;box-shadow:0 0 0 6px #0b0a0d, 0 0 0 7px var(--gold-lo)}
+.peep .slat{position:absolute;inset:0;background:linear-gradient(#2a2319,#15110c);transition:transform .45s cubic-bezier(.5,0,.2,1);display:grid;place-items:center}
+.peep .slat i{display:block;width:60%;height:2px;background:var(--gold-lo)}
+.peep.open .slat{transform:translateX(100%)}
+.peep .eyes{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:22%;background:radial-gradient(ellipse at center,#3b2a18,#000 70%)}
+.peep .eyes b{width:12%;height:40%;background:radial-gradient(circle at 40% 40%,#fff 0 18%,#6b4a22 22% 55%,#111 58%);border-radius:50%;animation:blink 4s infinite}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+.foyer.open .peep{opacity:0;transition:opacity .3s}
+.knob{position:absolute;top:52%;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--gold-hi),var(--gold-lo));z-index:3}
+.leaf.l .knob{right:10px}.leaf.r .knob{left:10px}
+.voice{position:absolute;left:50%;top:calc(22% - 54px);transform:translateX(-50%);z-index:4;font-family:var(--thin);font-size:22px;letter-spacing:.06em;white-space:nowrap;color:var(--gold-hi);text-shadow:0 0 12px rgba(0,0,0,.9);transition:opacity .3s}
+.foyer.open .voice{opacity:0}
+.door-frame.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+.entry-form{position:relative;z-index:5;margin-top:36px;display:grid;justify-items:center;gap:14px;text-align:center;transition:opacity .6s}
+.foyer.open .entry-form{opacity:0;pointer-events:none}
+.entry-form label{font-family:var(--thin);letter-spacing:.3em;text-transform:uppercase;font-size:14px;color:var(--muted)}
+.pwrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+#pw{background:transparent;border:0;border-bottom:1px solid var(--gold);color:var(--gold-hi);font-family:var(--thin);font-size:24px;text-align:center;letter-spacing:.14em;padding:6px 8px;width:min(70vw,260px)}
+#pw:focus{outline:none;border-bottom-color:var(--gold-hi);box-shadow:0 6px 12px -8px var(--gold)}
+.btn{all:unset;cursor:pointer;font-family:var(--deco);font-size:15px;letter-spacing:.18em;color:var(--lacquer);background:var(--goldgrad);padding:10px 20px;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,8px 100%,0 50%)}
+.btn.ghost{background:transparent;color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);clip-path:none}
+.btn:focus-visible{outline:2px solid var(--gold-hi);outline-offset:3px}
+.matchbook{display:inline-flex;align-items:center;gap:10px;font-family:var(--slab);font-style:italic;color:var(--muted);font-size:16px}
+.matchbook svg{flex:none}
+.stage{display:grid;justify-items:center;position:relative;z-index:2}
+.foyer .scrollhint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-family:var(--thin);letter-spacing:.3em;font-size:13px;color:var(--muted);z-index:5;text-transform:uppercase;text-decoration:none}
+
+/* ============ MENU ============ */
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+.mast{text-align:center;padding:110px 0 50px;position:relative}
+.mast .est{font-family:var(--thin);letter-spacing:.5em;text-transform:uppercase;font-size:14px;color:var(--gold)}
+.mast h1{font-family:var(--deco);font-weight:400;font-size:clamp(52px,10vw,138px);line-height:.92;margin:18px 0 10px;letter-spacing:.02em}
+.mast .sub{font-family:var(--thin);font-size:clamp(18px,2vw,26px);letter-spacing:.14em;color:var(--ivory)}
+.sunburst{display:block;margin:0 auto;width:min(100%,780px);height:auto}
+.rule{display:flex;align-items:center;gap:16px;color:var(--gold);margin:40px 0}
+.rule::before,.rule::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.rule span{font-family:var(--thin);letter-spacing:.4em;font-size:13px;text-transform:uppercase}
+
+.intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;margin:30px 0 20px}
+.intro p{margin:0 0 1em}
+.intro p:first-child::first-letter{font-family:var(--deco);font-size:4.4em;float:left;line-height:.8;margin:.06em .1em 0 0;background:var(--goldgrad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+.controls{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;align-items:center;margin:50px 0 30px;padding:16px 0;border-top:1px solid rgba(212,175,97,.35);border-bottom:1px solid rgba(212,175,97,.35)}
+.filters,.units{display:flex;gap:8px;flex-wrap:wrap}
+.chip{all:unset;cursor:pointer;font-family:var(--thin);font-size:15px;letter-spacing:.16em;text-transform:uppercase;padding:7px 14px;border:1px solid rgba(212,175,97,.35);color:var(--ivory)}
+.chip[aria-pressed="true"]{background:var(--gold);color:var(--lacquer);border-color:var(--gold)}
+.chip:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px}
+.units .lab{font-family:var(--thin);letter-spacing:.2em;font-size:13px;color:var(--muted);align-self:center;margin-right:4px;text-transform:uppercase}
+
+.menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 64px}
+.drink{position:relative;padding:34px 0 34px 74px;border-bottom:1px solid rgba(212,175,97,.2);transition:opacity .4s}
+.drink.hide{display:none}
+.drink .no{position:absolute;left:0;top:32px;width:54px;height:54px;display:grid;place-items:center;font-family:var(--deco);font-size:22px;color:var(--gold)}
+.drink .no svg{position:absolute;inset:0}
+.drink h3{padding-right:72px;font-family:var(--deco);font-weight:400;font-size:clamp(26px,3vw,36px);letter-spacing:.06em;margin:0;line-height:1.05;text-transform:uppercase}
+.drink .meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--thin);font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin:8px 0 12px}
+.drink .meta span+span::before{content:"◆";font-size:8px;margin-right:14px;vertical-align:2px;color:var(--gold-lo)}
+.drink ul{list-style:none;margin:0 0 12px;padding:0;font-size:17px}
+.drink li{display:grid;grid-template-columns:90px minmax(0,1fr);gap:10px;padding:3px 0;border-bottom:1px dotted rgba(212,175,97,.18)}
+.drink li b{font-weight:600;color:var(--gold-hi);font-variant-numeric:tabular-nums}
+.drink p{margin:0;font-style:italic;color:#d6ccb4;font-size:17px}
+.drink .abv{position:absolute;right:0;top:34px;text-align:right;font-family:var(--deco);font-size:26px;line-height:1}
+.drink .abv small{display:block;font-family:var(--thin);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+.drink .method{font-family:var(--thin);font-size:15px;color:var(--ivory);margin:0 0 10px;letter-spacing:.04em}
+
+.rules{margin:90px 0 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:48px;align-items:start}
+.rules h2{font-family:var(--deco);font-weight:400;font-size:clamp(38px,5vw,64px);margin:0;line-height:1}
+.rules ol{margin:0;padding:0;list-style:none;counter-reset:r}
+.rules li{counter-increment:r;padding:14px 0 14px 60px;position:relative;border-bottom:1px solid rgba(212,175,97,.2)}
+.rules li::before{content:counter(r,upper-roman);position:absolute;left:0;top:12px;font-family:var(--deco);color:var(--gold);font-size:22px}
+footer{margin-top:100px;padding:40px 0 70px;text-align:center;font-family:var(--thin);letter-spacing:.24em;font-size:13px;color:var(--muted);text-transform:uppercase}
+footer .gold{font-family:var(--deco);font-size:22px;letter-spacing:.1em;display:block;margin-bottom:12px}
+
+@media (max-width:860px){
+  .intro,.rules{grid-template-columns:minmax(0,1fr)}
+  .menu{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:480px){
+  .drink{padding-left:0;padding-top:78px}
+  .drink .no{top:18px}
+  .drink .abv{top:26px}
+  .voice{font-size:18px}
+  .drink li{grid-template-columns:78px minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  .leaf{transition:none}
+  .peep .eyes b{animation:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<section class="foyer" id="foyer" aria-label="The door">
+  <div class="inside" aria-hidden="true">
+    <svg viewBox="0 0 700 500">
+      <defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2c2"/><stop offset=".5" stop-color="#d4af61"/><stop offset="1" stop-color="#8a6a2c"/></linearGradient>
+      <radialGradient id="warm"><stop offset="0" stop-color="#ffdca0" stop-opacity=".6"/><stop offset="1" stop-color="#ffdca0" stop-opacity="0"/></radialGradient></defs>
+      <circle cx="350" cy="220" r="260" fill="url(#warm)"/>
+      <g stroke="url(#gg)" stroke-width="1.2" fill="none" opacity=".8">
+        <path d="M120 380 H580"/><path d="M140 380 V300 H560 V380"/>
+
+      </g>
+      <g fill="url(#gg)" opacity=".85">
+        <rect x="180" y="250" width="8" height="50"/><rect x="215" y="240" width="10" height="60"/><rect x="255" y="236" width="9" height="64"/>
+        <rect x="430" y="244" width="10" height="56"/><rect x="470" y="238" width="8" height="62"/><rect x="505" y="250" width="12" height="50"/>
+        <path d="M330 250 l-22 -26 h84 l-22 26 v34 h14 v4 h-68 v-4 h14Z"/>
+      </g>
+      <text x="350" y="440" text-anchor="middle" font-family="Poiret One, sans-serif" font-size="22" letter-spacing="8" fill="#f6e3a8">WELCOME, FRIEND</text>
+    </svg>
+  </div>
+  <div class="stage">
+    <div class="door-frame" id="door">
+      <div class="frame-arch"></div>
+      <div class="voice" id="voice" aria-live="polite">What's the word?</div>
+      <div class="peep" id="peep"><div class="eyes"><b></b><b></b></div><div class="slat"><i></i></div></div>
+      <div class="leaf l">
+        <svg viewBox="0 0 220 640" preserveAspectRatio="none" aria-hidden="true">
+          <g fill="none" stroke="#8a6a2c" stroke-width="1.5">
+            <rect x="22" y="200" width="176" height="400"/><rect x="32" y="210" width="156" height="380" stroke="#d4af61"/>
+            <path d="M110 230 L110 570 M50 400 L170 400"/>
+            <path d="M110 400 L40 230 M110 400 L60 230 M110 400 L85 230 M110 400 L135 230 M110 400 L160 230 M110 400 L180 230" stroke="#d4af61" opacity=".6"/>
+            <path d="M110 400 L40 570 M110 400 L60 570 M110 400 L85 570 M110 400 L135 570 M110 400 L160 570 M110 400 L180 570" stroke="#d4af61" opacity=".6"/>
+            <path d="M22 40 H198 V170 H22Z"/>
+          </g>
+        </svg>
+        <span class="knob"></span>
+      </div>
+      <div class="leaf r">
+        <svg viewBox="0 0 220 640" preserveAspectRatio="none" aria-hidden="true">
+          <g fill="none" stroke="#8a6a2c" stroke-width="1.5">
+            <rect x="22" y="200" width="176" height="400"/><rect x="32" y="210" width="156" height="380" stroke="#d4af61"/>
+            <path d="M110 230 L110 570 M50 400 L170 400"/>
+            <path d="M110 400 L40 230 M110 400 L60 230 M110 400 L85 230 M110 400 L135 230 M110 400 L160 230 M110 400 L180 230" stroke="#d4af61" opacity=".6"/>
+            <path d="M110 400 L40 570 M110 400 L60 570 M110 400 L85 570 M110 400 L135 570 M110 400 L160 570 M110 400 L180 570" stroke="#d4af61" opacity=".6"/>
+            <path d="M22 40 H198 V170 H22Z"/>
+          </g>
+        </svg>
+        <span class="knob"></span>
+      </div>
+    </div>
+    <form class="entry-form" id="entry" autocomplete="off">
+      <label for="pw">Speak easy, friend</label>
+      <div class="pwrow">
+        <input id="pw" name="pw" type="text" placeholder="password" spellcheck="false">
+        <button class="btn" type="submit" id="say">Whisper</button>
+        <button class="btn ghost" type="button" id="knock">Knock ×3</button>
+      </div>
+      <span class="matchbook">
+        <svg width="34" height="44" viewBox="0 0 34 44" aria-hidden="true"><rect x="1" y="1" width="32" height="42" fill="#1f5b4d" stroke="#d4af61"/><rect x="1" y="30" width="32" height="13" fill="#0b0a0d" stroke="#d4af61"/><path d="M6 8 h22 M6 14 h22 M6 20 h14" stroke="#d4af61"/></svg>
+        scrawled inside a matchbook: <b style="font-style:normal;color:var(--gold)">“bee's knees”</b>
+      </span>
+    </form>
+  </div>
+  <a class="scrollhint" href="#menu" id="skip">or slip round the back ↓</a>
+</section>
+
+<main class="wrap" id="menu">
+  <header class="mast">
+    <svg class="sunburst" viewBox="0 0 780 170" aria-hidden="true">
+      <defs><linearGradient id="g2" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f6e3a8"/><stop offset="1" stop-color="#8a6a2c"/></linearGradient></defs>
+      <g stroke="url(#g2)" fill="none" stroke-width="1.2" id="rays"></g>
+      <path d="M270 170 A120 120 0 0 1 510 170" fill="none" stroke="#d4af61" stroke-width="2"/>
+      <path d="M300 170 A90 90 0 0 1 480 170" fill="none" stroke="#8a6a2c" stroke-width="1"/>
+      <path d="M40 168 H270 M510 168 H740" stroke="#d4af61"/><path d="M80 160 H270 M510 160 H700" stroke="#8a6a2c"/>
+    </svg>
+    <div class="est">Est. MCMXXIV · beneath the florist · Wabash Avenue</div>
+    <h1 class="gold">The Velvet<br>Keyhole</h1>
+    <div class="sub">Cocktails, of which we know nothing, officer.</div>
+  </header>
+
+  <section class="intro">
+    <div>
+      <p>On the sixteenth of January 1920, the Eighteenth Amendment made it illegal to manufacture, sell or transport intoxicating liquor anywhere in the United States. Within a year, America had more places to get a drink than it had before. They hid behind barbershops, beneath laundries, at the back of soda fountains and, in our case, under a florist whose front window was always, suspiciously, full of lilies.</p>
+      <p>The name <em>speakeasy</em> is older than the law, borrowed from Irish and British slang for an unlicensed grog shop — a place where you spoke softly so as not to draw the constable. The rule was the same on Wabash Avenue: a password at the door, a quiet voice at the bar, and not a word about any of it upstairs.</p>
+    </div>
+    <div>
+      <p>Bootleg liquor was frequently terrible, and much of the invention of the era came from bartenders trying to hide it. Honey, citrus, grenadine and sparkling wine could make bathtub gin taste like a rumour of something better. Many of the best American bartenders simply left — to London, Paris and Havana — and the drinks they wrote down there came home when Repeal did, on the fifth of December 1933.</p>
+      <p>The list below is our small tribute to those thirteen dry years. Every drink is one that was poured, or first set down in print, in the decade either side of Prohibition. Specs are the house's own; the strength is calculated from the pour and a fair allowance for the ice.</p>
+    </div>
+  </section>
+
+  <div class="controls" role="group" aria-label="Menu controls">
+    <div class="filters" id="filters">
+      <button class="chip" type="button" id="f-all" data-f="all" aria-pressed="true">All</button>
+      <button class="chip" type="button" id="f-gin" data-f="gin" aria-pressed="false">Gin</button>
+      <button class="chip" type="button" id="f-whiskey" data-f="whiskey" aria-pressed="false">Whiskey</button>
+      <button class="chip" type="button" id="f-brandy" data-f="brandy" aria-pressed="false">Brandy</button>
+      <button class="chip" type="button" id="f-rum" data-f="rum" aria-pressed="false">Rum</button>
+    </div>
+    <div class="units"><span class="lab">Measure</span>
+      <button class="chip" type="button" id="u-oz" data-u="oz" aria-pressed="true">oz</button>
+      <button class="chip" type="button" id="u-ml" data-u="ml" aria-pressed="false">ml</button>
+    </div>
+  </div>
+
+  <div class="rule"><span>The List</span></div>
+  <section class="menu" id="list" aria-live="polite"></section>
+
+  <section class="rules">
+    <h2 class="gold">House<br>Rules</h2>
+    <ol>
+      <li>If a gentleman in a bowler hat asks for a sarsaparilla, pour him one. Then pour him another. Then hum loudly.</li>
+      <li>When the bell above the bar rings twice, every glass goes into the sink and every sink goes into the wall. Practise this.</li>
+      <li>We do not ask your name and you do not ask ours. The pianist's name is Leonard. Everybody knows that.</li>
+      <li>Voices low. The florist is a light sleeper and an excellent witness.</li>
+      <li>Nobody leaves by the front. The alley door opens onto the coal chute. Mind the step, and your hat.</li>
+    </ol>
+  </section>
+
+  <footer><span class="gold">The Velvet Keyhole</span>A fiction · drink responsibly, and legally, now that you can</footer>
+</main>
+
+<script>
+(function(){
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* sunburst */
+const rays=document.getElementById('rays');let r='';for(let i=0;i<=24;i++){const a=Math.PI+i*Math.PI/24;const x1=390+Math.cos(a)*130,y1=170+Math.sin(a)*130,x2=390+Math.cos(a)*(i%2?200:260),y2=170+Math.sin(a)*(i%2?200:260);r+=`<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${Math.max(0,y2).toFixed(1)}"/>`;}rays.innerHTML=r;
+
+/* door */
+const foyer=document.getElementById('foyer'),door=document.getElementById('door'),peep=document.getElementById('peep'),voice=document.getElementById('voice');
+let knocks=0,knockT=0,opened=false;
+setTimeout(()=>peep.classList.add('open'),reduce?0:900);
+function openDoor(msg){
+  if(opened)return;opened=true;voice.textContent=msg;
+  peep.classList.remove('open');
+  setTimeout(()=>{foyer.classList.add('open');},reduce?0:500);
+  setTimeout(()=>{document.getElementById('menu').scrollIntoView({behavior:reduce?'auto':'smooth'});},reduce?600:2600);
+}
+document.getElementById('entry').addEventListener('submit',e=>{
+  e.preventDefault();const v=document.getElementById('pw').value.toLowerCase().replace(/[^a-z]/g,'');
+  if(v==='beesknees'||v==='beeknees'){openDoor('Come in. Quick.');}
+  else if(!v){voice.textContent="Cat got your tongue?";}
+  else{voice.textContent=['Never heard of ya.','Wrong door, pal.','Try the matchbook.'][Math.floor(Math.random()*3)];
+    door.classList.remove('shake');void door.offsetWidth;if(!reduce)door.classList.add('shake');}
+});
+document.getElementById('knock').addEventListener('click',()=>{
+  const now=Date.now();if(now-knockT>2500)knocks=0;knockT=now;knocks++;
+  if(!reduce){door.classList.remove('shake');void door.offsetWidth;door.classList.add('shake');}
+  if(knocks<3)voice.textContent=knocks===1?'Who is it?':'Keep your voice down…';
+  else openDoor('Alright, alright. In you get.');
+});
+
+/* drinks */
+// [qty oz, unit label or null, name, abv]
+const D=[
+ {n:'Bee’s Knees',base:'gin',glass:'Coupe',m:'shake',year:'c. 1921',
+  s:[[2,'Gin',40],[.75,'Fresh lemon juice',0],[.75,'Honey syrup, 1:1',0]],
+  note:'The house drink and the password. Honey was the bootlegger’s friend; it could make almost anything taste like it had been meant.'},
+ {n:'Sidecar',base:'brandy',glass:'Sugar-rimmed coupe',m:'shake',year:'1922',
+  s:[[1.5,'Cognac',40],[.75,'Cointreau',40],[.75,'Fresh lemon juice',0]],
+  note:'First printed in London in 1922 by Harry MacElhone and Robert Vermeire. Paris claims it too. Paris claims everything.'},
+ {n:'Mary Pickford',base:'rum',glass:'Coupe',m:'shake',year:'c. 1920s',
+  s:[[1.5,'White rum',40],[1.5,'Pineapple juice',0],[.25,'Maraschino liqueur',32],[.17,'Grenadine (1 tsp)',0]],
+  note:'Named in Havana for the silent film star, who was there filming with Douglas Fairbanks. Pink, bright, and far stronger than it looks.'},
+ {n:'Southside',base:'gin',glass:'Coupe',m:'shake',year:'c. 1917',
+  s:[[2,'Gin',40],[.75,'Fresh lime juice',0],[.75,'Simple syrup',0],[0,'Mint, 6 leaves',0]],
+  note:'A gin julep that went uptown. Legend ties it to Chicago’s South Side and the rough gin of the Capone years; the mint did the heavy lifting.'},
+ {n:'French 75',base:'gin',glass:'Flute',m:'shake-top',year:'1927',
+  s:[[1,'Gin',40],[.5,'Fresh lemon juice',0],[.5,'Simple syrup',0],[3,'Champagne, to top',12]],
+  note:'Named for the French 75 mm field gun, on the grounds that it hits about as hard. In print by 1927, in a book printed for thirsty Americans abroad.'},
+ {n:'Old Fashioned',base:'whiskey',glass:'Rocks, large cube',m:'stir',year:'1880s',
+  s:[[2,'Rye whiskey',45],[.25,'Rich demerara syrup',0],[0,'Angostura bitters, 2 dashes',0],[0,'Orange peel, expressed',0]],
+  note:'Already old-fashioned when Prohibition began: a request for whiskey made the way grandfather drank it, before the fancy liqueurs arrived.'},
+ {n:'Scofflaw',base:'whiskey',glass:'Coupe',m:'shake',year:'1924',
+  s:[[1.5,'Rye whiskey',45],[1,'Dry vermouth',18],[.25,'Fresh lemon juice',0],[.25,'Grenadine',0],[0,'Orange bitters, 1 dash',0]],
+  note:'In January 1924 a Boston newspaper ran a contest to name those who drank illegally. The winner was “scofflaw”. Within days, Harry’s New York Bar in Paris had named a cocktail after them.'},
+ {n:'The Last Word',base:'gin',glass:'Coupe',m:'shake',year:'c. 1915',
+  s:[[.75,'Gin',40],[.75,'Green Chartreuse',55],[.75,'Maraschino liqueur',32],[.75,'Fresh lime juice',0]],
+  note:'Poured at the Detroit Athletic Club just before Prohibition, then almost forgotten for eighty years. Equal parts, and not one of them shy.'},
+ {n:'Corpse Reviver No. 2',base:'gin',glass:'Absinthe-rinsed coupe',m:'shake',year:'1930',
+  s:[[.75,'Gin',40],[.75,'Cointreau',40],[.75,'Lillet Blanc',17],[.75,'Fresh lemon juice',0],[0,'Absinthe, a rinse',0]],
+  note:'Harry Craddock’s Savoy Cocktail Book warns that “four of these taken in swift succession will unrevive the corpse again.” We enforce a limit of two.'},
+ {n:'Hanky Panky',base:'gin',glass:'Coupe',m:'stir',year:'c. 1903',
+  s:[[1.5,'Gin',40],[1.5,'Sweet vermouth',16],[.1,'Fernet-Branca, 2 dashes',39],[0,'Orange peel',0]],
+  note:'Invented by Ada Coleman, head bartender at the Savoy’s American Bar, for the actor Charles Hawtrey, who tasted it and declared it “the real hanky-panky”.'},
+];
+const DIL={shake:.28,stir:.2,'shake-top':.22};
+let unit='oz',filter='all';
+function amount(q){if(q===0)return '—';if(unit==='ml'){return Math.round(q*30)+' ml';}
+  const frac={.1:'2 dash',.17:'1 tsp',.25:'¼',.5:'½',.75:'¾'};const w=Math.floor(q),f=+(q-w).toFixed(2);
+  if(frac[q]&&w===0)return frac[q]+(q<.2?'':' oz');return (w?w:'')+(f?(frac[f]||f):'')+' oz';}
+function abv(d){
+  let vol=0,alc=0,topVol=0,topAlc=0;
+  d.s.forEach(([q,,a],i)=>{if(d.m==='shake-top'&&i===d.s.length-1){topVol=q;topAlc=q*a/100;return;}vol+=q;alc+=q*a/100;});
+  vol*=1+DIL[d.m];vol+=topVol;alc+=topAlc;return (alc/vol*100);
+}
+function deco(i){return `<svg viewBox="0 0 54 54" aria-hidden="true"><path d="M27 2 L52 27 L27 52 L2 27Z" fill="none" stroke="#d4af61"/><path d="M27 8 L46 27 L27 46 L8 27Z" fill="none" stroke="#8a6a2c"/></svg><span>${i+1}</span>`;}
+const METHOD={shake:'Shake hard with ice, double strain.',stir:'Stir with ice until cold and silky.','shake-top':'Shake the first three, strain, top with champagne.'};
+function render(){
+  document.getElementById('list').innerHTML=D.map((d,i)=>`<article class="drink ${filter!=='all'&&d.base!==filter?'hide':''}">
+    <div class="no">${deco(i)}</div>
+    <div class="abv"><span class="gold">${abv(d).toFixed(0)}%</span><small>ABV ≈</small></div>
+    <h3 class="gold">${d.n}</h3>
+    <div class="meta"><span>${d.year}</span><span>${d.glass}</span></div>
+    <ul>${d.s.map(([q,name])=>`<li><b>${amount(q)}</b><span>${name}</span></li>`).join('')}</ul>
+    <div class="method">${METHOD[d.m]}</div>
+    <p>${d.note}</p>
+  </article>`).join('');
+}
+document.getElementById('filters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;filter=b.dataset.f;document.querySelectorAll('#filters .chip').forEach(c=>c.setAttribute('aria-pressed',c===b));render();});
+document.querySelector('.units').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;unit=b.dataset.u;document.querySelectorAll('.units .chip').forEach(c=>c.setAttribute('aria-pressed',c===b));render();});
+render();
+})();
+</script>
+</body>
+</html>

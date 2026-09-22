@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lowglow Terminal</title>
+<meta name="description" content="A phosphor CRT homepage for a fictional sysop: boot sequence, a working shell with ls, cat, fortune, matrix and games, scanlines, curvature and flicker — plus the history of the glass teletype.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ph:#41ff7a;       /* phosphor */
+  --ph-dim:#1f9e48;
+  --ph-glow:rgba(65,255,122,.55);
+  --bg:#031008;
+  --bezel:#1b1a17;
+  --vt:"VT323","IBM Plex Mono","Courier New",monospace;
+  --plex:"IBM Plex Mono","Courier New",monospace;
+}
+body.amber{--ph:#ffb238;--ph-dim:#b1731a;--ph-glow:rgba(255,178,56,.55);--bg:#140a02}
+body.white{--ph:#e8f1ff;--ph-dim:#8b95a8;--ph-glow:rgba(210,225,255,.5);--bg:#07090d}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#0b0b0a;background-image:radial-gradient(ellipse at 50% 30%,#23221e 0%,#0b0b0a 70%);color:var(--ph);font-family:var(--vt);overflow:hidden}
+:focus-visible{outline:2px solid var(--ph);outline-offset:2px}
+
+.room{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));gap:10px}
+.monitor{position:relative;width:min(1100px,100%);flex:1;min-height:0;max-height:820px;background:linear-gradient(180deg,#2a2925,#171613);border-radius:28px;padding:clamp(14px,3vw,38px);box-shadow:0 30px 80px rgba(0,0,0,.7),inset 0 2px 0 #3a3934,inset 0 -3px 0 #0c0c0b}
+.monitor::after{content:"LOWGLOW VT-220";position:absolute;left:50%;bottom:clamp(2px,.7vw,10px);transform:translateX(-50%);font:600 10px var(--plex);letter-spacing:.35em;color:#58564e}
+.led{position:absolute;right:clamp(18px,3vw,40px);bottom:clamp(4px,.8vw,12px);width:7px;height:7px;border-radius:50%;background:var(--ph);box-shadow:0 0 8px var(--ph)}
+.screen{position:relative;width:100%;height:100%;border-radius:22px/18px;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,color-mix(in srgb,var(--bg) 70%,var(--ph) 6%) 0%,var(--bg) 62%,#000 100%);box-shadow:inset 0 0 60px rgba(0,0,0,.9),inset 0 0 12px rgba(0,0,0,.9),0 0 0 3px #0a0a09}
+/* overlays: scanlines, vignette, glass reflection, flicker */
+.screen::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:4;background:repeating-linear-gradient(180deg,rgba(0,0,0,.28) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+.screen::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;background:radial-gradient(ellipse 120% 90% at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%),linear-gradient(160deg,rgba(255,255,255,.07) 0%,transparent 28%);border-radius:inherit}
+.flicker{position:absolute;inset:0;z-index:6;pointer-events:none;background:var(--ph);opacity:0;animation:flick 6s infinite steps(1)}
+@keyframes flick{0%{opacity:.012}3%{opacity:.03}6%{opacity:.01}50%{opacity:.02}51%{opacity:.035}52%{opacity:.015}}
+.roll{position:absolute;left:0;right:0;height:18%;z-index:6;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(255,255,255,.035),transparent);animation:roll 7s linear infinite}
+@keyframes roll{from{top:-20%}to{top:110%}}
+
+#term{position:absolute;inset:0;z-index:2;overflow-y:auto;overflow-x:hidden;padding:clamp(12px,2.4vw,28px) clamp(12px,2.6vw,32px);font-size:clamp(17px,2.05vw,24px);line-height:1.12;text-shadow:0 0 1px var(--ph),0 0 6px var(--ph-glow),0 0 14px var(--ph-glow);transform:perspective(900px) scale(1.0);scrollbar-width:thin;scrollbar-color:var(--ph-dim) transparent;animation:warm 1.1s ease-out both}
+@keyframes warm{0%{filter:brightness(3) blur(2px);transform:scaleY(.01)}35%{transform:scaleY(1)}100%{filter:none}}
+#out{white-space:pre-wrap;word-break:break-word}
+#out .dim{color:var(--ph-dim);text-shadow:0 0 4px var(--ph-glow)}
+#out .inv{background:var(--ph);color:var(--bg);text-shadow:none;padding:0 .3em}
+#out .cmd{cursor:pointer;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;background:none;border:0;color:inherit;font:inherit;padding:0;text-shadow:inherit}
+#out .cmd:hover,#out .cmd:focus-visible{background:var(--ph);color:var(--bg);text-shadow:none;outline:0}
+#out .err{color:var(--ph);font-weight:bold}
+.line{display:flex;gap:.5em;align-items:baseline}
+.prompt{white-space:nowrap}
+#inwrap{position:relative;flex:1;min-width:0}
+#in{width:100%;background:transparent;border:0;outline:0;color:transparent;caret-color:transparent;font:inherit;padding:0;margin:0;text-shadow:none;position:relative;z-index:2}
+#mirror{position:absolute;left:0;top:0;white-space:pre;pointer-events:none;z-index:1;overflow:hidden;max-width:100%}
+#mirror .cur{display:inline-block;width:.6em;background:var(--ph);color:var(--bg);text-shadow:none;animation:blink 1.06s steps(1) infinite;box-shadow:0 0 10px var(--ph-glow)}
+@keyframes blink{50%{opacity:0}}
+#in:not(:focus)+#mirror .cur{background:transparent;outline:1px solid var(--ph);animation:none}
+
+#rain{position:absolute;inset:0;z-index:3;display:none;width:100%;height:100%}
+#rain.on{display:block}
+
+.deck{width:min(1100px,100%);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font:13px var(--plex);color:#8e8b80}
+.deck a{color:#c9c5b8;text-decoration:none;border:1px solid #3d3b35;padding:6px 10px;border-radius:4px;background:#1a1916}
+.deck a:hover{border-color:var(--ph);color:var(--ph)}
+.keys{display:flex;gap:6px;flex-wrap:wrap}
+.keys button{font:600 12px var(--plex);color:#c9c5b8;background:linear-gradient(180deg,#34322d,#23221e);border:1px solid #45433c;border-bottom-width:3px;border-radius:5px;padding:6px 9px;cursor:pointer;letter-spacing:.04em}
+.keys button:hover{color:var(--ph)}
+.keys button:active{transform:translateY(2px);border-bottom-width:1px}
+.knob{display:flex;align-items:center;gap:6px}
+.knob button{width:18px;height:18px;border-radius:50%;border:2px solid #45433c;cursor:pointer;padding:0}
+.knob button[aria-pressed="true"]{border-color:#e9e5d8;box-shadow:0 0 8px currentColor}
+
+@media (max-width:640px){
+  .monitor{border-radius:18px;padding:12px 10px 22px}
+  .screen{border-radius:14px/12px}
+  #term{font-size:17px}
+  .deck{font-size:12px}
+  .deck .hint{display:none}
+  .keys button{padding:5px 7px;font-size:11px}
+  .keys{gap:4px}
+}
+@media (prefers-reduced-motion:reduce){
+  .flicker,.roll{display:none}
+  #term{animation:none}
+  #mirror .cur{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="room">
+  <div class="monitor">
+    <div class="screen" id="screen">
+      <div id="term" role="log" aria-live="polite" aria-label="Terminal">
+        <div id="out"></div>
+        <div class="line" id="inputline" hidden><span class="prompt" id="prompt">ember@lowglow:~$</span><div id="inwrap"><input id="in" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command input"><div id="mirror" aria-hidden="true"></div></div></div>
+      </div>
+      <canvas id="rain" aria-hidden="true"></canvas>
+      <div class="roll" aria-hidden="true"></div>
+      <div class="flicker" aria-hidden="true"></div>
+    </div>
+    <span class="led" aria-hidden="true"></span>
+  </div>
+  <div class="deck">
+    <a href="index.html" id="back">&lt; Showcase</a>
+    <div class="keys" role="group" aria-label="Quick commands">
+      <button type="button" id="k-help" data-cmd="help">HELP</button>
+      <button type="button" id="k-ls" data-cmd="ls">LS</button>
+      <button type="button" id="k-hist" data-cmd="cat history.txt">HISTORY</button>
+      <button type="button" id="k-fortune" data-cmd="fortune">FORTUNE</button>
+      <button type="button" id="k-matrix" data-cmd="matrix">MATRIX</button>
+      <button type="button" id="k-games" data-cmd="games">GAMES</button>
+    </div>
+    <div class="knob" role="group" aria-label="Phosphor">
+      <span class="hint">phosphor</span>
+      <button type="button" id="ph-green" style="background:#41ff7a;color:#41ff7a" aria-label="P1 green" aria-pressed="true"></button>
+      <button type="button" id="ph-amber" style="background:#ffb238;color:#ffb238" aria-label="P3 amber" aria-pressed="false"></button>
+      <button type="button" id="ph-white" style="background:#e8f1ff;color:#e8f1ff" aria-label="P4 white" aria-pressed="false"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var out=document.getElementById('out'),term=document.getElementById('term'),inp=document.getElementById('in'),mirror=document.getElementById('mirror'),line=document.getElementById('inputline'),promptEl=document.getElementById('prompt');
+  var cwd="~",hist=[],hi=0,mode=null; // mode: game handler
+  function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+
+  /* ---------- filesystem ---------- */
+  var FS={
+    "~":{type:"dir",kids:["readme.txt","history.txt","phosphor.txt","people.txt","principles.txt","projects","guestbook.txt",".plan"]},
+    "~/readme.txt":{type:"file",body:
+"LOWGLOW BBS  //  home of ember, sysop since 1989\n\n"+
+"You are connected to a personal homepage that never left the\n"+
+"green screen. Everything here is text. Everything here is fast.\n\n"+
+"This machine is an homage to the video terminal — the 'glass\n"+
+"teletype' — and the people who lived inside 80 columns.\n\n"+
+"Try: [[ls]]  [[cat history.txt]]  [[fortune]]  [[matrix]]  [[games]]\n"},
+    "~/history.txt":{type:"file",body:
+"A SHORT HISTORY OF THE GLASS TELETYPE\n"+
+"=====================================\n\n"+
+"1963  Teletype Model 33 ASR — paper, 10 characters per second,\n"+
+"      and the reason we still say 'TTY'.\n"+
+"1967  Computer Terminal Corp's Datapoint 3300 and friends replace\n"+
+"      paper with a CRT: the 'glass teletype' is born.\n"+
+"1969  Ken Thompson and Dennis Ritchie start Unix at Bell Labs.\n"+
+"      Short commands (ls, cat, cp) exist because typing hurt.\n"+
+"1975  Lear Siegler ADM-3A: cheap, quiet, and home to the HJKL\n"+
+"      arrows that vi still uses today.\n"+
+"1978  DEC VT100 ships. Its ANSI escape codes become the standard\n"+
+"      every terminal emulator still speaks.\n"+
+"1978  Ward Christensen and Randy Suess open CBBS in Chicago,\n"+
+"      the first dial-up bulletin board system.\n"+
+"1983  DEC VT220 — amber, green or white phosphor, your choice.\n"+
+"1984  IBM 3270s glow green in every bank basement on earth.\n"+
+"1990s BBS culture peaks: ANSI art, door games, FidoNet mail.\n"+
+"      Then the web arrives and the text-mode world goes quiet.\n"+
+"2000s The terminal never died. It moved into a window.\n\n"+
+"See also: [[cat phosphor.txt]]  [[cat people.txt]]\n"},
+    "~/phosphor.txt":{type:"file",body:
+"PHOSPHORS, OR WHY YOUR SCREEN IS GREEN\n"+
+"======================================\n\n"+
+"A CRT fires electrons at a coating of phosphor. Different\n"+
+"compounds glow different colours, and fade at different speeds.\n\n"+
+"  P1   green     zinc silicate. medium persistence, cheap, bright.\n"+
+"                 easy on 1970s eyes and on 1970s budgets.\n"+
+"  P3   amber     zinc beryllium silicate. popular in Europe after\n"+
+"                 studies suggested it was less tiring. warmer.\n"+
+"  P4   white     a blend. the 'paper-white' look of later terminals.\n"+
+"  P39  green     long persistence — ghostly trails, no flicker.\n\n"+
+"The fuzzy glow around each letter is 'bloom'. The dark stripes\n"+
+"between rows are the gaps between electron-beam passes.\n"+
+"The slight curve is the glass itself.\n\n"+
+"Change phosphor here: [[theme green]]  [[theme amber]]  [[theme white]]\n"},
+    "~/people.txt":{type:"file",body:
+"PEOPLE WHO LIVED IN 80 COLUMNS\n"+
+"==============================\n\n"+
+"Ken Thompson & Dennis Ritchie  — Unix and C. terse on purpose.\n"+
+"Brian Kernighan                — 'hello, world'. awk. the manual\n"+
+"                                 as literature.\n"+
+"Bill Joy                       — wrote vi on an ADM-3A at Berkeley.\n"+
+"Richard Stallman               — Emacs, GNU, and the free software\n"+
+"                                 movement, typed in a terminal.\n"+
+"Ward Christensen & Randy Suess  — CBBS, 1978. the first BBS, built\n"+
+"                                 during a Chicago blizzard.\n"+
+"Tom Jennings                   — FidoNet, mail relayed BBS to BBS\n"+
+"                                 overnight by modem.\n"+
+"Will Crowther & Don Woods      — Colossal Cave Adventure. 'You are\n"+
+"                                 in a maze of twisty little passages.'\n"},
+    "~/principles.txt":{type:"file",body:
+"PRINCIPLES OF THE COMMAND LINE\n"+
+"==============================\n\n"+
+"1. 80 x 24.   The screen is a grid of character cells. Layout is\n"+
+"              arithmetic.\n"+
+"2. Text is the universal interface. Programs read and write it.\n"+
+"3. Small tools, piped together. Do one thing well.\n"+
+"4. Silence is golden. A command that succeeds says nothing.\n"+
+"5. The keyboard is fast. The mouse is a rumour.\n"+
+"6. History matters. Up-arrow is the most used key you own.\n"+
+"7. Glow. The medium was light. We miss it.\n"},
+    "~/guestbook.txt":{type:"file",body:null},
+    "~/.plan":{type:"file",body:
+"ember's .plan  (finger ember@lowglow)\n\n"+
+"- re-cap the VT220 flyback before it re-caps me\n"+
+"- finish the door game, 'LIGHTHOUSE', maybe by 1994\n"+
+"- teach the cat that the keyboard is not a bed\n"},
+    "~/projects":{type:"dir",kids:["lighthouse.txt","ansi-art.txt","modem.log"]},
+    "~/projects/lighthouse.txt":{type:"file",body:"LIGHTHOUSE — a door game in progress.\nYou keep a light burning on an island of text. Play the demo: [[adventure]]\n"},
+    "~/projects/ansi-art.txt":{type:"file",body:
+"        .--.\n"+
+"       |o_o |     ember's ANSI corner\n"+
+"       |:_/ |     (the 16-colour version\n"+
+"      //   \\ \\    looked much better\n"+
+"     (|     | )   at 2400 baud)\n"+
+"    /'\\_   _/`\\\n"+
+"    \\___)=(___/\n"},
+    "~/projects/modem.log":{type:"file",body:
+"ATDT 555-0199\nCONNECT 2400\n** handshake **\nWelcome to LOWGLOW. Node 1 of 2.\nNO CARRIER\n"}
+  };
+  function guestbook(){var g=ls('lowglow-guestbook');var base="GUESTBOOK — sign with: sign <your message>\n----------------------------------------\n1991-03-02  kestrel: first! nice glow.\n1992-11-19  moth: the amber mode is a warm bath.\n";return base+(g||"");}
+
+  /* ---------- output helpers ---------- */
+  function esc(s){return s.replace(/[&<>]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});}
+  function fmt(s){return esc(s).replace(/\[\[(.+?)\]\]/g,function(_,c){return'<button class="cmd" type="button" data-cmd="'+c+'">'+c+'</button>';});}
+  function print(s,cls){if(!s)s=' ';var d=document.createElement('div');if(cls)d.className=cls;d.innerHTML=fmt(s);out.appendChild(d);scroll();return d;}
+  function raw(html){var d=document.createElement('div');d.innerHTML=html;out.appendChild(d);scroll();}
+  function scroll(){term.scrollTop=term.scrollHeight;}
+  function echo(c){print(promptEl.textContent+' '+c);}
+  function path(p){
+    if(!p||p==="~")return"~";
+    if(p==="..")return cwd==="~"?"~":cwd.replace(/\/[^/]+$/,'');
+    if(p.indexOf("~/")===0)return p.replace(/\/$/,'');
+    if(p.charAt(0)==="/")return"~"+p.replace(/\/$/,'');
+    return(cwd+"/"+p).replace(/\/$/,'');
+  }
+
+  /* ---------- commands ---------- */
+  var FORTUNES=[
+    "There are 10 kinds of people: those who understand binary and those who don't.",
+    "The best way to predict the future is to invent it. — Alan Kay",
+    "UNIX is simple. It just takes a genius to understand its simplicity. — Dennis Ritchie",
+    "It's not a bug, it's an undocumented feature.",
+    "Real programmers set the universal constants at the start such that the universe evolves to contain the disk with the data they want.",
+    "You are in a maze of twisty little passages, all alike.",
+    "NO CARRIER",
+    "Your lucky phosphor today is P3 amber.",
+    "Beware of bugs in the above code; I have only proved it correct, not tried it. — Donald Knuth",
+    "A terminal is a window you can't see through, and that's the point.",
+    "Talk is cheap. Show me the code. — Linus Torvalds",
+    "Simplicity is prerequisite for reliability. — Edsger Dijkstra"
+  ];
+  var CMDS={
+    help:function(){print(
+"AVAILABLE COMMANDS\n"+
+"  [[ls]] [dir]        list files          [[cat]] <file>   print a file\n"+
+"  cd <dir>          change directory    [[pwd]]            where am i\n"+
+"  [[fortune]]         a cookie            [[matrix]]         digital rain\n"+
+"  [[games]]           list games          [[theme]] <p>      green|amber|white\n"+
+"  [[whoami]]          about the sysop     [[date]]           system clock\n"+
+"  echo <text>       say it back         sign <msg>       sign guestbook\n"+
+"  [[history]]         your commands       [[clear]]          wipe screen\n"+
+"  [[neofetch]]        system info         [[reboot]]         warm the tubes\n"+
+"Tab completes, Up/Down recalls history, Ctrl+L clears.");},
+    ls:function(a){
+      var p=path(a[0]||cwd),n=FS[p];
+      if(!n){print("ls: cannot access '"+(a[0]||'')+"': No such file or directory");return;}
+      if(n.type==="file"){print(a[0]);return;}
+      var html=n.kids.map(function(k){var full=p+"/"+k,isDir=FS[full]&&FS[full].type==="dir";var rel=(p===cwd?k:full);return isDir?'[['+'cd '+rel+']]/':'[['+'cat '+rel+']]';});
+      print(html.join("   ").replace(/\[\[cat ([^\]]+)\]\]/g,function(_,f){return '[[cat '+f+']]';}));
+    },
+    cat:function(a){
+      if(!a[0]){print("usage: cat <file>");return;}
+      var p=path(a[0]),n=FS[p];
+      if(!n){print("cat: "+a[0]+": No such file or directory");return;}
+      if(n.type==="dir"){print("cat: "+a[0]+": Is a directory");return;}
+      print(p==="~/guestbook.txt"?guestbook():n.body);
+    },
+    more:function(a){CMDS.cat(a);},less:function(a){CMDS.cat(a);},
+    cd:function(a){var p=path(a[0]||"~");if(!FS[p]||FS[p].type!=="dir"){print("cd: "+(a[0]||'')+": Not a directory");return;}cwd=p;setPrompt();},
+    pwd:function(){print(cwd.replace("~","/home/ember"));},
+    whoami:function(){print("ember — sysop of LOWGLOW BBS (est. 1989, 2 nodes, 2400 baud).\nlikes: amber phosphor, door games, long .plan files.\ndislikes: GUIs that hide the files.\nsee [[cat .plan]]");},
+    date:function(){print(new Date().toString());},
+    echo:function(a,rawargs){print(rawargs||"");},
+    clear:function(){out.innerHTML="";},
+    history:function(){print(hist.map(function(h,i){return String(i+1).padStart(4," ")+"  "+h;}).join("\n")||"(empty)");},
+    fortune:function(){print(FORTUNES[Math.floor(Math.random()*FORTUNES.length)]);},
+    theme:function(a){var t=(a[0]||"").toLowerCase();if(["green","amber","white"].indexOf(t)<0){print("usage: theme green|amber|white   (P1, P3, P4 phosphor)");return;}setTheme(t);print("phosphor set to "+t+".");},
+    sign:function(a,r){if(!r){print("usage: sign <message>");return;}var d=new Date().toISOString().slice(0,10);var cur=ls('lowglow-guestbook')||"";ls('lowglow-guestbook',cur+d+"  guest: "+r.slice(0,120)+"\n");print("thanks for signing. [[cat guestbook.txt]]");},
+    neofetch:function(){print(
+"   ██████      ember@lowglow\n"+
+"  ██    ██     -------------\n"+
+"  ██ ▓▓ ██     OS: LowglowNIX 4.3 (text mode)\n"+
+"  ██    ██     Terminal: VT-220, 80x24\n"+
+"   ██████      Phosphor: "+document.body.className.replace(/^$/,'green')+"\n"+
+"     ██        Uptime: since 1989\n"+
+"   ██████      Modem: 2400 baud, Hayes compatible\n"+
+"               Memory: 640K (ought to be enough)");},
+    games:function(){print("GAMES\n  [[guess]]       guess the number (1-100)\n  [[adventure]]   LIGHTHOUSE — a tiny text adventure\n  [[wargames]]    shall we play a game?");},
+    guess:function(){startGuess();},
+    adventure:function(){startAdv();},
+    wargames:function(){print("GREETINGS PROFESSOR FALKEN.\nSHALL WE PLAY A GAME?\n\n...A STRANGE GAME. THE ONLY WINNING MOVE IS NOT TO PLAY.\nHOW ABOUT A NICE GAME OF [[guess]]?");},
+    matrix:function(){startRain();},
+    reboot:function(){out.innerHTML="";line.hidden=true;bootSeq();},
+    sudo:function(){print("ember is not in the sudoers file. This incident will be reported.");},
+    exit:function(){print("logout\nNO CARRIER\n\n(just kidding. you can't leave. try [[help]])");},
+    ssh:function(){print("ssh: the modem is busy. someone picked up the phone.");},
+    vi:function(){print("you are now in vi. you will never leave.\n(:q! — just kidding.)");},
+    emacs:function(){print("M-x butterfly\nAmazing physics going on...");},
+    rm:function(){print("rm: permission denied. the files are load-bearing.");},
+    man:function(a){print(a[0]?"No manual entry for "+a[0]+". try [[help]].":"What manual page do you want?");}
+  };
+  var NAMES=Object.keys(CMDS);
+
+  /* ---------- games ---------- */
+  function startGuess(){
+    var n=1+Math.floor(Math.random()*100),tries=0;
+    print("I'm thinking of a number between 1 and 100. Type a guess, or 'q' to quit.");
+    mode=function(v){
+      if(v==="q"){mode=null;print("the number was "+n+".");return;}
+      var g=parseInt(v,10);if(isNaN(g)){print("a number, please.");return;}
+      tries++;
+      if(g<n)print(g+" is too low.");else if(g>n)print(g+" is too high.");
+      else{print("*** "+g+" — correct in "+tries+" tr"+(tries===1?"y":"ies")+". ***");var b=+ls('lowglow-best')||0;if(!b||tries<b){ls('lowglow-best',String(tries));print("new personal best.");}mode=null;}
+    };
+    setPrompt("guess>");
+  }
+  function startAdv(){
+    var rooms={
+      shore:{d:"You stand on a shore of cold grey text. A lighthouse rises to the NORTH. Waves hiss to the SOUTH.",x:{north:"door"}},
+      door:{d:"A heavy door, its paint peeled into ASCII flakes. It is shut. Something glints in the sand: a KEY. Paths lead SOUTH.",x:{south:"shore"}},
+      stairs:{d:"A spiral staircase. 80 steps, arranged in 24 turns. UP leads to the lamp. DOWN leads out.",x:{up:"lamp",down:"door"}},
+      lamp:{d:"The lamp room. The great lens is dark. A MATCH sits on a shelf. Stairs go DOWN.",x:{down:"stairs"}}
+    };
+    var here="shore",inv=[],unlocked=false,lit=false;
+    function look(){print(rooms[here].d+(here==="door"&&inv.indexOf("key")>=0?" (You have the key.)":"")+(here==="door"&&unlocked?" The door stands open: go NORTH.":""));}
+    print("LIGHTHOUSE  v0.3  — a door game by ember\ncommands: look, north/south/up/down (n/s/u/d), take <thing>, use <thing>, inv, quit\n");
+    look();
+    mode=function(v){
+      var w=v.toLowerCase().split(/\s+/),c=w[0],o=w[1];
+      var dirs={n:"north",s:"south",u:"up",d:"down"};if(dirs[c])c=dirs[c];
+      if(c==="go"&&o){c=dirs[o]||o;}
+      if(c==="quit"||c==="q"){mode=null;print("You leave the island. The light waits.");setPrompt();return;}
+      if(c==="look"||c==="l"){look();return;}
+      if(c==="inv"||c==="i"){print(inv.length?"You carry: "+inv.join(", "):"You carry nothing but curiosity.");return;}
+      if(["north","south","up","down"].indexOf(c)>=0){
+        if(here==="door"&&c==="north"){if(unlocked){here="stairs";look();}else print("The door is locked.");return;}
+        var nx=rooms[here].x[c];if(nx){here=nx;look();}else print("You can't go that way.");return;
+      }
+      if(c==="take"||c==="get"){
+        if(o==="key"&&here==="door"&&inv.indexOf("key")<0){inv.push("key");print("Taken: a small brass key.");return;}
+        if(o==="match"&&here==="lamp"&&inv.indexOf("match")<0){inv.push("match");print("Taken: one match. Only one.");return;}
+        print("There's no "+(o||"that")+" here.");return;
+      }
+      if(c==="use"||c==="light"||c==="unlock"){
+        if((o==="key"||c==="unlock")&&here==="door"&&inv.indexOf("key")>=0){unlocked=true;print("The key turns with a sound like a modem handshake. The door opens.");return;}
+        if((o==="match"||o==="lamp"||c==="light")&&here==="lamp"&&inv.indexOf("match")>=0&&!lit){lit=true;mode=null;
+          print("You strike the match. The lamp catches. The lens turns, and a beam of green light sweeps out across the text sea, across every screen still glowing in every basement.\n\n*** YOU KEPT THE LIGHT ON. THE END. ***");setPrompt();return;}
+        print("Nothing happens.");return;
+      }
+      print("I don't understand '"+v+"'.");
+    };
+    setPrompt("lighthouse>");
+  }
+
+  /* ---------- matrix rain ---------- */
+  var rain=document.getElementById('rain'),rctx=rain.getContext('2d'),raf=null;
+  function startRain(){
+    print("wake up, ember... (press any key or tap to exit)");
+    rain.classList.add('on');
+    var dpr=Math.min(2,window.devicePixelRatio||1),W=rain.clientWidth,H=rain.clientHeight;
+    rain.width=W*dpr;rain.height=H*dpr;rctx.setTransform(dpr,0,0,dpr,0,0);
+    var fs=W<500?14:18,cols=Math.ceil(W/fs),drops=[];for(var i=0;i<cols;i++)drops.push(Math.random()*-40);
+    var chars="ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ0123456789ABCDEF<>=+*";
+    var col=getComputedStyle(document.body).getPropertyValue('--ph').trim()||'#41ff7a';
+    rctx.fillStyle='#000';rctx.fillRect(0,0,W,H);
+    var last=0;
+    function step(t){
+      raf=requestAnimationFrame(step);
+      if(t-last<(reduce?200:45))return;last=t;
+      rctx.fillStyle='rgba(0,0,0,.08)';rctx.fillRect(0,0,W,H);
+      rctx.font=fs+'px VT323, monospace';
+      for(var i=0;i<cols;i++){
+        var y=drops[i]*fs;
+        rctx.fillStyle='#fff';rctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*fs,y);
+        rctx.fillStyle=col;rctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*fs,y-fs);
+        if(y>H&&Math.random()>.975)drops[i]=0;drops[i]++;
+      }
+    }
+    raf=requestAnimationFrame(step);
+    setTimeout(function(){document.addEventListener('keydown',stopRain,{once:true});rain.addEventListener('pointerdown',stopRain,{once:true});},50);
+  }
+  function stopRain(e){if(e&&e.preventDefault)e.preventDefault();cancelAnimationFrame(raf);rain.classList.remove('on');document.removeEventListener('keydown',stopRain);print("the rain stops. you are back.");inp.focus();}
+
+  /* ---------- input ---------- */
+  function setPrompt(p){promptEl.textContent=p||("ember@lowglow:"+cwd+"$");}
+  function updMirror(){
+    var v=inp.value,pos=inp.selectionStart==null?v.length:inp.selectionStart;
+    var ch=v.charAt(pos)||" ";
+    mirror.innerHTML=esc(v.slice(0,pos))+'<span class="cur">'+esc(ch)+'</span>'+esc(v.slice(pos+1));
+  }
+  function run(c){
+    c=c.trim();
+    echo(c);
+    if(!c){return;}
+    hist.push(c);hi=hist.length;
+    if(mode){mode(c);if(!mode)setPrompt();return;}
+    var parts=c.split(/\s+/),name=parts[0].toLowerCase(),args=parts.slice(1),rest=c.slice(parts[0].length).trim();
+    if(CMDS[name])CMDS[name](args,rest);
+    else print(name+": command not found. type [[help]].");
+  }
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){var v=inp.value;inp.value='';run(v);updMirror();scroll();}
+    else if(e.key==='ArrowUp'){if(hi>0){hi--;inp.value=hist[hi];e.preventDefault();setTimeout(function(){inp.setSelectionRange(inp.value.length,inp.value.length);updMirror();},0);}}
+    else if(e.key==='ArrowDown'){if(hi<hist.length){hi++;inp.value=hist[hi]||'';e.preventDefault();updMirror();}}
+    else if(e.key==='Tab'){e.preventDefault();var v2=inp.value,sp=v2.split(' ');
+      if(sp.length===1){var m=NAMES.filter(function(n){return n.indexOf(v2)===0;});if(m.length===1)inp.value=m[0]+' ';else if(m.length>1)print(m.join('  '));}
+      else{var last=sp[sp.length-1],dir=FS[cwd].kids.filter(function(k){return k.indexOf(last)===0;});if(dir.length===1){sp[sp.length-1]=dir[0];inp.value=sp.join(' ');}else if(dir.length>1)print(dir.join('  '));}
+      updMirror();}
+    else if(e.key==='l'&&e.ctrlKey){e.preventDefault();out.innerHTML='';}
+    else if(e.key==='c'&&e.ctrlKey&&mode){e.preventDefault();mode=null;print('^C');setPrompt();}
+  });
+  ['input','keyup','click','select'].forEach(function(ev){inp.addEventListener(ev,updMirror);});
+  inp.addEventListener('focus',updMirror);inp.addEventListener('blur',updMirror);
+  document.getElementById('screen').addEventListener('click',function(e){
+    var b=e.target.closest('.cmd');
+    if(b){run(b.dataset.cmd);inp.focus({preventScroll:true});return;}
+    if(!window.getSelection().toString()&&!line.hidden)inp.focus({preventScroll:true});
+  });
+  document.querySelectorAll('.keys button').forEach(function(b){b.addEventListener('click',function(){if(line.hidden)return;run(b.dataset.cmd);});});
+
+  /* ---------- theme ---------- */
+  function setTheme(t){
+    document.body.className=t==="green"?"":t;
+    ["green","amber","white"].forEach(function(k){document.getElementById('ph-'+k).setAttribute('aria-pressed',k===t?'true':'false');});
+    ls('lowglow-theme',t);
+  }
+  ["green","amber","white"].forEach(function(k){document.getElementById('ph-'+k).addEventListener('click',function(){setTheme(k);});});
+  var saved=ls('lowglow-theme');if(saved&&["green","amber","white"].indexOf(saved)>=0)setTheme(saved);
+
+  /* ---------- boot ---------- */
+  function bootSeq(){
+    var lines=[
+      ["LOWGLOW BIOS v2.20  (C) 1989 Lowglow Systems","dim"],
+      ["Memory test: 640K OK",""],
+      ["Detecting modem........ Hayes compatible 2400 baud",""],
+      ["Warming phosphor....... [##########] 100%",""],
+      ["Mounting /home/ember... ok",""],
+      ["",""],
+    ].concat(term.clientWidth<600?[
+      ["+--------------------+",""],
+      ["|  L O W G L O W     |",""],
+      ["|  bbs · since 1989  |",""],
+      ["+--------------------+",""]
+    ]:[
+      ["  _                    _             ",""],
+      [" | |    _____      __ | | _____      __",""],
+      [" | |   / _ \\ \\ /\\ / / | |/ _ \\ \\ /\\ / /",""],
+      [" | |__| (_) \\ V  V /  | | (_) \\ V  V / ",""],
+      [" |_____\\___/ \\_/\\_/   |_|\\___/ \\_/\\_/  ",""]
+    ]).concat([
+
+      ["",""],
+      ["Welcome to LOWGLOW BBS — ember's homepage on the glass teletype.",""],
+      ["Last login: "+new Date(Date.now()-86400000*3).toDateString()+" on ttyS0",""],
+      ["",""],
+      ["New here? Click a command or type one:  [[help]]  [[ls]]  [[cat readme.txt]]  [[fortune]]  [[matrix]]  [[games]]",""],
+      ["",""]
+    ]);
+    var i=0,fast=reduce;
+    function next(){
+      if(i>=lines.length){line.hidden=false;setPrompt();updMirror();if(!('ontouchstart' in window))inp.focus({preventScroll:true});scroll();return;}
+      print(lines[i][0],lines[i][1]);i++;
+      if(fast)next();else setTimeout(next,i<6?90:28);
+    }
+    next();
+  }
+  bootSeq();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Ember Terminal</title>
+<meta name="description" content="A campfire and candle rendered entirely from text characters with an upgraded Doom-fire algorithm, coloured palettes, crackling synthesized sound and wind that follows your pointer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#050304;
+  --ember:#ff7a1a;
+  --flame:#ffc24a;
+  --ash:#8a7a70;
+  --bone:#f3e6d6;
+  --line:rgba(243,230,214,.16);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--night);color:var(--bone);font-family:"Share Tech Mono",ui-monospace,Menlo,Consolas,monospace;overflow:hidden}
+#fire{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.crt{position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+.vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 70%,transparent 30%,rgba(0,0,0,.7) 100%)}
+.head{position:fixed;left:max(20px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));z-index:2;pointer-events:none}
+.head h1{font-family:"Pirata One","UnifrakturCook","Old English Text MT",Georgia,serif;font-weight:400;font-size:clamp(34px,5vw,64px);margin:0;line-height:.9;color:var(--flame);text-shadow:0 0 18px rgba(255,122,26,.55),0 0 2px #fff3}
+.head p{margin:8px 0 0;font-size:12px;color:var(--ash);letter-spacing:.08em}
+.head p b{color:var(--bone);font-weight:400}
+.back{position:fixed;right:max(20px,env(safe-area-inset-right));top:max(18px,env(safe-area-inset-top));z-index:3;color:var(--ash);text-decoration:none;font-size:13px}
+.back::before{content:"> ";color:var(--ember)}
+.back:hover,.back:focus-visible{color:var(--flame);outline:none;text-shadow:0 0 8px var(--ember)}
+.console{width:max-content;position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:3;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:center;font-size:13px;color:var(--ash);background:rgba(5,3,4,.72);border:1px solid var(--line);padding:9px 14px;max-width:calc(100% - 32px)}
+.console label{display:flex;gap:8px;align-items:center}
+.console .k{color:var(--ember)}
+input[type=range]{width:100px;accent-color:var(--ember)}
+select{background:#120b08;color:var(--bone);border:1px solid var(--line);font:inherit;font-size:13px;padding:3px 6px}
+button{background:transparent;color:var(--bone);border:1px solid var(--line);font:inherit;font-size:13px;padding:4px 10px;cursor:pointer}
+button:hover{border-color:var(--ember);color:var(--flame)}
+button[aria-pressed=true]{background:var(--ember);color:#140800;border-color:var(--ember)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:1px dashed var(--flame);outline-offset:3px}
+.wind{position:fixed;right:max(20px,env(safe-area-inset-right));top:max(48px,calc(env(safe-area-inset-top) + 34px));z-index:2;font-size:12px;color:var(--ash);text-align:right;pointer-events:none;white-space:pre}
+@media (max-width:640px){
+  .console{gap:8px 12px;font-size:12px;padding:8px 10px}
+  input[type=range]{width:70px}
+  .head p{max-width:24ch}
+  .wind{display:none}
+  .head{right:120px}
+  .head h1{font-size:32px}
+}
+@media (prefers-reduced-motion:reduce){.crt{display:none}}
+</style>
+</head>
+<body>
+<canvas id="fire" aria-label="A campfire and a candle drawn in text characters. Move the pointer to blow wind; click to throw on a log."></canvas>
+<div class="crt" aria-hidden="true"></div>
+<div class="vig" aria-hidden="true"></div>
+<header class="head">
+  <h1>The Ember Terminal</h1>
+  <p>fire.exe · <b id="cells">0</b> glyphs burning · move to blow, click to add a log</p>
+</header>
+<a class="back" href="index.html">← Showcase</a>
+<div class="wind" id="windReadout" aria-live="off">wind  0.0 kn</div>
+<div class="console" role="toolbar" aria-label="Fire controls">
+  <label for="fuel"><span class="k">fuel</span><input id="fuel" type="range" min="10" max="100" value="72"></label>
+  <label for="palette"><span class="k">palette</span>
+    <select id="palette"><option value="wood">wood</option><option value="gas">gas</option><option value="witch">witch</option><option value="mono">amber CRT</option></select></label>
+  <label for="glyphs"><span class="k">glyphs</span>
+    <select id="glyphs"><option value="classic">classic</option><option value="blocks">blocks</option><option value="runes">runes</option><option value="digits">digits</option></select></label>
+  <button id="btnSound" aria-pressed="false">sound: off</button>
+  <button id="btnLog">+ log</button>
+</div>
+
+<script>
+(function(){
+'use strict';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cv=document.getElementById('fire'),g=cv.getContext('2d');
+let W=0,H=0,dpr=1,CW=9,CH=14,cols=0,rows=0;
+let fire=null;const MAXI=36;
+let fuel=.72,wind=0,windTarget=0,mouseIn=false,logBoost=0;
+const RAMPS={classic:" .'`^,:;Il!i><~+_-?][}{1)(|tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",blocks:" ░░▒▒▓▓█",runes:" ·ᛁᚲᚾᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ",digits:" .01234567899"};
+let ramp=RAMPS.classic;
+const PALETTES={
+  wood:[[7,7,7],[31,7,7],[47,15,7],[71,15,7],[87,23,7],[103,31,7],[119,31,7],[143,39,7],[159,47,7],[175,63,7],[191,71,7],[199,71,7],[223,79,7],[223,87,7],[223,87,7],[215,95,7],[215,95,7],[215,103,15],[207,111,15],[207,119,15],[207,127,15],[207,135,23],[199,135,23],[199,143,23],[199,151,31],[191,159,31],[191,159,31],[191,167,39],[191,167,39],[191,175,47],[183,175,47],[183,183,47],[183,183,55],[207,207,111],[223,223,159],[239,239,199],[255,255,255]],
+};
+function lerpPal(stops){const out=[];for(let i=0;i<=MAXI;i++){const t=i/MAXI*(stops.length-1);const a=Math.floor(t),b=Math.min(stops.length-1,a+1),f=t-a;out.push(stops[a].map((v,k)=>Math.round(v+(stops[b][k]-v)*f)));}return out;}
+PALETTES.gas=lerpPal([[4,4,10],[10,20,80],[20,60,200],[60,140,255],[150,210,255],[255,255,255]]);
+PALETTES.witch=lerpPal([[4,6,4],[20,50,10],[40,120,20],[90,210,40],[190,255,120],[250,255,230]]);
+PALETTES.mono=lerpPal([[6,4,0],[60,30,0],[140,80,0],[220,140,10],[255,200,80],[255,240,190]]);
+let pal=PALETTES.wood;let palCss=[];
+function buildPalCss(){palCss=pal.map(c=>`rgb(${c[0]},${c[1]},${c[2]})`);}
+buildPalCss();
+
+// candle has its own tiny fire buffer
+const CAN={cols:7,rows:8,buf:null};
+let bg=document.createElement('canvas'),bgg=bg.getContext('2d');
+let stars=[],sparks=[];
+
+function resize(){
+  dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+  CW=W<640?7:9;CH=Math.round(CW*1.55);
+  cols=Math.ceil(W/CW);rows=Math.ceil(H/CH);fire=new Uint8Array(cols*rows);CAN.buf=new Uint8Array(CAN.cols*CAN.rows);
+  stars=[];for(let i=0;i<cols*rows*.012;i++)stars.push({x:(Math.random()*cols)|0,y:(Math.random()*rows*.55)|0,c:'.·+*'[Math.random()*4|0],p:Math.random()*6.28,s:.5+Math.random()*2});
+  bg.width=cv.width;bg.height=cv.height;drawStatic();
+}
+function fireBase(){return{cx:Math.round(cols*(W<640?.5:.46)),y:Math.round(rows*.8),half:Math.max(6,Math.round(cols*(W<640?.2:.12)))};}
+function candlePos(){return{cx:Math.round(cols*(W<640?.84:.8)),y:Math.round(rows*.72)};}
+function font(){return `${CH*.92}px "Share Tech Mono", ui-monospace, Menlo, Consolas, monospace`;}
+function drawStatic(){
+  const b=bgg;b.setTransform(dpr,0,0,dpr,0,0);b.fillStyle='#050304';b.fillRect(0,0,W,H);b.font=font();b.textBaseline='top';
+  const fb=fireBase(),cp=candlePos();
+  // ground
+  for(let y=fb.y+1;y<rows;y++)for(let x=0;x<cols;x++){const r=Math.random();const ch=y===fb.y+1?(r<.5?'_':'~'):(r<.1?',':r<.2?'.':r<.24?'`':' ');if(ch===' ')continue;
+    const d=Math.hypot((x-fb.cx)/1.6,(y-fb.y)*1.3);const k=Math.max(0,1-d/(cols*.35));b.fillStyle=`rgba(${80+k*170|0},${40+k*70|0},${20+k*10|0},${.25+k*.6})`;b.fillText(ch,x*CW,y*CH);}
+  // logs
+  const logs=[['\\\\\\\\\\\\\\',-7,1],['///////',1,1],['=======[]',-4,2],['(##########)',-6,0]];
+  b.fillStyle='#6b3d1f';for(const [s,dx,dy] of logs){for(let i=0;i<s.length;i++)b.fillText(s[i],(fb.cx+dx+i)*CW,(fb.y+dy)*CH);}
+  // stones ring
+  b.fillStyle='#5c5550';for(let i=-fb.half-3;i<=fb.half+3;i+=3){b.fillText(i%2?'O':'o',(fb.cx+i)*CW,(fb.y+2)*CH);}
+  // candle body, dish
+  b.fillStyle='#e9dcc4';for(let y=0;y<6;y++){b.fillText('|',(cp.cx-1)*CW,(cp.y+1+y)*CH);b.fillText('|',(cp.cx+1)*CW,(cp.y+1+y)*CH);b.fillText(y===0?'~':':',(cp.cx)*CW,(cp.y+1+y)*CH);}
+  b.fillStyle='#b9a27a';b.fillText('\\_____/',(cp.cx-3)*CW,(cp.y+7)*CH);b.fillText('(=====)',(cp.cx-3)*CW,(cp.y+8)*CH);
+  b.fillStyle='#3a2a1a';b.fillText('i',cp.cx*CW,cp.y*CH);
+  // distant tree line
+  b.fillStyle='rgba(40,50,40,.8)';for(let x=0;x<cols;x++){const h=Math.round(3+Math.abs(Math.sin(x*.13)*4+Math.sin(x*.41)*2));for(let y=0;y<h;y++){const yy=fb.y-6-y;if(Math.abs(x-fb.cx)<fb.half+14&&yy>fb.y-18)continue;b.fillText(y===h-1?'^':(y%2?'A':'|'),x*CW,yy*CH);}}
+}
+
+// ---------- doom fire, upgraded: shaped source, wind, fuel, turbulence ----------
+function stepFire(){
+  const fb=fireBase();const src=fb.y;
+  // seed the source row with a hot, flickering bed shaped by fuel
+  for(let x=0;x<cols;x++){const d=Math.abs(x-fb.cx)/(fb.half*(0.55+fuel*.6+logBoost*.4));let v=0;
+    if(d<1){v=Math.round(MAXI*(1-Math.pow(d,1.6)*.8)*(0.8+Math.random()*.2));if(Math.random()<.18+d*.3)v=Math.round(v*.45);}
+    fire[src*cols+x]=v;}
+  const decayBias=Math.max(.05,.95-fuel*.6-logBoost*.35);const w=wind;
+  for(let y=1;y<=src;y++){for(let x=0;x<cols;x++){const i=y*cols+x;const p=fire[i];
+      if(p===0){fire[i-cols]=0;continue;}
+      const r=(Math.random()*3.999)|0;let drift=((Math.random()*3)|0)-1+Math.round(w*(.5+Math.random()*1.1));
+      let dst=i-cols+drift;if(dst<0)dst=0;if(dst>=fire.length)dst=fire.length-1;
+      const edge=Math.abs(x-fb.cx)/(fb.half*1.1);const dec=(r&1)+(Math.random()<decayBias?1:0)+(Math.random()<edge*.55?1:0);fire[dst]=p>dec?p-dec:0;}}
+  // clear below the source
+  for(let i=(src+1)*cols;i<fire.length;i++)fire[i]=0;
+}
+function stepCandle(t){
+  const c=CAN,b=c.buf;const mid=(c.cols/2)|0;
+  for(let x=0;x<c.cols;x++){b[(c.rows-1)*c.cols+x]=x===mid?MAXI-2+(Math.random()*2|0):(Math.abs(x-mid)===1&&Math.random()<.6?24:0);}
+  for(let y=1;y<c.rows;y++)for(let x=0;x<c.cols;x++){const i=y*c.cols+x;const p=b[i];if(!p){b[i-c.cols]=0;continue;}
+    const r=(Math.random()*3)|0;let dx=Math.random()<.5?0:(r-1);dx+=Math.round(wind*.8*Math.random());let nx=Math.max(0,Math.min(c.cols-1,x+dx));const dst=(y-1)*c.cols+nx;b[dst]=Math.max(0,p-(3+(Math.random()*4|0)));}
+}
+function emitSparks(dt){
+  const fb=fireBase();const rate=(8+fuel*25+logBoost*80)*dt;
+  for(let i=0;i<rate;i++)if(Math.random()<.7)sparks.push({x:fb.cx+(Math.random()-.5)*fb.half*1.2,y:fb.y-4-Math.random()*6,vx:(Math.random()-.5)*6,vy:-(8+Math.random()*16),life:1+Math.random()*1.6,c:Math.random()<.5?'*':'.'});
+  for(const s of sparks){s.vx+=wind*14*dt+(Math.random()-.5)*20*dt;s.x+=s.vx*dt;s.y+=s.vy*dt;s.vy*=.995;s.life-=dt;}
+  sparks=sparks.filter(s=>s.life>0&&s.y>0);
+}
+
+// ---------- render ----------
+let lastCount=0;
+function render(t){
+  g.setTransform(1,0,0,1,0,0);g.drawImage(bg,0,0);
+  g.setTransform(dpr,0,0,dpr,0,0);g.font=font();g.textBaseline='top';
+  const fb=fireBase(),cp=candlePos();
+  // warm glow
+  const heat=.55+fuel*.35+logBoost*.3+Math.sin(t*9)*.03+Math.random()*.04;const c0=pal[Math.min(MAXI,26)];
+  const gl=g.createRadialGradient(fb.cx*CW,fb.y*CH-CH*4,0,fb.cx*CW,fb.y*CH-CH*4,Math.max(W,H)*.45);
+  gl.addColorStop(0,`rgba(${c0[0]},${c0[1]},${c0[2]},${.22*heat})`);gl.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);
+  const cg2=g.createRadialGradient(cp.cx*CW,cp.y*CH,0,cp.cx*CW,cp.y*CH,CW*14);cg2.addColorStop(0,`rgba(${c0[0]},${c0[1]},${c0[2]},.14)`);cg2.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=cg2;g.fillRect(0,0,W,H);
+  // stars
+  for(const s of stars){const a=reduce?.5:.35+.35*Math.sin(t*s.s+s.p);g.fillStyle=`rgba(243,230,214,${a})`;g.fillText(s.c,s.x*CW,s.y*CH);}
+  // fire glyphs grouped by intensity
+  const L=ramp.length-1;let count=0;
+  const buckets=[];for(let i=0;i<=MAXI;i++)buckets.push([]);
+  for(let y=0;y<=fb.y;y++){const row=y*cols;for(let x=0;x<cols;x++){const v=fire[row+x];if(v>1){buckets[v].push(x,y);}}}
+  for(let v=2;v<=MAXI;v++){const b=buckets[v];if(!b.length)continue;g.fillStyle=palCss[v];const ch=ramp[Math.max(1,Math.round(v/MAXI*L))];
+    for(let k=0;k<b.length;k+=2)g.fillText(ch,b[k]*CW,b[k+1]*CH);count+=b.length/2;}
+  // candle flame
+  const c=CAN;const ox=cp.cx-((c.cols/2)|0),oy=cp.y-c.rows;
+  for(let y=0;y<c.rows;y++)for(let x=0;x<c.cols;x++){const v=c.buf[y*c.cols+x];if(v<4)continue;g.fillStyle=palCss[v];g.fillText(ramp[Math.max(1,Math.round(v/MAXI*L))],(ox+x)*CW,(oy+y)*CH);count++;}
+  // sparks
+  for(const s of sparks){const k=Math.min(1,s.life);g.fillStyle=`rgba(255,${160+k*80|0},${60*k|0},${k})`;g.fillText(s.c,s.x*CW,s.y*CH);}
+  if(count!==lastCount){lastCount=count;}
+}
+
+// ---------- sound ----------
+let ac=null,master=null,roarG=null,soundOn=false;
+function initAudio(){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;ac=new AC();master=ac.createGain();master.gain.value=0;master.connect(ac.destination);
+  const len=ac.sampleRate*2,buf=ac.createBuffer(1,len,ac.sampleRate),d=buf.getChannelData(0);let last=0;for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*3.5;}
+  const s=ac.createBufferSource();s.buffer=buf;s.loop=true;const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=380;roarG=ac.createGain();roarG.gain.value=.5;s.connect(lp).connect(roarG).connect(master);s.start();
+  window.__noise=(()=>{const n=ac.createBuffer(1,ac.sampleRate*.2,ac.sampleRate),dd=n.getChannelData(0);for(let i=0;i<dd.length;i++)dd[i]=Math.random()*2-1;return n;})();
+  return true;}
+function crackle(){
+  if(!soundOn||!ac)return;const now=ac.currentTime;const s=ac.createBufferSource();s.buffer=window.__noise;const bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900+Math.random()*3800;bp.Q.value=1+Math.random()*6;
+  const gg=ac.createGain();const a=(.08+Math.random()*.35)*(.5+fuel);gg.gain.setValueAtTime(a,now);gg.gain.exponentialRampToValueAtTime(.0001,now+.01+Math.random()*.05);
+  const p=ac.createStereoPanner?ac.createStereoPanner():null;if(p){p.pan.value=(Math.random()-.5)*.8;s.connect(bp).connect(gg).connect(p).connect(master);}else s.connect(bp).connect(gg).connect(master);
+  s.start(now,Math.random()*.15,.08);
+}
+const sb=document.getElementById('btnSound');
+sb.addEventListener('click',()=>{if(!ac&&!initAudio())return;soundOn=!soundOn;if(ac.state==='suspended')ac.resume();master.gain.setTargetAtTime(soundOn?.7:0,ac.currentTime,.3);sb.textContent='sound: '+(soundOn?'on':'off');sb.setAttribute('aria-pressed',String(soundOn));});
+
+// ---------- input ----------
+let lastMX=null;
+cv.addEventListener('pointermove',e=>{mouseIn=true;const fb=fireBase();const cx=fb.cx*CW;windTarget=Math.max(-2.2,Math.min(2.2,(e.clientX-cx)/(W*.35)*-1.6));
+  if(lastMX!==null)windTarget+=Math.max(-1.5,Math.min(1.5,(e.clientX-lastMX)*.03));lastMX=e.clientX;});
+cv.addEventListener('pointerleave',()=>{mouseIn=false;lastMX=null;});
+cv.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'){mouseIn=true;const fb=fireBase();windTarget=Math.max(-2.2,Math.min(2.2,(e.clientX-fb.cx*CW)/(W*.35)*-1.6));}throwLog();});
+cv.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')mouseIn=false;});
+function throwLog(){logBoost=1;for(let i=0;i<6;i++)crackle();}
+document.getElementById('btnLog').addEventListener('click',throwLog);
+document.getElementById('fuel').addEventListener('input',e=>fuel=+e.target.value/100);
+document.getElementById('palette').addEventListener('change',e=>{pal=PALETTES[e.target.value];buildPalCss();});
+document.getElementById('glyphs').addEventListener('change',e=>ramp=RAMPS[e.target.value]);
+
+// ---------- loop ----------
+const cellsEl=document.getElementById('cells'),windEl=document.getElementById('windReadout');
+let last=performance.now(),acc=0,t=0,uiT=0;const STEP=1/(reduce?15:32);
+function loop(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;t+=dt;acc+=dt;
+  if(!mouseIn)windTarget*=Math.pow(.2,dt);
+  // an idle breeze so the scene breathes on its own
+  const breeze=reduce?0:Math.sin(t*.37)*.35+Math.sin(t*1.3)*.15;
+  wind+=((windTarget+(mouseIn?0:breeze))-wind)*Math.min(1,dt*3);
+  logBoost=Math.max(0,logBoost-dt*.25);
+  let n=0;while(acc>=STEP&&n<4){stepFire();stepCandle(t);acc-=STEP;n++;}
+  emitSparks(dt);render(t);
+  if(soundOn&&Math.random()<dt*(6+fuel*14+logBoost*30))crackle();
+  if(soundOn&&roarG)roarG.gain.setTargetAtTime(.25+fuel*.5+Math.abs(wind)*.2+logBoost*.3,ac.currentTime,.2);
+  if((uiT+=dt)>.3){uiT=0;cellsEl.textContent=lastCount.toLocaleString('en-GB');const kn=wind*6.5;windEl.textContent=`wind ${kn>=0?'→':'←'} ${Math.abs(kn).toFixed(1)} kn\nfuel ${'#'.repeat(Math.round(fuel*10)).padEnd(10,'.')}`;}
+  requestAnimationFrame(loop);
+}
+function start(){resize();for(let i=0;i<80;i++){stepFire();stepCandle(0);}requestAnimationFrame(loop);}
+addEventListener('resize',()=>{clearTimeout(resize._t);resize._t=setTimeout(()=>{resize();for(let i=0;i<40;i++)stepFire();},150);});
+if(document.fonts&&document.fonts.load){Promise.race([document.fonts.load('14px "Share Tech Mono"'),new Promise(r=>setTimeout(r,1000))]).then(start,start);}else start();
+})();
+</script>
+</body>
+</html>

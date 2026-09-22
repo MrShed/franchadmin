@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Window Seat, 2am</title>
+<meta name="description" content="Rain on a night window: droplets slide, stall and merge, each one refracting the blurred city lights behind the glass, with an optional synthesized rain soundtrack.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@1,6..72,300;1,6..72,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#07060d;
+  --glass:rgba(18,16,30,.55);
+  --paper:#efe9ff;
+  --soft:#a59fc0;
+  --sodium:#ffb35c;
+  --neon:#58e1d4;
+  --line:rgba(239,233,255,.14);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--night);color:var(--paper);font-family:"Space Mono",ui-monospace,Menlo,Consolas,monospace;overflow:hidden}
+#rain{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Ccircle cx='14' cy='14' r='10' fill='none' stroke='white' stroke-opacity='.6'/%3E%3C/svg%3E") 14 14,crosshair}
+.frameShade{position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 30px rgba(0,0,0,.75);}
+.mullion{position:fixed;pointer-events:none;background:linear-gradient(90deg,#0b0a12,#1a1826 40%,#0d0c14);}
+.mullion.v{top:0;bottom:0;left:62%;width:14px;box-shadow:0 0 30px rgba(0,0,0,.7)}
+.mullion.h{left:0;right:0;top:58%;height:12px;background:linear-gradient(180deg,#0b0a12,#1b1927 40%,#0d0c14);box-shadow:0 0 30px rgba(0,0,0,.7)}
+.back{position:fixed;left:max(18px,env(safe-area-inset-left));top:max(16px,env(safe-area-inset-top));font-size:11px;color:var(--soft);text-decoration:none;letter-spacing:.08em;z-index:3;padding:4px 0}
+.back:hover,.back:focus-visible{color:var(--paper);outline:none;text-decoration:underline;text-decoration-color:var(--sodium);text-underline-offset:4px}
+.card{position:fixed;left:max(18px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));width:min(360px,calc(100% - 32px));background:var(--glass);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);border:1px solid var(--line);border-radius:14px;padding:16px 18px 14px;z-index:3;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.card h1{font-family:Newsreader,"Iowan Old Style",Georgia,serif;font-style:italic;font-weight:300;font-size:30px;margin:0;line-height:1.05;letter-spacing:-.01em}
+.meta{font-size:10px;color:var(--soft);letter-spacing:.14em;text-transform:uppercase;margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+.meta b{color:var(--sodium);font-weight:400}
+.note{font-family:Newsreader,Georgia,serif;font-style:italic;font-size:15px;line-height:1.5;color:#d6d0ec;margin:12px 0 10px}
+.track{display:flex;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:12px}
+.play{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:rgba(239,233,255,.06);color:var(--paper);cursor:pointer;display:grid;place-items:center;flex:none;transition:background .3s}
+.play:hover{background:rgba(239,233,255,.14)}
+.play svg{width:16px;height:16px}
+.play:focus-visible,.mini:focus-visible,input[type=range]:focus-visible{outline:2px solid var(--neon);outline-offset:3px}
+.tinfo{flex:1;min-width:0;font-size:11px}
+.tinfo span{display:block;color:var(--soft);font-size:10px;margin-top:2px}
+.eq{display:flex;gap:2px;align-items:flex-end;height:16px}
+.eq i{width:3px;background:var(--neon);height:3px;border-radius:1px;opacity:.6}
+.on .eq i{animation:eq 1.2s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-.4s}.eq i:nth-child(3){animation-delay:-.8s}.eq i:nth-child(4){animation-delay:-.2s}
+@keyframes eq{0%,100%{height:3px}50%{height:15px}}
+.sliders{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;font-size:10px;color:var(--soft);letter-spacing:.12em;text-transform:uppercase;margin-top:12px}
+input[type=range]{width:100%;accent-color:var(--sodium)}
+.row{display:flex;gap:8px;margin-top:12px}
+.mini{flex:1;background:transparent;color:var(--paper);border:1px solid var(--line);border-radius:8px;font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:8px 6px;cursor:pointer}
+.mini:hover{border-color:var(--soft)}
+.clock{position:fixed;right:max(20px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));text-align:right;z-index:3;pointer-events:none}
+.clock b{display:block;font-family:Newsreader,Georgia,serif;font-style:italic;font-weight:300;font-size:clamp(40px,6vw,72px);line-height:1;color:rgba(239,233,255,.82);text-shadow:0 0 30px rgba(255,179,92,.25)}
+.clock span{font-size:10px;letter-spacing:.2em;color:var(--soft);text-transform:uppercase}
+.hint{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));font-size:10px;letter-spacing:.14em;color:var(--soft);z-index:2;text-transform:uppercase;pointer-events:none;text-align:right;line-height:1.8}
+@media (max-width:640px){
+  .hint{display:none}
+  .card{left:16px;right:16px;width:auto;bottom:16px;padding:14px}
+  .note{display:none}
+  .card h1{font-size:24px}
+  .mullion.v{left:70%}
+}
+@media (prefers-reduced-motion:reduce){.on .eq i{animation:none;height:9px}}
+</style>
+</head>
+<body>
+<canvas id="rain" aria-label="A rainy window at night. Drag across the glass to wipe away the fog."></canvas>
+<div class="mullion v" aria-hidden="true"></div>
+<div class="mullion h" aria-hidden="true"></div>
+<div class="frameShade" aria-hidden="true"></div>
+<a class="back" href="index.html">← Showcase</a>
+<div class="clock" aria-hidden="true"><b id="clock">2:14</b><span>Harbour St · 11°C · heavy rain</span></div>
+<div class="hint">Drag to wipe the glass<br>Tap to flick a drop</div>
+
+<section class="card" id="card" aria-label="Listening room">
+  <h1>Window Seat, 2am</h1>
+  <div class="meta"><span>Fourth floor</span><span>Tram depot view</span><span><b id="dropCount">0</b> drops on glass</span></div>
+  <p class="note">The last number 9 tram went past an hour ago. Somebody downstairs is still frying garlic. The rain has not decided whether it is stopping.</p>
+  <div class="track" id="track">
+    <button class="play" id="btnSound" aria-pressed="false" aria-label="Play rain sound">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path id="icon" d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>
+    </button>
+    <div class="tinfo">Rain on glass, no. 4<span id="soundState">sound off · tap to listen</span></div>
+    <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  </div>
+  <div class="sliders">
+    <label for="intensity">Rain</label><input id="intensity" type="range" min="0" max="100" value="55">
+    <label for="fog">Fog</label><input id="fog" type="range" min="0" max="100" value="60">
+  </div>
+  <div class="row">
+    <button class="mini" id="btnWipe">Wipe glass</button>
+    <button class="mini" id="btnGust">Gust</button>
+  </div>
+</section>
+
+<script>
+(function(){
+'use strict';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cv=document.getElementById('rain'),g=cv.getContext('2d');
+let W=0,H=0,dpr=1;
+const bgBlur=document.createElement('canvas'),bgSharp=document.createElement('canvas'),mask=document.createElement('canvas'),comp=document.createElement('canvas');
+const mg=mask.getContext('2d'),cg=comp.getContext('2d');
+let intensity=.55,fog=.6;
+let lights=[];let cars=[];
+
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function buildCity(){
+  const R=rng(20260922);lights=[];
+  const pal=[['#ffb35c',.9],['#ffd9a0',.7],['#ff4d5a',.8],['#58e1d4',.7],['#ff5cc8',.6],['#8fa8ff',.5],['#fff3d6',.8]];
+  // windows of distant towers
+  for(let i=0;i<150;i++){const c=pal[(R()*pal.length)|0];lights.push({x:R(),y:.18+R()*.5,r:.006+R()*.02,c:c[0],a:c[1]*(.35+R()*.6)});}
+  // street level: sodium lamps and signs
+  for(let i=0;i<40;i++){const c=R()<.6?pal[0]:pal[(R()*pal.length)|0];lights.push({x:R(),y:.62+R()*.3,r:.02+R()*.045,c:c[0],a:c[1]*(.4+R()*.5)});}
+  // a few big neon smears
+  lights.push({x:.22,y:.44,r:.09,c:'#ff5cc8',a:.35},{x:.78,y:.36,r:.11,c:'#58e1d4',a:.28},{x:.5,y:.72,r:.14,c:'#ffb35c',a:.3});
+  cars=[];for(let i=0;i<6;i++)cars.push({x:R(),y:.8+R()*.1,v:(R()<.5?-1:1)*(.02+R()*.03),c:R()<.5?'#ff3b3b':'#fff1cf',r:.018+R()*.012});
+}
+function paintCity(ctx,w,h,t){
+  const sky=ctx.createLinearGradient(0,0,0,h);
+  sky.addColorStop(0,'#0a0818');sky.addColorStop(.45,'#1a1030');sky.addColorStop(.75,'#2a1a2a');sky.addColorStop(1,'#120c14');
+  ctx.globalCompositeOperation='source-over';ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
+  // tower silhouettes
+  ctx.fillStyle='rgba(5,4,12,.7)';const R=rng(7);
+  for(let i=0;i<18;i++){const x=R()*w,bw=(.04+R()*.1)*w,top=(.15+R()*.4)*h;ctx.fillRect(x-bw/2,top,bw,h);}
+  ctx.globalCompositeOperation='lighter';
+  const m=Math.max(w,h);
+  for(const L of lights){blob(ctx,L.x*w,L.y*h,L.r*m,L.c,L.a*(.85+.15*Math.sin(t*.7+L.x*40)));}
+  for(const c of cars){const x=((c.x+c.v*t)%1.2+1.2)%1.2-.1;blob(ctx,x*w,c.y*h,c.r*m,c.c,.8);blob(ctx,(x+.025)*w,c.y*h,c.r*m,c.c,.6);}
+  ctx.globalCompositeOperation='source-over';
+}
+function blob(ctx,x,y,r,c,a){const gr=ctx.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,hexA(c,a));gr.addColorStop(.35,hexA(c,a*.55));gr.addColorStop(1,hexA(c,0));ctx.fillStyle=gr;ctx.fillRect(x-r,y-r,r*2,r*2);}
+function hexA(h,a){const v=parseInt(h.slice(1),16);return`rgba(${v>>16&255},${v>>8&255},${v&255},${a.toFixed(3)})`;}
+const SB=10,SS=3; // downsample factors: heavy blur behind fog, lighter blur where wiped
+function renderBG(t){
+  bgBlur.width=Math.ceil(W/SB);bgBlur.height=Math.ceil(H/SB);paintCity(bgBlur.getContext('2d'),bgBlur.width,bgBlur.height,t);
+  bgSharp.width=Math.ceil(W/SS);bgSharp.height=Math.ceil(H/SS);paintCity(bgSharp.getContext('2d'),bgSharp.width,bgSharp.height,t);
+}
+function resize(){
+  dpr=Math.min(devicePixelRatio||1,1.5);W=innerWidth;H=innerHeight;
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+  mask.width=Math.ceil(W/2);mask.height=Math.ceil(H/2);comp.width=cv.width;comp.height=cv.height;
+  renderBG(0);seedDrops();
+}
+
+// ---------- drops ----------
+let drops=[];
+function seedDrops(){
+  drops=[];const n=Math.round((W*H)/900*(.4+intensity));
+  for(let i=0;i<n;i++)drops.push(mkDrop(Math.random()*W,Math.random()*H,tinyR()));
+  for(let i=0;i<Math.round(W*H/26000);i++)drops.push(mkDrop(Math.random()*W,Math.random()*H,4+Math.random()*9));
+}
+function tinyR(){return .6+Math.pow(Math.random(),3)*2.6;}
+function mkDrop(x,y,r){return{x,y,r,vy:0,vx:0,moving:false,stall:0,spread:1,lastTrail:y,dead:false};}
+const SPEED=reduce?.25:1;
+let gust=0;
+function update(dt){
+  // new rain
+  const spawn=(W*H/1e5)*intensity*(reduce?4:14)*dt;
+  for(let i=0;i<spawn;i++){const big=Math.random()<.12;drops.push(mkDrop(Math.random()*W,Math.random()*H,big?3+Math.random()*6:tinyR()));}
+  gust*=Math.pow(.3,dt);
+  const movers=[];
+  for(const d of drops){
+    if(d.dead)continue;
+    if(!d.moving&&d.r>5.2&&Math.random()<dt*(d.r-4.5)*.5)d.moving=true;
+    if(d.moving){
+      if(d.stall>0){d.stall-=dt;d.vy*=.8;}
+      else{d.vy+=(90+d.r*28)*dt*SPEED;if(Math.random()<dt*1.8)d.stall=Math.random()*.35;}
+      d.vy=Math.min(d.vy,(60+d.r*30)*SPEED);d.vx=(d.vx+(Math.random()-.5)*40*dt+gust*dt*40)*.9;
+      d.x+=d.vx*dt;d.y+=d.vy*dt;
+      // trail droplets and fog wiping
+      if(d.y-d.lastTrail>d.r*1.6){d.lastTrail=d.y;if(Math.random()<.7&&d.r>3){const tr=d.r*(.18+Math.random()*.2);drops.push(mkDrop(d.x+(Math.random()-.5)*d.r*.6,d.y-d.r*1.4,tr));d.r=Math.sqrt(Math.max(1,d.r*d.r-tr*tr*.7));}}
+      mg.fillStyle='rgba(255,255,255,.9)';mg.beginPath();mg.ellipse(d.x/2,d.y/2,d.r*.62,d.r*.9,0,0,6.283);mg.fill();
+      if(d.y-d.r>H+20)d.dead=true;
+      if(d.r<3.2&&d.vy<5)d.moving=false;
+      movers.push(d);
+    }
+  }
+  // merging: movers swallow what they touch
+  for(const m of movers){if(m.dead)continue;for(const o of drops){if(o===m||o.dead)continue;const dx=o.x-m.x,dy=o.y-m.y,rr=m.r+o.r*.9;if(dx*dx+dy*dy<rr*rr){
+      const a=m.r*m.r+o.r*o.r;m.r=Math.min(18,Math.sqrt(a));o.dead=true;if(o.r>3)ping(o.r);if(o.moving)m.vy=Math.max(m.vy,o.vy);}}}
+  // static big drops also coalesce occasionally
+  drops=drops.filter(d=>!d.dead);
+  const cap=Math.round(W*H/220);if(drops.length>cap)drops.splice(0,drops.length-cap);
+  // fog creeps back
+  mg.globalCompositeOperation='destination-out';mg.fillStyle=`rgba(0,0,0,${(.004+fog*.012)*SPEED})`;mg.fillRect(0,0,mask.width,mask.height);mg.globalCompositeOperation='source-over';
+}
+
+function draw(t){
+  const S=dpr;g.setTransform(1,0,0,1,0,0);g.imageSmoothingEnabled=true;
+  // background: heavy blur under fog, then wiped regions sharper
+  g.drawImage(bgBlur,0,0,cv.width,cv.height);
+  g.fillStyle=`rgba(40,34,62,${.12+fog*.32})`;g.fillRect(0,0,cv.width,cv.height);
+  cg.globalCompositeOperation='source-over';cg.clearRect(0,0,comp.width,comp.height);cg.drawImage(bgSharp,0,0,comp.width,comp.height);
+  cg.globalCompositeOperation='destination-in';cg.drawImage(mask,0,0,comp.width,comp.height);
+  g.drawImage(comp,0,0);
+  g.setTransform(S,0,0,S,0,0);
+  // tiny drops batched
+  g.fillStyle='rgba(8,6,16,.28)';g.beginPath();
+  for(const d of drops){if(d.r<2.4){g.moveTo(d.x+d.r,d.y+.4);g.arc(d.x,d.y+.4,d.r,0,6.283);}}g.fill();
+  g.fillStyle='rgba(235,225,255,.22)';g.beginPath();
+  for(const d of drops){if(d.r<2.4){const r=d.r*.55;g.moveTo(d.x+r,d.y-.2);g.arc(d.x,d.y-.2,r,0,6.283);}}g.fill();
+  // lens drops
+  const sx=bgSharp.width/W,sy=bgSharp.height/H;
+  for(const d of drops){if(d.r<2.4)continue;
+    const rx=d.r,ry=d.r*(d.moving?1.18:1.05);
+    g.save();g.beginPath();g.ellipse(d.x,d.y,rx,ry,0,0,6.283);g.clip();
+    const span=d.r*5.5;
+    g.translate(d.x,d.y);g.scale(1,-1);
+    g.drawImage(bgSharp,(d.x-span)*sx,(d.y-span)*sy,span*2*sx,span*2*sy,-rx,-ry,rx*2,ry*2);
+    g.restore();
+    const sh=g.createRadialGradient(d.x-rx*.2,d.y-ry*.3,rx*.1,d.x,d.y,Math.max(rx,ry));
+    sh.addColorStop(0,'rgba(255,255,255,0)');sh.addColorStop(.72,'rgba(10,6,20,.05)');sh.addColorStop(1,'rgba(10,6,20,.55)');
+    g.fillStyle=sh;g.beginPath();g.ellipse(d.x,d.y,rx,ry,0,0,6.283);g.fill();
+    g.fillStyle='rgba(255,250,240,.55)';g.beginPath();g.ellipse(d.x-rx*.32,d.y-ry*.42,rx*.2,ry*.12,-.5,0,6.283);g.fill();
+    g.strokeStyle='rgba(0,0,0,.18)';g.lineWidth=.8;g.beginPath();g.ellipse(d.x,d.y+ry*.08,rx,ry,0,.2,2.94);g.stroke();
+  }
+}
+
+// ---------- sound ----------
+let ac=null,master=null,soundOn=false,pinged=0;
+function startAudio(){
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
+  ac=new AC();master=ac.createGain();master.gain.value=0;master.connect(ac.destination);
+  const len=ac.sampleRate*3,buf=ac.createBuffer(2,len,ac.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);let b0=0,b1=0,b2=0;for(let i=0;i<len;i++){const w=Math.random()*2-1;b0=.99765*b0+w*.099;b1=.963*b1+w*.2965;b2=.57*b2+w*1.0526;d[i]=(b0+b1+b2+w*.1848)*.18;}}
+  const layer=(freq,q,gain,type)=>{const s=ac.createBufferSource();s.buffer=buf;s.loop=true;s.playbackRate.value=.9+Math.random()*.2;const f=ac.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;const gg=ac.createGain();gg.gain.value=gain;s.connect(f).connect(gg).connect(master);s.start();return gg;};
+  window.__rainLayers=[layer(900,.5,.9,'lowpass'),layer(3200,.7,.25,'bandpass'),layer(180,.6,.6,'lowpass')];
+  return true;
+}
+function ping(r){
+  if(!soundOn||!ac)return;const now=ac.currentTime;if(now-pinged<.04)return;pinged=now;
+  const o=ac.createOscillator(),gg=ac.createGain();o.type='sine';o.frequency.setValueAtTime(1400+Math.random()*1800-r*40,now);o.frequency.exponentialRampToValueAtTime(500,now+.08);
+  gg.gain.setValueAtTime(.0001,now);gg.gain.exponentialRampToValueAtTime(.05,now+.005);gg.gain.exponentialRampToValueAtTime(.0001,now+.12);
+  const p=ac.createStereoPanner?ac.createStereoPanner():null;if(p){p.pan.value=Math.random()*1.6-.8;o.connect(gg).connect(p).connect(master);}else o.connect(gg).connect(master);
+  o.start(now);o.stop(now+.14);
+}
+const btn=document.getElementById('btnSound'),track=document.getElementById('track');
+btn.addEventListener('click',()=>{
+  if(!ac&&!startAudio())return;
+  soundOn=!soundOn;if(ac.state==='suspended')ac.resume();
+  const now=ac.currentTime;master.gain.cancelScheduledValues(now);master.gain.setValueAtTime(master.gain.value,now);master.gain.linearRampToValueAtTime(soundOn?(.35+intensity*.6):0,now+1.2);
+  btn.setAttribute('aria-pressed',String(soundOn));btn.setAttribute('aria-label',soundOn?'Pause rain sound':'Play rain sound');
+  document.getElementById('icon').setAttribute('d',soundOn?'M4 2.5h3v11H4zM9 2.5h3v11H9z':'M4 2.5v11l9-5.5z');
+  document.getElementById('soundState').textContent=soundOn?'playing · synthesized live':'sound off · tap to listen';
+  track.classList.toggle('on',soundOn);
+});
+
+// ---------- controls ----------
+document.getElementById('intensity').addEventListener('input',e=>{intensity=+e.target.value/100;if(soundOn&&master)master.gain.setTargetAtTime(.35+intensity*.6,ac.currentTime,.4);});
+document.getElementById('fog').addEventListener('input',e=>fog=+e.target.value/100);
+document.getElementById('btnWipe').addEventListener('click',()=>{
+  // a sleeve wipe across the middle of the pane
+  const y=H*(.35+Math.random()*.3);mg.fillStyle='rgba(255,255,255,1)';
+  for(let x=-40;x<W+40;x+=10){mg.beginPath();mg.ellipse(x/2,(y+Math.sin(x*.01)*30)/2,26,48,0,0,6.283);mg.fill();}
+  drops=drops.filter(d=>Math.abs(d.y-y-Math.sin(d.x*.01)*30)>90);
+});
+document.getElementById('btnGust').addEventListener('click',()=>{gust=(Math.random()<.5?-1:1)*(reduce?2:8);for(const d of drops)if(d.r>3.5&&Math.random()<.6)d.moving=true;});
+let wiping=null;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);wiping={x:e.clientX,y:e.clientY,moved:0};wipeAt(e.clientX,e.clientY);});
+cv.addEventListener('pointermove',e=>{if(!wiping)return;const dx=e.clientX-wiping.x,dy=e.clientY-wiping.y;const d=Math.hypot(dx,dy);wiping.moved+=d;const n=Math.ceil(d/8);for(let i=1;i<=n;i++)wipeAt(wiping.x+dx*i/n,wiping.y+dy*i/n);wiping.x=e.clientX;wiping.y=e.clientY;});
+cv.addEventListener('pointerup',e=>{if(wiping&&wiping.moved<6){const nd=mkDrop(e.clientX,e.clientY,9+Math.random()*4);nd.moving=true;nd.vy=40;drops.push(nd);ping(9);}wiping=null;});
+cv.addEventListener('pointercancel',()=>wiping=null);
+function wipeAt(x,y){mg.fillStyle='rgba(255,255,255,1)';mg.beginPath();mg.arc(x/2,y/2,22,0,6.283);mg.fill();
+  for(const d of drops){const dx=d.x-x,dy=d.y-y;if(dx*dx+dy*dy<44*44){if(d.r>4){d.moving=true;}else d.dead=true;}}}
+
+// clock
+function tickClock(){const d=new Date();document.getElementById('clock').textContent=d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');}
+tickClock();setInterval(tickClock,15000);
+
+// loop
+buildCity();resize();
+// pre-wiped streaks so the opening frame already shows clear trails
+for(let i=0;i<12;i++){const x=Math.random()*W;let y=Math.random()*H*.4;const r=5+Math.random()*4;for(;y<H;y+=6){mg.fillStyle='rgba(255,255,255,.8)';mg.beginPath();mg.ellipse((x+Math.sin(y*.02)*6)/2,y/2,r*.6,r*.9,0,0,6.283);mg.fill();}}
+for(let i=0;i<60;i++)update(1/30);
+let last=performance.now(),bgT=0,countT=0;
+addEventListener('resize',()=>{clearTimeout(resize._t);resize._t=setTimeout(resize,150);});
+function loop(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  bgT+=dt;if(!reduce&&(bgT*10|0)!==((bgT-dt)*10|0))renderBG(bgT);
+  update(dt);draw(bgT);
+  if((countT+=dt)>.5){countT=0;document.getElementById('dropCount').textContent=drops.length.toLocaleString('en-GB');}
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tern Atlantic Check-in</title>
+<meta name="description" content="A complete airline check-in flow for a fictional North Atlantic carrier: search flights, pick a seat on an A350 cabin map, and tear the stub off a boarding pass with a real-looking PDF417 barcode.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ice:#e6ecef; --paper:#fbfcfc; --ink:#0b1b2b; --mut:#5f6f7c; --line:#c9d3d9; --teal:#00a3a1; --teal-d:#007f7d; --red:#e8322b; --sky:#cfe4ea;
+  --disp:"Big Shoulders Display","Oswald","Arial Narrow",Impact,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ice); color:var(--ink); font-family:var(--mono); min-height:100vh; overflow-x:hidden;
+  background-image:linear-gradient(90deg, rgba(11,27,43,.045) 1px, transparent 1px), linear-gradient(rgba(11,27,43,.045) 1px, transparent 1px); background-size:32px 32px}
+:focus-visible{outline:2.5px solid var(--teal); outline-offset:2px}
+.top{display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px max(16px,4vw); border-bottom:2px solid var(--ink); background:var(--paper)}
+.logo{display:flex; align-items:center; gap:10px; font-family:var(--disp); font-weight:900; font-size:26px; letter-spacing:.02em; text-transform:uppercase}
+.logo svg{width:38px; height:22px}
+.back{font-size:12px; color:var(--ink); text-decoration:none; font-weight:500; padding:6px 10px; border:1.5px solid var(--ink)}
+.back:hover{background:var(--ink); color:var(--paper)}
+.steps{display:flex; gap:0; max-width:1100px; margin:26px auto 0; padding:0 max(16px,4vw); list-style:none}
+.steps li{flex:1; border-top:4px solid var(--line); padding-top:10px; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--mut); transition:border-color .4s, color .4s}
+.steps li b{font-family:var(--disp); font-size:26px; display:block; line-height:1; margin-bottom:2px; letter-spacing:0}
+.steps li.on{border-color:var(--teal); color:var(--ink)}
+.steps li.done{border-color:var(--ink); color:var(--ink)}
+main{max-width:1100px; margin:0 auto; padding:26px max(16px,4vw) 60px; position:relative}
+.step{display:none; animation:enter .5s cubic-bezier(.2,.8,.2,1)}
+.step.on{display:block}
+@keyframes enter{from{opacity:0; transform:translateY(16px)}}
+h1{font-family:var(--disp); font-weight:900; font-size:clamp(46px,8vw,96px); line-height:.88; text-transform:uppercase; margin:0 0 22px; letter-spacing:-.005em}
+h1 em{font-style:normal; color:var(--teal)}
+
+/* search */
+.search{display:grid; grid-template-columns:1fr 44px 1fr 1fr 1fr; border:2px solid var(--ink); background:var(--paper)}
+.fld{padding:12px 14px; border-right:2px solid var(--ink); min-width:0}
+.fld:last-child{border-right:0}
+.fld label{display:block; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--mut); margin-bottom:4px}
+.fld select,.fld input{width:100%; border:0; background:none; font:700 22px var(--disp); color:var(--ink); padding:0; text-transform:uppercase; letter-spacing:.02em; appearance:none; -webkit-appearance:none; min-width:0}
+.fld small{display:block; font-size:11px; color:var(--mut); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.swap{border:0; border-right:2px solid var(--ink); background:var(--ink); color:var(--paper); cursor:pointer; font-size:18px}
+.swap:hover{background:var(--teal)}
+.results{margin-top:22px; display:grid; gap:12px}
+.flight{display:grid; grid-template-columns:minmax(0,1fr) auto; border:2px solid var(--ink); background:var(--paper); transition:transform .2s, box-shadow .2s}
+.flight:hover{transform:translate(-3px,-3px); box-shadow:6px 6px 0 var(--ink)}
+.f-main{display:grid; grid-template-columns:auto 1fr auto; gap:18px; align-items:center; padding:16px 18px}
+.f-time{font-family:var(--disp); font-weight:700; font-size:40px; line-height:1}
+.f-time small{display:block; font-family:var(--mono); font-size:11px; color:var(--mut); font-weight:400; margin-top:4px}
+.f-path{position:relative; height:30px; font-size:11px; color:var(--mut); text-align:center}
+.f-path::before{content:""; position:absolute; left:0; right:0; top:50%; border-top:2px dashed var(--ink)}
+.f-path span{position:relative; background:var(--paper); padding:0 8px; top:3px}
+.f-path .stop{position:absolute; left:50%; top:50%; width:10px; height:10px; margin:-5px 0 0 -5px; border:2px solid var(--ink); background:var(--paper); border-radius:50%}
+.f-meta{grid-column:1/-1; display:flex; gap:16px; font-size:11px; color:var(--mut); flex-wrap:wrap}
+.f-meta b{color:var(--ink); font-weight:500}
+.fares{display:flex; border-left:2px solid var(--ink)}
+.fare{border:0; border-right:2px solid var(--ink); background:none; padding:14px 16px; text-align:left; cursor:pointer; min-width:108px; font-family:var(--mono); color:var(--ink)}
+.fare:last-child{border-right:0}
+.fare small{display:block; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--mut)}
+.fare b{display:block; font:700 30px var(--disp); margin:4px 0}
+.fare span{font-size:10.5px; color:var(--mut); line-height:1.4; display:block}
+.fare:hover{background:var(--sky)}
+.fare.best{background:var(--ink); color:var(--paper)} .fare.best small,.fare.best span{color:#9fb3c2}
+.fare.best:hover{background:var(--teal)}
+
+/* seats */
+.seat-layout{display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:26px; align-items:start}
+.cabin-wrap{border:2px solid var(--ink); background:var(--paper); height:min(74vh,720px); overflow:auto; position:relative; overscroll-behavior:contain}
+.plane{width:360px; max-width:100%; margin:0 auto; padding:120px 22px 60px; position:relative}
+.fuselage{position:absolute; inset:20px 6px 10px; border:2px solid var(--ink); border-radius:180px 180px 40px 40px / 160px 160px 30px 30px; pointer-events:none; background:linear-gradient(var(--ice),transparent 180px)}
+.cockpit{position:absolute; top:44px; left:50%; transform:translateX(-50%); display:flex; gap:6px}
+.cockpit i{width:22px; height:10px; border:2px solid var(--ink); border-radius:10px 10px 2px 2px; display:block; background:var(--sky)}
+.zone{font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--mut); text-align:center; margin:18px 0 8px; position:relative}
+.zone b{color:var(--ink)}
+.row{display:grid; align-items:center; gap:4px; margin:4px 0; position:relative}
+.row.eco{grid-template-columns:22px repeat(3,26px) 18px repeat(3,26px) 18px repeat(3,26px) 22px; justify-content:center}
+.row.bus{grid-template-columns:22px 42px 30px 42px 6px 42px 30px 42px 22px; justify-content:center}
+.row .n{font-size:10px; color:var(--mut); text-align:center}
+.exit{display:flex; justify-content:space-between; font-size:9px; font-weight:700; letter-spacing:.1em; color:var(--red); margin:10px -8px 2px}
+.exit span::before{content:"◀ "} .exit span:last-child::before{content:""} .exit span:last-child::after{content:" ▶"}
+.seat{height:28px; border:1.5px solid var(--ink); border-radius:6px 6px 3px 3px; background:var(--paper); cursor:pointer; padding:0; position:relative; font:500 9px var(--mono); color:transparent; transition:transform .15s, background .15s}
+.seat:hover:not(:disabled){background:var(--sky); transform:translateY(-2px); color:var(--ink)}
+.seat.plus{border-color:var(--teal-d); background:#e2f5f4}
+.seat.bus-s{height:40px; border-radius:10px 10px 4px 4px}
+.seat:disabled{background:repeating-linear-gradient(45deg, #d5dde2 0 3px, #eef2f4 3px 6px); border-color:#b3c0c8; cursor:not-allowed}
+.seat[aria-pressed="true"]{background:var(--red); border-color:var(--red); color:#fff; transform:scale(1.1); z-index:2; animation:pop .35s cubic-bezier(.3,1.8,.5,1)}
+@keyframes pop{from{transform:scale(.7)}}
+.wing{position:absolute; top:0; width:120px; height:220px; border:2px solid var(--ink); pointer-events:none}
+.legend{display:flex; flex-wrap:wrap; gap:14px; font-size:11px; color:var(--mut); margin-top:12px}
+.legend i{display:inline-block; width:14px; height:14px; border:1.5px solid var(--ink); border-radius:4px 4px 2px 2px; vertical-align:-3px; margin-right:6px; background:var(--paper)}
+.legend i.p{border-color:var(--teal-d); background:#e2f5f4} .legend i.t{background:repeating-linear-gradient(45deg,#d5dde2 0 3px,#eef2f4 3px 6px); border-color:#b3c0c8} .legend i.s{background:var(--red); border-color:var(--red)}
+.side-card{border:2px solid var(--ink); background:var(--paper); padding:18px; position:sticky; top:16px}
+.side-card h3{font-family:var(--disp); font-size:28px; margin:0 0 4px; text-transform:uppercase}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:8px 12px; font-size:12px; margin:14px 0}
+.kv dt{color:var(--mut)} .kv dd{margin:0; text-align:right; font-weight:500}
+.big-seat{font-family:var(--disp); font-weight:900; font-size:88px; line-height:.9; color:var(--red); margin:8px 0 0}
+.seat-note{font-size:12px; color:var(--mut); min-height:3.2em; line-height:1.5}
+.btn{display:block; width:100%; border:2px solid var(--ink); background:var(--ink); color:var(--paper); font:700 20px var(--disp); letter-spacing:.06em; text-transform:uppercase; padding:14px; cursor:pointer; text-align:center; margin-top:8px}
+.btn:hover:not(:disabled){background:var(--teal); border-color:var(--teal)}
+.btn:disabled{opacity:.35; cursor:not-allowed}
+.btn.ghost{background:none; color:var(--ink)}
+.btn.ghost:hover{background:var(--ink); color:var(--paper)}
+.tip{position:fixed; pointer-events:none; background:var(--ink); color:var(--paper); font-size:11px; padding:6px 9px; z-index:50; opacity:0; transition:opacity .15s; white-space:nowrap}
+
+/* pass */
+.pass-stage{display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:28px; align-items:start}
+.pass{display:grid; grid-template-columns:minmax(0,1fr) 230px; filter:drop-shadow(0 22px 26px rgba(11,27,43,.22)); position:relative}
+.p-main,.p-stub{background:var(--paper); position:relative}
+.p-main{padding:0 0 22px; border-radius:14px 0 0 14px; overflow:hidden}
+.p-stub{border-radius:0 14px 14px 0; padding:0 0 18px; touch-action:none; cursor:grab; transition:transform .5s cubic-bezier(.3,1.4,.5,1)}
+.p-stub.dragging{transition:none; cursor:grabbing}
+.p-stub.torn{transition:transform 1.1s cubic-bezier(.5,0,.8,.3), opacity 1.1s; opacity:0; pointer-events:none}
+.perf{position:absolute; top:0; bottom:0; left:-1px; width:2px; background:radial-gradient(circle, var(--ice) 2.4px, transparent 2.6px) 0 0/2px 11px repeat-y; z-index:3}
+.p-stub::before,.p-stub::after,.p-main::before,.p-main::after{content:""; position:absolute; width:22px; height:22px; border-radius:50%; background:var(--ice); z-index:2}
+.p-main::before{right:-11px; top:-11px} .p-main::after{right:-11px; bottom:-11px}
+.p-stub::before{left:-11px; top:-11px} .p-stub::after{left:-11px; bottom:-11px}
+.band{background:var(--ink); color:var(--paper); display:flex; justify-content:space-between; align-items:center; padding:14px 22px; font-size:11px; letter-spacing:.16em; text-transform:uppercase}
+.band .logo{font-size:20px; gap:8px} .band .logo svg{width:30px; height:18px}
+.stub-band{background:var(--teal); padding:14px 18px 14px 22px; color:#fff; font-size:11px; letter-spacing:.16em; text-transform:uppercase; font-weight:700}
+.route{display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:end; padding:20px 22px 8px}
+.iata{font-family:var(--disp); font-weight:900; font-size:clamp(64px,9vw,110px); line-height:.8; letter-spacing:-.01em}
+.iata small{display:block; font-family:var(--mono); font-weight:400; font-size:11px; letter-spacing:.08em; color:var(--mut); margin-top:8px}
+.plane-line{position:relative; height:40px; margin-bottom:26px}
+.plane-line::before{content:""; position:absolute; left:0; right:0; top:50%; border-top:2px dotted var(--ink)}
+.plane-line svg{position:absolute; left:50%; top:50%; width:34px; height:34px; transform:translate(-50%,-50%); background:var(--paper); padding:0 4px; box-sizing:content-box}
+.grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border-top:2px solid var(--ink); border-bottom:2px solid var(--ink); margin:12px 22px 0}
+.cell{padding:10px 10px 10px 0; border-right:1px solid var(--line); min-width:0}
+.cell:nth-child(4n){border-right:0}
+.cell:nth-child(n+5){border-top:1px solid var(--line)}
+.cell + .cell{padding-left:10px} .cell:nth-child(5){padding-left:0}
+.cell small{display:block; font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--mut)}
+.cell b{display:block; font:700 26px var(--disp); line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cell b.red{color:var(--red)}
+.pname{padding:14px 22px 0; display:flex; justify-content:space-between; gap:16px; align-items:flex-end; flex-wrap:wrap}
+.pname small{display:block; font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--mut)}
+.pname b{font:700 30px var(--disp); letter-spacing:.02em}
+.barcode{padding:16px 22px 0}
+#pdf417{width:100%; height:92px; display:block; image-rendering:pixelated}
+.bcbp{font-size:9.5px; color:var(--mut); margin-top:6px; letter-spacing:.06em; word-break:break-all}
+.stub-body{padding:14px 18px 0 22px}
+.stub-body .iata{font-size:52px}
+.stub-body .cell{border:0; padding:8px 0}
+.stub-seat{font:900 72px var(--disp); color:var(--red); line-height:.9; margin:10px 0 4px}
+.stub-qr{width:92px; height:92px; margin-top:12px; display:block}
+.pass-side h3{font-family:var(--disp); font-size:30px; text-transform:uppercase; margin:0 0 6px}
+.pass-side p{font-size:12.5px; color:var(--mut); line-height:1.6; margin:0 0 12px}
+.drag-hint{font-size:11px; color:var(--teal-d); margin-top:10px; display:flex; align-items:center; gap:8px}
+.drag-hint::before{content:""; width:28px; border-top:2px dashed var(--teal-d)}
+.kept{position:absolute; right:0; top:0; bottom:0; width:230px; display:grid; place-items:center; text-align:center; font-size:12px; color:var(--mut); padding:20px; border:2px dashed var(--line); border-radius:0 14px 14px 0; opacity:0; transition:opacity .6s .6s; pointer-events:none}
+.pass.is-torn .kept{opacity:1}
+.pass.is-torn .p-main{border-radius:14px}
+
+@media (max-width:900px){
+  .search{grid-template-columns:1fr 44px 1fr; }
+  .search .fld:nth-child(4){border-top:2px solid var(--ink); grid-column:1/3}
+  .search .fld:nth-child(5){border-top:2px solid var(--ink)}
+  .search .fld:nth-child(3){border-right:0}
+  .flight{grid-template-columns:minmax(0,1fr)}
+  .fares{border-left:0; border-top:2px solid var(--ink)} .fare{flex:1; min-width:0; padding:12px}
+  .seat-layout,.pass-stage{grid-template-columns:minmax(0,1fr)}
+  .side-card{position:static}
+  .pass{grid-template-columns:minmax(0,1fr)}
+  .p-main{border-radius:14px 14px 0 0}
+  .p-stub{border-radius:0 0 14px 14px}
+  .perf{top:-1px; left:0; right:0; bottom:auto; width:auto; height:2px; background:radial-gradient(circle, var(--ice) 2.4px, transparent 2.6px) 0 0/11px 2px repeat-x}
+  .p-main::before{right:auto; left:-11px; top:auto; bottom:-11px} .p-main::after{right:-11px; bottom:-11px}
+  .p-stub::before{left:-11px; top:-11px} .p-stub::after{left:auto; right:-11px; top:-11px; bottom:auto}
+  .kept{left:0; right:0; top:auto; width:auto; height:160px; bottom:0; border-radius:0 0 14px 14px; transform:translateY(100%)}
+  .pass.is-torn .p-main{border-radius:14px}
+  .stub-body{display:grid; grid-template-columns:1fr auto; gap:6px 16px; align-items:end}
+}
+@media (max-width:520px){
+  .f-main{grid-template-columns:auto 1fr auto; gap:10px; padding:14px}
+  .f-time{font-size:30px}
+  .fare b{font-size:24px} .fare span{display:none}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cell:nth-child(2n){border-right:0} .cell:nth-child(n+3){border-top:1px solid var(--line)} .cell:nth-child(3),.cell:nth-child(5),.cell:nth-child(7){padding-left:0}
+  .route{padding:18px 16px 6px} .grid{margin:12px 16px 0} .pname,.barcode{padding-left:16px; padding-right:16px} .band{padding:12px 16px}
+  .plane{padding:110px 4px 60px}
+  .row.eco{grid-template-columns:18px repeat(3,24px) 12px repeat(3,24px) 12px repeat(3,24px) 18px; gap:3px}
+  .row.bus{grid-template-columns:18px 38px 22px 38px 4px 38px 22px 38px 18px}
+  .steps li b{font-size:20px} .steps li{font-size:9.5px; letter-spacing:.08em}
+  .logo{font-size:20px}
+}
+@media (prefers-reduced-motion:reduce){ .step,.seat[aria-pressed="true"]{animation:none} .p-stub,.p-stub.torn,.flight{transition:none} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo"><svg viewBox="0 0 38 22" aria-hidden="true"><path d="M1 12 C 10 2, 18 2, 22 10 C 26 4, 32 3, 37 5 C 31 7, 27 11, 24 18 L 20 13 C 14 11, 7 12, 1 12Z" fill="#0b1b2b"/><path d="M34 5 L38 6 L34 7Z" fill="#e8322b"/></svg>Tern Atlantic</div>
+  <a class="back" id="backLink" href="index.html">← Showcase</a>
+</header>
+<ol class="steps" id="steps"><li class="on"><b>01</b>Flights</li><li><b>02</b>Seat</li><li><b>03</b>Boarding pass</li></ol>
+
+<main>
+  <!-- STEP 1 -->
+  <section class="step on" id="step1" aria-label="Search flights">
+    <h1>North, <em>then west.</em></h1>
+    <form class="search" id="searchForm" onsubmit="return false">
+      <div class="fld"><label for="from">From</label><select id="from"><option value="EDI">EDI</option><option value="GLA">GLA</option><option value="ABZ">ABZ</option></select><small id="fromName">Edinburgh</small></div>
+      <button class="swap" id="swap" type="button" aria-label="Swap origin and destination">⇄</button>
+      <div class="fld"><label for="to">To</label><select id="to"><option value="YHZ">YHZ</option><option value="KEF">KEF</option><option value="YYT">YYT</option></select><small id="toName">Halifax, Nova Scotia</small></div>
+      <div class="fld"><label for="date">Date</label><input id="date" type="text" value="THU 15 OCT" aria-label="Date"><small>2026 · one way</small></div>
+      <div class="fld"><label for="pax">Passenger</label><input id="pax" type="text" value="MACLEAN/ORLA" maxlength="20" autocomplete="off"><small>1 adult · Ternary Gold</small></div>
+    </form>
+    <div class="results" id="results"></div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" id="step2" aria-label="Choose seat">
+    <h1>Pick your <em>window.</em></h1>
+    <div class="seat-layout">
+      <div>
+        <div class="cabin-wrap" id="cabinWrap"><div class="plane" id="plane"><div class="fuselage"></div><div class="cockpit"><i></i><i></i><i></i></div><div id="cabin"></div></div></div>
+        <div class="legend"><span><i></i>Free</span><span><i class="p"></i>Extra legroom / front</span><span><i class="t"></i>Taken</span><span><i class="s"></i>Yours</span></div>
+      </div>
+      <aside class="side-card" aria-live="polite">
+        <h3 id="sFlight">TN 214</h3>
+        <div style="font-size:12px;color:var(--mut)" id="sRoute">EDI → YHZ · Airbus A350-900</div>
+        <div class="big-seat" id="bigSeat">—</div>
+        <div class="seat-note" id="seatNote">Choose any open seat. Rows 20 and 32 are exit rows with extra legroom.</div>
+        <dl class="kv"><dt>Fare</dt><dd id="kFare">Classic</dd><dt>Ticket</dt><dd id="kTicket">£312</dd><dt>Seat</dt><dd id="kSeat">£0</dd><dt>Total</dt><dd id="kTotal" style="font-size:16px">£312</dd></dl>
+        <button class="btn" id="toPass" disabled>Check in</button>
+        <button class="btn ghost" id="back1">Change flight</button>
+      </aside>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" id="step3" aria-label="Boarding pass">
+    <h1>Have a <em>good flight.</em></h1>
+    <div class="pass-stage">
+      <div class="pass" id="pass">
+        <div class="p-main">
+          <div class="band"><div class="logo"><svg viewBox="0 0 38 22" aria-hidden="true"><path d="M1 12 C 10 2, 18 2, 22 10 C 26 4, 32 3, 37 5 C 31 7, 27 11, 24 18 L 20 13 C 14 11, 7 12, 1 12Z" fill="#fbfcfc"/><path d="M34 5 L38 6 L34 7Z" fill="#e8322b"/></svg>Tern Atlantic</div><span>Boarding pass</span></div>
+          <div class="route">
+            <div class="iata" id="pFrom">EDI<small id="pFromN">Edinburgh</small></div>
+            <div class="plane-line"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 13l8-1 5-8h2l-2 8 5-.5 2-2.5h1.5l-1 4 1 4H22l-2-2.5-5-.5 2 8h-2l-5-8-8-1z" fill="#0b1b2b" transform="rotate(0 12 12)"/></svg></div>
+            <div class="iata" id="pTo" style="text-align:right">YHZ<small id="pToN">Halifax</small></div>
+          </div>
+          <div class="pname"><div><small>Passenger</small><b id="pName">MACLEAN/ORLA</b></div><div style="text-align:right"><small>Booking ref</small><b id="pRef">TQ7K2M</b></div></div>
+          <div class="grid">
+            <div class="cell"><small>Flight</small><b id="pFlight">TN 214</b></div>
+            <div class="cell"><small>Date</small><b id="pDate">15 OCT</b></div>
+            <div class="cell"><small>Boarding</small><b id="pBoard" class="red">08:05</b></div>
+            <div class="cell"><small>Departs</small><b id="pDep">08:40</b></div>
+            <div class="cell"><small>Gate</small><b id="pGate">14</b></div>
+            <div class="cell"><small>Seat</small><b id="pSeat" class="red">23A</b></div>
+            <div class="cell"><small>Zone</small><b id="pZone">3</b></div>
+            <div class="cell"><small>Class</small><b id="pClass">Y</b></div>
+          </div>
+          <div class="barcode"><canvas id="pdf417" aria-label="PDF417 barcode"></canvas><div class="bcbp" id="bcbp"></div></div>
+        </div>
+        <div class="p-stub" id="stub" tabindex="0" role="button" aria-label="Boarding pass stub. Drag away or press Enter to tear off.">
+          <span class="perf"></span>
+          <div class="stub-band">Passenger coupon</div>
+          <div class="stub-body">
+            <div><div class="iata" id="sFromTo">EDI<small>→ YHZ</small></div>
+            <div class="cell"><small>Flight · Date</small><b id="sFD">TN 214 · 15 OCT</b></div>
+            <div class="cell"><small>Gate · Board</small><b id="sGB">14 · 08:05</b></div></div>
+            <div><div class="stub-seat" id="sSeat">23A</div><svg class="stub-qr" id="qr" viewBox="0 0 25 25" shape-rendering="crispEdges" aria-hidden="true"></svg></div>
+          </div>
+        </div>
+        <div class="kept" id="kept">Stub torn at the gate.<br>Keep the main pass until you land.</div>
+      </div>
+      <aside class="pass-side">
+        <h3>At the gate</h3>
+        <p>Gate closes 20 minutes before departure. Your zone boards after Tern Suite and Ternary Gold members.</p>
+        <p id="passNote">Seat 23A is a window on the left side. On the way into Halifax you should see the Nova Scotia coastline.</p>
+        <div class="drag-hint">Drag the stub away to tear it off</div>
+        <button class="btn" id="tear">Tear stub</button>
+        <button class="btn ghost" id="restart">New check-in</button>
+      </aside>
+    </div>
+  </section>
+</main>
+<div class="tip" id="tip"></div>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CITY = {EDI:'Edinburgh', GLA:'Glasgow', ABZ:'Aberdeen', YHZ:'Halifax, Nova Scotia', KEF:'Reykjavík–Keflavík', YYT:"St. John's, Newfoundland"};
+const S = { from:'EDI', to:'YHZ', flight:null, fare:null, seat:null, seatPrice:0 };
+
+/* ---------- step nav ---------- */
+function go(n){ [1,2,3].forEach(i => $('#step'+i).classList.toggle('on', i===n));
+  document.querySelectorAll('#steps li').forEach((li,i) => { li.classList.toggle('on', i===n-1); li.classList.toggle('done', i < n-1); });
+  window.scrollTo({top:0, behavior: reduce ? 'auto' : 'smooth'}); }
+
+/* ---------- search ---------- */
+function flights(){
+  const long = S.to !== 'KEF'; const base = S.to==='KEF' ? 118 : S.to==='YYT' ? 264 : 312;
+  const dur = S.to==='KEF' ? [2,20] : S.to==='YYT' ? [5,35] : [6,55];
+  const tz = S.to==='KEF' ? -1 : S.to==='YYT' ? -3.5 : -4;
+  const mk = (no, dep, via, extra) => { const [h,m] = dep.split(':').map(Number); const tot = h*60+m + dur[0]*60+dur[1] + (extra||0) + tz*60; const ah = Math.floor(((tot%1440)+1440)%1440/60), am = ((tot%60)+60)%60;
+    return {no, dep, arr:String(ah).padStart(2,'0')+':'+String(Math.round(am)).padStart(2,'0'), via, dur:`${dur[0] + Math.floor((dur[1]+(extra||0))/60)}h ${String((dur[1]+(extra||0))%60).padStart(2,'0')}m`,
+      ac: long && !via ? 'Airbus A350-900' : via ? 'A321neo + A350-900' : 'Airbus A321neo', fares:[['Light', base - 48, 'Cabin bag only'],['Classic', base, 'Seat choice · 23 kg bag'],['Flex', base + 146, 'Changes free · lounge']]}; };
+  return [mk('TN 214','08:40'), mk('TN 218','13:05'), mk('TN 1214','16:50','KEF',115)].map(f => { if (!long) f.ac = 'Airbus A350-900'; return f; });
+}
+function renderResults(){
+  $('#fromName').textContent = CITY[S.from]; $('#toName').textContent = CITY[S.to];
+  const r = $('#results'); r.innerHTML = '';
+  flights().forEach((f, i) => { const el = document.createElement('div'); el.className = 'flight'; el.style.animation = reduce ? 'none' : `enter .5s ${i*.08}s both cubic-bezier(.2,.8,.2,1)`;
+    el.innerHTML = `<div class="f-main"><div class="f-time">${f.dep}<small>${S.from}</small></div><div class="f-path"><span>${f.dur}${f.via ? ' · via ' + f.via : ' · non-stop'}</span>${f.via ? '<i class="stop"></i>' : ''}</div><div class="f-time" style="text-align:right">${f.arr}<small>${S.to}</small></div>
+      <div class="f-meta"><span><b>${f.no}</b></span><span>${f.ac}</span><span>${i===0?'Breakfast served':'Hot meal'}</span><span>Wi-Fi</span></div></div>
+      <div class="fares">${f.fares.map((x,j) => `<button class="fare ${j===1?'best':''}" id="fare-${i}-${j}" data-i="${i}" data-j="${j}"><small>${x[0]}</small><b>£${x[1]}</b><span>${x[2]}</span></button>`).join('')}</div>`;
+    r.appendChild(el); f.el = el; });
+  const fl = flights();
+  r.querySelectorAll('.fare').forEach(b => b.addEventListener('click', () => { S.flight = fl[+b.dataset.i]; S.fare = S.flight.fares[+b.dataset.j]; buildCabin(); go(2); }));
+}
+$('#from').addEventListener('change', e => { S.from = e.target.value; renderResults(); });
+$('#to').addEventListener('change', e => { S.to = e.target.value; renderResults(); });
+$('#swap').addEventListener('click', () => { /* keep the network sensible: swap only shows the inverted labels */ const f = $('#from'), t = $('#to');
+  const fo = [...f.options].map(o=>o.value), to = [...t.options].map(o=>o.value);
+  f.innerHTML = to.map(v=>`<option value="${v}">${v}</option>`).join(''); t.innerHTML = fo.map(v=>`<option value="${v}">${v}</option>`).join('');
+  f.value = S.to; t.value = S.from; S.from = f.value; S.to = t.value; renderResults(); });
+
+/* ---------- seat map ---------- */
+function srand(seed){ let s = seed; return () => (s = (s*16807) % 2147483647) / 2147483647; }
+const tip = $('#tip');
+function buildCabin(){
+  const cab = $('#cabin'); cab.innerHTML = ''; S.seat = null; S.seatPrice = 0;
+  const r = srand(S.flight.no.length*97 + S.flight.dep.charCodeAt(1)*13 + S.to.charCodeAt(0));
+  const addZone = t => { const z = document.createElement('div'); z.className = 'zone'; z.innerHTML = t; cab.appendChild(z); };
+  addZone('<b>Tern Suite</b> · 1-2-1 · lie-flat');
+  for (let row = 1; row <= 7; row++){ const el = document.createElement('div'); el.className = 'row bus';
+    el.innerHTML = `<span class="n">${row}</span>`; ['A','','E','','F','','K'].forEach((L,k) => { if (!L){ el.appendChild(document.createElement('span')); return; }
+      el.appendChild(seatBtn(row, L, 'bus', r() < .55)); }); el.insertAdjacentHTML('beforeend', `<span class="n">${row}</span>`); cab.appendChild(el); }
+  addZone('<b>Economy</b> · 3-3-3');
+  for (let row = 20; row <= 44; row++){
+    if (row === 20 || row === 32) cab.insertAdjacentHTML('beforeend', '<div class="exit"><span>EXIT</span><span>EXIT</span></div>');
+    const el = document.createElement('div'); el.className = 'row eco'; el.innerHTML = `<span class="n">${row}</span>`;
+    'ABC DEF GHK'.split('').forEach(L => { if (L === ' '){ el.appendChild(document.createElement('span')); return; }
+      const taken = r() < (row < 26 ? .5 : .36) || (row === 44 && 'DEF'.includes(L));
+      el.appendChild(seatBtn(row, L, 'eco', taken)); });
+    el.insertAdjacentHTML('beforeend', `<span class="n">${row}</span>`); cab.appendChild(el); }
+  // default: suggest a window
+  $('#sFlight').textContent = S.flight.no; $('#sRoute').textContent = `${S.from} → ${S.to} · ${S.flight.ac}`;
+  $('#kFare').textContent = S.fare[0]; $('#kTicket').textContent = '£' + S.fare[1]; updateSide();
+  setTimeout(() => { const w = $('#cabinWrap'); const target = cab.querySelector('.row.eco'); w.scrollTo({top: target ? target.offsetTop - 60 : 0, behavior: reduce ? 'auto' : 'smooth'}); }, 350);
+}
+function seatInfo(row, L, cls){
+  const win = 'AK'.includes(L), aisle = cls==='bus' ? 'EF'.includes(L) : 'CDFG'.includes(L);
+  let price = 0, note = '';
+  if (cls==='bus'){ price = 890; note = 'Tern Suite upgrade: a lie-flat bed, a door that closes, and dinner by Aizle.'; }
+  else if (row === 20 || row === 32){ price = 45; note = 'Exit row: 86 cm of legroom. You must be willing to help in an evacuation.'; }
+  else if (row <= 25){ price = 18; note = 'Front of economy: you get off the plane sooner and choose your meal first.'; }
+  else if (S.fare[0] === 'Light'){ price = 12; }
+  const pos = win ? 'Window' : aisle ? 'Aisle' : 'Middle';
+  if (!note) note = win ? `A window on the ${L==='A'?'left':'right'} side, ${row > 34 ? 'behind the wing' : 'over the wing'}.` : aisle ? 'An aisle seat, so you can get up whenever you like.' : 'A middle seat. Brave choice. We will bring you extra shortbread.';
+  if (S.fare[0] === 'Flex' && cls==='eco') price = 0;
+  return {price, note, pos};
+}
+function seatBtn(row, L, cls, taken){
+  const b = document.createElement('button'); b.className = 'seat' + (cls==='bus' ? ' bus-s' : '') ; b.id = `seat-${row}${L}`; b.textContent = row + L;
+  const info = seatInfo(row, L, cls); if (info.price && cls==='eco' && (row===20||row===32||row<=25)) b.classList.add('plus');
+  b.disabled = taken; b.setAttribute('aria-pressed', 'false');
+  b.setAttribute('aria-label', `Seat ${row}${L}, ${info.pos}${taken ? ', taken' : info.price ? ', £' + info.price : ', free'}`);
+  b.addEventListener('click', () => { document.querySelectorAll('.seat[aria-pressed="true"]').forEach(x => x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true');
+    S.seat = {id: row+L, row, L, cls, ...info}; S.seatPrice = info.price; updateSide(); });
+  b.addEventListener('pointerenter', e => { if (taken) return; tip.textContent = `${row}${L} · ${info.pos}${info.price ? ' · £'+info.price : ' · included'}`; tip.style.opacity = 1; moveTip(e); });
+  b.addEventListener('pointermove', moveTip); b.addEventListener('pointerleave', () => tip.style.opacity = 0);
+  return b;
+}
+function moveTip(e){ tip.style.left = Math.min(innerWidth - 180, e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 34) + 'px'; }
+function updateSide(){
+  const s = S.seat; $('#bigSeat').textContent = s ? s.id : '—'; $('#seatNote').textContent = s ? s.note : 'Choose any open seat. Rows 20 and 32 are exit rows with extra legroom.';
+  $('#kSeat').textContent = '£' + (S.seatPrice||0); $('#kTotal').textContent = '£' + (S.fare[1] + (S.seatPrice||0)); $('#toPass').disabled = !s;
+  $('#toPass').textContent = s ? `Check in · seat ${s.id}` : 'Choose a seat';
+}
+$('#back1').addEventListener('click', () => go(1));
+$('#toPass').addEventListener('click', () => { buildPass(); go(3); });
+
+/* ---------- boarding pass ---------- */
+function buildPass(){
+  const f = S.flight, s = S.seat; const name = ($('#pax').value || 'MACLEAN/ORLA').toUpperCase().replace(/[^A-Z/ ]/g,'').slice(0,20);
+  const [h,m] = f.dep.split(':').map(Number); const b = h*60 + m - (s.cls==='bus' ? 40 : 35); const board = String(Math.floor(b/60)).padStart(2,'0') + ':' + String(b%60).padStart(2,'0');
+  const gate = s.cls==='bus' ? '11' : String(10 + (f.no.length + s.row) % 9); const zone = s.cls==='bus' ? '1' : s.row <= 25 ? '2' : s.row <= 34 ? '3' : '4';
+  const ref = 'TQ' + (s.row*7 % 10) + 'K' + (s.L.charCodeAt(0) % 10) + 'M';
+  $('#pFrom').innerHTML = `${S.from}<small>${CITY[S.from].split(',')[0]}</small>`; $('#pTo').innerHTML = `${S.to}<small>${CITY[S.to].split(',')[0]}</small>`;
+  $('#pName').textContent = name; $('#pRef').textContent = ref; $('#pFlight').textContent = f.no; $('#pDate').textContent = '15 OCT';
+  $('#pBoard').textContent = board; $('#pDep').textContent = f.dep; $('#pGate').textContent = gate; $('#pSeat').textContent = s.id; $('#pZone').textContent = zone; $('#pClass').textContent = s.cls==='bus' ? 'J' : 'Y';
+  $('#sFromTo').innerHTML = `${S.from}<small>→ ${S.to}</small>`; $('#sFD').textContent = `${f.no} · 15 OCT`; $('#sGB').textContent = `${gate} · ${board}`; $('#sSeat').textContent = s.id;
+  $('#passNote').textContent = `Seat ${s.id}: ${s.note}`;
+  const nm = name.padEnd(20,' ');
+  const bcbp = `M1${nm}E${ref} ${S.from}${S.to}TN ${f.no.replace('TN ','').padStart(4,'0')} 288${s.cls==='bus'?'J':'Y'}${String(s.row).padStart(3,'0')}${s.L}0042 100`;
+  $('#bcbp').textContent = bcbp;
+  resetStub(); drawPDF417(bcbp); drawQR(bcbp);
+}
+function hash(str){ let h = 2166136261; for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function drawPDF417(data){
+  const cv = $('#pdf417'); const dpr = Math.min(2, devicePixelRatio||1); const w = cv.clientWidth || 600, h = 92; cv.width = w*dpr; cv.height = h*dpr;
+  const c = cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.fillStyle = '#fbfcfc'; c.fillRect(0,0,w,h);
+  const rows = 11, cols = 5; // data columns
+  const start = [8,1,1,1,1,1,1,3], stop = [7,1,1,3,1,1,1,2,1];
+  const r = srand(hash(data) % 2147483646 + 1);
+  const totalModules = 17 + 17 + cols*17 + 17 + 18; // start, left row ind, data, right row ind, stop
+  const mw = w / totalModules; const rh = h / rows;
+  function codeword(){ // 8 elements summing to 17, each 1..6
+    let parts; do { parts = Array.from({length:8}, () => 1 + Math.floor(r()*4)); } while (parts.reduce((a,b)=>a+b,0) > 17 || parts.reduce((a,b)=>a+b,0) < 11);
+    let rem = 17 - parts.reduce((a,b)=>a+b,0); while (rem > 0){ const k = Math.floor(r()*8); if (parts[k] < 6){ parts[k]++; rem--; } } return parts; }
+  c.fillStyle = '#0b1b2b';
+  for (let row = 0; row < rows; row++){
+    let x = 0; const y = row*rh;
+    const draw = els => { els.forEach((m, i) => { if (i % 2 === 0) c.fillRect(Math.floor(x), y, Math.ceil(m*mw), Math.ceil(rh)); x += m*mw; }); };
+    draw(start); draw(codeword()); for (let k=0;k<cols;k++) draw(codeword()); draw(codeword()); draw(stop);
+  }
+}
+function drawQR(data){
+  const N = 25; const r = srand(hash(data+'qr') % 2147483646 + 1); const svg = $('#qr'); let o = `<rect width="${N}" height="${N}" fill="#fbfcfc"/>`;
+  const finder = (x,y) => `<rect x="${x}" y="${y}" width="7" height="7" fill="#0b1b2b"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fbfcfc"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#0b1b2b"/>`;
+  const inF = (x,y) => (x<8&&y<8)||(x>=N-8&&y<8)||(x<8&&y>=N-8);
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ if (inF(x,y)) continue; if ((x===6||y===6) ? (x+y)%2===0 : r() < .5) o += `<rect x="${x}" y="${y}" width="1" height="1" fill="#0b1b2b"/>`; }
+  o += finder(0,0) + finder(N-7,0) + finder(0,N-7) + `<rect x="16" y="16" width="5" height="5" fill="#0b1b2b"/><rect x="17" y="17" width="3" height="3" fill="#fbfcfc"/><rect x="18" y="18" width="1" height="1" fill="#0b1b2b"/>`;
+  svg.innerHTML = o;
+}
+
+/* ---------- tear-off ---------- */
+const stub = $('#stub'), pass = $('#pass'); let drag = null, torn = false;
+const vertical = () => matchMedia('(max-width:900px)').matches;
+function tearSound(){ try{ const a = new (window.AudioContext||window.webkitAudioContext)(); const len = a.sampleRate*.35; const b = a.createBuffer(1,len,a.sampleRate); const d = b.getChannelData(0);
+  for (let i=0;i<len;i++){ const env = Math.pow(1-i/len,1.5); d[i] = (Math.random()*2-1)*env*(Math.random()<.3?1:.3); }
+  const s = a.createBufferSource(); s.buffer = b; const f = a.createBiquadFilter(); f.type='highpass'; f.frequency.value=1800; const g = a.createGain(); g.gain.value=.25; s.connect(f); f.connect(g); g.connect(a.destination); s.start(); }catch(_){} }
+function tear(dx, dy){ if (torn) return; torn = true; tearSound(); stub.classList.remove('dragging');
+  const v = vertical(); const tx = v ? (dx||40) : 300 + (dx||0), ty = v ? 420 + (dy||0) : 260 + (dy||0); const rot = v ? 8 : 24;
+  stub.style.clipPath = v ? 'polygon(0 6px,4% 0,8% 6px,12% 0,16% 6px,20% 0,24% 6px,28% 0,32% 6px,36% 0,40% 6px,44% 0,48% 6px,52% 0,56% 6px,60% 0,64% 6px,68% 0,72% 6px,76% 0,80% 6px,84% 0,88% 6px,92% 0,96% 6px,100% 0,100% 100%,0 100%)'
+    : 'polygon(6px 0,100% 0,100% 100%,6px 100%,0 96%,6px 92%,0 88%,6px 84%,0 80%,6px 76%,0 72%,6px 68%,0 64%,6px 60%,0 56%,6px 52%,0 48%,6px 44%,0 40%,6px 36%,0 32%,6px 28%,0 24%,6px 20%,0 16%,6px 12%,0 8%,6px 4%)';
+  stub.classList.add('torn'); stub.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`; pass.classList.add('is-torn');
+  $('#tear').textContent = 'Reattach stub'; }
+function resetStub(){ torn = false; stub.classList.remove('torn','dragging'); stub.style.transform = ''; stub.style.clipPath = ''; pass.classList.remove('is-torn'); $('#tear').textContent = 'Tear stub'; }
+stub.addEventListener('pointerdown', e => { if (torn) return; drag = {x:e.clientX, y:e.clientY}; stub.setPointerCapture(e.pointerId); stub.classList.add('dragging'); });
+stub.addEventListener('pointermove', e => { if (!drag) return; const v = vertical(); let dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  const along = v ? Math.max(0, dy) : Math.max(0, dx); const resist = along < 60 ? along*.35 : 21 + (along-60);
+  const rot = v ? Math.min(6, along/30) : Math.min(14, along/12);
+  stub.style.transform = v ? `translate(${dx*.1}px, ${resist}px) rotate(${rot}deg)` : `translate(${resist}px, ${dy*.1}px) rotate(${rot}deg)`; stub.style.transformOrigin = v ? '0 0' : '0 100%';
+  if (along > 140){ const d = drag; drag = null; tear(dx, dy); } });
+const endDrag = () => { if (!drag) return; drag = null; stub.classList.remove('dragging'); stub.style.transform = ''; };
+stub.addEventListener('pointerup', endDrag); stub.addEventListener('pointercancel', endDrag);
+stub.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' '){ e.preventDefault(); torn ? resetStub() : tear(); } });
+$('#tear').addEventListener('click', () => torn ? resetStub() : tear());
+$('#restart').addEventListener('click', () => { resetStub(); go(1); });
+addEventListener('resize', () => { if ($('#step3').classList.contains('on')) drawPDF417($('#bcbp').textContent); });
+
+renderResults();
+// preload a realistic pass so every step has data
+S.flight = flights()[0]; S.fare = S.flight.fares[1]; buildCabin(); const pre = document.querySelector('#seat-23A:not(:disabled)') || document.querySelector('.row.eco .seat:not(:disabled)'); if (pre) pre.click();
+})();
+</script>
+</body>
+</html>

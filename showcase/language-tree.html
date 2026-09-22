@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arbor Linguarum</title>
+<meta name="description" content="An illuminated radial tree of the world's language families — expand Indo-European, Uralic, Austronesian and more to see how 'mother' and 'night' are said across sixty languages, with the cognates of the Proto-Indo-European roots picked out in gold.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<style>
+:root{
+  --lapis:#12205a;
+  --lapis-d:#0a1440;
+  --lapis-l:#1d2f78;
+  --gold:#d9b25a;
+  --gold-l:#f2d78e;
+  --gold-d:#8a6c2c;
+  --verm:#e2493b;
+  --ink:#efe6cf;
+  --mute:#a9a6b8;
+  --serif:"EB Garamond","Garamond","Iowan Old Style","Times New Roman",serif;
+  --black:"UnifrakturMaguntia","Old English Text MT","EB Garamond",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--lapis-d)}
+body{color:var(--ink);font-family:var(--serif);font-size:18px;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background:
+    radial-gradient(ellipse at 50% 30%,#223a8c 0%,transparent 65%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'><g fill='none' stroke='%23d9b25a' stroke-opacity='.07'><path d='M24 4 L44 24 L24 44 L4 24Z'/><circle cx='24' cy='24' r='3'/></g></svg>"),
+    var(--lapis-d)}
+:focus-visible{outline:2px solid var(--gold-l);outline-offset:3px}
+a{color:var(--gold-l)}
+.back{position:absolute;top:16px;left:max(16px,env(safe-area-inset-left));font-family:var(--serif);font-style:italic;font-size:16px;color:var(--gold);text-decoration:none}
+.back:hover{text-decoration:underline}
+.page{max-width:1280px;margin:0 auto;padding:60px max(16px,3vw) 60px}
+header{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;margin-bottom:26px}
+.initial{width:clamp(96px,12vw,150px);aspect-ratio:1;position:relative}
+.initial svg{width:100%;height:100%;display:block}
+h1{font-family:var(--black);font-weight:400;font-size:clamp(46px,7.4vw,104px);line-height:.95;margin:0;color:var(--gold-l);text-shadow:0 2px 0 #5a4214,0 0 30px rgba(217,178,90,.25)}
+.sub{font-style:italic;font-size:clamp(17px,1.6vw,21px);color:var(--ink);max-width:40em;margin:12px 0 0;line-height:1.5}
+.sub b{font-style:normal;color:var(--gold-l);font-weight:500}
+.rubric{color:var(--verm);font-variant:small-caps;letter-spacing:.06em;font-style:normal}
+
+.controls{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;margin:0 0 16px;padding:12px 16px;border-top:1px solid var(--gold-d);border-bottom:1px solid var(--gold-d)}
+.controls .lbl{font-variant:small-caps;letter-spacing:.08em;color:var(--gold)}
+.seg{display:inline-flex;border:1px solid var(--gold-d);border-radius:999px;overflow:hidden}
+.seg button,.btn{font-family:var(--serif);font-size:17px;background:transparent;color:var(--ink);border:0;padding:6px 16px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--gold);color:var(--lapis-d)}
+.btn{border:1px solid var(--gold-d);border-radius:999px;font-style:italic}
+.btn:hover{border-color:var(--gold)}
+.legend{display:flex;gap:16px;align-items:center;font-size:15px;color:var(--mute);margin-left:auto;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+
+.folio{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+.frame{position:relative;padding:18px;background:rgba(10,20,64,.55);border:1px solid var(--gold-d)}
+.frame::before{content:"";position:absolute;inset:6px;border:2px solid var(--gold);pointer-events:none;
+  -webkit-mask:repeating-linear-gradient(90deg,#000 0 14px,transparent 14px 20px);mask:repeating-linear-gradient(90deg,#000 0 14px,transparent 14px 20px);opacity:.6}
+.frame .corner{position:absolute;width:44px;height:44px;pointer-events:none}
+#tree{width:100%;height:auto;display:block;font-family:var(--serif)}
+#tree .link{fill:none;stroke:var(--gold);stroke-opacity:.55;stroke-width:1.1}
+#tree .link.hot{stroke:var(--gold-l);stroke-opacity:1;stroke-width:2}
+#tree .node{transition:transform .7s cubic-bezier(.2,.8,.2,1),opacity .5s}
+#tree .node circle{stroke:var(--gold);stroke-width:1.2}
+#tree .node.inner circle{fill:var(--lapis)}
+#tree .node.inner.closed circle{fill:var(--gold)}
+#tree .node.leaf circle{fill:var(--verm);stroke:none}
+#tree .node.leaf.cog circle{fill:var(--gold-l)}
+#tree .node text{fill:var(--ink);font-size:12.5px}
+#tree .node.inner text{font-style:italic;fill:var(--gold-l);font-size:13.5px;paint-order:stroke;stroke:var(--lapis-d);stroke-width:4px;stroke-linejoin:round}
+#tree .node.fam text{font-size:16px;font-variant:small-caps;letter-spacing:.04em}
+#tree .node.leaf text .w{font-weight:600;fill:var(--ink)}
+#tree .node.leaf.cog text .w{fill:var(--gold-l)}
+#tree .node.leaf text .l{fill:var(--mute);font-style:italic;font-size:11px}
+#tree .node{cursor:pointer}
+#tree .node:hover text,#tree .node.sel text{text-decoration:underline;text-decoration-color:var(--verm)}
+#tree .rootlbl{font-family:var(--black);fill:var(--gold-l);font-size:22px}
+
+aside.gloss{position:sticky;top:16px;border:1px solid var(--gold-d);padding:20px 20px 22px;background:rgba(10,20,64,.7)}
+aside h2{font-family:var(--black);font-weight:400;font-size:34px;margin:0 0 4px;color:var(--gold-l);line-height:1}
+aside .path{font-size:14px;color:var(--mute);font-style:italic;line-height:1.4}
+aside .word{font-size:44px;line-height:1.05;margin:16px 0 2px;color:var(--ink)}
+aside .rom{font-style:italic;color:var(--gold);font-size:19px}
+aside .pair{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-top:16px;font-size:16px;border-top:1px solid var(--gold-d);padding-top:12px}
+aside .pair dt{font-variant:small-caps;color:var(--verm);letter-spacing:.06em}
+aside .pair dd{margin:0}
+aside p{font-size:16px;line-height:1.5;margin:14px 0 0}
+.codex{margin-top:46px}
+.codex h2{font-family:var(--black);font-weight:400;font-size:clamp(34px,4vw,52px);color:var(--gold-l);margin:0 0 6px}
+.codex .cols{columns:3 280px;column-gap:40px;column-rule:1px solid rgba(217,178,90,.25)}
+.codex .fam{break-inside:avoid;margin:0 0 20px}
+.codex .fam h3{font-variant:small-caps;letter-spacing:.06em;color:var(--verm);font-weight:500;margin:0 0 4px;font-size:19px;border-bottom:1px solid var(--gold-d)}
+.codex table{width:100%;border-collapse:collapse;font-size:15.5px}
+.codex td{padding:3px 6px 3px 0;vertical-align:top}
+.codex td:first-child{color:var(--mute);font-style:italic;width:38%}
+.codex td.g{color:var(--gold-l)}
+footer{margin-top:30px;font-size:14.5px;font-style:italic;color:var(--mute);line-height:1.5;max-width:70em}
+@media (max-width:980px){.folio{grid-template-columns:1fr}aside.gloss{position:static}}
+@media (max-width:560px){header{grid-template-columns:1fr}.initial{width:84px}.legend{margin-left:0}}
+@media (prefers-reduced-motion:reduce){#tree .node{transition:none}}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="page">
+  <header>
+    <div class="initial" aria-hidden="true">
+      <svg viewBox="0 0 150 150">
+        <rect x="3" y="3" width="144" height="144" fill="#e2493b" stroke="#d9b25a" stroke-width="3"/>
+        <rect x="12" y="12" width="126" height="126" fill="#12205a" stroke="#f2d78e" stroke-width="1"/>
+        <g fill="none" stroke="#d9b25a" stroke-width="2">
+          <path d="M20 128 C40 100 30 70 55 55 C80 40 70 20 100 22"/>
+          <path d="M30 118 c10 -4 14 -10 12 -20 M46 80 c10 2 16 -2 18 -12 M78 40 c6 6 14 8 22 4" />
+          <circle cx="100" cy="22" r="5" fill="#e2493b"/><circle cx="42" cy="98" r="4" fill="#f2d78e"/><circle cx="64" cy="68" r="4" fill="#f2d78e"/>
+        </g>
+        <text x="75" y="118" text-anchor="middle" font-family="UnifrakturMaguntia, serif" font-size="104" fill="#f2d78e" stroke="#5a4214" stroke-width="1.5">L</text>
+      </svg>
+    </div>
+    <div>
+      <h1>Arbor Linguarum</h1>
+      <p class="sub">Every language descends from something older. Open the branches of this tree and hear <b>mother</b> and <b>night</b> drift across three continents — <span class="rubric">gold</span> leaves still carry the Proto-Indo-European roots <i>*méh₂tēr</i> and <i>*nókʷts</i>; <span class="rubric">vermilion</span> ones found other words.</p>
+    </div>
+  </header>
+
+  <div class="controls">
+    <span class="lbl">Word</span>
+    <div class="seg" role="group" aria-label="Word shown on leaves">
+      <button id="w-mother" aria-pressed="true" data-w="mother">mother</button>
+      <button id="w-night" aria-pressed="false" data-w="night">night</button>
+    </div>
+    <button class="btn" id="expandAll" type="button">Open every branch</button>
+    <button class="btn" id="collapseAll" type="button">Close to families</button>
+    <div class="legend"><span><i style="background:var(--gold-l)"></i>PIE cognate</span><span><i style="background:var(--verm)"></i>other origin</span><span><i style="background:var(--gold);border:1px solid var(--gold)"></i>closed branch</span></div>
+  </div>
+
+  <div class="folio">
+    <div class="frame">
+      <svg id="tree" viewBox="-560 -560 1120 1120" role="img" aria-label="Radial tree of language families"></svg>
+    </div>
+    <aside class="gloss" id="gloss" aria-live="polite"></aside>
+  </div>
+
+  <section class="codex" aria-labelledby="codexh">
+    <h2 id="codexh">The Codex</h2>
+    <p class="sub" style="margin:0 0 20px">Every leaf of the tree, set out plainly. Cognates of the Indo-European roots in gold.</p>
+    <div class="cols" id="codex"></div>
+  </section>
+
+  <footer>Forms are given in native script where one is standard, with a romanisation. Some languages have several everyday words (Hindi <i>mā̃</i> and <i>mātā</i>; Japanese <i>haha</i> and <i>okāsan</i>); the entry shows a common neutral form. Cognacy follows standard etymological dictionaries; Romanian <i>mamă</i>, Welsh <i>mam</i> and many "mama"-type words across unrelated families are nursery words, not inherited from <i>*méh₂tēr</i>. Language counts per family are rounded Ethnologue/Glottolog figures.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+// word entries: [native, romanisation, cognate?]
+const L=(name,m,n,note)=>({name,words:{mother:m,night:n},note});
+const DATA={name:'Human speech',children:[
+ {name:'Indo-European',count:'≈450 languages',root:{mother:'*méh₂tēr',night:'*nókʷts'},note:'Spoken natively by nearly half of humanity, from Iceland to Bengal. Its ancestor, Proto-Indo-European, was probably spoken on the Pontic–Caspian steppe some 6,000 years ago.',children:[
+   {name:'Germanic',children:[
+     L('English',['mother','',1],['night','',1]),
+     L('German',['Mutter','',1],['Nacht','',1]),
+     L('Dutch',['moeder','',1],['nacht','',1]),
+     L('Swedish',['mor','',1],['natt','',1],'Swedish also keeps the older, more formal moder.'),
+     L('Icelandic',['móðir','',1],['nótt','',1]),
+     L('Gothic',['aiþei','',0],['nahts','',1],'Extinct; known chiefly from Wulfila’s 4th-century Bible translation. Its word for mother is not the inherited one.')]},
+   {name:'Italic',children:[
+     L('Latin',['māter','',1],['nox','',1]),
+     L('Italian',['madre','',1],['notte','',1]),
+     L('Spanish',['madre','',1],['noche','',1]),
+     L('French',['mère','',1],['nuit','',1]),
+     L('Portuguese',['mãe','',1],['noite','',1]),
+     L('Romanian',['mamă','',0],['noapte','',1],'Latin mater gave way to the nursery word mamă, but nox survived as noapte.')]},
+   {name:'Celtic',children:[
+     L('Irish',['máthair','',1],['oíche','',0],'Oíche continues Old Irish adaig; whether that word ultimately shares the *nókʷts root is debated, so it is not counted here.'),
+     L('Welsh',['mam','',0],['nos','',1]),
+     L('Breton',['mamm','',0],['noz','',1])]},
+   {name:'Hellenic',children:[
+     L('Ancient Greek',['μήτηρ','mḗtēr',1],['νύξ','nýx',1]),
+     L('Modern Greek',['μητέρα','mitéra',1],['νύχτα','níchta',1])]},
+   {name:'Balto-Slavic',children:[
+     L('Russian',['мать','mat’',1],['ночь','noch’',1]),
+     L('Polish',['matka','',1],['noc','',1]),
+     L('Czech',['matka','',1],['noc','',1]),
+     L('Lithuanian',['motina','',1],['naktis','',1],'Often called the most conservative living Indo-European language in its sound system.'),
+     L('Latvian',['māte','',1],['nakts','',1])]},
+   {name:'Indo-Iranian',children:[
+     L('Sanskrit',['मातृ','mātṛ',1],['नक्त','nákta',1]),
+     L('Hindi',['माता','mātā',1],['रात','rāt',0],'Rāt comes from Sanskrit rātri, a different root from *nókʷts.'),
+     L('Bengali',['মা','mā',0],['রাত','rāt',0]),
+     L('Persian',['مادر','mādar',1],['شب','šab',0])]},
+   L('Armenian',['մայր','mayr',1],['գիշեր','gišer',0],'Its own branch of Indo-European. The origin of gišer is disputed and it is not counted as a cognate here.'),
+   L('Albanian',['nënë','',0],['natë','',1]),
+   {name:'Anatolian †',children:[L('Hittite',['anna-','',0],['išpant-','',0],'The oldest attested Indo-European language, written in cuneiform from about 1650 BCE.')]}
+ ]},
+ {name:'Uralic',count:'≈40 languages',note:'Stretches from Hungary and Finland across the Arctic to the Taymyr Peninsula.',children:[
+   L('Finnish',['äiti','',0],['yö','',0]),
+   L('Estonian',['ema','',0],['öö','',0]),
+   L('Hungarian',['anya','',0],['éjszaka','',0])]},
+ {name:'Turkic',count:'≈40 languages',children:[
+   L('Turkish',['anne','',0],['gece','',0]),
+   L('Kazakh',['ана','ana',0],['түн','tün',0]),
+   L('Uzbek',['ona','',0],['tun','',0])]},
+ {name:'Sino-Tibetan',count:'≈450 languages',note:'The family of Chinese and of Tibetan, Burmese and hundreds of Himalayan languages.',children:[
+   L('Mandarin',['母亲','mǔqīn',0],['夜','yè',0]),
+   L('Cantonese',['媽媽','maa4 maa1',0],['夜','je6',0]),
+   L('Burmese',['အမေ','amay',0],['ည','nya',0])]},
+ {name:'Afro-Asiatic',count:'≈380 languages',children:[
+   L('Arabic',['أم','umm',0],['ليل','layl',0]),
+   L('Hebrew',['אם','em',0],['לילה','laila',0],'Arabic layl and Hebrew laila share a Proto-Semitic root, *layl-.'),
+   L('Amharic',['እናት','enat',0],['ሌሊት','lelit',0]),
+   L('Hausa',['uwa','',0],['dare','',0])]},
+ {name:'Austronesian',count:'≈1,250 languages',note:'Carried by seafarers from Taiwan to Madagascar, Hawaiʻi and Aotearoa — the widest spread of any family before 1500.',children:[
+   L('Malay',['ibu','',0],['malam','',0]),
+   L('Tagalog',['ina','',0],['gabi','',0]),
+   L('Māori',['whaea','',0],['pō','',0]),
+   L('Hawaiian',['makuahine','',0],['pō','',0],'Māori pō and Hawaiian pō are Polynesian cognates.')]},
+ {name:'Niger–Congo',count:'≈1,500 languages',children:[
+   L('Swahili',['mama','',0],['usiku','',0]),
+   L('Yoruba',['ìyá','',0],['alẹ́','',0]),
+   L('Zulu',['umama','',0],['ubusuku','',0],'Swahili usiku and Zulu ubusuku both go back to Proto-Bantu *-tíku.')]},
+ {name:'Dravidian',count:'≈80 languages',children:[
+   L('Tamil',['அம்மா','ammā',0],['இரவு','iravu',0]),
+   L('Telugu',['అమ్మ','amma',0],['రాత్రి','rātri',0],'Telugu rātri is borrowed from Sanskrit.'),
+   L('Kannada',['ಅಮ್ಮ','amma',0],['ರಾತ್ರಿ','rātri',0])]},
+ {name:'Japonic',count:'≈12 languages',children:[L('Japanese',['母','haha',0],['夜','yoru',0])]},
+ {name:'Koreanic',count:'2 languages',children:[L('Korean',['어머니','eomeoni',0],['밤','bam',0])]},
+ {name:'Kartvelian',count:'4 languages',children:[L('Georgian',['დედა','deda',0],['ღამე','ghame',0],'A famous trap: in Georgian, mama means father.')]},
+ {name:'Basque',count:'isolate',note:'Unrelated to any other living language; spoken on both sides of the western Pyrenees since before the Romans.',children:[L('Basque',['ama','',0],['gau','',0])]}
+]};
+
+// ---------- prepare ----------
+let uid=0; const ALL=[];
+(function walk(n,depth,parent,path){
+  n.id='n'+(uid++); n.depth=depth; n.parent=parent; n.path=path; ALL.push(n);
+  if(n.children) n.children.forEach(c=>walk(c,depth+1,n,path.concat(n.name)));
+})(DATA,0,null,[]);
+const open=new Set();
+function resetOpen(){ open.clear(); open.add(DATA.id); const ie=DATA.children[0]; open.add(ie.id); ie.children.forEach(c=>c.children&&open.add(c.id)); }
+resetOpen();
+let WORD='mother', selected=null;
+
+// ---------- layout ----------
+function visible(){
+  const leaves=[]; const nodes=[];
+  (function v(n){ nodes.push(n); if(n.children && open.has(n.id)){ n.children.forEach(v);} else leaves.push(n); })(DATA);
+  return {nodes,leaves};
+}
+const RINGS=[0,150,280,395];
+function layout(){
+  const {nodes,leaves}=visible();
+  const gap=Math.PI*2/leaves.length;
+  leaves.forEach((l,i)=>{l.a=i*gap-Math.PI/2+gap/2});
+  (function set(n){ if(n.children && open.has(n.id)){ n.children.forEach(set); n.a=(n.children[0].a+n.children[n.children.length-1].a)/2; } })(DATA);
+  nodes.forEach(n=>{
+    const isLeaf=!n.children;
+    n.r = isLeaf? 395 : RINGS[Math.min(n.depth,2)];
+    if(!isLeaf && !open.has(n.id)) n.r = Math.min(RINGS[Math.min(n.depth,2)]+ (n.depth===1?70:0), 330);
+    if(!isLeaf && open.has(n.id) && n.depth===1 && n.children.every(c=>!c.children)) { n.r=280; n.radial=true; } else n.radial=false;
+  });
+  DATA.r=0;
+  return {nodes,leaves};
+}
+const xy=(r,a)=>[r*Math.cos(a),r*Math.sin(a)];
+function linkPath(p,c){
+  const [x0,y0]=xy(p.r,p.a),[x3,y3]=xy(c.r,c.a); const rm=(p.r+c.r)/2;
+  const [x1,y1]=xy(rm,p.a),[x2,y2]=xy(rm,c.a);
+  return `M${x0.toFixed(1)},${y0.toFixed(1)}C${x1.toFixed(1)},${y1.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)} ${x3.toFixed(1)},${y3.toFixed(1)}`;
+}
+
+// ---------- render ----------
+const svg=document.getElementById('tree'); const NS='http://www.w3.org/2000/svg';
+const gLinks=document.createElementNS(NS,'g'), gNodes=document.createElementNS(NS,'g');
+svg.innerHTML=`<defs><radialGradient id="halo"><stop offset="0" stop-color="#f2d78e" stop-opacity=".35"/><stop offset="1" stop-color="#f2d78e" stop-opacity="0"/></radialGradient></defs>
+  <circle r="120" fill="url(#halo)"/>
+  ${[150,280,395].map(r=>`<circle r="${r}" fill="none" stroke="#d9b25a" stroke-opacity=".12" stroke-dasharray="2 6"/>`).join('')}
+  <circle r="520" fill="none" stroke="#d9b25a" stroke-opacity=".35"/><circle r="528" fill="none" stroke="#d9b25a" stroke-opacity=".2" stroke-dasharray="1 5"/>`;
+svg.appendChild(gLinks); svg.appendChild(gNodes);
+const els={};
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function render(){
+  const {nodes}=layout();
+  const vis=new Set(nodes.map(n=>n.id));
+  // links
+  gLinks.innerHTML=nodes.filter(n=>n.parent).map(n=>`<path class="link${selected&&isAncestor(n,selected)?' hot':''}" d="${linkPath(n.parent,n)}"/>`).join('');
+  // nodes
+  Object.keys(els).forEach(id=>{ if(!vis.has(id)){ els[id].remove(); delete els[id]; } });
+  nodes.forEach(n=>{
+    let g=els[n.id];
+    const isLeaf=!n.children, isRoot=n.depth===0;
+    if(!g){
+      g=document.createElementNS(NS,'g'); els[n.id]=g; gNodes.appendChild(g);
+      g.setAttribute('tabindex','0'); g.setAttribute('role','button');
+      const from=n.parent&&n.parent.x!==undefined?[n.parent.x,n.parent.y]:[0,0];
+      g.style.transform=`translate(${from[0]}px,${from[1]}px)`;
+      g.addEventListener('click',()=>act(n));
+      g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act(n)}});
+    }
+    const [x,y]=xy(n.r,n.a); n.x=x; n.y=y;
+    const cog = isLeaf && n.words[WORD][2];
+    g.setAttribute('class',`node ${isLeaf?'leaf':'inner'}${n.depth===1?' fam':''}${!isLeaf&&!open.has(n.id)&&!isRoot?' closed':''}${cog?' cog':''}${selected===n?' sel':''}`);
+    const deg=n.a*180/Math.PI, flip=Math.cos(n.a)<0;
+    let label='';
+    if(isRoot) label=`<text class="rootlbl" text-anchor="middle" dy="7">${esc(n.name)}</text>`;
+    else if(isLeaf){
+      const w=n.words[WORD]; const rot=flip?deg+180:deg;
+      label=`<text transform="rotate(${rot.toFixed(2)})" x="${flip?-10:10}" dy="4" text-anchor="${flip?'end':'start'}"><tspan class="w">${esc(w[0])}</tspan>${w[1]?` <tspan class="l">${esc(w[1])}</tspan>`:''}<tspan class="l"> · ${esc(n.name)}</tspan></text>`;
+      g.setAttribute('aria-label',`${n.name}: ${w[0]}${w[1]?' ('+w[1]+')':''}`);
+    } else {
+      const closed=!open.has(n.id);
+      const out = n.depth===1 && closed;
+      if(n.radial){ const rot=flip?deg+180:deg; label=`<text transform="rotate(${rot.toFixed(2)})" x="${flip?10:-10}" dy="5" text-anchor="${flip?'start':'end'}">${esc(n.name)}</text>`; }
+      else if(out){ const rot=flip?deg+180:deg; label=`<text transform="rotate(${rot.toFixed(2)})" x="${flip?-12:12}" dy="5" text-anchor="${flip?'end':'start'}">${esc(n.name)} <tspan style="font-size:11px;fill:#a9a6b8;font-variant:normal">· ${n.children.length} shown</tspan></text>`; }
+      else label=`<text text-anchor="middle" dy="${n.y<0?-10:18}">${esc(n.name)}</text>`;
+      g.setAttribute('aria-label',`${n.name} — ${closed?'closed, activate to open':'open, activate to close'}`);
+      g.setAttribute('aria-expanded',!closed);
+    }
+    const rad=isRoot?0:isLeaf?4.2:(n.depth===1?7:5.5);
+    g.innerHTML=(rad?`<circle r="${rad}"/>`:'')+label;
+    requestAnimationFrame(()=>{g.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`});
+  });
+}
+function isAncestor(n,s){let p=s;while(p){if(p===n)return true;p=p.parent}return false}
+function act(n){
+  if(n.children && n.depth>0){
+    if(open.has(n.id)) { (function close(k){open.delete(k.id);k.children&&k.children.forEach(close)})(n); }
+    else open.add(n.id);
+  }
+  selected=n; render(); gloss(n);
+  const g=els[n.id]; g&&g.focus({preventScroll:true});
+}
+
+// ---------- gloss panel ----------
+const glossEl=document.getElementById('gloss');
+function famOf(n){let p=n;while(p&&p.depth>1)p=p.parent;return p}
+function gloss(n){
+  if(n.depth===0){glossEl.innerHTML=`<h2>Radix</h2><p class="path">The centre of the tree</p><p>About 7,000 languages are spoken today, grouped by linguists into roughly 140 families plus dozens of isolates. Twelve of them are shown here. Choose any branch or leaf.</p>`;return}
+  if(n.children){
+    const fam=famOf(n);
+    const leaves=[];(function g(k){k.children?k.children.forEach(g):leaves.push(k)})(n);
+    const cog=leaves.filter(l=>l.words[WORD][2]).length;
+    glossEl.innerHTML=`<h2>${esc(n.name)}</h2><p class="path">${n.path.slice(1).concat(n.name).join(' › ')}${fam&&fam.count?' · '+fam.count:''}</p>
+      ${n.root?`<div class="word">${n.root[WORD]}</div><div class="rom">reconstructed Proto-Indo-European “${WORD}”</div>`:''}
+      <p>${n.note||(fam&&fam.note)||`${leaves.length} language${leaves.length>1?'s':''} shown on this branch.`}</p>
+      ${famOf(n).name==='Indo-European'?`<p><span class="rubric">${cog} of ${leaves.length}</span> languages here keep the inherited word for “${WORD}”.</p>`:''}`;
+    return;
+  }
+  const m=n.words.mother, ni=n.words.night, w=n.words[WORD];
+  const fam=famOf(n);
+  glossEl.innerHTML=`<h2>${esc(n.name)}</h2><p class="path">${n.path.slice(1).join(' › ')}</p>
+    <div class="word">${esc(w[0])}</div><div class="rom">${w[1]?esc(w[1])+' · ':''}“${WORD}”${w[2]?' — from *'+(WORD==='mother'?'méh₂tēr':'nókʷts'):''}</div>
+    <dl class="pair"><dt>mother</dt><dd>${esc(m[0])}${m[1]?' <i>'+esc(m[1])+'</i>':''}${m[2]?' ✦':''}</dd><dt>night</dt><dd>${esc(ni[0])}${ni[1]?' <i>'+esc(ni[1])+'</i>':''}${ni[2]?' ✦':''}</dd></dl>
+    ${n.note?`<p>${esc(n.note)}</p>`:''}
+    ${fam&&fam.name==='Indo-European'?'<p style="color:var(--mute);font-size:14px">✦ inherited from Proto-Indo-European</p>':''}`;
+}
+
+// ---------- codex ----------
+function codex(){
+  document.getElementById('codex').innerHTML=DATA.children.map(f=>{
+    const leaves=[];(function g(k){k.children?k.children.forEach(g):leaves.push(k)})(f);
+    return `<div class="fam"><h3>${esc(f.name)} <span style="font-size:14px;color:var(--mute);font-variant:normal;letter-spacing:0">${f.count||''}</span></h3><table><tbody>${leaves.map(l=>`<tr><td>${esc(l.name)}</td><td class="${l.words.mother[2]?'g':''}">${esc(l.words.mother[0])}${l.words.mother[1]?' <i>'+esc(l.words.mother[1])+'</i>':''}</td><td class="${l.words.night[2]?'g':''}">${esc(l.words.night[0])}${l.words.night[1]?' <i>'+esc(l.words.night[1])+'</i>':''}</td></tr>`).join('')}</tbody></table></div>`;
+  }).join('');
+}
+
+// ---------- controls ----------
+document.querySelectorAll('[data-w]').forEach(b=>b.addEventListener('click',()=>{
+  WORD=b.dataset.w; document.querySelectorAll('[data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b)); render(); if(selected) gloss(selected);
+}));
+document.getElementById('expandAll').addEventListener('click',()=>{ALL.forEach(n=>n.children&&open.add(n.id)); render()});
+document.getElementById('collapseAll').addEventListener('click',()=>{open.clear();open.add(DATA.id);selected=null;render();gloss(DATA)});
+
+render(); codex();
+selected=DATA.children[0]; gloss(selected); render();
+})();
+</script>
+</body>
+</html>

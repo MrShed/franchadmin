@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Engraved Heart</title>
+<meta name="description" content="An engraved anatomical plate of the human heart wired to a bedside monitor: blood flows through four chambers and four valves in time with a live ECG trace, heart sounds and a heart-rate dial.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bezel:#0a0b0b;
+  --glass:#050807;
+  --bone:#dcd3c0;
+  --bone-d:#9c9483;
+  --bone-f:rgba(220,211,192,.28);
+  --oxy:#e0443e;
+  --deoxy:#5b86e5;
+  --ecg:#5cf29a;
+  --spo2:#4fd6f0;
+  --bp:#ff6b6b;
+  --resp:#f6d45c;
+  --fell:"IM Fell English","Hoefler Text","Garamond","Times New Roman",serif;
+  --fellsc:"IM Fell English SC","IM Fell English","Garamond",serif;
+  --vt:"VT323","Lucida Console","Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#101211}
+body{color:var(--bone);font-family:var(--fell);font-size:17px;-webkit-font-smoothing:antialiased;
+  background:radial-gradient(ellipse at 30% 20%,#1c1f1d 0%,#0c0d0c 70%);min-height:100vh;overflow-x:hidden}
+:focus-visible{outline:1px dashed var(--bone);outline-offset:3px}
+.back{position:absolute;top:14px;left:max(16px,env(safe-area-inset-left));font-family:var(--fellsc);font-size:15px;color:var(--bone-d);text-decoration:none;letter-spacing:.06em;z-index:5}
+.back:hover{color:var(--bone)}
+.wrap{max-width:1320px;margin:0 auto;padding:54px max(16px,3vw) 50px}
+.title{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;border-bottom:1px solid var(--bone-f);padding-bottom:12px;margin-bottom:22px}
+.title h1{font-family:var(--fell);font-weight:400;font-size:clamp(40px,6vw,76px);line-height:.95;margin:0;letter-spacing:-.01em}
+.title h1 i{color:var(--oxy)}
+.title p{margin:0;font-style:italic;color:var(--bone-d);max-width:32em;font-size:16px;line-height:1.45}
+.stage{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(18px,3vw,40px);align-items:start}
+
+/* plate */
+.plate{position:relative;border:1px solid var(--bone-f);padding:14px;background:
+  repeating-linear-gradient(0deg,rgba(220,211,192,.018) 0 1px,transparent 1px 3px),#0d0f0e}
+.plate::before{content:"";position:absolute;inset:6px;border:1px solid rgba(220,211,192,.12);pointer-events:none}
+.plate .cap{display:flex;justify-content:space-between;font-family:var(--fellsc);font-size:14px;color:var(--bone-d);letter-spacing:.08em;padding:0 6px}
+#heart{width:100%;height:auto;display:block}
+#heart .lbl{font-family:var(--fell);font-style:italic;font-size:14px;fill:var(--bone)}
+#heart .lbl.sc{font-family:var(--fellsc);font-style:normal;font-size:12.5px;fill:var(--bone-d);letter-spacing:.06em}
+#heart .lead{stroke:var(--bone-d);stroke-width:.6;fill:none}
+#heart .valve{stroke:var(--bone);stroke-width:2.2;fill:none;stroke-linecap:round;transition:none}
+#heart .vdot{transition:fill .15s}
+
+/* monitor */
+.monitor{background:linear-gradient(#1a1c1c,#0f1111);border-radius:14px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 30px 60px -30px #000;border:1px solid #262a29}
+.screen{background:var(--glass);border-radius:6px;padding:10px 12px 12px;font-family:var(--vt);position:relative;overflow:hidden;box-shadow:inset 0 0 40px rgba(0,0,0,.9)}
+.screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)}
+.bar{display:flex;justify-content:space-between;font-size:17px;color:#8a9a93;letter-spacing:.04em}
+.bar b{color:#e6ece9;font-weight:400}
+.trace{display:grid;grid-template-columns:1fr 118px;gap:8px;margin-top:6px;align-items:stretch}
+.trace canvas{width:100%;height:118px;display:block}
+.num{display:flex;flex-direction:column;justify-content:center;line-height:.9}
+.num .k{font-size:16px;letter-spacing:.06em}
+.num .v{font-size:62px}
+.num .u{font-size:15px;opacity:.8}
+.num.ecg{color:var(--ecg)} .num.spo2{color:var(--spo2)} .num.bp{color:var(--bp)} .num.resp{color:var(--resp)}
+.heartico{display:inline-block;width:12px;height:12px;background:var(--ecg);clip-path:path('M6 11 L1 6 A2.7 2.7 0 0 1 6 2.4 A2.7 2.7 0 0 1 11 6 Z');opacity:.25;margin-left:6px;vertical-align:1px}
+.heartico.on{opacity:1}
+.lower{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;border-top:1px solid #1b2320;padding-top:8px}
+.lower .v{font-size:42px}
+.phase{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px;border-top:1px solid #1b2320;padding-top:8px;font-size:19px;color:#cfe;align-items:center}
+.phase .p{letter-spacing:.06em}
+.phase .snd{font-size:30px;color:#fff;min-width:80px;text-align:right;opacity:.15;transition:opacity .25s}
+.phase .snd.on{opacity:1;transition:none}
+.valves{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;font-size:15px}
+.valves div{border:1px solid #1d2a26;padding:4px 6px;color:#7c8c86}
+.valves b{display:block;font-weight:400;font-size:19px;color:#6d7773}
+.valves .open b{color:var(--ecg)}
+.knobs{display:grid;grid-template-columns:1fr auto;gap:12px 16px;align-items:center;margin-top:14px;font-family:var(--fellsc);font-size:14px;color:var(--bone-d);letter-spacing:.05em}
+.knobs label{display:block;margin-bottom:4px}
+.knobs input[type=range]{width:100%;accent-color:#b9b19f}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.btns button{font-family:var(--fellsc);font-size:14px;letter-spacing:.04em;color:var(--bone);background:#151817;border:1px solid #2c3230;border-radius:4px;padding:6px 10px;cursor:pointer}
+.btns button:hover{border-color:var(--bone-d)}
+.btns button[aria-pressed="true"]{background:var(--bone);color:#111}
+
+/* notes */
+.notes{margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0;border-top:1px solid var(--bone-f)}
+.notes div{padding:18px 20px 20px 0;border-bottom:1px solid var(--bone-f)}
+.notes .n{font-family:var(--fell);font-size:44px;line-height:1;color:var(--bone)}
+.notes .n small{font-size:18px;color:var(--bone-d);font-style:italic}
+.notes p{margin:6px 0 0;font-size:15.5px;line-height:1.45;color:var(--bone-d);font-style:italic;max-width:24em}
+.sequence{margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;counter-reset:s}
+.sequence div{counter-increment:s;font-size:16px;line-height:1.55;color:#c7bfae}
+.sequence div::before{content:counter(s,upper-roman) ".";font-family:var(--fellsc);display:block;font-size:22px;color:var(--oxy);margin-bottom:2px}
+.sequence b{font-family:var(--fellsc);font-weight:400;letter-spacing:.04em;color:var(--bone)}
+footer{margin-top:40px;font-style:italic;color:#6f6a5f;font-size:14px;line-height:1.5}
+@media (max-width:900px){.stage{grid-template-columns:1fr}}
+@media (max-width:520px){
+  .trace{grid-template-columns:1fr 84px}
+  .num .v{font-size:46px}
+  .lower .v{font-size:32px}
+  .valves{grid-template-columns:repeat(2,1fr)}
+  .knobs{grid-template-columns:1fr}
+  .bar{font-size:15px}.bar span:nth-child(2){display:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="wrap">
+  <header class="title">
+    <h1>Plate XII. <i>Cor</i>,<br>the Heart laid open</h1>
+    <p>A frontal section after the manner of the old anatomists, wired to a modern bedside monitor. Blood moves only when the valves allow it — watch the chambers wait, fill and fire in step with the trace.</p>
+  </header>
+
+  <div class="stage">
+    <figure class="plate" style="margin:0">
+      <div class="cap"><span>Fig. 1 — Sectio frontalis</span><span id="figbpm">72 bpm</span></div>
+      <svg id="heart" viewBox="0 0 600 700" role="img" aria-label="Animated cross-section of the heart showing four chambers, four valves and blood flow">
+        <defs>
+          <pattern id="hatchA" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(38)"><line x1="0" y1="0" x2="0" y2="5" stroke="#dcd3c0" stroke-width=".7" opacity=".55"/></pattern>
+          <pattern id="hatchB" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-52)"><line x1="0" y1="0" x2="0" y2="4" stroke="#dcd3c0" stroke-width=".55" opacity=".35"/></pattern>
+          <pattern id="stip" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r=".6" fill="#dcd3c0" opacity=".4"/><circle cx="5" cy="4.6" r=".5" fill="#dcd3c0" opacity=".3"/></pattern>
+          <radialGradient id="cavB" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#1b2744"/><stop offset="1" stop-color="#0d1220"/></radialGradient>
+          <radialGradient id="cavR" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#3a1616"/><stop offset="1" stop-color="#1a0b0b"/></radialGradient>
+        </defs>
+
+        <!-- great vessels (behind) -->
+        <g id="vessels" stroke="#dcd3c0" stroke-width="1.2">
+          <!-- aorta -->
+          <path d="M318 392 C312 330 298 250 298 180 C298 104 360 70 414 82 C466 94 488 140 488 200 L488 300" fill="url(#hatchB)" stroke-width="0" />
+          <path id="aortaW" d="M318 392 C312 330 298 250 298 180 C298 104 360 70 414 82 C466 94 488 140 488 200 L488 300" fill="none" stroke="#6f2525" stroke-width="44" stroke-linecap="butt" opacity=".9"/>
+          <path d="M318 392 C312 330 298 250 298 180 C298 104 360 70 414 82 C466 94 488 140 488 200 L488 300" fill="none" stroke="url(#hatchA)" stroke-width="44" opacity=".5"/>
+          <!-- arch branches -->
+          <path d="M338 92 L326 26 M376 78 L378 18 M414 80 L428 22" stroke="#6f2525" stroke-width="14" fill="none"/>
+          <path d="M338 92 L326 26 M376 78 L378 18 M414 80 L428 22" stroke="#dcd3c0" stroke-width=".8" fill="none" opacity=".6"/>
+          <!-- SVC -->
+          <path d="M206 96 L206 268" stroke="#1f3160" stroke-width="40" fill="none"/>
+          <path d="M206 96 L206 268" stroke="url(#hatchA)" stroke-width="40" fill="none" opacity=".45"/>
+          <!-- IVC -->
+          <path d="M150 640 C140 540 146 440 176 370" stroke="#1f3160" stroke-width="38" fill="none"/>
+          <path d="M150 640 C140 540 146 440 176 370" stroke="url(#hatchA)" stroke-width="38" fill="none" opacity=".45"/>
+          <!-- pulmonary trunk -->
+          <path id="ptW" d="M282 402 C288 330 322 262 362 226 C400 214 452 210 566 206" stroke="#26396b" stroke-width="36" fill="none"/>
+          <path d="M340 240 C300 230 250 214 120 206" stroke="#26396b" stroke-width="26" fill="none"/>
+          <path d="M282 402 C288 330 322 262 362 226 C400 214 452 210 566 206 M340 240 C300 230 250 214 120 206" stroke="url(#hatchB)" stroke-width="30" fill="none" opacity=".6"/>
+          <!-- pulmonary veins -->
+          <path d="M586 262 C530 262 500 272 462 286 M586 334 C534 332 500 322 466 312" stroke="#6f2525" stroke-width="18" fill="none"/>
+          <path d="M586 262 C530 262 500 272 462 286 M586 334 C534 332 500 322 466 312" stroke="url(#hatchA)" stroke-width="18" fill="none" opacity=".5"/>
+        </g>
+
+        <!-- myocardium -->
+        <g id="myo">
+          <path id="myoPath" d="M190 236 C118 244 106 334 128 404 C150 482 252 584 372 646 C424 604 526 522 526 420 C530 338 504 268 444 242 C392 226 252 224 190 236 Z" fill="#2a1a17" stroke="#dcd3c0" stroke-width="1.6"/>
+          <path d="M190 236 C118 244 106 334 128 404 C150 482 252 584 372 646 C424 604 526 522 526 420 C530 338 504 268 444 242 C392 226 252 224 190 236 Z" fill="url(#hatchA)" opacity=".85"/>
+          <path d="M190 236 C118 244 106 334 128 404 C150 482 252 584 372 646 C424 604 526 522 526 420 C530 338 504 268 444 242 C392 226 252 224 190 236 Z" fill="url(#stip)"/>
+        </g>
+
+        <!-- chambers -->
+        <g id="RA"><path d="M162 262 C138 292 138 362 168 392 C198 408 240 398 256 372 C266 332 252 282 226 264 C206 250 180 250 162 262 Z" fill="url(#cavB)" stroke="#dcd3c0" stroke-width="1.2"/></g>
+        <g id="RV"><path d="M172 418 C168 462 222 542 334 594 C344 542 324 470 296 424 C264 406 200 402 172 418 Z" fill="url(#cavB)" stroke="#dcd3c0" stroke-width="1.2"/></g>
+        <g id="LA"><path d="M330 262 C310 282 314 332 346 352 C382 366 440 356 462 330 C476 300 462 264 430 254 C400 244 356 248 330 262 Z" fill="url(#cavR)" stroke="#dcd3c0" stroke-width="1.2"/></g>
+        <g id="LV"><path d="M348 384 C330 432 346 522 374 604 C424 562 484 482 480 420 C478 386 442 370 402 372 C376 372 358 374 348 384 Z" fill="url(#cavR)" stroke="#dcd3c0" stroke-width="1.2"/></g>
+
+        <!-- flow particles -->
+        <g id="parts"></g>
+
+        <!-- valves: each drawn as two leaflets -->
+        <g id="vTri" transform="translate(214 402)"><path class="valve" d="M-26 0 L-4 0 M4 0 L26 0"/></g>
+        <g id="vMit" transform="translate(398 364)"><path class="valve" d="M-24 0 L-4 0 M4 0 L24 0"/></g>
+        <g id="vPul" transform="translate(284 400) rotate(-8)"><path class="valve" d="M-18 0 L-3 0 M3 0 L18 0"/></g>
+        <g id="vAor" transform="translate(320 388) rotate(6)"><path class="valve" d="M-20 0 L-3 0 M3 0 L20 0"/></g>
+
+        <!-- labels -->
+        <g>
+          <path class="lead" d="M206 100 L150 70 L96 70"/><text class="lbl" x="18" y="66">Vena cava sup.</text>
+          <path class="lead" d="M150 600 L96 620 L60 620"/><text class="lbl" x="18" y="640">Vena cava inf.</text>
+          <path class="lead" d="M180 318 L90 318"/><text class="lbl" x="16" y="314">Atrium dextrum</text>
+          <path class="lead" d="M230 500 L120 540"/><text class="lbl" x="16" y="560">Ventriculus dexter</text>
+          <path class="lead" d="M440 300 L520 300"/><text class="lbl" x="486" y="370" text-anchor="start">Atrium</text><text class="lbl" x="486" y="386">sinistrum</text>
+          <path class="lead" d="M460 330 L500 360"/>
+          <path class="lead" d="M440 470 L540 470"/><text class="lbl" x="494" y="492">Ventriculus</text><text class="lbl" x="494" y="508">sinister</text>
+          <path class="lead" d="M440 86 L500 60"/><text class="lbl" x="470" y="52">Aorta</text>
+          <path class="lead" d="M540 206 L560 180"/><text class="lbl" x="490" y="172">Truncus pulm.</text>
+          <path class="lead" d="M560 334 L580 380"/><text class="lbl" x="506" y="408" >Vv. pulmonales</text>
+          <g class="lbl" style="font-size:17px;font-weight:bold">
+            <text x="166" y="420">a</text><text x="262" y="384">b</text><text x="430" y="386">c</text><text x="330" y="372">d</text>
+          </g>
+          <text class="lbl sc" x="560" y="200" text-anchor="end" opacity=".7">→ lungs</text>
+          <text class="lbl sc" x="126" y="196" opacity=".7">lungs ←</text>
+          <text class="lbl sc" x="326" y="628" opacity=".6">apex</text>
+        </g>
+      </svg>
+      <div class="cap"><span><i>Valvulae:</i> a tricuspid · b pulmonary · c mitral · d aortic</span></div><div class="cap"><span style="color:#e0443e">● arterial</span><span style="color:#5b86e5">● venous</span><span>scale ≈ 1 : 0.9</span></div>
+    </figure>
+
+    <div>
+      <div class="monitor">
+        <div class="screen" aria-live="off">
+          <div class="bar"><span>BED 04 · <b>ADULT</b></span><span>II · 25 mm/s · ×1</span><span id="clock">--:--</span></div>
+          <div class="trace"><canvas id="ecg" aria-label="ECG trace"></canvas>
+            <div class="num ecg"><span class="k">HR<span class="heartico" id="hico"></span></span><span class="v" id="hrv">72</span><span class="u">bpm</span></div></div>
+          <div class="trace"><canvas id="pleth" aria-label="Plethysmograph trace" style="height:64px"></canvas>
+            <div class="num spo2"><span class="k">SpO₂</span><span class="v" style="font-size:44px">98</span><span class="u">%</span></div></div>
+          <div class="lower">
+            <div class="num bp"><span class="k">NIBP mmHg</span><span class="v" id="bpv">118/76</span><span class="u" id="map">(90)</span></div>
+            <div class="num resp"><span class="k">RESP</span><span class="v" id="rr">14</span><span class="u">/min</span></div>
+            <div class="num" style="color:#e6ece9"><span class="k">CO</span><span class="v" id="co">5.0</span><span class="u">L/min</span></div>
+          </div>
+          <div class="phase"><span class="p" id="phase">DIASTOLE — ventricles filling</span><span class="snd" id="snd">LUB</span></div>
+          <div class="valves" id="valves">
+            <div id="vs-tri">TRICUSPID<b>OPEN</b></div>
+            <div id="vs-pul">PULMONARY<b>SHUT</b></div>
+            <div id="vs-mit">MITRAL<b>OPEN</b></div>
+            <div id="vs-aor">AORTIC<b>SHUT</b></div>
+          </div>
+        </div>
+        <div class="knobs">
+          <div><label for="hr">Heart rate · <span id="hrl">72</span> beats per minute</label><input id="hr" type="range" min="40" max="170" value="72"></div>
+          <div class="btns">
+            <button id="pause" aria-pressed="false">Pause</button>
+            <button id="beep" aria-pressed="false" title="Beep on each R wave">Beep</button>
+          </div>
+          <div class="btns" style="grid-column:1/-1" role="group" aria-label="Presets">
+            <button id="ps-sleep" data-hr="52">Asleep · 52</button>
+            <button id="ps-rest" data-hr="72">At rest · 72</button>
+            <button id="ps-walk" data-hr="105">Brisk walk · 105</button>
+            <button id="ps-run" data-hr="160">Sprinting · 160</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sequence">
+        <div><b>Atrial systole.</b> The P wave spreads across the atria; they squeeze the last fifth or so of the blood down through the open tricuspid and mitral valves.</div>
+        <div><b>Ventricular systole.</b> The QRS fires the ventricles. Rising pressure slams the AV valves shut — the first sound, <i>lub</i> — then forces open the pulmonary and aortic valves.</div>
+        <div><b>Diastole.</b> After the T wave the ventricles relax; the semilunar valves snap closed — <i>dub</i> — and the AV valves fall open to refill.</div>
+      </div>
+    </div>
+  </div>
+
+  <section class="notes" aria-label="Figures">
+    <div><div class="n" id="beatsToday">—</div><p>beats since midnight, if it had kept this pace all day.</p></div>
+    <div><div class="n">≈ 3 <small>billion</small></div><p>beats in an 80-year life at an average of 72 a minute.</p></div>
+    <div><div class="n" id="litres">7,200 <small>L/day</small></div><p>pumped at this rate, with about 70 mL per stroke — the whole 5 L of blood roughly once a minute at rest.</p></div>
+    <div><div class="n">250–350 <small>g</small></div><p>adult heart mass: about the size of a clenched fist, with a left ventricle wall three times thicker than the right.</p></div>
+  </section>
+
+  <footer>Illustrative model: interval timings follow PR ≈ 0.16 s and a Bazett-corrected QT of 0.40 s, scaled with rate; monitor values other than rate and output are held at typical adult resting figures. Not a medical device.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let HR=72, paused=false, beep=false, actx=null;
+const $=id=>document.getElementById(id);
+
+// ---------- timing model ----------
+function timing(){
+  const RR=60/HR, k=Math.min(1,Math.sqrt(RR/0.8333));
+  const QT=0.40*Math.sqrt(RR);
+  const Rt=0.2*k, Qs=0.16*k;
+  return {RR,k,QT,Rt,Qs,Tend:Qs+QT};
+}
+const g=(t,c,w,a)=>a*Math.exp(-((t-c)*(t-c))/(2*w*w));
+function ecg(tb,T){
+  const {k,QT,Rt,Qs}=T;
+  return g(tb,0.07*k,0.024*k,0.14)+g(tb,Rt-0.024*k,0.008,-0.12)+g(tb,Rt,0.0095,1.25)+g(tb,Rt+0.024*k,0.009,-0.28)
+       + g(tb,Qs+QT*0.72,QT*0.1,0.32)+g(tb,T.RR+0.07*k,0.024*k,0.14);
+}
+function pleth(tb,T){
+  let x=(tb-T.Rt-0.22+T.RR)%T.RR; // time since foot of the pulse
+  const up=Math.min(1,x/0.12), rise=up<1?Math.sin(up*Math.PI/2):1;
+  const decay=Math.exp(-Math.max(0,x-0.12)/(T.RR*0.45));
+  const notch=g(x,0.34,0.03,0.12);
+  return rise*decay*0.9+notch*decay;
+}
+const smooth=(e0,e1,x)=>{const t=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return t*t*(3-2*t)};
+function state(tb,T){
+  const a = tb>0.05*T.k && tb<0.22*T.k ? Math.sin((tb-0.05*T.k)/(0.17*T.k)*Math.PI) : 0;
+  const v = smooth(T.Rt,T.Rt+0.08,tb)*(1-smooth(T.Tend-0.04,T.Tend+0.08,tb));
+  const avOpen = !(tb>=T.Rt && tb<T.Tend+0.06);
+  const slOpen = tb>=T.Rt+0.05 && tb<T.Tend;
+  let phase='DIASTOLE — ventricles filling';
+  if(a>0.02 && avOpen) phase='ATRIAL SYSTOLE — atria contract';
+  if(!avOpen && !slOpen) phase = tb<T.Rt+0.05?'ISOVOLUMETRIC CONTRACTION':'ISOVOLUMETRIC RELAXATION';
+  if(slOpen) phase='VENTRICULAR SYSTOLE — ejection';
+  return {a,v,avOpen,slOpen,phase};
+}
+
+// ---------- heart svg animation ----------
+const chambers={RA:[200,328],RV:[258,488],LA:[396,304],LV:[412,478]};
+function setScale(id,s){const [cx,cy]=chambers[id];$(id).setAttribute('transform',`translate(${cx} ${cy}) scale(${s.toFixed(4)}) translate(${-cx} ${-cy})`)}
+function valve(id,open,angle){
+  const el=$(id).querySelector('path'); const L=+el.getAttribute('d').match(/M-(\d+)/)[1];
+  // leaflets hinge at outer ends; open = swing down into the next chamber
+  const a=open?70:0;
+  const r=a*Math.PI/180; const x=Math.cos(r)*(L-3), y=Math.sin(r)*(L-3)*(angle||1);
+  el.setAttribute('d',`M-${L} 0 L${(-L+x).toFixed(1)} ${y.toFixed(1)} M${L} 0 L${(L-x).toFixed(1)} ${y.toFixed(1)}`);
+}
+
+// particle routes
+const NS='http://www.w3.org/2000/svg';
+function mk(d){const p=document.createElementNS(NS,'path');p.setAttribute('d',d);return p}
+const R={
+  svc:mk('M206 100 L206 300'),
+  ivc:mk('M150 640 C140 540 146 440 190 350'),
+  tri:mk('M204 330 C206 380 214 420 250 480'),
+  pul:mk('M262 496 C292 470 290 430 284 400 C288 330 322 262 362 226 C400 214 452 210 580 206'),
+  pulL:mk('M262 496 C292 470 290 430 284 400 C288 330 318 262 340 240 C300 230 250 214 110 206'),
+  pv1:mk('M590 262 C530 262 500 272 400 300'),
+  pv2:mk('M590 334 C534 332 500 322 400 306'),
+  mit:mk('M398 310 C396 350 400 400 414 470'),
+  aor:mk('M414 486 C380 440 330 420 318 392 C312 330 298 250 298 180 C298 104 360 70 414 82 C466 94 488 140 488 300')
+};
+Object.values(R).forEach(p=>p.len=p.getTotalLength());
+const flows=[
+  {color:'#6b93ee',routes:[['svc','in'],['tri','av'],['pul','out']],n:26},
+  {color:'#6b93ee',routes:[['ivc','in'],['tri','av'],['pulL','out']],n:22},
+  {color:'#ef5a50',routes:[['pv1','in'],['mit','av'],['aor','out']],n:26},
+  {color:'#ef5a50',routes:[['pv2','in'],['mit','av'],['aor','out']],n:22}
+];
+const partsG=$('parts'); const P=[];
+flows.forEach(f=>{for(let i=0;i<f.n;i++){
+  const c=document.createElementNS(NS,'circle'); c.setAttribute('r',(2+Math.random()*1.8).toFixed(1)); c.setAttribute('fill',f.color); c.setAttribute('opacity',(.6+Math.random()*.4).toFixed(2));
+  partsG.appendChild(c);
+  const seg=Math.floor(Math.random()*3);
+  P.push({f,seg,u:Math.random(),el:c,j:(Math.random()-.5)*14,jy:(Math.random()-.5)*14});
+}});
+function moveParticles(dt,S){
+  const speeds={in:0.22, av:S.avOpen?(S.a>0.1?1.6:0.55):0, out:S.slOpen?2.6:0};
+  for(const p of P){
+    const [rk,type]=p.f.routes[p.seg]; const path=R[rk];
+    p.u += speeds[type]*dt*(260/path.len);
+    if(p.u>=1){
+      if(p.seg<2){ // entering next segment only if its gate allows; otherwise wait
+        p.seg++; p.u=0;
+      } else { p.seg=0; p.u=Math.random()*0.2; }
+    }
+    const pt=path.getPointAtLength(Math.min(1,p.u)*path.len);
+    const inCh = type!=='out' ? 1 : Math.max(0,1-p.u*4);
+    p.el.setAttribute('cx',(pt.x+p.j*inCh).toFixed(1)); p.el.setAttribute('cy',(pt.y+p.jy*inCh).toFixed(1));
+  }
+}
+
+// ---------- canvases ----------
+function setupCanvas(c){
+  const d=Math.min(2,devicePixelRatio||1), r=c.getBoundingClientRect();
+  c.width=Math.max(10,r.width*d); c.height=Math.max(10,r.height*d);
+  const x=c.getContext('2d'); x.setTransform(d,0,0,d,0,0); x.lineJoin='round'; x.lineCap='round';
+  return {c,x,w:r.width,h:r.height,last:null};
+}
+let E,PL;
+function initCanvases(){E=setupCanvas($('ecg'));PL=setupCanvas($('pleth'));drawGrid(E);drawGrid(PL)}
+function drawGrid(C){C.x.fillStyle='#050807';C.x.fillRect(0,0,C.w,C.h);}
+const WINDOW=5; // seconds across the screen
+function sweep(C,val,t,color,scale,base){
+  const x=((t%WINDOW)/WINDOW)*C.w, y=base-val*scale;
+  C.x.fillStyle='#050807'; C.x.fillRect(x+1,0,14,C.h);
+  if(C.last && x>C.last[0]){
+    C.x.strokeStyle=color; C.x.lineWidth=1.8; C.x.shadowColor=color; C.x.shadowBlur=6;
+    C.x.beginPath(); C.x.moveTo(C.last[0],C.last[1]); C.x.lineTo(x,y); C.x.stroke(); C.x.shadowBlur=0;
+  }
+  C.last=[x,y];
+}
+
+// ---------- main loop ----------
+let simT=0, beatStart=0, lastR=-1, T=timing(), lastFrame=performance.now(), sndTimer=0;
+function frame(now){
+  let dt=Math.min(0.05,(now-lastFrame)/1000); lastFrame=now;
+  if(paused) dt=0;
+  const steps=Math.max(1,Math.ceil(dt/0.004));
+  for(let i=0;i<steps;i++){
+    simT+=dt/steps;
+    let tb=simT-beatStart;
+    if(tb>=T.RR){beatStart+=T.RR; T=timing(); tb=simT-beatStart; lastR=-1;}
+    if(dt>0){
+      sweep(E,ecg(tb,T),simT,'#5cf29a',E.h*0.52,E.h*0.66);
+      sweep(PL,pleth(tb,T),simT,'#4fd6f0',PL.h*0.7,PL.h*0.86);
+    }
+  }
+  const tb=simT-beatStart;
+  const S=state(tb,T);
+  setScale('RA',1-0.13*S.a); setScale('LA',1-0.13*S.a);
+  setScale('RV',1-0.16*S.v); setScale('LV',1-0.14*S.v);
+  $('myo').setAttribute('transform',`translate(330 440) scale(${(1-0.025*S.v).toFixed(4)}) translate(-330 -440)`);
+  valve('vTri',S.avOpen,1); valve('vMit',S.avOpen,1); valve('vPul',S.slOpen,-1); valve('vAor',S.slOpen,-1);
+  if(dt>0) moveParticles(dt,S);
+  $('phase').textContent=S.phase;
+  [['tri',S.avOpen],['mit',S.avOpen],['pul',S.slOpen],['aor',S.slOpen]].forEach(([k,o])=>{const el=$('vs-'+k);el.classList.toggle('open',o);el.querySelector('b').textContent=o?'OPEN':'SHUT'});
+  // heart sounds
+  const snd=$('snd');
+  if(tb>=T.Rt && tb<T.Rt+0.12){snd.textContent='LUB';snd.classList.add('on')}
+  else if(tb>=T.Tend && tb<T.Tend+0.1){snd.textContent='DUB';snd.classList.add('on')}
+  else snd.classList.remove('on');
+  const hico=$('hico'); hico.classList.toggle('on',tb>=T.Rt&&tb<T.Rt+0.15);
+  if(tb>=T.Rt && lastR<0){lastR=1; if(beep) doBeep();}
+  requestAnimationFrame(frame);
+}
+function doBeep(){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const o=actx.createOscillator(), gn=actx.createGain(); o.frequency.value=880; o.type='sine';
+    gn.gain.setValueAtTime(0.0001,actx.currentTime); gn.gain.exponentialRampToValueAtTime(0.12,actx.currentTime+0.01); gn.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+0.09);
+    o.connect(gn).connect(actx.destination); o.start(); o.stop(actx.currentTime+0.1);
+  }catch(e){}
+}
+
+// ---------- readouts ----------
+function readouts(){
+  $('hrv').textContent=HR; $('hrl').textContent=HR; $('figbpm').textContent=HR+' bpm';
+  const sv = HR<=100?70: Math.max(55,70-(HR-100)*0.15); // stroke volume falls a little at very high rates (illustrative)
+  const co=HR*sv/1000; $('co').textContent=co.toFixed(1);
+  $('litres').innerHTML=`${Math.round(co*1440).toLocaleString('en-GB')} <small>L/day</small>`;
+  const now=new Date(), mins=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
+  $('beatsToday').textContent=Math.round(mins*HR).toLocaleString('en-GB');
+  $('clock').textContent=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  $('rr').textContent = HR<90?14: HR<130?22:32;
+  $('bpv').textContent = HR<60?'112/72': HR<90?'118/76' : HR<130?'136/78':'168/80';
+}
+$('hr').addEventListener('input',e=>{HR=+e.target.value;readouts()});
+document.querySelectorAll('[data-hr]').forEach(b=>b.addEventListener('click',()=>{HR=+b.dataset.hr;$('hr').value=HR;readouts()}));
+$('pause').addEventListener('click',e=>{paused=!paused;e.currentTarget.setAttribute('aria-pressed',paused);e.currentTarget.textContent=paused?'Resume':'Pause'});
+$('beep').addEventListener('click',e=>{beep=!beep;e.currentTarget.setAttribute('aria-pressed',beep);if(beep)doBeep()});
+setInterval(readouts,5000);
+
+initCanvases(); readouts();
+let rz; addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(initCanvases,120)});
+if(reduce){ // pre-draw a static strip and pause
+  paused=true; $('pause').setAttribute('aria-pressed','true'); $('pause').textContent='Resume';
+  for(let t=0;t<WINDOW-0.05;t+=0.004){const tb=t%T.RR; sweep(E,ecg(tb,T),t,'#5cf29a',E.h*0.52,E.h*0.66); sweep(PL,pleth(tb,T),t,'#4fd6f0',PL.h*0.7,PL.h*0.86);}
+  simT=WINDOW-0.05; beatStart=simT-(simT%T.RR);
+  moveParticles(0,state(0.1,T));
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

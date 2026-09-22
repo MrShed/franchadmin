@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meridian Orbital Lines</title>
+<meta name="description" content="A 1960s travel-poster site for a fictional space tourism line, with a launch countdown, illustrated destination posters and a fare calculator that prints your boarding pass.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#14213d; --navy2:#1d2f55; --orange:#f26b38; --blue:#7fb7d9; --paper:#eaeee9; --mustard:#f2b134; --red:#c8373a; --ink:#0f1830;
+  --wide:"Syncopate","Eurostile","Microgramma","Arial Black",sans-serif;
+  --geo:"Josefin Sans","Futura","Century Gothic","Avenir",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--navy);font-family:var(--geo);font-size:18px;line-height:1.55;overflow-x:hidden}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--orange);outline-offset:3px}
+.wide{font-family:var(--wide);text-transform:uppercase;letter-spacing:.12em}
+.back{position:fixed;top:14px;left:16px;z-index:40;font-family:var(--wide);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--paper);background:var(--orange);padding:9px 14px;text-decoration:none;border-radius:2px}
+.back:hover{background:var(--mustard);color:var(--navy)}
+/* HERO poster */
+.hero{position:relative;background:var(--navy);color:var(--paper);overflow:hidden;min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:80px clamp(16px,5vw,72px) 50px;gap:30px}
+.hero svg.poster{position:absolute;inset:0;width:100%;height:100%}
+.hero .copy{position:relative;z-index:2;margin-bottom:12vh}
+.hero .kick{font-family:var(--wide);font-size:11px;letter-spacing:.3em;color:var(--mustard)}
+.hero h1{font-family:var(--wide);font-weight:700;font-size:clamp(40px,5.6vw,86px);line-height:.98;letter-spacing:.02em;margin:18px 0 20px;text-transform:uppercase}
+.hero h1 span{display:block;color:var(--orange)}
+.hero p{max-width:34ch;font-size:clamp(18px,1.6vw,22px);margin:0 0 30px;font-weight:300}
+.count{display:inline-grid;grid-template-columns:repeat(4,auto);gap:10px;align-items:end}
+.count div{text-align:center}
+.flap{display:block;font-family:var(--wide);font-weight:700;font-size:clamp(26px,3vw,42px);background:var(--paper);color:var(--navy);padding:8px 10px 6px;min-width:2.2em;border-radius:3px;position:relative;font-variant-numeric:tabular-nums;box-shadow:0 4px 0 #0a1224}
+.flap::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(20,33,61,.35)}
+.count small{display:block;font-family:var(--wide);font-size:9px;letter-spacing:.2em;margin-top:8px;color:var(--blue)}
+.count-label{font-family:var(--wide);font-size:10px;letter-spacing:.24em;color:var(--blue);margin-bottom:10px}
+.hero .stamp{position:absolute;z-index:2;right:clamp(16px,5vw,72px);bottom:40px;width:150px;height:150px;border:3px solid var(--mustard);border-radius:50%;display:grid;place-items:center;text-align:center;color:var(--mustard);font-family:var(--wide);font-size:9px;letter-spacing:.18em;transform:rotate(-12deg);line-height:1.5}
+.hero .stamp b{display:block;font-size:24px;letter-spacing:.04em}
+/* stripe */
+.stripe{height:28px;background:linear-gradient(90deg,var(--orange) 0 33.3%,var(--mustard) 33.3% 66.6%,var(--blue) 66.6%)}
+section{padding:clamp(70px,9vw,130px) clamp(16px,5vw,72px)}
+.wrap{max-width:1220px;margin:0 auto}
+h2{font-family:var(--wide);font-weight:700;text-transform:uppercase;font-size:clamp(30px,4.2vw,60px);line-height:1.02;letter-spacing:.02em;margin:10px 0 18px}
+.lead{max-width:56ch;font-size:20px;font-weight:300;margin:0 0 50px}
+/* destinations */
+.dest{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+.card{background:var(--navy);color:var(--paper);display:flex;flex-direction:column;box-shadow:10px 10px 0 var(--orange);transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s}
+.card:nth-child(2){box-shadow:10px 10px 0 var(--mustard)}
+.card:nth-child(3){box-shadow:10px 10px 0 var(--blue)}
+.card:nth-child(4){box-shadow:10px 10px 0 var(--red)}
+.card:hover{transform:translate(-4px,-4px)}
+.card svg{width:100%;aspect-ratio:3/4;display:block}
+.card .txt{padding:18px 18px 22px}
+.card h3{font-family:var(--wide);font-weight:700;font-size:16px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;line-height:1.25}
+.card p{margin:0 0 12px;font-size:16px;font-weight:300;color:#cbd4e4}
+.card .meta{font-family:var(--wide);font-size:9px;letter-spacing:.2em;color:var(--mustard)}
+/* calculator */
+.calc{background:var(--navy2);color:var(--paper);position:relative;overflow:hidden}
+.calc::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(127,183,217,.18) 1px,transparent 1.5px);background-size:14px 14px;pointer-events:none}
+.calc .wrap{position:relative}
+.calc-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(24px,4vw,60px);align-items:start}
+.field{margin-bottom:26px}
+.field > .lbl{font-family:var(--wide);font-size:10px;letter-spacing:.24em;color:var(--mustard);margin-bottom:10px;display:block}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{border:2px solid rgba(234,238,233,.35);padding:10px 14px;cursor:pointer;font-weight:600;font-size:16px;border-radius:2px}
+.seg input:checked + label{background:var(--orange);border-color:var(--orange);color:var(--paper)}
+.seg input:focus-visible + label{outline:3px solid var(--mustard);outline-offset:2px}
+.stepper{display:inline-flex;align-items:center;border:2px solid rgba(234,238,233,.35)}
+.stepper button{background:none;border:0;color:var(--paper);font:700 22px var(--geo);width:46px;height:46px;cursor:pointer}
+.stepper button:hover{background:rgba(234,238,233,.1)}
+.stepper output{min-width:60px;text-align:center;font-family:var(--wide);font-weight:700;font-size:20px}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.checks label{display:flex;gap:10px;align-items:flex-start;font-size:16px;cursor:pointer}
+.checks input{accent-color:var(--orange);width:18px;height:18px;margin-top:2px}
+.checks span small{display:block;color:var(--blue);font-size:13px}
+select{background:var(--navy);color:var(--paper);border:2px solid rgba(234,238,233,.35);font:600 16px var(--geo);padding:10px 12px;border-radius:2px}
+/* boarding pass */
+.pass{background:var(--paper);color:var(--navy);display:grid;grid-template-columns:1fr 110px;position:relative;box-shadow:12px 12px 0 var(--orange)}
+.pass .main{padding:22px 22px 20px;border-right:2px dashed rgba(20,33,61,.4)}
+.pass .top{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--navy);padding-bottom:10px;margin-bottom:14px}
+.pass .top b{font-family:var(--wide);font-size:13px;letter-spacing:.14em}
+.pass .route{display:flex;align-items:center;gap:12px;font-family:var(--wide);font-weight:700;font-size:30px;line-height:1}
+.pass .route svg{flex:1;height:30px}
+.pass .route small{display:block;font-size:9px;letter-spacing:.18em;font-weight:400;margin-top:4px}
+.pass dl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 14px;margin:18px 0 0}
+.pass dt{font-family:var(--wide);font-size:8px;letter-spacing:.2em;color:#5a6780}
+.pass dd{margin:2px 0 0;font-weight:700;font-size:17px}
+.pass .total{margin-top:16px;padding-top:12px;border-top:3px solid var(--navy);display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+.pass .total b{font-family:var(--wide);font-weight:700;font-size:clamp(26px,3vw,36px)}
+.pass .stub{padding:18px 10px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;background:var(--mustard)}
+.pass .stub .vert{writing-mode:vertical-rl;font-family:var(--wide);font-weight:700;font-size:13px;letter-spacing:.2em}
+.barcode{width:70px;height:60px}
+.pass.bump{animation:bump .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes bump{0%{transform:translateY(0)}30%{transform:translateY(-6px) rotate(-.6deg)}100%{transform:none}}
+#reserve{margin-top:22px;width:100%;background:var(--orange);color:var(--paper);border:0;padding:18px;font-family:var(--wide);font-weight:700;font-size:13px;letter-spacing:.2em;cursor:pointer}
+#reserve:hover{background:var(--mustard);color:var(--navy)}
+#reserveMsg{margin-top:12px;min-height:1.5em;color:var(--mustard);font-size:16px}
+/* itinerary */
+.itin{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-top:4px solid var(--navy);position:relative}
+.day{padding:22px 18px 10px 0}
+.day .n{font-family:var(--wide);font-weight:700;font-size:44px;line-height:1;color:var(--orange)}
+.day h3{font-family:var(--wide);font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin:10px 0 8px}
+.day p{margin:0;font-size:16px;font-weight:300}
+footer{background:var(--navy);color:var(--blue);padding:40px clamp(16px,5vw,72px) 60px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;font-size:15px}
+footer b{font-family:var(--wide);color:var(--paper);letter-spacing:.14em;font-size:14px}
+@media (max-width:1000px){
+  .dest{grid-template-columns:1fr 1fr}
+  .calc-grid{grid-template-columns:1fr}
+  .itin{grid-template-columns:1fr 1fr}
+}
+@media (max-width:760px){
+  .hero{grid-template-columns:1fr;align-items:end;padding-top:90px}
+  .hero .copy{background:rgba(20,33,61,.9);padding:20px 18px;box-shadow:8px 8px 0 var(--orange)}
+  .hero .stamp{top:70px;bottom:auto;width:110px;height:110px;font-size:7px}
+  .hero .stamp b{font-size:18px}
+}
+@media (max-width:520px){
+  .dest,.itin{grid-template-columns:1fr}
+  .checks{grid-template-columns:1fr}
+  .pass{grid-template-columns:1fr}
+  .pass .main{border-right:0;border-bottom:2px dashed rgba(20,33,61,.4)}
+  .pass .stub{flex-direction:row}
+  .pass .stub .vert{writing-mode:horizontal-tb}
+  .pass dl{grid-template-columns:1fr 1fr}
+  .count{gap:6px}
+}
+@media (prefers-reduced-motion:reduce){ .pass.bump{animation:none} .card{transition:none} }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<header class="hero">
+  <svg class="poster" id="poster" viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+  <div class="copy">
+    <div class="kick">Meridian Orbital Lines · Since 1961*</div>
+    <h1>Fly to<span>the Moon</span>by Tuesday.</h1>
+    <p>Jet-age comfort, lunar-age distances. Four destinations, champagne in zero-g, and a window seat on every single seat.</p>
+    <div class="count-label" id="countLabel">Next departure · Flight MO-7 to Hotel Tranquility</div>
+    <div class="count" role="timer" aria-live="off" aria-label="Countdown to next launch">
+      <div><span class="flap" id="cd-d">00</span><small>Days</small></div>
+      <div><span class="flap" id="cd-h">00</span><small>Hrs</small></div>
+      <div><span class="flap" id="cd-m">00</span><small>Min</small></div>
+      <div><span class="flap" id="cd-s">00</span><small>Sec</small></div>
+    </div>
+  </div>
+  <div class="stamp" aria-hidden="true"><div>Cape Meridian<b>T-MINUS</b>Pad 39-M</div></div>
+</header>
+<div class="stripe" aria-hidden="true"></div>
+
+<section id="destinations">
+  <div class="wrap">
+    <div class="wide" style="font-size:11px;color:var(--orange)">Destinations</div>
+    <h2>Where will you<br>go this season?</h2>
+    <p class="lead">Every Meridian Clipper departs from Cape Meridian, Florida, and returns you within fourteen days — tanned by starlight, three centimetres taller, with a story nobody at the club can top.</p>
+    <div class="dest" id="dest"></div>
+  </div>
+</section>
+
+<section class="calc" id="fares">
+  <div class="wrap">
+    <div class="wide" style="font-size:11px;color:var(--mustard)">Fare Calculator</div>
+    <h2>Plan your fare</h2>
+    <div class="calc-grid">
+      <form id="calcForm" onsubmit="return false">
+        <div class="field"><span class="lbl">Destination</span><div class="seg" id="segDest"></div></div>
+        <div class="field"><span class="lbl">Cabin</span><div class="seg" id="segCabin"></div></div>
+        <div class="field"><span class="lbl">Travellers</span>
+          <div class="stepper"><button type="button" id="paxMinus" aria-label="Fewer travellers">−</button><output id="pax" aria-live="polite">2</output><button type="button" id="paxPlus" aria-label="More travellers">+</button></div>
+        </div>
+        <div class="field"><label class="lbl" for="month">Departure month</label><select id="month"></select></div>
+        <div class="field"><span class="lbl">Extras</span>
+          <div class="checks">
+            <label><input type="checkbox" id="x-walk" data-p="18500"><span>Tethered spacewalk<small>+$18,500 pp · 40 minutes</small></span></label>
+            <label><input type="checkbox" id="x-photo" data-p="2400" checked><span>Earthrise portrait<small>+$2,400 · Hasselblad, framed</small></span></label>
+            <label><input type="checkbox" id="x-wed" data-p="45000"><span>Zero-g wedding<small>+$45,000 · flowers float</small></span></label>
+            <label><input type="checkbox" id="x-ins" data-p="3900" checked><span>Re-entry insurance<small>+$3,900 pp · peace of mind</small></span></label>
+          </div>
+        </div>
+      </form>
+      <div>
+        <div class="pass" id="pass">
+          <div class="main">
+            <div class="top"><b>Meridian Orbital</b><span class="wide" style="font-size:9px" id="pClass">Clipper</span></div>
+            <div class="route"><div>CMF<small>Cape Meridian</small></div>
+              <svg viewBox="0 0 200 30" aria-hidden="true"><path d="M5 25 Q100 -10 195 25" fill="none" stroke="#14213d" stroke-width="2" stroke-dasharray="4 5"/><g transform="translate(100,8) rotate(0)"><path d="M-10 0 L8 0 L12 -2 L8 -4 L-10 -4Z M-6 -4 L-10 -9 M-6 0 L-10 5" fill="#f26b38" stroke="#14213d" stroke-width="1.2"/></g></svg>
+              <div id="pCode">TRQ<small id="pName">Hotel Tranquility</small></div></div>
+            <dl>
+              <div><dt>Departs</dt><dd id="pDate">—</dd></div>
+              <div><dt>Transit</dt><dd id="pTime">—</dd></div>
+              <div><dt>Peak g</dt><dd id="pG">—</dd></div>
+              <div><dt>Travellers</dt><dd id="pPax">—</dd></div>
+              <div><dt>Stay</dt><dd id="pStay">—</dd></div>
+              <div><dt>Gate</dt><dd>Pad 39-M</dd></div>
+            </dl>
+            <div class="total"><span class="wide" style="font-size:9px">Total fare, all taxes</span><b id="pTotal">$0</b></div>
+          </div>
+          <div class="stub"><span class="vert" id="pSeat">Seat 4A · 4B</span><svg class="barcode" id="barcode" viewBox="0 0 70 60" aria-hidden="true"></svg></div>
+        </div>
+        <button id="reserve" type="button">Hold these seats</button>
+        <div id="reserveMsg" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="itinerary">
+  <div class="wrap">
+    <div class="wide" style="font-size:11px;color:var(--orange)">A Lunar Week</div>
+    <h2>The Tranquility itinerary</h2>
+    <p class="lead">Our most popular voyage. Nine days door to door, five of them in the Sea of Tranquility.</p>
+    <div class="itin">
+      <div class="day"><div class="n">01</div><h3>Lift-off</h3><p>Brunch on the gantry, then eight and a half minutes that will rearrange your understanding of the word "fast".</p></div>
+      <div class="day"><div class="n">02</div><h3>Coast</h3><p>Three days in the Clipper lounge. Cocktails with spheres. Earth shrinking to the size of a dinner plate, then a dime.</p></div>
+      <div class="day"><div class="n">04</div><h3>Touchdown</h3><p>Descent to Hotel Tranquility, 1.6 km from the original landing site (viewing gallery only — no souvenirs).</p></div>
+      <div class="day"><div class="n">06</div><h3>Rover day</h3><p>A pressurised rover picnic to the rim of crater Moltke. Lunch served in one-sixth gravity; soup is not advised.</p></div>
+      <div class="day"><div class="n">09</div><h3>Splashdown</h3><p>Re-entry at 11 km/s and a warm welcome on the recovery ship. Certificate, medal, and a very long nap.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer><b>Meridian Orbital Lines</b><span>*In spirit. Fares illustrative. Moon subject to availability.</span></footer>
+
+<script>
+(function(){
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* ---------- poster ---------- */
+  var P=document.getElementById('poster');
+  var stars=''; var seed=7; function r(){ seed=(seed*16807)%2147483647; return seed/2147483647; }
+  for(var i=0;i<140;i++){ var x=r()*1400,y=r()*620,s=r(); stars+=s>.93?'<path d="M'+x.toFixed(0)+' '+(y-6).toFixed(0)+' L'+(x+1.5).toFixed(0)+' '+(y-1.5).toFixed(0)+' L'+(x+6).toFixed(0)+' '+y.toFixed(0)+' L'+(x+1.5).toFixed(0)+' '+(y+1.5).toFixed(0)+' L'+x.toFixed(0)+' '+(y+6).toFixed(0)+' L'+(x-1.5).toFixed(0)+' '+(y+1.5).toFixed(0)+' L'+(x-6).toFixed(0)+' '+y.toFixed(0)+' L'+(x-1.5).toFixed(0)+' '+(y-1.5).toFixed(0)+'Z" fill="#f2b134"/>' : '<circle cx="'+x.toFixed(0)+'" cy="'+y.toFixed(0)+'" r="'+(s*1.6+.4).toFixed(1)+'" fill="#eaeee9" opacity="'+(0.4+s*.6).toFixed(2)+'"/>'; }
+  P.innerHTML='<defs><pattern id="dots" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="2" fill="#14213d" opacity=".35"/></pattern>'+
+   '<pattern id="dots2" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.6" fill="#eaeee9" opacity=".5"/></pattern>'+
+   '<clipPath id="moonC"><circle cx="1060" cy="260" r="150"/></clipPath><clipPath id="earthC"><circle cx="700" cy="1780" r="1100"/></clipPath></defs>'+
+   '<rect width="1400" height="900" fill="#14213d"/>'+stars+
+   // orbit rings
+   '<ellipse cx="1060" cy="260" rx="290" ry="80" fill="none" stroke="#7fb7d9" stroke-width="2" stroke-dasharray="2 10" transform="rotate(-18 1060 260)"/>'+
+   // moon
+   '<g id="moon"><circle cx="1060" cy="260" r="150" fill="#eaeee9"/><g clip-path="url(#moonC)"><circle cx="1130" cy="300" r="150" fill="url(#dots)"/>'+
+   '<circle cx="1010" cy="210" r="26" fill="#c9d0cc"/><circle cx="1090" cy="170" r="14" fill="#c9d0cc"/><circle cx="1000" cy="320" r="34" fill="#c9d0cc"/><circle cx="1120" cy="250" r="18" fill="#c9d0cc"/>'+
+   '<path d="M960 360 q30 -30 60 0 Z" fill="#f2b134"/><rect x="972" y="350" width="36" height="12" fill="#f26b38"/><path d="M1030 362 l10 -40 l10 40Z" fill="#c8373a"/></g></g>'+
+   // earth limb
+   '<g clip-path="url(#earthC)"><circle cx="700" cy="1780" r="1100" fill="#7fb7d9"/><path d="M-100 760 C200 700 300 800 520 740 C700 690 820 760 980 720 C1150 680 1300 740 1500 700 L1500 900 L-100 900Z" fill="#f26b38" opacity=".9"/><path d="M-100 820 C250 780 520 850 760 800 C960 760 1200 830 1500 790 L1500 900 L-100 900Z" fill="#f2b134"/><rect x="0" y="600" width="1400" height="300" fill="url(#dots2)" opacity=".5"/></g>'+
+   '<circle cx="700" cy="1780" r="1112" fill="none" stroke="#7fb7d9" stroke-width="3" opacity=".6"/>'+
+   // rocket trail + rocket
+   '<path id="trail" d="M760 700 C 800 560 860 440 930 360" fill="none" stroke="#eaeee9" stroke-width="10" stroke-linecap="round" stroke-dasharray="1 22" opacity=".7"/>'+
+   '<g id="rocket"><g transform="rotate(35)"><path d="M0 -60 C14 -40 16 -10 14 30 L-14 30 C-16 -10 -14 -40 0 -60Z" fill="#eaeee9" stroke="#14213d" stroke-width="3"/><path d="M-14 10 L-30 40 L-14 30Z M14 10 L30 40 L14 30Z" fill="#c8373a" stroke="#14213d" stroke-width="3"/><circle cx="0" cy="-18" r="7" fill="#7fb7d9" stroke="#14213d" stroke-width="3"/><rect x="-14" y="-2" width="28" height="6" fill="#f26b38"/><path id="flame" d="M-9 32 Q0 70 9 32Z" fill="#f2b134"/></g></g>';
+  function vb(){ P.setAttribute('viewBox', window.innerWidth<760 ? '820 60 480 840' : '0 0 1400 900'); }
+  vb(); window.addEventListener('resize',vb);
+  var rocket=document.getElementById('rocket'), flame=document.getElementById('flame'), moon=document.getElementById('moon');
+  var t0=performance.now();
+  function fly(now){
+    var t=reduce?0:(now-t0)/1000;
+    var bob=Math.sin(t*1.3)*6;
+    rocket.setAttribute('transform','translate('+(930+Math.sin(t*.6)*4).toFixed(1)+','+(360+bob).toFixed(1)+')');
+    flame.setAttribute('d','M-9 32 Q0 '+(64+Math.sin(t*22)*8).toFixed(1)+' 9 32Z');
+    moon.setAttribute('transform','translate(0,'+(Math.sin(t*.4)*4).toFixed(1)+')');
+    if(!reduce) requestAnimationFrame(fly);
+  }
+  requestAnimationFrame(fly);
+
+  /* ---------- countdown: next Saturday 14:00 UTC ---------- */
+  function nextLaunch(){ var n=new Date(); var d=new Date(Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),14,0,0)); var add=(6-d.getUTCDay()+7)%7; d.setUTCDate(d.getUTCDate()+add); if(d<=n) d.setUTCDate(d.getUTCDate()+7); return d; }
+  var L=nextLaunch();
+  function pad(n){ return (n<10?'0':'')+n; }
+  var ids=['d','h','m','s'].map(function(k){return document.getElementById('cd-'+k);});
+  function tick(){ var ms=L-new Date(); if(ms<=0){ L=nextLaunch(); ms=L-new Date(); }
+    var s=Math.floor(ms/1000), v=[Math.floor(s/86400),Math.floor(s%86400/3600),Math.floor(s%3600/60),s%60];
+    v.forEach(function(x,i){ var t=pad(x); if(ids[i].textContent!==t) ids[i].textContent=t; }); }
+  tick(); setInterval(tick,1000);
+
+  /* ---------- destinations ---------- */
+  var D=[
+    {id:'trq',code:'TRQ',n:'Hotel Tranquility',w:'The Moon',base:385000,days:'3 days',g:'3.2 g',stay:'5 nights',p:'A 64-room lunar hotel beneath a glass dome, with Earth hanging in the lounge window like a blue lamp.',
+     art:'<rect width="300" height="400" fill="#14213d"/><circle cx="220" cy="80" r="40" fill="#7fb7d9"/><circle cx="208" cy="72" r="40" fill="#14213d" opacity=".0"/><path d="M190 70 q20 -10 40 10" stroke="#f26b38" stroke-width="6" fill="none"/><path d="M0 300 Q150 250 300 300 L300 400 L0 400Z" fill="#eaeee9"/><path d="M60 300 A90 90 0 0 1 240 300Z" fill="#7fb7d9" opacity=".6" stroke="#eaeee9" stroke-width="3"/><rect x="100" y="260" width="100" height="40" fill="#f2b134"/><rect x="112" y="270" width="14" height="14" fill="#14213d"/><rect x="136" y="270" width="14" height="14" fill="#14213d"/><rect x="160" y="270" width="14" height="14" fill="#14213d"/><circle cx="60" cy="350" r="16" fill="#c9d0cc"/><circle cx="240" cy="360" r="10" fill="#c9d0cc"/>'},
+    {id:'eur',code:'EUR',n:'Europa Ice Dive',w:'Jupiter system',base:2450000,days:'11 months',g:'4.1 g',stay:'3 weeks',p:'Descend through six kilometres of ice in a heated bathysphere and switch the lights off in the dark ocean below.',
+     art:'<rect width="300" height="400" fill="#1d2f55"/><circle cx="240" cy="60" r="90" fill="#f2b134"/><path d="M150 50 Q240 30 330 60 M150 80 Q240 60 330 90" stroke="#f26b38" stroke-width="8" fill="none"/><rect y="170" width="300" height="40" fill="#eaeee9"/><path d="M0 210 L300 210 L300 400 L0 400Z" fill="#14213d"/><path d="M150 170 L150 290" stroke="#eaeee9" stroke-width="3" stroke-dasharray="4 6"/><circle cx="150" cy="310" r="26" fill="#f26b38"/><circle cx="150" cy="310" r="12" fill="#7fb7d9"/><path d="M40 350 q10 -20 20 0 q10 20 20 0" stroke="#7fb7d9" stroke-width="3" fill="none"/><path d="M200 370 q10 -20 20 0 q10 20 20 0" stroke="#7fb7d9" stroke-width="3" fill="none"/>'},
+    {id:'aur',code:'AUR',n:'Station Aurora',w:'Low Earth orbit',base:96000,days:'6 hours',g:'2.8 g',stay:'3 nights',p:'The weekend break. Sixteen sunrises a day, the ring-shaped Starlight Bar, and a view of your own hometown.',
+     art:'<rect width="300" height="400" fill="#14213d"/><circle cx="150" cy="560" r="330" fill="#7fb7d9"/><path d="M-20 300 Q150 250 320 300" stroke="#f2b134" stroke-width="6" fill="none"/><ellipse cx="150" cy="150" rx="100" ry="36" fill="none" stroke="#eaeee9" stroke-width="12"/><rect x="142" y="80" width="16" height="140" fill="#eaeee9"/><circle cx="150" cy="150" r="20" fill="#f26b38"/><rect x="20" y="140" width="60" height="20" fill="#f2b134"/><rect x="220" y="140" width="60" height="20" fill="#f2b134"/>'},
+    {id:'sat',code:'SAT',n:'Saturn Ring Cruise',w:'Outer planets',base:5900000,days:'2.5 years',g:'4.4 g',stay:'40 days',p:'For the unhurried. Skim the Cassini Division aboard the liner <i>Huygens</i>, with a library, a pool, and a string quartet.',
+     art:'<rect width="300" height="400" fill="#1d2f55"/><circle cx="150" cy="200" r="80" fill="#f2b134"/><path d="M70 190 Q150 170 230 190 M72 210 Q150 190 228 210" stroke="#f26b38" stroke-width="7" fill="none"/><ellipse cx="150" cy="200" rx="140" ry="30" fill="none" stroke="#eaeee9" stroke-width="10" transform="rotate(-12 150 200)"/><ellipse cx="150" cy="200" rx="118" ry="22" fill="none" stroke="#7fb7d9" stroke-width="4" transform="rotate(-12 150 200)"/><circle cx="40" cy="60" r="3" fill="#eaeee9"/><circle cx="260" cy="340" r="3" fill="#eaeee9"/><circle cx="240" cy="70" r="2" fill="#eaeee9"/>'}
+  ];
+  document.getElementById('dest').innerHTML=D.map(function(d){ return '<article class="card"><svg viewBox="0 0 300 400" aria-hidden="true">'+d.art+'<text x="18" y="386" font-family="Syncopate, Arial Black, sans-serif" font-weight="700" font-size="22" fill="#eaeee9" letter-spacing="2">'+d.code+'</text></svg><div class="txt"><h3>'+d.n+'</h3><p>'+d.p+'</p><div class="meta">'+d.w.toUpperCase()+' · FROM $'+d.base.toLocaleString('en-US')+'</div></div></article>'; }).join('');
+
+  /* ---------- calculator ---------- */
+  var CAB=[{id:'coach',n:'Coach',m:1,seat:'Row 22'},{id:'clipper',n:'Clipper',m:1.6,seat:'Row 4'},{id:'state',n:'Stateroom',m:2.9,seat:'Suite'}];
+  function seg(host,list,name,def){ document.getElementById(host).innerHTML=list.map(function(o){ return '<input type="radio" name="'+name+'" id="'+name+'-'+o.id+'" value="'+o.id+'"'+(o.id===def?' checked':'')+'><label for="'+name+'-'+o.id+'">'+o.n+'</label>'; }).join(''); }
+  seg('segDest',D,'dest','trq'); seg('segCabin',CAB,'cabin','clipper');
+  var month=document.getElementById('month'); var now=new Date();
+  var mNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  for(var k=1;k<=12;k++){ var dt=new Date(now.getFullYear(),now.getMonth()+k,1); var o=document.createElement('option'); o.value=k; o.textContent=mNames[dt.getMonth()]+' '+dt.getFullYear()+(dt.getMonth()===11?' · holiday surcharge':dt.getMonth()===2?' · off-peak':''); o.dataset.mult=dt.getMonth()===11?1.2:dt.getMonth()===2?.88:1; o.dataset.label=mNames[dt.getMonth()].slice(0,3).toUpperCase()+' '+String(dt.getFullYear()).slice(2); month.appendChild(o); }
+  month.selectedIndex=2;
+  var pax=2, paxEl=document.getElementById('pax');
+  document.getElementById('paxMinus').addEventListener('click',function(){ pax=Math.max(1,pax-1); calc(); });
+  document.getElementById('paxPlus').addEventListener('click',function(){ pax=Math.min(8,pax+1); calc(); });
+  var form=document.getElementById('calcForm');
+  form.addEventListener('change',calc);
+  function barcode(seedStr){ var h=0; for(var i=0;i<seedStr.length;i++) h=(h*31+seedStr.charCodeAt(i))>>>0; var s=''; var x=2; while(x<68){ h=(h*1103515245+12345)>>>0; var w=1+(h>>>28)%3; s+='<rect x="'+x+'" y="2" width="'+w+'" height="56" fill="#14213d"/>'; x+=w+1+((h>>>24)%3); } document.getElementById('barcode').innerHTML=s; }
+  function calc(){
+    var d=D.find(function(x){return x.id===form.querySelector('input[name=dest]:checked').value;});
+    var c=CAB.find(function(x){return x.id===form.querySelector('input[name=cabin]:checked').value;});
+    var mo=month.options[month.selectedIndex];
+    var fare=d.base*c.m*(+mo.dataset.mult)*pax;
+    var extras=0; form.querySelectorAll('.checks input:checked').forEach(function(x){ var p=+x.dataset.p; extras+= (x.id==='x-walk'||x.id==='x-ins')? p*pax : p; });
+    var total=Math.round((fare+extras)*1.075/100)*100;
+    paxEl.textContent=pax;
+    document.getElementById('pCode').firstChild.nodeValue=d.code;
+    document.getElementById('pName').textContent=d.n;
+    document.getElementById('pClass').textContent=c.n+' class';
+    document.getElementById('pDate').textContent=mo.dataset.label;
+    document.getElementById('pTime').textContent=d.days;
+    document.getElementById('pG').textContent=d.g;
+    document.getElementById('pPax').textContent=pax+(pax>1?' adults':' adult');
+    document.getElementById('pStay').textContent=d.stay;
+    var seats=[]; for(var i=0;i<Math.min(pax,4);i++) seats.push((c.id==='state'?'S':c.id==='clipper'?'4':'22')+'ABCD'[i]);
+    document.getElementById('pSeat').textContent='Seat '+seats.join(' · ')+(pax>4?' +'+(pax-4):'');
+    document.getElementById('pTotal').textContent='$'+total.toLocaleString('en-US');
+    barcode(d.code+c.id+pax+mo.value+extras);
+    var pass=document.getElementById('pass'); pass.classList.remove('bump'); void pass.offsetWidth; pass.classList.add('bump');
+    document.getElementById('reserveMsg').textContent='';
+  }
+  document.getElementById('reserve').addEventListener('click',function(){ var ref='MO-'+Math.random().toString(36).slice(2,7).toUpperCase(); document.getElementById('reserveMsg').textContent='Seats held for 48 hours · reference '+ref+'. A Meridian stewardess will call to discuss your medical.'; });
+  calc();
+})();
+</script>
+</body>
+</html>

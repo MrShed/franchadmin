@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meridian Loan Hall</title>
+<meta name="description" content="An Art Deco mortgage and loan calculator with a full amortisation schedule, monthly and lump-sum overpayment scenarios, interest-versus-principal charts and saved comparisons.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poiret+One&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e9efed; --panel:#f3f6f4; --ink:#0c3336; --ink-2:#3d5c5e; --muted:#5f7a7b; --gold:#9a6f17; --gold-2:#c9a24c; --hair:#c4d2cf; --deco:#0c3336;
+  --s-int:#00909e; --s-pri:#a87a1e; --field:#fff;
+  --display:"Poiret One","Futura","Century Gothic",sans-serif; --body:"Jost","Futura","Century Gothic","Avenir Next",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#07201f;--panel:#0c2a2d;--ink:#eadfc2;--ink-2:#c5bc9f;--muted:#8fa6a3;--gold:#d4af5a;--gold-2:#e6c77d;--hair:#1e4448;--deco:#d4af5a;--s-int:#14a0ad;--s-pri:#b8892b;--field:#08201f;color-scheme:dark}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-weight:400;font-size:16px;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh;
+  background-image:repeating-linear-gradient(90deg,transparent 0 79px,color-mix(in srgb,var(--gold) 10%,transparent) 79px 80px)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.wrap{max-width:1180px;margin:0 auto;padding:14px max(16px,env(safe-area-inset-right)) 70px max(16px,env(safe-area-inset-left))}
+.back{display:inline-block;font:500 12px var(--body);letter-spacing:.3em;text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold);padding-bottom:2px}
+.hero{position:relative;text-align:center;padding:30px 0 26px;margin:10px 0 24px}
+.hero svg.fan{display:block;width:min(520px,100%);height:auto;margin:0 auto -14px;color:var(--gold)}
+.hero h1{font:400 clamp(44px,9vw,104px)/.9 var(--display);margin:0;letter-spacing:.08em;text-transform:uppercase}
+.hero .sub{font:500 12px var(--body);letter-spacing:.42em;text-transform:uppercase;color:var(--gold);margin-top:14px}
+.rule{display:flex;align-items:center;gap:10px;color:var(--gold);margin:14px auto 0;max-width:420px}
+.rule::before,.rule::after{content:"";flex:1;height:0;border-top:3px double currentColor}
+.rule i{width:10px;height:10px;transform:rotate(45deg);border:1px solid currentColor}
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:920px){.grid{grid-template-columns:minmax(0,1fr)}}
+.frame{position:relative;background:var(--panel);padding:22px;border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:4px;margin:5px}
+.frame::before,.frame::after{content:"";position:absolute;width:26px;height:26px;border:3px double var(--gold)}
+.frame::before{top:-9px;left:-9px;border-right:0;border-bottom:0}
+.frame::after{bottom:-9px;right:-9px;border-left:0;border-top:0}
+h2{font:400 26px var(--display);letter-spacing:.12em;text-transform:uppercase;margin:0 0 16px;display:flex;align-items:center;gap:12px}
+h2::after{content:"";flex:1;height:8px;background:linear-gradient(var(--gold),var(--gold)) 0 0/100% 1px no-repeat,linear-gradient(var(--gold),var(--gold)) 0 100%/60% 1px no-repeat}
+.f{display:grid;gap:5px;margin-bottom:14px;grid-template-columns:minmax(0,1fr)}
+.f label{font:500 11px var(--body);letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+.inp{display:flex;align-items:stretch;border-bottom:2px solid var(--ink);background:var(--field)}
+.inp span{display:grid;place-items:center;padding:0 10px;color:var(--gold);font-weight:500}
+.inp input,.inp select{flex:1;min-width:0;width:100%;border:0;background:transparent;color:var(--ink);font:500 20px var(--body);padding:8px 10px;font-variant-numeric:tabular-nums;outline:none}
+.inp:focus-within{border-bottom-color:var(--gold)}
+input[type=range]{width:100%;accent-color:var(--gold);margin:4px 0 0}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--gold)}
+.seg button{background:transparent;border:0;padding:9px 6px;font:500 12px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--gold);color:var(--panel)}
+.sep{margin:18px 0 14px;text-align:center;color:var(--gold);font:500 11px var(--body);letter-spacing:.34em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.sep::before,.sep::after{content:"";flex:1;border-top:1px solid var(--gold)}
+/* results */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-top:3px double var(--gold);border-bottom:3px double var(--gold);margin-bottom:22px}
+@media (max-width:640px){.tiles{grid-template-columns:1fr 1fr}}
+.tile{padding:16px 12px;text-align:center;border-right:1px solid var(--hair)}
+.tile:last-child{border-right:0}
+@media (max-width:640px){.tile:nth-child(2){border-right:0}.tile:nth-child(-n+2){border-bottom:1px solid var(--hair)}}
+.tile .k{font:500 10.5px var(--body);letter-spacing:.26em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font:400 clamp(20px,2.3vw,30px)/1.1 var(--display);margin-top:8px;font-weight:400;letter-spacing:.02em;color:var(--ink)}
+.tile .d{font-size:12.5px;color:var(--gold);margin-top:4px;min-height:1.2em;font-weight:500}
+.tile.hero-t .v{font-size:clamp(22px,2.7vw,36px);color:var(--gold)}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .ax{font:400 11px var(--body);fill:var(--muted)}
+.chart .gl{stroke:var(--hair);stroke-width:1}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);margin:0 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:2px;display:inline-block}
+.legend i.ln{height:0;border-top:2px solid var(--ink);border-radius:0;width:18px}
+.legend i.ln.dash{border-top-style:dashed;border-color:var(--muted)}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--gold);padding:8px 10px;font-size:12.5px;line-height:1.5;color:var(--ink);box-shadow:0 10px 20px -12px rgba(0,0,0,.5);opacity:0;transition:opacity .12s;white-space:nowrap;z-index:5;font-variant-numeric:tabular-nums}
+.tip b{font-weight:600}
+.tip i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+.charts{display:grid;gap:26px}
+.cap{font:500 11px var(--body);letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+/* schedule */
+.sched{margin-top:30px}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+.tbl th{font:500 10.5px var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);text-align:right;padding:8px 8px;border-bottom:1px solid var(--gold)}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--hair)}
+.tbl tr.yr{cursor:pointer}
+.tbl tr.yr:hover td{background:color-mix(in srgb,var(--gold) 8%,transparent)}
+.tbl tr.yr td:first-child::before{content:"▸";color:var(--gold);display:inline-block;width:16px;transition:transform .2s}
+.tbl tr.yr.open td:first-child::before{transform:rotate(90deg)}
+.tbl tr.mo td{font-size:13px;color:var(--ink-2);background:color-mix(in srgb,var(--gold) 4%,transparent)}
+.tbl tr.mo td:first-child{padding-left:26px}
+.tbl .op{color:var(--gold)}
+.tblwrap{overflow-x:auto}
+@media (max-width:640px){.tbl .hide-s{display:none}}
+.scen{margin-top:30px}
+.scen-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.btn{font:500 12px var(--body);letter-spacing:.2em;text-transform:uppercase;padding:10px 16px;border:1px solid var(--gold);background:transparent;color:var(--ink);cursor:pointer}
+.btn.solid{background:var(--gold);color:var(--panel)}
+.btn:hover{background:color-mix(in srgb,var(--gold) 18%,transparent)}
+.btn.solid:hover{background:var(--gold-2)}
+.cmp td button{background:none;border:0;color:var(--gold);cursor:pointer;font:inherit;text-decoration:underline;padding:0}
+.note{font-size:13px;color:var(--muted);margin:10px 0 0;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html" id="backLink">← Showcase</a>
+  <header class="hero">
+    <svg class="fan" viewBox="0 0 520 120" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M260 118 L260 8"/><path d="M260 118 L208 14"/><path d="M260 118 L312 14"/><path d="M260 118 L160 34"/><path d="M260 118 L360 34"/><path d="M260 118 L120 62"/><path d="M260 118 L400 62"/><path d="M260 118 L92 96"/><path d="M260 118 L428 96"/>
+        <path d="M180 118 A80 80 0 0 1 340 118"/><path d="M200 118 A60 60 0 0 1 320 118"/><path d="M220 118 A40 40 0 0 1 300 118"/>
+        <path d="M10 118 H150 M370 118 H510" stroke-width="3"/><path d="M30 110 H140 M380 110 H490"/>
+      </g>
+      <circle cx="260" cy="118" r="10" fill="currentColor"/>
+    </svg>
+    <h1>Meridian</h1>
+    <div class="sub">Loan &amp; Mortgage Hall</div>
+    <div class="rule"><i></i></div>
+  </header>
+
+  <div class="grid">
+    <section class="frame" aria-label="Loan details">
+      <h2>Terms</h2>
+      <div class="f"><label for="amount">Loan amount</label><div class="inp"><span id="sym1">£</span><input id="amount" inputmode="decimal"></div><input type="range" id="amountR" min="5000" max="1500000" step="5000" aria-label="Loan amount slider"></div>
+      <div class="pair">
+        <div class="f"><label for="rate">Interest rate</label><div class="inp"><input id="rate" inputmode="decimal"><span>%</span></div></div>
+        <div class="f"><label for="years">Term</label><div class="inp"><input id="years" inputmode="numeric"><span>yrs</span></div></div>
+      </div>
+      <input type="range" id="rateR" min="0" max="15" step="0.05" aria-label="Interest rate slider">
+      <div class="pair" style="margin-top:14px">
+        <div class="f"><label for="start">First payment</label><div class="inp"><input id="start" type="month"></div></div>
+        <div class="f"><label for="cur">Currency</label><div class="inp"><select id="cur"><option value="GBP">GBP £</option><option value="EUR">EUR €</option><option value="USD">USD $</option></select></div></div>
+      </div>
+      <div class="f"><label>Repayment type</label><div class="seg" role="group" aria-label="Repayment type"><button type="button" id="tRepay" aria-pressed="true">Repayment</button><button type="button" id="tIO" aria-pressed="false">Interest only</button></div></div>
+      <div class="sep">Overpayments</div>
+      <div class="f"><label for="monthlyOver">Extra each month</label><div class="inp"><span id="sym2">£</span><input id="monthlyOver" inputmode="decimal"></div></div>
+      <div class="pair">
+        <div class="f"><label for="lump">One-off lump sum</label><div class="inp"><span id="sym3">£</span><input id="lump" inputmode="decimal"></div></div>
+        <div class="f"><label for="lumpMonth">Paid in month</label><div class="inp"><input id="lumpMonth" inputmode="numeric"><span>#</span></div></div>
+      </div>
+      <div class="f"><label>Overpayments should</label><div class="seg" role="group" aria-label="Overpayment strategy"><button type="button" id="sTerm" aria-pressed="true">Shorten term</button><button type="button" id="sPay" aria-pressed="false">Lower payment</button></div></div>
+      <p class="note">Check your lender’s overpayment allowance — many UK fixed-rate deals cap penalty-free overpayments at 10% of the balance each year.</p>
+    </section>
+
+    <section aria-label="Results">
+      <div class="tiles" id="tiles"></div>
+      <div class="charts">
+        <div>
+          <p class="cap">Where each year’s payments go</p>
+          <div class="legend"><span><i style="background:var(--s-pri)"></i>Principal (incl. overpayments)</span><span><i style="background:var(--s-int)"></i>Interest</span></div>
+          <div class="chart" id="c1"></div>
+        </div>
+        <div>
+          <p class="cap">Balance outstanding</p>
+          <div class="legend"><span><i class="ln"></i>With overpayments</span><span><i class="ln dash"></i>Without</span></div>
+          <div class="chart" id="c2"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="frame sched" aria-label="Amortisation schedule">
+    <h2>Schedule</h2>
+    <div class="tblwrap"><table class="tbl" id="tbl"></table></div>
+    <p class="note">Select a year to open its twelve monthly rows.</p>
+  </section>
+
+  <section class="frame scen" aria-label="Saved scenarios">
+    <h2>Scenarios</h2>
+    <div class="scen-row"><button class="btn solid" id="saveScen" type="button">Save this scenario</button><button class="btn" id="clearScen" type="button">Clear all</button></div>
+    <div class="tblwrap"><table class="tbl cmp" id="cmp"></table></div>
+  </section>
+</div>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const KEY='meridian-loan-v1';
+  const ls={get(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}},set(v){try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}};
+  const d0=new Date();const nextMonth=`${d0.getFullYear()+(d0.getMonth()===11?1:0)}-${String((d0.getMonth()+1)%12+1).padStart(2,'0')}`;
+  const saved=ls.get()||{};
+  let st=Object.assign({amount:285000,rate:4.39,years:25,start:nextMonth,cur:'GBP',type:'repay',over:150,lump:10000,lumpMonth:36,strat:'term',scen:[
+    {name:'5-yr fix, no overpaying',amount:285000,rate:4.39,years:25,type:'repay',over:0,lump:0,lumpMonth:12,strat:'term'},
+    {name:'£300/month extra',amount:285000,rate:4.39,years:25,type:'repay',over:300,lump:0,lumpMonth:12,strat:'term'}
+  ]},saved);
+  if(!Array.isArray(st.scen))st.scen=[];
+  const nf=()=>new Intl.NumberFormat('en-GB',{style:'currency',currency:st.cur,maximumFractionDigits:0});
+  const nf2=()=>new Intl.NumberFormat('en-GB',{style:'currency',currency:st.cur,minimumFractionDigits:2,maximumFractionDigits:2});
+  const M=v=>nf().format(v),M2=v=>nf2().format(v);
+  const num=s=>{const v=parseFloat(String(s).replace(/[^\d.\-]/g,''));return isFinite(v)?v:0};
+  const fmtIn=v=>Math.round(v).toLocaleString('en-GB');
+  function simulate(p,withOver){
+    const L=p.amount,r=p.rate/1200,n=Math.max(1,Math.round(p.years*12));
+    const pmt=(bal,m)=>p.type==='io'?bal*r:(r===0?bal/m:bal*r/(1-Math.pow(1+r,-m)));
+    let bal=L,pay=pmt(L,n);const rows=[];let totI=0,totP=0;
+    for(let k=1;k<=n&&bal>0.005;k++){
+      const interest=bal*r;let principal=p.type==='io'?0:Math.min(bal,pay-interest);
+      if(p.type==='io'&&k===n)principal=bal;
+      let over=0;
+      if(withOver){over=(p.over||0)+(k===p.lumpMonth?(p.lump||0):0);over=Math.min(over,bal-principal)}
+      bal=bal-principal-over;if(bal<0.005)bal=0;
+      totI+=interest;totP+=principal+over;
+      rows.push({k,interest,principal,over,pay:interest+principal,bal});
+      if(withOver&&over>0&&p.strat==='pay'&&p.type!=='io'&&bal>0){pay=pmt(bal,n-k)}
+    }
+    return {rows,totI,totP,first:rows[0]?rows[0].pay:0,months:rows.length,n};
+  }
+  const addM=(ym,k)=>{const [y,m]=ym.split('-').map(Number);const d=new Date(y,m-1+k,1);return d};
+  const mLabel=d=>d.toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+  function durTxt(m){const y=Math.floor(m/12),mm=m%12;return (y?y+' yr'+(y>1?'s':''):'')+(mm?(y?' ':'')+mm+' mo':'')||'0 mo'}
+  // inputs
+  const fields=[['amount','amount'],['rate','rate'],['years','years'],['monthlyOver','over'],['lump','lump'],['lumpMonth','lumpMonth']];
+  function fill(){
+    $('amount').value=fmtIn(st.amount);$('rate').value=st.rate;$('years').value=st.years;$('monthlyOver').value=fmtIn(st.over);$('lump').value=fmtIn(st.lump);$('lumpMonth').value=st.lumpMonth;
+    $('amountR').value=st.amount;$('rateR').value=st.rate;$('start').value=st.start;$('cur').value=st.cur;
+    $('tRepay').setAttribute('aria-pressed',st.type==='repay');$('tIO').setAttribute('aria-pressed',st.type==='io');
+    $('sTerm').setAttribute('aria-pressed',st.strat==='term');$('sPay').setAttribute('aria-pressed',st.strat==='pay');
+    const s={GBP:'£',EUR:'€',USD:'$'}[st.cur];['sym1','sym2','sym3'].forEach(i=>$(i).textContent=s);
+  }
+  fields.forEach(([id,k])=>{$(id).addEventListener('input',e=>{let v=num(e.target.value);if(k==='years')v=Math.min(50,Math.max(1,v||1));if(k==='lumpMonth')v=Math.max(1,Math.round(v));st[k]=v;if(k==='amount')$('amountR').value=v;if(k==='rate')$('rateR').value=v;calc()});
+    $(id).addEventListener('blur',()=>fill())});
+  $('amountR').oninput=e=>{st.amount=+e.target.value;$('amount').value=fmtIn(st.amount);calc()};
+  $('rateR').oninput=e=>{st.rate=+e.target.value;$('rate').value=st.rate;calc()};
+  $('start').onchange=e=>{if(e.target.value){st.start=e.target.value;calc()}};
+  $('cur').onchange=e=>{st.cur=e.target.value;fill();calc()};
+  $('tRepay').onclick=()=>{st.type='repay';fill();calc()};$('tIO').onclick=()=>{st.type='io';fill();calc()};
+  $('sTerm').onclick=()=>{st.strat='term';fill();calc()};$('sPay').onclick=()=>{st.strat='pay';fill();calc()};
+  // charts
+  const NS='http://www.w3.org/2000/svg';
+  const ticks=m=>{const f=m/Math.pow(10,Math.floor(Math.log10(m)));return Math.abs(f-2.5)<1e-9||Math.abs(f-5)<1e-9?5:4};
+  function niceMax(v){if(v<=0)return 1;const e=Math.pow(10,Math.floor(Math.log10(v)));const f=v/e;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*e}
+  const short=v=>{const s={GBP:'£',EUR:'€',USD:'$'}[st.cur];return v>=1e6?s+(v/1e6).toFixed(v%1e6?1:0)+'m':v>=1e3?s+Math.round(v/1e3)+'k':s+Math.round(v)};
+  function tipAt(box,html,x,y){let t=box.querySelector('.tip');if(!t){t=document.createElement('div');t.className='tip';box.appendChild(t)}t.innerHTML=html;t.style.opacity=1;const bw=box.clientWidth;const tw=t.offsetWidth;let left=x+14;if(left+tw>bw)left=x-tw-14;t.style.left=Math.max(0,left)+'px';t.style.top=Math.max(0,y-10)+'px'}
+  function hideTip(box){const t=box.querySelector('.tip');if(t)t.style.opacity=0}
+  function yearly(sim,startYm){
+    const ys=[];sim.rows.forEach(r=>{const yi=Math.floor((r.k-1)/12);(ys[yi]=ys[yi]||{i:yi,interest:0,principal:0,over:0,bal:0,months:[]});const y=ys[yi];y.interest+=r.interest;y.principal+=r.principal;y.over+=r.over;y.bal=r.bal;y.months.push(r)});return ys;
+  }
+  function chart1(ys){
+    const box=$('c1');const W=Math.max(300,box.clientWidth||700),H=240,pl=48,pr=8,pt=10,pb=26;box.innerHTML='';
+    const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('role','img');svg.setAttribute('aria-label','Stacked columns of principal and interest paid each year');
+    const max=niceMax(Math.max(...ys.map(y=>y.interest+y.principal+y.over)));const iw=W-pl-pr,ih=H-pt-pb;const bw=iw/ys.length;const gap=Math.min(6,bw*.25);
+    const T=ticks(max);let h='';for(let g=0;g<=T;g++){const v=max*g/T;const y=pt+ih-ih*g/T;h+=`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}"/><text class="ax" x="${pl-6}" y="${y+4}" text-anchor="end">${short(v)}</text>`}
+    const step=Math.ceil(ys.length/(W<500?6:12));
+    ys.forEach((y,i)=>{const x=pl+i*bw+gap/2,w=Math.max(1,bw-gap);const P=y.principal+y.over;const hp=ih*P/max,hi=ih*y.interest/max;const yb=pt+ih;
+      const r=Math.min(4,w/2);
+      // principal bottom segment, interest on top with 2px surface gap, rounded top on topmost
+      h+=`<rect x="${x}" y="${yb-hp}" width="${w}" height="${Math.max(0,hp)}" fill="var(--s-pri)"/>`;
+      if(hi>0.5){const y0=yb-hp-hi;h+=`<path d="M${x} ${yb-hp-2} V${y0+r} Q${x} ${y0} ${x+r} ${y0} H${x+w-r} Q${x+w} ${y0} ${x+w} ${y0+r} V${yb-hp-2} Z" fill="var(--s-int)"/>`}
+      if(i%step===0)h+=`<text class="ax" x="${x+w/2}" y="${H-8}" text-anchor="middle">${addM(st.start,i*12).getFullYear()}</text>`;
+      h+=`<rect data-i="${i}" x="${pl+i*bw}" y="${pt}" width="${bw}" height="${ih}" fill="transparent"/>`;
+    });
+    svg.innerHTML=h;box.appendChild(svg);
+    svg.addEventListener('pointermove',e=>{const t=e.target.dataset&&e.target.dataset.i;if(t==null){hideTip(box);return}const y=ys[+t];const rb=box.getBoundingClientRect();
+      tipAt(box,`<b>Year ${+t+1} · ${addM(st.start,+t*12).getFullYear()}</b><br><i style="background:var(--s-pri)"></i>Principal ${M(y.principal)}${y.over?`<br><i style="background:var(--s-pri);opacity:.5"></i>of which overpaid ${M(y.over)}`:''}<br><i style="background:var(--s-int)"></i>Interest ${M(y.interest)}<br>Balance after ${M(y.bal)}`,e.clientX-rb.left,e.clientY-rb.top)});
+    svg.addEventListener('pointerleave',()=>hideTip(box));
+  }
+  function chart2(a,b){
+    const box=$('c2');const W=Math.max(300,box.clientWidth||700),H=200,pl=48,pr=64,pt=10,pb=26;box.innerHTML='';
+    const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('role','img');svg.setAttribute('aria-label','Outstanding balance over time with and without overpayments');
+    const n=Math.max(a.rows.length,b.rows.length);const max=niceMax(st.amount);const iw=W-pl-pr,ih=H-pt-pb;
+    const X=k=>pl+iw*k/n,Y=v=>pt+ih-ih*v/max;
+    const path=rows=>'M'+X(0)+' '+Y(st.amount)+rows.map(r=>` L${X(r.k).toFixed(1)} ${Y(r.bal).toFixed(1)}`).join('');
+    const T=ticks(max);let h='';for(let g=0;g<=T;g++){const v=max*g/T,y=Y(v);h+=`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}"/><text class="ax" x="${pl-6}" y="${y+4}" text-anchor="end">${short(v)}</text>`}
+    const yrs=Math.ceil(n/12);const step=Math.ceil(yrs/(W<500?5:10));for(let yi=0;yi<=yrs;yi+=step){h+=`<text class="ax" x="${X(Math.min(n,yi*12))}" y="${H-8}" text-anchor="middle">${addM(st.start,yi*12).getFullYear()}</text>`}
+    h+=`<path d="${path(b.rows)}" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 5"/>`;
+    h+=`<path d="${path(a.rows)}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+    const la=a.rows[a.rows.length-1],lb=b.rows[b.rows.length-1];
+    if(la)h+=`<circle cx="${X(la.k)}" cy="${Y(la.bal)}" r="4" fill="var(--ink)" stroke="var(--panel)" stroke-width="2"/><text class="ax" x="${X(la.k)+6}" y="${Y(la.bal)-8}" style="fill:var(--ink)">${mLabel(addM(st.start,la.k-1))}</text>`;
+    if(lb&&lb.k!==(la&&la.k))h+=`<text class="ax" x="${Math.min(W-pr+4,X(lb.k)+6)}" y="${Y(lb.bal)-22}">${mLabel(addM(st.start,lb.k-1))}</text>`;
+    h+=`<line id="xh" x1="0" x2="0" y1="${pt}" y2="${pt+ih}" stroke="var(--gold)" stroke-width="1" opacity="0"/><rect x="${pl}" y="${pt}" width="${iw}" height="${ih}" fill="transparent" id="hit2"/>`;
+    svg.innerHTML=h;box.appendChild(svg);
+    const xh=svg.querySelector('#xh');
+    svg.querySelector('#hit2').addEventListener('pointermove',e=>{const rb=svg.getBoundingClientRect();const sx=(e.clientX-rb.left)*W/rb.width;const k=Math.max(1,Math.min(n,Math.round((sx-pl)/iw*n)));
+      const ra=a.rows[k-1],rbb=b.rows[k-1];xh.setAttribute('x1',X(k));xh.setAttribute('x2',X(k));xh.setAttribute('opacity',1);
+      tipAt(box,`<b>${mLabel(addM(st.start,k-1))} · payment ${k}</b><br>With overpayments ${ra?M(ra.bal):M(0)+' — cleared'}<br>Without ${rbb?M(rbb.bal):M(0)}`,(e.clientX-rb.left),(e.clientY-rb.top))});
+    svg.querySelector('#hit2').addEventListener('pointerleave',()=>{xh.setAttribute('opacity',0);hideTip(box)});
+  }
+  let lastYs=[],open=new Set();
+  function table(ys){
+    let h='<thead><tr><th>Year</th><th class="hide-s">Paid</th><th>Interest</th><th>Principal</th><th class="hide-s">Overpaid</th><th>Balance</th></tr></thead><tbody>';
+    ys.forEach((y,i)=>{h+=`<tr class="yr${open.has(i)?' open':''}" data-i="${i}" tabindex="0" aria-expanded="${open.has(i)}"><td>${i+1} · ${addM(st.start,i*12).getFullYear()}</td><td class="hide-s">${M(y.interest+y.principal+y.over)}</td><td>${M(y.interest)}</td><td>${M(y.principal)}</td><td class="hide-s op">${y.over?M(y.over):'—'}</td><td>${M(y.bal)}</td></tr>`;
+      if(open.has(i))y.months.forEach(r=>{h+=`<tr class="mo"><td>${mLabel(addM(st.start,r.k-1))}</td><td class="hide-s">${M2(r.pay+r.over)}</td><td>${M2(r.interest)}</td><td>${M2(r.principal)}</td><td class="hide-s op">${r.over?M2(r.over):'—'}</td><td>${M2(r.bal)}</td></tr>`})});
+    $('tbl').innerHTML=h+'</tbody>';
+  }
+  $('tbl').addEventListener('click',e=>{const tr=e.target.closest('tr.yr');if(!tr)return;const i=+tr.dataset.i;open.has(i)?open.delete(i):open.add(i);table(lastYs)});
+  $('tbl').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const tr=e.target.closest('tr.yr');if(tr){e.preventDefault();tr.click();const n=$('tbl').querySelector(`tr.yr[data-i="${tr.dataset.i}"]`);n&&n.focus()}}});
+  function calc(){
+    const a=simulate(st,true),b=simulate(st,false);
+    const saved=b.totI-a.totI,mSaved=b.months-a.months;const end=addM(st.start,a.months-1);
+    const minPay=a.first;const hasOver=(st.over>0||st.lump>0);
+    const lastPay=a.rows.length?a.rows[a.rows.length-1]:null;
+    $('tiles').innerHTML=`
+      <div class="tile hero-t"><div class="k">Monthly payment</div><div class="v">${M2(minPay+(st.over||0))}</div><div class="d">${st.over?M2(minPay)+' + '+M(st.over)+' extra':st.type==='io'?'interest only':'&nbsp;'}</div></div>
+      <div class="tile"><div class="k">Total interest</div><div class="v">${M(a.totI)}</div><div class="d">${hasOver&&saved>0.5?M(saved)+' saved':'&nbsp;'}</div></div>
+      <div class="tile"><div class="k">Total repaid</div><div class="v">${M(a.totI+a.totP)}</div><div class="d">${(a.totI/st.amount*100||0).toFixed(0)}% of the loan in interest</div></div>
+      <div class="tile"><div class="k">Mortgage-free</div><div class="v">${mLabel(end)}</div><div class="d">${hasOver&&mSaved>0?durTxt(mSaved)+' sooner':st.strat==='pay'&&hasOver?'payment falls instead':durTxt(a.months)}</div></div>`;
+    lastYs=yearly(a);chart1(lastYs);chart2(a,b);table(lastYs);cmp();
+    ls.set(st);
+  }
+  function cmp(){
+    if(!st.scen.length){$('cmp').innerHTML='<tbody><tr><td style="text-align:left;color:var(--muted)">No scenarios saved yet.</td></tr></tbody>';return}
+    let h='<thead><tr><th>Scenario</th><th>Rate</th><th class="hide-s">Extra / mo</th><th>Monthly</th><th>Interest</th><th>Months</th><th></th></tr></thead><tbody>';
+    st.scen.forEach((s,i)=>{const r=simulate(Object.assign({},st,s),true);h+=`<tr><td><button type="button" data-load="${i}" id="sc${i}">${s.name.replace(/</g,'&lt;')}</button></td><td>${s.rate}%</td><td class="hide-s">${M(s.over)}</td><td>${M2(r.first+(s.over||0))}</td><td>${M(r.totI)}</td><td>${r.months}</td><td><button type="button" data-del="${i}" id="scx${i}" aria-label="Remove scenario">×</button></td></tr>`});
+    $('cmp').innerHTML=h+'</tbody>';
+  }
+  $('cmp').addEventListener('click',e=>{const l=e.target.closest('[data-load]'),d=e.target.closest('[data-del]');
+    if(l){const s=st.scen[+l.dataset.load];Object.assign(st,{amount:s.amount,rate:s.rate,years:s.years,type:s.type,over:s.over,lump:s.lump,lumpMonth:s.lumpMonth,strat:s.strat});fill();calc()}
+    if(d){st.scen.splice(+d.dataset.del,1);calc()}});
+  $('saveScen').onclick=()=>{const name=`${M(st.amount)} @ ${st.rate}% · ${st.years}y${st.over?' · +'+M(st.over)+'/mo':''}${st.lump?' · '+M(st.lump)+' lump':''}`;st.scen.unshift({name,amount:st.amount,rate:st.rate,years:st.years,type:st.type,over:st.over,lump:st.lump,lumpMonth:st.lumpMonth,strat:st.strat});st.scen=st.scen.slice(0,8);calc()};
+  $('clearScen').onclick=()=>{st.scen=[];calc()};
+  let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(calc,120)});
+  fill();calc();
+})();
+</script>
+</body>
+</html>

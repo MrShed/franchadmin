@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Strongroom Passphrase Forge</title>
+<meta name="description" content="A password and passphrase generator built like a bank vault door: spin the combination dial to set length, get cryptographically random passphrases from a built-in wordlist, and read their real entropy.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Anonymous+Pro:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wall:#d9dcdf; --wall-2:#c8ccd0; --rivet:#a9aeb4;
+  --steel-1:#f1f3f4; --steel-2:#bfc4c9; --steel-3:#7d848b; --steel-4:#4a5057;
+  --brass-1:#f6dd9a; --brass-2:#c9a14a; --brass-3:#8a6a22;
+  --ink:#1b1e22; --ink-soft:#50565e; --plate:#f7f7f5; --plate-line:#cfd3d7;
+  --good:#1c7c45; --ok:#b07d10; --weak:#b3261e;
+  --w1:#1b1e22; --w2:#8a6a22;
+  --focus:#1f5fd6;
+  --shadow:0 40px 60px -30px rgba(10,15,20,.55);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --wall:#121416; --wall-2:#0d0f10; --rivet:#2b3035;
+    --steel-1:#9aa1a8; --steel-2:#5f666d; --steel-3:#3a3f45; --steel-4:#1c1f23;
+    --brass-1:#f1d68a; --brass-2:#b88f38; --brass-3:#6e5218;
+    --ink:#e8eaec; --ink-soft:#a0a7ae; --plate:#1b1e22; --plate-line:#30353b;
+    --good:#5fd68f; --ok:#f0c050; --weak:#ff7a70;
+    --w1:#e8eaec; --w2:#f1d68a;
+    --focus:#8ab4ff;
+    --shadow:0 40px 60px -24px rgba(0,0,0,.9);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; min-height:100vh; color:var(--ink); background-color:var(--wall);
+  background-image:radial-gradient(circle at 12px 12px, var(--rivet) 2.5px, transparent 3.2px), linear-gradient(90deg, transparent 0 calc(100% - 2px), var(--wall-2) calc(100% - 2px)), linear-gradient(transparent 0 calc(100% - 2px), var(--wall-2) calc(100% - 2px));
+  background-size:160px 120px, 160px 120px, 160px 120px;
+  font-family:"Anonymous Pro",ui-monospace,Menlo,Consolas,monospace; font-size:15px;
+  padding:max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left))}
+:focus-visible{outline:3px solid var(--focus); outline-offset:3px}
+.engr{font-family:"Cinzel","Trajan Pro",Georgia,serif}
+header{max-width:1180px; margin:0 auto 18px; display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap}
+h1{margin:0; font-family:"Cinzel",Georgia,serif; font-weight:900; font-size:clamp(28px,5vw,52px); letter-spacing:.06em; line-height:1}
+h1 small{display:block; font-weight:500; font-size:12px; letter-spacing:.34em; color:var(--ink-soft); margin-top:8px}
+.back{font-family:"Cinzel",serif; font-weight:700; font-size:13px; letter-spacing:.14em; text-decoration:none; color:var(--brass-3); border:2px solid var(--brass-2); padding:6px 12px; border-radius:3px; background:linear-gradient(var(--brass-1), var(--brass-2)); color:#2a1f08}
+.back:hover{filter:brightness(1.08)}
+main{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); gap:36px; align-items:start}
+@media (max-width:940px){ main{grid-template-columns:minmax(0,1fr)} }
+
+/* vault door */
+.door-wrap{display:flex; flex-direction:column; align-items:center; gap:16px}
+.door{position:relative; width:min(100%, 470px); aspect-ratio:1; border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 58%, rgba(0,0,0,.25) 58.4%, transparent 59.5%),
+    repeating-conic-gradient(from 0deg, rgba(255,255,255,.06) 0 2deg, rgba(0,0,0,.05) 2deg 4deg),
+    radial-gradient(circle at 35% 30%, var(--steel-1), var(--steel-2) 45%, var(--steel-3) 80%, var(--steel-4));
+  box-shadow:var(--shadow), inset 0 0 0 10px var(--steel-3), inset 0 0 0 12px rgba(255,255,255,.3), inset 0 0 0 26px var(--steel-2), inset 0 0 0 28px rgba(0,0,0,.25)}
+.bolt{position:absolute; left:50%; top:50%; width:15%; height:5.4%; margin:-2.7% 0 0 -7.5%; border-radius:6px;
+  background:linear-gradient(180deg, var(--steel-1), var(--steel-3)); box-shadow:0 2px 3px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6);
+  transform:rotate(var(--a)) translateX(var(--r, 250%)); transition:transform .5s cubic-bezier(.5,0,.2,1)}
+.door.locking .bolt{--r:290%}
+.hinge{position:absolute; left:-3.5%; width:7%; height:16%; border-radius:6px; background:linear-gradient(90deg, var(--steel-4), var(--steel-2), var(--steel-4)); box-shadow:0 3px 6px rgba(0,0,0,.4)}
+#dial{position:absolute; inset:21%; width:58%; height:58%; touch-action:none; cursor:grab; overflow:visible}
+#dial.drag{cursor:grabbing}
+#dial:focus{outline:none}
+#dial:focus-visible .rim{stroke:var(--focus); stroke-width:4}
+#dial-face{transition:transform .35s cubic-bezier(.3,1.3,.5,1)}
+#dial.drag #dial-face{transition:none}
+.dnum{font-family:"Cinzel",serif; font-weight:700; font-size:11px; fill:#f6ecd0}
+.dtick{stroke:#e9dcb4}
+.door-cap{font-family:"Cinzel",serif; font-weight:700; font-size:12px; letter-spacing:.3em; color:var(--ink-soft); text-align:center; text-transform:uppercase}
+.door-cap b{color:var(--ink); font-size:22px; letter-spacing:.06em; display:block; margin-top:2px}
+.lever{display:flex; gap:10px; flex-wrap:wrap; justify-content:center}
+.spin{font-family:"Cinzel",serif; font-weight:900; font-size:18px; letter-spacing:.18em; padding:14px 28px; border-radius:40px; border:0; cursor:pointer; color:#2a1f08;
+  background:linear-gradient(180deg, var(--brass-1), var(--brass-2) 60%, var(--brass-3)); box-shadow:0 5px 0 #4d3a0e, 0 10px 18px -6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.7); transition:transform .08s, box-shadow .08s}
+.spin:active{transform:translateY(4px); box-shadow:0 1px 0 #4d3a0e, inset 0 1px 0 rgba(255,255,255,.7)}
+.mini{font-family:"Anonymous Pro",monospace; font-size:14px; padding:6px 10px; border:1px solid var(--plate-line); background:var(--plate); color:var(--ink); border-radius:3px; cursor:pointer}
+.nudge{display:flex; align-items:center; gap:8px}
+.nudge input{width:64px; font:700 16px "Anonymous Pro",monospace; text-align:center; padding:6px; border:1px solid var(--plate-line); background:var(--plate); color:var(--ink); border-radius:3px}
+
+/* plates */
+.plate{background:linear-gradient(180deg, var(--plate), color-mix(in srgb, var(--plate) 92%, #000)); border:1px solid var(--plate-line); border-radius:6px; padding:18px 20px; box-shadow:var(--shadow); position:relative; margin-bottom:22px}
+.plate::before, .plate::after{content:""; position:absolute; top:8px; width:9px; height:9px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #fff, var(--steel-3))}
+.plate::before{left:8px} .plate::after{right:8px}
+.plate h2{margin:0 0 12px; font-family:"Cinzel",serif; font-weight:700; font-size:14px; letter-spacing:.28em; text-transform:uppercase; color:var(--ink-soft); text-align:center}
+.modes{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border:2px solid var(--brass-2); border-radius:4px; overflow:hidden; margin-bottom:16px}
+.modes button{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.12em; font-size:13px; padding:10px 6px; border:0; background:transparent; color:var(--ink); cursor:pointer}
+.modes button + button{border-left:1px solid var(--brass-2)}
+.modes button[aria-pressed="true"]{background:linear-gradient(var(--brass-1), var(--brass-2)); color:#2a1f08}
+.box{background:var(--steel-4); border-radius:6px; padding:16px 16px 12px; box-shadow:inset 0 3px 10px rgba(0,0,0,.6); position:relative}
+.secret{font:700 clamp(18px,2.6vw,24px)/1.45 "Anonymous Pro",monospace; color:#f3f5f6; word-break:break-all; min-height:70px; letter-spacing:.02em}
+.secret .w:nth-child(odd){color:#ffffff} .secret .w:nth-child(even){color:var(--brass-1)}
+.secret .sep{color:#8b939b}
+.secret .d{color:#8fd3ff} .secret .s{color:#ff9f8f}
+.secret.masked{filter:blur(8px); user-select:none}
+.box-actions{display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap}
+.copy{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.14em; font-size:14px; padding:10px 18px; border-radius:3px; border:0; cursor:pointer; color:#2a1f08; background:linear-gradient(var(--brass-1), var(--brass-2))}
+.copy.done{background:linear-gradient(#b7f0cb,#5fc987)}
+.ghost{font:14px "Anonymous Pro",monospace; background:transparent; border:1px solid #5b626a; color:#d5dade; padding:8px 10px; border-radius:3px; cursor:pointer}
+.chars{font-size:13px; color:#aab1b8}
+
+/* gauge */
+.gauge-row{display:grid; grid-template-columns:200px minmax(0,1fr); gap:18px; align-items:center}
+@media (max-width:520px){ .gauge-row{grid-template-columns:minmax(0,1fr); justify-items:center} }
+.gauge svg{width:100%; max-width:200px; height:auto; display:block}
+.needle{transition:transform .6s cubic-bezier(.3,1.4,.5,1); transform-origin:100px 100px}
+.verdict{font-family:"Cinzel",serif; font-weight:900; font-size:22px; letter-spacing:.08em}
+.verdict.weak{color:var(--weak)} .verdict.ok{color:var(--ok)} .verdict.good{color:var(--good)}
+.facts{margin:6px 0 0; padding:0; list-style:none; line-height:1.6; font-size:14px; color:var(--ink-soft)}
+.facts b{color:var(--ink)}
+
+.opts{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 18px}
+@media (max-width:460px){ .opts{grid-template-columns:minmax(0,1fr)} }
+.opt{display:flex; align-items:center; gap:10px; font-size:15px; cursor:pointer}
+.opt input[type=checkbox]{width:20px; height:20px; accent-color:var(--brass-3)}
+.opt select{font:15px "Anonymous Pro",monospace; padding:6px; border:1px solid var(--plate-line); background:var(--plate); color:var(--ink); border-radius:3px}
+.opt-group[hidden]{display:none}
+.hist{list-style:none; margin:0; padding:0}
+.hist li{display:flex; justify-content:space-between; gap:10px; align-items:center; border-bottom:1px dashed var(--plate-line); padding:7px 0}
+.hist code{font:14px "Anonymous Pro",monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+.note{font-size:13px; color:var(--ink-soft); line-height:1.6; margin:10px 0 0}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+@media (prefers-reduced-motion: reduce){ .bolt, #dial-face, .needle, .spin{transition:none} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Strongroom<small>Passphrase &amp; password forge &middot; vault no. 1438</small></h1>
+  <a class="back" href="index.html">&larr; Showcase</a>
+</header>
+
+<main>
+  <section class="door-wrap" aria-label="Length dial">
+    <div class="door" id="door">
+      <span class="hinge" style="top:22%"></span><span class="hinge" style="bottom:22%"></span>
+      <svg id="dial" viewBox="-110 -110 220 220" role="slider" tabindex="0" aria-label="Length"></svg>
+    </div>
+    <div class="door-cap"><span id="len-kind">Words</span><b id="len-val">6</b></div>
+    <div class="lever">
+      <div class="nudge"><button class="mini" id="len-dn" aria-label="Shorter">&minus;</button><label class="sr" for="len-in">Length</label><input id="len-in" type="number"><button class="mini" id="len-up" aria-label="Longer">+</button></div>
+      <button class="spin" id="spin">Spin &amp; forge</button>
+    </div>
+  </section>
+
+  <div>
+    <section class="plate" aria-labelledby="h-out">
+      <h2 id="h-out">Deposit box</h2>
+      <div class="modes" role="group" aria-label="Kind of secret">
+        <button id="m-phrase" data-m="phrase" aria-pressed="true">Passphrase</button>
+        <button id="m-pass" data-m="pass" aria-pressed="false">Password</button>
+        <button id="m-pin" data-m="pin" aria-pressed="false">PIN</button>
+      </div>
+      <div class="box">
+        <div class="secret" id="secret" aria-live="polite"></div>
+        <div class="box-actions">
+          <span class="chars" id="chars"></span>
+          <div style="display:flex; gap:8px">
+            <button class="ghost" id="mask" aria-pressed="false">Hide</button>
+            <button class="copy" id="copy">Copy</button>
+          </div>
+        </div>
+      </div>
+      <p class="note">Generated in your browser with <code>crypto.getRandomValues</code> and unbiased rejection sampling. Nothing leaves this page and secrets are never stored.</p>
+    </section>
+
+    <section class="plate" aria-labelledby="h-str">
+      <h2 id="h-str">Strength</h2>
+      <div class="gauge-row">
+        <div class="gauge">
+          <svg viewBox="0 0 200 120" aria-hidden="true">
+            <defs><linearGradient id="arc" x1="0" x2="1"><stop offset="0" stop-color="#c0392b"/><stop offset=".45" stop-color="#e0a100"/><stop offset=".75" stop-color="#2e9e5b"/><stop offset="1" stop-color="#1c7c45"/></linearGradient></defs>
+            <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="url(#arc)" stroke-width="14" stroke-linecap="round"/>
+            <g id="gticks"></g>
+            <g class="needle" id="needle"><path d="M100 100 L96 98 L100 28 L104 98 Z" fill="var(--ink)"/></g>
+            <circle cx="100" cy="100" r="8" fill="var(--brass-2)" stroke="var(--brass-3)" stroke-width="2"/>
+            <text x="100" y="118" text-anchor="middle" font-family="Anonymous Pro, monospace" font-size="12" fill="var(--ink-soft)" id="bits-t">0 bits</text>
+          </svg>
+        </div>
+        <div>
+          <div class="verdict" id="verdict">&nbsp;</div>
+          <ul class="facts" id="facts"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="plate" aria-labelledby="h-opt">
+      <h2 id="h-opt">Mechanism</h2>
+      <div class="opt-group opts" id="o-phrase">
+        <label class="opt" for="sep">Separator
+          <select id="sep"><option value="-">hyphen -</option><option value=" ">space</option><option value=".">dot .</option><option value="_">underscore _</option><option value="">none</option><option value="#digit">random digits</option></select></label>
+        <label class="opt" for="cap"><input type="checkbox" id="cap"> Capitalise words</label>
+        <label class="opt" for="num"><input type="checkbox" id="num" checked> Add a number</label>
+        <label class="opt" for="sym"><input type="checkbox" id="sym"> Add a symbol</label>
+      </div>
+      <div class="opt-group opts" id="o-pass" hidden>
+        <label class="opt" for="lower"><input type="checkbox" id="lower" checked> Lowercase a&ndash;z</label>
+        <label class="opt" for="upper"><input type="checkbox" id="upper" checked> Uppercase A&ndash;Z</label>
+        <label class="opt" for="digits"><input type="checkbox" id="digits" checked> Digits 0&ndash;9</label>
+        <label class="opt" for="symbols"><input type="checkbox" id="symbols" checked> Symbols !#$%&amp;*</label>
+        <label class="opt" for="ambig"><input type="checkbox" id="ambig" checked> Avoid look-alikes (Il1O0)</label>
+        <label class="opt" for="each"><input type="checkbox" id="each" checked> At least one of each</label>
+      </div>
+      <div class="opt-group" id="o-pin" hidden><p class="note" style="margin:0">PINs are uniformly random digits. Four digits is only 13 bits: fine behind a lockout, never for anything offline.</p></div>
+    </section>
+
+    <section class="plate" aria-labelledby="h-hist">
+      <h2 id="h-hist">This session</h2>
+      <ul class="hist" id="hist"></ul>
+      <p class="note">Recent results stay in memory only and vanish when you close the tab. Keys: <b>G</b> forge, <b>C</b> copy.</p>
+    </section>
+  </div>
+</main>
+<p class="sr" id="live" aria-live="polite"></p>
+
+<script>
+(function(){
+  "use strict";
+  var WORDS = "ability able absorb accent account acid acorn acre action actor adapt adobe adult advice aerial affair agenda agent agree ahead aisle alarm album alder alert alien alley allow alloy almond alone alpha amber amend ample amused anchor angel angle angora ankle annual antler anvil appeal apple april apron arcade arch arctic arena argue armada armor army aroma arrow artist ascent aspect aspen assist athlete atlas atom attic audio august aunt autumn avenue avid avocado awake award axis bacon badge bagel baker bakery balance balcony ballad ballet bamboo banana band bandit banjo bank banner banquet bargain barley barn baron barrel basil basin basket batch bazaar beach beacon beak beam bean bear beard beauty beaver bedrock bedtime beef beehive beetle begin bell bellow belt bench beret berry beyond bicycle bike billow bingo birch bird biscuit bison blade blank blanket blast blaze blazer blend bless blimp block bloom blossom blotch blouse blue bluff blunt board boat bobcat body boil bolt bonnet bonus book bookend boost boot border boss bottle boulder bounce bowl boxer bracket brain bramble branch brass brave bread breath breeze brick bride bridge brief bright brioche brisk broad broccoli bronze brook broom brownie brush bubble bucket buddy budget buffalo bugle bugler build bulb bundle bunny burrow burst bush butter button buzz cabbage cabin cable cactus caddie cadet cake calico calm camel camera camp camper canal candle candy canoe canopy canvas canyon cape captain caramel carbon card cardigan cargo carnival carpet carrot cart cashew castle catch caviar cedar celery cellar cello cement census cereal chair chalk champ chapel chariot charm chart chase cheek cheese cheetah cherry chess chest chestnut chew chief chime chimney chip choir chorus chowder cider cinder cinema circle citrus city civic clam clap clarinet clay clean clerk clever cliff climb clock cloth cloud clover clown club coach coast cobalt cobbler cocoa coconut code coffee coin cold color comet comic comma compass cone cookie copper coral cord corn cosmos cottage cotton couch cougar country courage cousin cove cowboy crab craft crane crater crayon cream creek crew cricket crisp crocus crown crumb crumpet crust crystal cube cuckoo cupboard cupcake curly curve cushion custard cutlass cycle dahlia daisy dance dandy dawn dazzle debut decade decimal decoy deer delight delta denim dentist depot desert design desk dessert detail dewdrop dial diamond diary diesel dimple dinner dipper direct disco dish ditch diver dock dolphin domain donkey doodle door dough dove dragon dragonfly drama drawer dream dress drift drill drink drizzle drum duck dumpling dune dusk dust duty dwarf dynamo eager eagle early earring earth easel east echo eclair eclipse edge eggplant eight elbow elder elegant elephant elevator elixir elk embassy ember emblem emerald empire empty encore energy engine enjoy entry envelope envoy equal equator era errand escape espresso essay estate ethics evening event exact exit expert extra fable fabric face factor fairy faith falafel falcon fame fancy fanfare farm fashion fawn feast feather feline fence fern ferry festival fever fiber fiddle field fiesta fig film filter final finch fire firefly first fish flag flame flannel flapjack flash flask fleet flicker flint float flock flood floor florist flour flower fluid flute focus fog folk fondue forest forge fork fort fossil fountain fox foxglove fragrant frame freckle fresh frisbee frog frost fruit fudge fuel funny gadget galaxy gallery gallon game garage garden garlic gate gauge gazebo gecko gem genius gentle geyser ghost giant ginger giraffe glacier glad glass glide glimmer globe glove glow goat goblet gold golf gondola goose gopher gorilla gosling gospel grace grain granite grape graph grass gravel gravy great green grid griffin grill grin grove guard guest guide guitar gulf gull gum gumdrop habit haiku halibut hammer hammock hamster hand harbor harmony harp harvest hatch hawk haystack hazel hazelnut heart heath hedge helium helmet hemlock herbal hero heron hiccup hickory hill hinge hippo hobby hockey honey hood hook hope hopscotch horizon horn horse hotel hound house hubcap humble hummus humor hunter hurdle husky hut iceberg icicle icon idea igloo iguana image impact index indigo infant ink inkwell inlet input insect island ivory ivy jackal jacket jaguar jam jar jasmine javelin jaw jazz jeans jelly jellybean jester jet jewel jigsaw jockey jolly journal journey judge juice jumbo jungle junior juniper jury kayak kazoo keen kernel ketchup kettle key kind king kingdom kiosk kitchen kite kitten kiwi knee knight knot koala label lace ladder lagoon lake lamb lamp lantern lap large laser latch lava lavender lawn layer leaf ledge legend lemon lens leopard letter lettuce lever liberty licorice light lilac lily limb lime limerick linen lion liquid list lizard llama lobby lobelia lobster local locket lodge lofty logic lotus loud lucky lullaby lumber lunar lunch lyric macaron machine magic magnet magnolia mail maize major mammal mandolin mango manor maple marble march margin marigold marina market marmot marsh mask mason matrix meadow medal meerkat melody melon memory mentor meringue merit mermaid metal meteor method middle mild mile milk mill mimic mind mineral minor mint minute mirror mist mitten mixer mocha model modest mole moment monarch monkey monsoon month moon moose morning mosaic moss motel moth motor mountain mouse mouth movie muesli muffin mulberry mule mural muscle museum music mustang mustard myth napkin narrow nation native nature navy nebula nectar needle nephew nerve nest net neutral never new nickel night nimble noble noodle normal north nose notch note novel number nurse nutmeg nutshell nylon oak oasis oat oatmeal object oboe ocean octave octopus odd office olive omega omelet onion opal open opera orange orbit orchard orchid order organ origami origin otter outer outpost oval oven owl oxygen oyster paddle page paint palace palm panda panel panther paper paprika parade parcel park parrot parsley partridge party pasta pastel patch path patio pause peach peacock peak peanut pear pebble pecan pedal pelican pencil pendant penguin people pepper perfect periscope permit pet petunia pheasant piano pickle picnic pier pigeon pillow pilot pine pink pinwheel pioneer pipe pirate pistachio pitch pixel pizza plaid plain planet plank plankton plant plaster plate platypus plaza plenty plum plume pocket poem poet polar polka pompom pond pony popcorn poppy porch porcupine portal potato pottery powder prairie praise pretzel prism prize proud prune puddle puffin pulse puma pumpkin pupil puppet puppy purple puzzle pyramid quail quaint quarry quartz queen quest quiche quick quiet quill quilt quiver quokka quota rabbit raccoon race radar radiant radio radish raft rain rainbow raisin rally ranch range rapid raspberry raven ravioli razor ready recipe record redwood reef reflex reindeer relay relic remedy rescue resin retro rhino rhythm ribbon rice riddle ridge ring ripple river road robin robot rocket rodeo roof rookie room rooster rope rose rosemary rotor rough round route royal ruby rudder rugby ruler rumble runway rural rustic saddle safari saffron saga sage sail salad salmon salt salute sand sandal sapphire sardine satchel satin sauce sausage savvy scale scallop scarf scene scholar school scone scooter scout screen script sculpt seal seashell season seat second secret seed sequel sequin serene shadow shark shell shelter sherbet sheriff shield ship shore shovel shrimp sienna signal silent silk silver simple siren sister sketch skill skunk sky skylark slate sled sleek slice slope smile smoke snack snail snow snowflake soap soccer socket sofa solar solid sombrero sonnet sound soup south spaniel spark sparrow spice spider spike spinach spiral spoon sport spring sprout squad square squash squid stable stadium stage stamp star starfish statue steam steel stem stereo stick stingray stone storm story stove strap straw stream street stripe strudel studio sugar suit summer summit sun sunflower sunset super surf swallow swamp swan sweater sweet swift swing symbol syrup table tackle tadpole tail talent tamarind tangerine tango tank tape target tartan task teacup teapot temple tennis tent terrace thimble thistle thorn thread throne thunder thyme ticket tide tiger timber tinsel toast toboggan toffee tomato tonic tool topaz topsoil torch tornado tortoise total towel tower town toy track tractor trail train travel tray treaty tree trellis trend tribe trinket trophy tropic trout truck truffle trumpet trunk tugboat tulip tuna tundra tunnel turbo turkey turnip turquoise turtle tuxedo twig twin ukulele umbrella uncle unicorn union unit universe upper urban usher utmost vacuum valiant valley value vanguard vanilla vapor velvet vendor venture venue verse vessel veteran victor video view village vine vinyl violet violin viper visit vista vital vivid vocal voice volcano volume voyage wafer wagon waiter walnut walrus wand warm wasabi water wave wax weasel weather weaver wedge whale wheat wheel whisk whistle wicker widget wigwam wild willow wind windmill window winter wisdom wisteria wizard wolf wombat wonder wood woodland wool world worthy wreath wren yacht yard yardstick yarn yeast yellow yodel yogurt young yoyo zebra zenith zeppelin zero zest zigzag zinc zipper zone zoom zucchini".split(" ");
+  var KEY = "strongroom-forge-v1";
+  var $ = function(id){ return document.getElementById(id); };
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- randomness ----------
+  var cryptoObj = window.crypto || window.msCrypto;
+  function randInt(n){
+    if (n <= 0) return 0;
+    var buf = new Uint32Array(1), limit = Math.floor(4294967296 / n) * n, x;
+    do { cryptoObj.getRandomValues(buf); x = buf[0]; } while (x >= limit);
+    return x % n;
+  }
+  function pick(arr){ return arr[randInt(arr.length)]; }
+  function log2(x){ return Math.log(x) / Math.LN2; }
+
+  // ---------- settings ----------
+  var LIMITS = {phrase:[3,12], pass:[8,64], pin:[4,12]};
+  var DEF = {mode:"phrase", len:{phrase:6, pass:20, pin:6}, sep:"-", cap:false, num:true, sym:false, lower:true, upper:true, digits:true, symbols:true, ambig:true, each:true};
+  var opt = Object.assign({}, DEF);
+  try { var sv = JSON.parse(localStorage.getItem(KEY)); if (sv && sv.len){ opt = Object.assign({}, DEF, sv); opt.len = Object.assign({}, DEF.len, sv.len); } } catch(e){}
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(opt)); } catch(e){} }
+  if (!LIMITS[opt.mode]) opt.mode = "phrase";
+
+  // ---------- generators ----------
+  var SYMS = "!#$%&*+-=?@^_~";
+  function genPhrase(k){
+    var words = [], parts = [], bits = k * log2(WORDS.length);
+    for (var i=0;i<k;i++){ var w = pick(WORDS); if (opt.cap) w = w[0].toUpperCase() + w.slice(1); words.push({t:w, c:"w"}); }
+    if (opt.num){ var wi = randInt(k), n = String(randInt(100)); words[wi].extra = (words[wi].extra || []).concat([{t:n, c:"d"}]); bits += log2(100) + log2(k); }
+    if (opt.sym){ var si = randInt(k), s = pick(SYMS); words[si].extra = (words[si].extra || []).concat([{t:s, c:"s"}]); bits += log2(SYMS.length) + log2(k); }
+    words.forEach(function(w, i){
+      if (i){ if (opt.sep === "#digit"){ parts.push({t:String(randInt(10)), c:"d"}); } else if (opt.sep) parts.push({t:opt.sep, c:"sep"}); }
+      parts.push({t:w.t, c:"w"}); (w.extra || []).forEach(function(e){ parts.push(e); });
+    });
+    if (opt.sep === "#digit") bits += (k-1) * log2(10);
+    return {parts:parts, bits:bits};
+  }
+  function genPass(L){
+    var sets = [];
+    function clean(s){ return opt.ambig ? s.replace(/[Il1O0o]/g, "") : s; }
+    if (opt.lower) sets.push(clean("abcdefghijklmnopqrstuvwxyz"));
+    if (opt.upper) sets.push(clean("ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+    if (opt.digits) sets.push(clean("0123456789"));
+    if (opt.symbols) sets.push(SYMS);
+    if (!sets.length){ sets.push(clean("abcdefghijklmnopqrstuvwxyz")); }
+    var all = sets.join(""), out, tries = 0;
+    do {
+      out = ""; for (var i=0;i<L;i++) out += all[randInt(all.length)];
+      tries++;
+    } while (opt.each && L >= sets.length && tries < 1000 && !sets.every(function(s){ for (var j=0;j<s.length;j++) if (out.indexOf(s[j]) >= 0) return true; return false; }));
+    var bits = L * log2(all.length);
+    if (opt.each && sets.length > 1){ // subtract the share of strings the rule rejects
+      var p = 1; // inclusion-exclusion estimate of acceptance probability
+      var n = all.length, acc = 0, m = sets.length;
+      for (var mask=0; mask < (1<<m); mask++){ var excl = 0, cnt = 0; for (var b=0;b<m;b++) if (mask & (1<<b)){ excl += sets[b].length; cnt++; } acc += (cnt % 2 ? -1 : 1) * Math.pow((n - excl)/n, L); }
+      p = Math.max(1e-12, acc); bits += log2(p);
+    }
+    var parts = out.split("").map(function(ch){ return {t:ch, c:/[0-9]/.test(ch) ? "d" : (SYMS.indexOf(ch) >= 0 ? "s" : "c")}; });
+    return {parts:parts, bits:bits, pool:all.length};
+  }
+  function genPin(L){ var s = ""; for (var i=0;i<L;i++) s += randInt(10); return {parts:[{t:s, c:"d"}], bits:L * log2(10)}; }
+
+  var current = "", hist = [];
+  function forge(animate){
+    var L = opt.len[opt.mode], r = opt.mode === "phrase" ? genPhrase(L) : (opt.mode === "pass" ? genPass(L) : genPin(L));
+    current = r.parts.map(function(p){ return p.t; }).join("");
+    var sec = $("secret"); sec.innerHTML = "";
+    r.parts.forEach(function(p){ var s = document.createElement("span"); s.className = p.c === "c" ? "" : p.c; s.textContent = p.t; sec.appendChild(s); });
+    $("chars").textContent = current.length + " characters";
+    strength(r.bits, r);
+    hist.unshift(current); if (hist.length > 8) hist.length = 8; renderHist();
+    var cp = $("copy"); cp.classList.remove("done"); cp.textContent = "Copy";
+    if (animate && !reduce){ var d = $("door"); d.classList.add("locking"); setTimeout(function(){ d.classList.remove("locking"); }, 420); spinFlourish(); }
+    $("live").textContent = "New " + (opt.mode === "phrase" ? "passphrase" : opt.mode === "pass" ? "password" : "PIN") + ", " + Math.round(r.bits) + " bits";
+  }
+
+  // ---------- strength ----------
+  function human(sec){
+    var y = sec / 31557600;
+    if (sec < 1) return "instantly";
+    if (sec < 60) return Math.round(sec) + " seconds";
+    if (sec < 3600) return Math.round(sec/60) + " minutes";
+    if (sec < 86400) return Math.round(sec/3600) + " hours";
+    if (y < 1) return Math.round(sec/86400) + " days";
+    if (y < 1000) return Math.round(y) + " years";
+    if (y < 1e6) return Math.round(y/1000) + " thousand years";
+    if (y < 1e9) return Math.round(y/1e6) + " million years";
+    if (y < 1.4e10) return Math.round(y/1e9) + " billion years";
+    return "longer than the age of the universe";
+  }
+  (function(){ var g = $("gticks"), NS = "http://www.w3.org/2000/svg";
+    for (var b=0;b<=160;b+=20){ var a = Math.PI * (1 - b/160), x1 = 100 + 64*Math.cos(a), y1 = 100 - 64*Math.sin(a), x2 = 100 + 56*Math.cos(a), y2 = 100 - 56*Math.sin(a);
+      var l = document.createElementNS(NS, "line"); l.setAttribute("x1", x1); l.setAttribute("y1", y1); l.setAttribute("x2", x2); l.setAttribute("y2", y2); l.setAttribute("stroke", "var(--ink-soft)"); l.setAttribute("stroke-width", 1.5); g.appendChild(l);
+      var t = document.createElementNS(NS, "text"); t.setAttribute("x", 100 + 46*Math.cos(a)); t.setAttribute("y", 100 - 46*Math.sin(a) + 3); t.setAttribute("text-anchor", "middle"); t.setAttribute("font-size", "8"); t.setAttribute("font-family", "Anonymous Pro, monospace"); t.setAttribute("fill", "var(--ink-soft)"); t.textContent = b; g.appendChild(t); } })();
+  function strength(bits, r){
+    var b = Math.max(0, bits), ang = Math.min(160, b)/160*180 - 90;
+    $("needle").style.transform = "rotate(" + ang.toFixed(1) + "deg)";
+    $("bits-t").textContent = Math.round(b) + " bits";
+    var v = $("verdict");
+    if (b < 40){ v.textContent = "Flimsy"; v.className = "verdict weak"; }
+    else if (b < 60){ v.textContent = "Padlock"; v.className = "verdict ok"; }
+    else if (b < 80){ v.textContent = "Strongbox"; v.className = "verdict good"; }
+    else { v.textContent = "Bank vault"; v.className = "verdict good"; }
+    var f = $("facts"); f.innerHTML = "";
+    function li(label, val){ var l = document.createElement("li"); l.appendChild(document.createTextNode(label + " ")); var bb = document.createElement("b"); bb.textContent = val; l.appendChild(bb); f.appendChild(l); }
+    var guesses = Math.pow(2, b - 1);
+    li("Offline attack (10 billion guesses/s):", human(guesses / 1e10));
+    li("Rate-limited login (100 guesses/hour):", human(guesses / (100/3600)));
+    if (opt.mode === "phrase") li("Wordlist:", WORDS.length.toLocaleString() + " words, " + log2(WORDS.length).toFixed(1) + " bits each");
+    else if (opt.mode === "pass") li("Character pool:", r.pool + " symbols, " + log2(r.pool).toFixed(2) + " bits each");
+    else li("Digits:", "3.32 bits each");
+  }
+
+  // ---------- dial ----------
+  var dial = $("dial"), NS = "http://www.w3.org/2000/svg", face = null;
+  function svg(n, a, p){ var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  function buildDial(){
+    dial.innerHTML = "";
+    var lim = LIMITS[opt.mode], N = lim[1] - lim[0] + 1, step = 360 / N;
+    var defs = svg("defs", {}, dial);
+    var rg = svg("radialGradient", {id:"dg", cx:"40%", cy:"30%", r:"80%"}, defs);
+    svg("stop", {offset:"0", "stop-color":"#3a3f45"}, rg); svg("stop", {offset:"1", "stop-color":"#0f1113"}, rg);
+    var bg = svg("radialGradient", {id:"bg2", cx:"35%", cy:"30%", r:"80%"}, defs);
+    svg("stop", {offset:"0", "stop-color":"var(--brass-1)"}, bg); svg("stop", {offset:".6", "stop-color":"var(--brass-2)"}, bg); svg("stop", {offset:"1", "stop-color":"var(--brass-3)"}, bg);
+    svg("circle", {r:108, fill:"rgba(0,0,0,.3)", cy:3}, dial);
+    svg("circle", {r:104, fill:"url(#bg2)", "class":"rim", stroke:"var(--brass-3)", "stroke-width":2}, dial);
+    face = svg("g", {id:"dial-face"}, dial);
+    svg("circle", {r:92, fill:"url(#dg)"}, face);
+    var every = N > 30 ? 4 : 1;
+    for (var i=0;i<N;i++){
+      var a = i*step*Math.PI/180, major = i % every === 0;
+      svg("line", {x1:(90*Math.sin(a)).toFixed(2), y1:(-90*Math.cos(a)).toFixed(2), x2:((major?78:84)*Math.sin(a)).toFixed(2), y2:(-(major?78:84)*Math.cos(a)).toFixed(2), "class":"dtick", "stroke-width": major ? 2 : 1}, face);
+      if (major){ var t = svg("text", {x:0, y:-66, "text-anchor":"middle", "class":"dnum", transform:"rotate(" + (i*step) + ")"}, face); t.textContent = lim[0] + i; }
+    }
+    for (var k=0;k<12;k++){ var ka = k*30*Math.PI/180; svg("circle", {cx:(40*Math.sin(ka)).toFixed(2), cy:(-40*Math.cos(ka)).toFixed(2), r:5, fill:"#1a1d20", stroke:"rgba(255,255,255,.15)"}, face); }
+    svg("circle", {r:30, fill:"url(#bg2)", stroke:"var(--brass-3)", "stroke-width":2}, face);
+    var lab = svg("text", {x:0, y:4, "text-anchor":"middle", "font-family":"Cinzel, serif", "font-weight":"900", "font-size":"10", fill:"#2a1f08", "letter-spacing":"2"}, face); lab.textContent = "FORGE";
+    // fixed index mark
+    svg("path", {d:"M0,-93 L-7,-106 L7,-106 Z", fill:"#b3261e", stroke:"#2a0a08", "stroke-width":1.5}, dial);
+    dial.setAttribute("aria-valuemin", lim[0]); dial.setAttribute("aria-valuemax", lim[1]);
+    setDial(opt.len[opt.mode], true);
+  }
+  var rotation = 0;
+  function setDial(v, instant){
+    var lim = LIMITS[opt.mode], N = lim[1] - lim[0] + 1, step = 360/N;
+    v = Math.max(lim[0], Math.min(lim[1], Math.round(v)));
+    var target = -(v - lim[0]) * step;
+    // take the short way round from the current rotation
+    var diff = ((target - rotation) % 360 + 540) % 360 - 180; rotation += diff;
+    if (instant){ face.style.transition = "none"; face.style.transform = "rotate(" + rotation + "deg)"; void face.getBoundingClientRect(); face.style.transition = ""; }
+    else face.style.transform = "rotate(" + rotation + "deg)";
+    var changed = v !== opt.len[opt.mode];
+    opt.len[opt.mode] = v;
+    $("len-val").textContent = v; $("len-in").value = v; $("len-in").min = lim[0]; $("len-in").max = lim[1];
+    $("len-kind").textContent = opt.mode === "phrase" ? "Words" : (opt.mode === "pass" ? "Characters" : "Digits");
+    dial.setAttribute("aria-valuenow", v); dial.setAttribute("aria-valuetext", v + " " + $("len-kind").textContent.toLowerCase());
+    return changed;
+  }
+  function spinFlourish(){ var cur = rotation; face.style.transform = "rotate(" + (cur + 720) + "deg)"; face.style.transition = "transform .6s cubic-bezier(.2,.8,.2,1)"; setTimeout(function(){ face.style.transition = "none"; face.style.transform = "rotate(" + cur + "deg)"; void face.getBoundingClientRect(); face.style.transition = ""; }, 620); }
+  var drag = null;
+  function ang(e){ var r = dial.getBoundingClientRect(); return Math.atan2(e.clientX - (r.left + r.width/2), -(e.clientY - (r.top + r.height/2))) * 180/Math.PI; }
+  dial.addEventListener("pointerdown", function(e){ drag = {a:ang(e), rot:rotation, moved:0}; dial.classList.add("drag"); dial.setPointerCapture(e.pointerId); e.preventDefault(); });
+  dial.addEventListener("pointermove", function(e){
+    if (!drag) return; var a = ang(e), d = a - drag.a; if (d > 180) d -= 360; if (d < -180) d += 360; drag.a = a; drag.rot += d; drag.moved += Math.abs(d);
+    var lim = LIMITS[opt.mode], N = lim[1]-lim[0]+1, step = 360/N;
+    face.style.transform = "rotate(" + drag.rot + "deg)";
+    var idx = Math.round(-drag.rot/step); idx = ((idx % N) + N) % N;
+    rotation = drag.rot;
+    if (idx + lim[0] !== opt.len[opt.mode]){ opt.len[opt.mode] = idx + lim[0]; $("len-val").textContent = opt.len[opt.mode]; $("len-in").value = opt.len[opt.mode]; tick(); }
+  });
+  function endDrag(){ if (!drag) return; var moved = drag.moved; drag = null; dial.classList.remove("drag"); setDial(opt.len[opt.mode]); save(); if (moved > 2) forge(false); }
+  dial.addEventListener("pointerup", endDrag); dial.addEventListener("pointercancel", endDrag);
+  dial.addEventListener("keydown", function(e){
+    var v = opt.len[opt.mode];
+    if (e.key === "ArrowUp" || e.key === "ArrowRight") v++; else if (e.key === "ArrowDown" || e.key === "ArrowLeft") v--; else if (e.key === "PageUp") v += 5; else if (e.key === "PageDown") v -= 5; else return;
+    e.preventDefault(); if (setDial(v)){ tick(); save(); forge(false); }
+  });
+  // mechanical click on each detent
+  var actx = null;
+  function tick(){ if (reduce) return; try { if (!actx){ var C = window.AudioContext || window.webkitAudioContext; if (!C) return; actx = new C(); } if (actx.state === "suspended") actx.resume(); var t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain(); o.type = "square"; o.frequency.value = 1800; g.gain.setValueAtTime(0.04, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03); o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + 0.035); } catch(err){} }
+
+  // ---------- UI wiring ----------
+  function setMode(m){
+    opt.mode = m; save();
+    ["phrase","pass","pin"].forEach(function(x){ $("m-" + x).setAttribute("aria-pressed", x === m ? "true" : "false"); $("o-" + x).hidden = x !== m; });
+    rotation = 0; buildDial(); forge(false);
+  }
+  ["phrase","pass","pin"].forEach(function(x){ $("m-" + x).addEventListener("click", function(){ setMode(x); }); });
+  $("spin").addEventListener("click", function(){ forge(true); });
+  $("len-up").addEventListener("click", function(){ if (setDial(opt.len[opt.mode] + 1)){ save(); forge(false); } });
+  $("len-dn").addEventListener("click", function(){ if (setDial(opt.len[opt.mode] - 1)){ save(); forge(false); } });
+  $("len-in").addEventListener("change", function(){ setDial(+this.value || LIMITS[opt.mode][0]); save(); forge(false); });
+  $("sep").value = opt.sep; $("sep").addEventListener("change", function(){ opt.sep = this.value; save(); forge(false); });
+  ["cap","num","sym","lower","upper","digits","symbols","ambig","each"].forEach(function(k){ var c = $(k); c.checked = !!opt[k]; c.addEventListener("change", function(){ opt[k] = c.checked; if (["lower","upper","digits","symbols"].every(function(s){ return !opt[s]; })){ opt.lower = true; $("lower").checked = true; } save(); forge(false); }); });
+
+  function copyText(text, btn){
+    function ok(){ if (btn){ btn.classList.add("done"); btn.textContent = "Copied"; setTimeout(function(){ btn.classList.remove("done"); btn.textContent = "Copy"; }, 1600); } $("live").textContent = "Copied to clipboard"; }
+    function fb(){ var ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly",""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0"; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length); var good = false; try { good = document.execCommand("copy"); } catch(e){} ta.remove(); if (good) ok(); else { if (btn) btn.textContent = "Select & copy"; var r = document.createRange(); r.selectNodeContents($("secret")); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } }
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) navigator.clipboard.writeText(text).then(ok, fb); else fb();
+  }
+  $("copy").addEventListener("click", function(){ copyText(current, this); });
+  $("mask").addEventListener("click", function(){ var m = $("secret").classList.toggle("masked"); this.setAttribute("aria-pressed", m ? "true" : "false"); this.textContent = m ? "Show" : "Hide"; renderHist(); });
+  function renderHist(){
+    var ul = $("hist"); ul.innerHTML = ""; var masked = $("secret").classList.contains("masked");
+    hist.slice(1).forEach(function(h, i){
+      var li = document.createElement("li"); var c = document.createElement("code"); c.textContent = masked ? "\u2022".repeat(Math.min(24, h.length)) : h;
+      var b = document.createElement("button"); b.className = "mini"; b.id = "h-copy-" + i; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy earlier result " + (i+1));
+      b.addEventListener("click", function(){ copyText(h, null); b.textContent = "Copied"; setTimeout(function(){ b.textContent = "Copy"; }, 1400); });
+      li.appendChild(c); li.appendChild(b); ul.appendChild(li);
+    });
+    if (hist.length < 2){ var li = document.createElement("li"); li.textContent = "Earlier results will appear here."; li.style.color = "var(--ink-soft)"; ul.appendChild(li); }
+  }
+  document.addEventListener("keydown", function(e){
+    var t = e.target; if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA")) return; if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "g" || e.key === "G"){ forge(true); } else if (e.key === "c" || e.key === "C"){ copyText(current, $("copy")); }
+  });
+
+  // bolts
+  (function(){ var d = $("door"); for (var i=0;i<10;i++){ var b = document.createElement("span"); b.className = "bolt"; b.style.setProperty("--a", (i*36 + 18) + "deg"); d.insertBefore(b, dial); } })();
+
+  if (!cryptoObj || !cryptoObj.getRandomValues){ $("secret").textContent = "This browser has no secure random source, so the forge is locked."; $("spin").disabled = true; return; }
+  setMode(opt.mode);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kwikfare Meeting Meter</title>
+<meta name="description" content="A 1970s taxi meter for meetings: set who is in the room by salary band, drop the flag and watch the fare tick up in red LED digits until it could have been an email.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Righteous&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --street:#f4c21a; --street-2:#e9b20c; --check-a:#111; --check-b:#f4c21a;
+  --ink:#1a1712; --ink-soft:#4a4131;
+  --body:#1c1b1a; --body-2:#2b2927; --chrome-1:#f3f3f1; --chrome-2:#9b9d9f; --chrome-3:#55585b;
+  --led:#ff2d1f; --led-glow:rgba(255,45,31,.65); --led-off:rgba(255,45,31,.09); --window:#140504;
+  --amber:#ffae1a; --amber-off:rgba(255,174,26,.12); --green:#35e06b;
+  --card:#fff8df; --card-ink:#1a1712; --card-line:#e2d3a0; --field:#fffdf3;
+  --focus:#0b57d0;
+  --shadow:0 30px 60px -28px rgba(40,25,0,.6);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --street:#121212; --street-2:#1a1a19; --check-a:#f4c21a; --check-b:#121212;
+    --ink:#f2ead4; --ink-soft:#b8ab88;
+    --card:#1d1b16; --card-ink:#f2ead4; --card-line:#3a3426; --field:#141310;
+    --focus:#8ab4ff;
+    --shadow:0 30px 60px -20px rgba(0,0,0,.9);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; min-height:100vh; background-color:var(--street); color:var(--ink); font-family:"Space Mono",ui-monospace,Menlo,Consolas,monospace; font-size:14px;
+  background-image:radial-gradient(circle at 20% 0%, var(--street-2), transparent 50%);
+  padding:0 0 40px}
+:focus-visible{outline:3px solid var(--focus); outline-offset:3px}
+.checks{height:28px; background:conic-gradient(var(--check-a) 25%, var(--check-b) 0 50%, var(--check-a) 0 75%, var(--check-b) 0) 0 0/28px 28px; border-bottom:3px solid var(--check-a)}
+header{max-width:1200px; margin:0 auto; padding:22px max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left)); display:flex; justify-content:space-between; align-items:flex-end; gap:14px; flex-wrap:wrap}
+h1{margin:0; font-family:"Righteous","Cooper Black",Georgia,serif; font-weight:400; font-size:clamp(34px,6vw,64px); line-height:.9; letter-spacing:.01em}
+h1 small{display:block; font-family:"Space Mono",monospace; font-size:13px; letter-spacing:.12em; margin-top:10px; font-weight:700; text-transform:uppercase}
+.back{font-family:"Righteous",sans-serif; color:var(--street); background:var(--ink); padding:8px 14px; border-radius:20px; text-decoration:none; font-size:15px}
+.back:hover{filter:brightness(1.2)}
+main{max-width:1200px; margin:0 auto; padding:14px max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); gap:30px; align-items:start}
+@media (max-width:960px){ main{grid-template-columns:minmax(0,1fr)} }
+
+/* roof sign */
+.roof{margin:0 auto -6px; width:min(92%, 520px); background:linear-gradient(#2a2826,#111); border-radius:14px 14px 4px 4px; padding:8px; box-shadow:0 6px 0 #000}
+.roof-in{border-radius:8px; padding:10px 12px; text-align:center; font-family:"Righteous",sans-serif; font-size:clamp(14px,2.4vw,20px); letter-spacing:.08em; line-height:1.15; color:#5a4c2a; background:#2c2618; transition:all .3s}
+.roof.lit .roof-in{color:#1a1200; background:radial-gradient(ellipse at center, #fff3b0, #ffc21a 70%); box-shadow:0 0 30px 6px rgba(255,194,26,.7)}
+.roof.lit.blink .roof-in{animation:blink 1s steps(2) 6}
+@keyframes blink{50%{filter:brightness(.55)}}
+
+/* meter */
+.meter{position:relative; background:linear-gradient(180deg, var(--body-2), var(--body)); border-radius:18px; padding:20px 20px 22px; box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.12); color:#e9e4d6; border:4px solid #0a0a0a}
+.meter::before{content:""; position:absolute; inset:6px; border-radius:12px; border:1px solid rgba(255,255,255,.07); pointer-events:none}
+.plate{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap}
+.maker{font-family:"Righteous",sans-serif; font-size:22px; letter-spacing:.06em; color:var(--chrome-1); background:linear-gradient(var(--chrome-1), var(--chrome-2)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
+.maker small{display:block; -webkit-text-fill-color:#9b958a; font-family:"Space Mono",monospace; font-size:10px; letter-spacing:.24em}
+.lamp{display:flex; gap:10px; align-items:center; font-size:11px; letter-spacing:.18em; color:#9b958a}
+.lamp i{width:14px; height:14px; border-radius:50%; background:#2d0c0a; box-shadow:inset 0 1px 2px rgba(0,0,0,.8)}
+.lamp.on i{background:radial-gradient(circle at 40% 35%, #fff, #ff5a3c 40%, #b3160b); box-shadow:0 0 10px #ff3b1f}
+.lamp.vacant i{background:radial-gradient(circle at 40% 35%, #fff, #6bff96 40%, #149c3e); box-shadow:0 0 10px #35e06b}
+
+.face{display:grid; grid-template-columns:minmax(0,1fr) 92px; gap:16px; align-items:stretch}
+@media (max-width:520px){ .face{grid-template-columns:minmax(0,1fr) 64px; gap:10px} }
+.win{background:var(--window); border-radius:8px; padding:10px 12px 8px; box-shadow:inset 0 3px 10px rgba(0,0,0,.95), 0 1px 0 rgba(255,255,255,.12); position:relative; overflow:hidden}
+.win::after{content:""; position:absolute; inset:0; background:linear-gradient(160deg, rgba(255,255,255,.08), transparent 40%); pointer-events:none}
+.win label, .win .lab{display:block; font-size:10px; letter-spacing:.24em; color:#b5a98f; margin-bottom:4px; text-transform:uppercase}
+.fare{display:flex; align-items:center; gap:10px}
+.cur{font-family:"Righteous",sans-serif; font-size:clamp(28px,5vw,48px); color:var(--led); text-shadow:0 0 12px var(--led-glow)}
+.seg{display:flex; gap:clamp(2px,.6vw,5px); flex:1; min-width:0}
+.seg svg{flex:1 1 0; min-width:0; max-width:44px; height:auto; overflow:visible}
+.seg .on{fill:var(--led); filter:drop-shadow(0 0 3px var(--led-glow))}
+.seg .off{fill:var(--led-off)}
+.seg.amber .on{fill:var(--amber); filter:drop-shadow(0 0 3px rgba(255,174,26,.6))}
+.seg.amber .off{fill:var(--amber-off)}
+.subs{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px}
+.subs .seg svg{max-width:22px}
+@media (max-width:520px){ .subs{grid-template-columns:repeat(2,minmax(0,1fr))} .subs .win:last-child{grid-column:1/-1} }
+
+.flagbox{display:flex; flex-direction:column; align-items:center; justify-content:space-between; background:#0f0e0d; border-radius:10px; padding:8px 4px; box-shadow:inset 0 2px 6px rgba(0,0,0,.8)}
+.flagbtn{border:0; background:transparent; cursor:pointer; padding:0; width:100%}
+.flagbtn svg{width:100%; height:auto; display:block}
+#flagarm{transform-origin:18px 30px; transition:transform .45s cubic-bezier(.3,1.6,.5,1)}
+.running #flagarm{transform:rotate(90deg)}
+.flagbox span{font-size:9px; letter-spacing:.14em; color:#9b958a; text-align:center; text-transform:uppercase}
+
+.keys{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:16px}
+@media (max-width:520px){ .keys{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.key{font:700 13px/1 "Space Mono",monospace; letter-spacing:.1em; text-transform:uppercase; padding:14px 6px; border-radius:8px; border:0; cursor:pointer; color:#1a1712;
+  background:linear-gradient(var(--chrome-1), var(--chrome-2)); box-shadow:0 4px 0 var(--chrome-3), 0 8px 12px -6px rgba(0,0,0,.7); transition:transform .06s, box-shadow .06s}
+.key:active{transform:translateY(3px); box-shadow:0 1px 0 var(--chrome-3)}
+.key.go{background:linear-gradient(#ffd54a,#f0a800); box-shadow:0 4px 0 #9a6a00, 0 8px 12px -6px rgba(0,0,0,.7)}
+.key.go:active{box-shadow:0 1px 0 #9a6a00}
+.meta-line{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:14px; font-size:11px; color:#9b958a; letter-spacing:.06em}
+.meta-line b{color:#e9e4d6}
+
+/* receipts / cards */
+.card{background:var(--card); color:var(--card-ink); border-radius:4px; padding:18px 18px 16px; box-shadow:var(--shadow); margin-bottom:24px; position:relative}
+.card h2{font-family:"Righteous",sans-serif; font-weight:400; font-size:24px; margin:0 0 4px}
+.card .sub{margin:0 0 12px; color:var(--ink-soft); font-size:12px}
+.pax{width:100%; border-collapse:collapse}
+.pax th{font-size:10px; letter-spacing:.16em; text-transform:uppercase; text-align:left; color:var(--ink-soft); padding:4px 4px 6px; border-bottom:2px solid var(--card-ink)}
+.pax td{padding:6px 4px; border-bottom:1px dashed var(--card-line); vertical-align:middle}
+.pax input{font:inherit; color:inherit; background:var(--field); border:1px solid var(--card-line); padding:6px 7px; width:100%; border-radius:3px}
+.pax input.num{text-align:right}
+.pax td.rate{text-align:right; font-weight:700; white-space:nowrap}
+.stepper{display:flex; align-items:center; gap:2px}
+.stepper button{width:26px; height:30px; border:1px solid var(--card-line); background:var(--field); color:inherit; font:700 14px "Space Mono",monospace; cursor:pointer; border-radius:3px; flex:none}
+.stepper input{width:40px; text-align:center; padding:6px 2px}
+.x{border:0; background:none; color:var(--ink-soft); font-size:18px; cursor:pointer; padding:2px 6px}
+.x:hover{color:#c0301f}
+@media (max-width:560px){ .pax .hide-sm{display:none} }
+.btn{font:700 12px/1 "Space Mono",monospace; letter-spacing:.08em; text-transform:uppercase; padding:9px 11px; border:2px solid var(--card-ink); background:transparent; color:var(--card-ink); border-radius:3px; cursor:pointer}
+.btn:hover{background:var(--card-ink); color:var(--card)}
+.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px}
+.settings{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 14px}
+.settings label{display:flex; flex-direction:column; gap:4px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft)}
+.settings input, .settings select{font:14px "Space Mono",monospace; padding:7px 8px; background:var(--field); color:var(--card-ink); border:1px solid var(--card-line); border-radius:3px; text-transform:none; letter-spacing:0}
+.quick{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; border:2px solid var(--card-ink); margin-top:4px}
+.quick div{padding:10px 8px; border-right:1px dashed var(--card-line); text-align:center}
+.quick div:last-child{border-right:0}
+.quick b{display:block; font-size:16px}
+.quick span{font-size:10px; color:var(--ink-soft); letter-spacing:.1em}
+@media (max-width:420px){ .quick{grid-template-columns:repeat(2,minmax(0,1fr))} .quick div:nth-child(2){border-right:0} .quick div:nth-child(-n+2){border-bottom:1px dashed var(--card-line)} }
+.equiv{font-size:13px; line-height:1.6; margin:12px 0 0; min-height:42px}
+.receipt{font-size:13px}
+.receipt ul{list-style:none; margin:0; padding:0; max-height:280px; overflow:auto}
+.receipt li{display:grid; grid-template-columns:1fr auto auto; gap:10px; padding:7px 0; border-bottom:1px dashed var(--card-line); align-items:center}
+.receipt li small{display:block; color:var(--ink-soft); font-size:11px}
+.receipt .tot{display:flex; justify-content:space-between; border-top:2px solid var(--card-ink); margin-top:8px; padding-top:8px; font-weight:700}
+.tear{position:absolute; left:0; right:0; bottom:-10px; height:10px; background:linear-gradient(135deg, var(--card) 50%, transparent 50%) 0 0/14px 10px, linear-gradient(225deg, var(--card) 50%, transparent 50%) 0 0/14px 10px; background-repeat:repeat-x}
+.titlein{font:inherit; width:100%; padding:8px 9px; background:var(--field); color:var(--card-ink); border:1px solid var(--card-line); border-radius:3px}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+@media (prefers-reduced-motion: reduce){ #flagarm, .roof-in, .key{transition:none} .roof.lit.blink .roof-in{animation:none} }
+</style>
+</head>
+<body>
+<div class="checks" aria-hidden="true"></div>
+<header>
+  <h1>Kwikfare<small>Meeting meter &middot; est. 1974 &middot; fares by the second</small></h1>
+  <a class="back" href="index.html">&larr; Showcase</a>
+</header>
+
+<main>
+  <div>
+    <div class="roof" id="roof"><div class="roof-in" id="roof-text">This meeting could have been an email</div></div>
+    <section class="meter" id="meter" aria-label="Meeting cost meter">
+      <div class="plate">
+        <div class="maker">KWIKFARE<small>TAXIMETER MODEL M-7</small></div>
+        <div class="lamp vacant" id="lamp"><i></i><span id="lamp-t">FOR HIRE</span></div>
+      </div>
+      <div class="face">
+        <div>
+          <div class="win">
+            <span class="lab">Fare</span>
+            <div class="fare"><span class="cur" id="cur-sym">&pound;</span><div class="seg" id="led-fare" aria-hidden="true"></div></div>
+          </div>
+          <div class="subs">
+            <div class="win"><span class="lab">Time</span><div class="seg amber" id="led-time" aria-hidden="true"></div></div>
+            <div class="win"><span class="lab">Per min</span><div class="seg amber" id="led-rate" aria-hidden="true"></div></div>
+            <div class="win"><span class="lab">Heads</span><div class="seg amber" id="led-heads" aria-hidden="true"></div></div>
+          </div>
+        </div>
+        <div class="flagbox">
+          <button class="flagbtn" id="flag" aria-pressed="false" aria-label="Drop the flag to start the meter">
+            <svg viewBox="0 0 60 150" aria-hidden="true">
+              <rect x="14" y="26" width="8" height="120" rx="3" fill="#8b8e91"/>
+              <g id="flagarm">
+                <rect x="14" y="4" width="8" height="30" rx="3" fill="#c9cbcd"/>
+                <path d="M22 6 H54 V30 H22 Z" fill="#e0301e" stroke="#000" stroke-width="1.5"/>
+                <text x="38" y="22" text-anchor="middle" font-family="Righteous, sans-serif" font-size="10" fill="#fff">FOR</text>
+              </g>
+              <circle cx="18" cy="30" r="7" fill="#d7d9db" stroke="#444"/>
+            </svg>
+          </button>
+          <span id="flag-lbl">Drop flag</span>
+        </div>
+      </div>
+      <div class="keys">
+        <button class="key go" id="k-start">Start</button>
+        <button class="key" id="k-extra">+ Late joiner</button>
+        <button class="key" id="k-log">Log fare</button>
+        <button class="key" id="k-reset">Reset</button>
+      </div>
+      <div class="meta-line"><span>Tariff <b id="tariff">&pound;0.00/s</b></span><span>Email threshold <b id="thr-t">&pound;150</b></span><span>Keys: <b>Space</b> start/pause &middot; <b>R</b> reset</span></div>
+      <p class="sr" id="live" aria-live="polite"></p>
+    </section>
+
+    <section class="card" style="margin-top:28px" aria-labelledby="h-quick">
+      <h2 id="h-quick">Before you book it</h2>
+      <p class="sub">What this group costs, by meeting length.</p>
+      <div class="quick" id="quick"></div>
+      <p class="equiv" id="equiv"></p>
+    </section>
+  </div>
+
+  <div>
+    <section class="card" aria-labelledby="h-pax">
+      <h2 id="h-pax">Passengers</h2>
+      <p class="sub">Who is in the room, by salary band. Edit freely.</p>
+      <table class="pax">
+        <thead><tr><th scope="col">Band</th><th scope="col" class="hide-sm">Salary / yr</th><th scope="col">Heads</th><th scope="col" style="text-align:right">Per hr</th><th scope="col"><span class="sr">Remove</span></th></tr></thead>
+        <tbody id="pax"></tbody>
+      </table>
+      <div class="row">
+        <button class="btn" id="add-band">+ Add band</button>
+        <label class="sr" for="preset">Add a preset band</label>
+        <select id="preset" class="btn" style="padding:8px"><option value="">Quick add&hellip;</option></select>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-set">
+      <h2 id="h-set">Tariff settings</h2>
+      <div class="settings">
+        <label for="currency">Currency<select id="currency"><option>GBP</option><option>USD</option><option>EUR</option><option>CAD</option><option>AUD</option><option>INR</option><option>JPY</option></select></label>
+        <label for="threshold">Email threshold<input id="threshold" type="number" min="0" step="10"></label>
+        <label for="overhead">On-cost multiplier<input id="overhead" type="number" min="1" max="3" step="0.05"></label>
+        <label for="hours">Paid hours / year<input id="hours" type="number" min="500" max="3000" step="10"></label>
+      </div>
+      <p class="sub" style="margin-top:10px">On-costs cover employer pension, national insurance, desks and software. 1.3 is a common rule of thumb.</p>
+    </section>
+
+    <section class="card receipt" aria-labelledby="h-log">
+      <h2 id="h-log">Fare log</h2>
+      <label class="sr" for="title">Meeting name for the next log entry</label>
+      <input class="titlein" id="title" placeholder="Name this meeting (e.g. Weekly sync)" maxlength="60">
+      <ul id="log" style="margin-top:10px"></ul>
+      <div class="tot"><span>Total logged</span><span id="log-total">&pound;0.00</span></div>
+      <div class="row"><button class="btn" id="clear-log">Clear log</button></div>
+      <div class="tear" aria-hidden="true"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "kwikfare-meter-v1";
+  var $ = function(id){ return document.getElementById(id); };
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+  var PRESETS = [["Intern",24000],["Junior engineer",42000],["Engineer",68000],["Senior engineer",92000],["Designer",58000],["Product manager",85000],["Engineering manager",105000],["Director",150000],["VP",210000],["Chief executive",320000]];
+
+  var DEF = {currency:"GBP", threshold:150, overhead:1.3, hours:1720,
+    bands:[{id:uid(), name:"Engineer", salary:68000, n:4},{id:uid(), name:"Senior engineer", salary:92000, n:2},{id:uid(), name:"Product manager", salary:85000, n:1},{id:uid(), name:"Director", salary:150000, n:1}],
+    log:[{t:Date.now()-864e5*1.2, title:"Sprint planning", sec:3420, cost:612.40},{t:Date.now()-864e5*3, title:"Q4 roadmap review", sec:5400, cost:1180.55},{t:Date.now()-864e5*4, title:"Weekly sync", sec:1860, cost:318.20}],
+    run:null};
+  var st; try { st = JSON.parse(localStorage.getItem(KEY)); } catch(e){ st = null; }
+  if (!st || !Array.isArray(st.bands)) st = JSON.parse(JSON.stringify(DEF));
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){} }
+
+  // meter run state: {acc: seconds before current segment, start: ms timestamp or null, extra: cost added}
+  var fresh = !st.run;
+  if (!st.run) st.run = {acc:0, start:null, extra:0, costAcc:0};
+  var fmt;
+  function mkFmt(){ try { fmt = new Intl.NumberFormat(undefined, {style:"currency", currency:st.currency}); } catch(e){ fmt = {format:function(v){ return st.currency + " " + v.toFixed(2); }}; } }
+  mkFmt();
+  function sym(){ try { var p = new Intl.NumberFormat("en-GB", {style:"currency", currency:st.currency}).formatToParts(0); for (var i=0;i<p.length;i++) if (p[i].type === "currency") return p[i].value; } catch(e){} return st.currency; }
+  var decimals = function(){ return st.currency === "JPY" ? 0 : 2; };
+
+  function perSecond(){ var s = 0; st.bands.forEach(function(b){ s += (+b.salary||0) * (+b.n||0); }); return s * (+st.overhead||1) / ((+st.hours||1720) * 3600); }
+  function heads(){ return st.bands.reduce(function(a,b){ return a + (+b.n||0); }, 0); }
+  function elapsed(){ return st.run.acc + (st.run.start ? (Date.now() - st.run.start)/1000 : 0); }
+  // cost accrues with a snapshot of the tariff per segment so editing mid-meeting is fair
+  function cost(){ return (st.run.costAcc || 0) + (st.run.start ? (Date.now() - st.run.start)/1000 * perSecond() : 0) + (st.run.extra || 0); }
+
+  // ---------- seven segment ----------
+  var SEG = {"0":"abcdef","1":"bc","2":"abged","3":"abgcd","4":"fgbc","5":"afgcd","6":"afgedc","7":"abc","8":"abcdefg","9":"abcdfg","-":"g"," ":"", "E":"afged", "r":"eg", "H":"fbgec"};
+  function h(x1,x2,cy){ return x1+","+cy+" "+(x1+2)+","+(cy-2)+" "+(x2-2)+","+(cy-2)+" "+x2+","+cy+" "+(x2-2)+","+(cy+2)+" "+(x1+2)+","+(cy+2); }
+  function v(cx,y1,y2){ return cx+","+y1+" "+(cx+2)+","+(y1+2)+" "+(cx+2)+","+(y2-2)+" "+cx+","+y2+" "+(cx-2)+","+(y2-2)+" "+(cx-2)+","+(y1+2); }
+  var GEO = {a:h(4,18,2), g:h(4,18,19), d:h(4,18,36), f:v(2,4,17), b:v(20,4,17), e:v(2,21,34), c:v(20,21,34)};
+  var NS = "http://www.w3.org/2000/svg";
+  function makeLED(host, n, dpAt, colonAt){
+    host.innerHTML = ""; var digits = [];
+    for (var i=0;i<n;i++){
+      var s = document.createElementNS(NS, "svg"); s.setAttribute("viewBox", "-2 -1 28 40");
+      var g = document.createElementNS(NS, "g"); g.setAttribute("transform", "skewX(-7) translate(3 0)"); s.appendChild(g);
+      var segs = {};
+      "abcdefg".split("").forEach(function(k){ var p = document.createElementNS(NS, "polygon"); p.setAttribute("points", GEO[k]); p.setAttribute("class", "off"); g.appendChild(p); segs[k] = p; });
+      var dp = document.createElementNS(NS, "circle"); dp.setAttribute("cx", 24); dp.setAttribute("cy", 35.5); dp.setAttribute("r", 2); dp.setAttribute("class", "off"); g.appendChild(dp);
+      var col = null;
+      if (colonAt && colonAt.indexOf(i) >= 0){ col = [ [11, 11], [11, 27] ].map(function(c){ var e = document.createElementNS(NS, "circle"); e.setAttribute("cx", 25); e.setAttribute("cy", c[1]); e.setAttribute("r", 1.8); e.setAttribute("class", "on"); g.appendChild(e); return e; }); }
+      host.appendChild(s); digits.push({segs:segs, dp:dp, ch:null, dpOn:null});
+    }
+    return digits;
+  }
+  function showLED(digits, str, dpIndex){
+    // str right-aligned to digits length
+    str = str.slice(-digits.length); while (str.length < digits.length) str = " " + str;
+    for (var i=0;i<digits.length;i++){
+      var d = digits[i], ch = str[i];
+      if (d.ch !== ch){ var on = SEG[ch] || ""; for (var k in d.segs) d.segs[k].setAttribute("class", on.indexOf(k) >= 0 ? "on" : "off"); d.ch = ch; }
+      var dpOn = i === dpIndex; if (d.dpOn !== dpOn){ d.dp.setAttribute("class", dpOn ? "on" : "off"); d.dpOn = dpOn; }
+    }
+  }
+  var ledFare = makeLED($("led-fare"), 7), ledTime = makeLED($("led-time"), 4, null, [1]), ledRate = makeLED($("led-rate"), 5), ledHeads = makeLED($("led-heads"), 3);
+
+  function renderMeter(){
+    var c = cost(), dec = decimals();
+    var cents = Math.floor(c * Math.pow(10, dec) + 1e-6), s = String(cents);
+    if (dec){ while (s.length < dec + 1) s = "0" + s; }
+    if (s.length > 7) s = "9999999";
+    showLED(ledFare, s, dec ? 6 - dec : -1);
+    var e = Math.floor(elapsed()), hh = Math.floor(e/3600), mm = Math.floor(e/60) % 60, ss = e % 60;
+    var tstr = hh ? String(hh).padStart(2," ") + String(mm).padStart(2,"0") : String(mm).padStart(2,"0") + String(ss).padStart(2,"0");
+    showLED(ledTime, tstr, -1);
+    var rate = perSecond()*60, rs = dec ? String(Math.round(rate*100)) : String(Math.round(rate));
+    if (dec){ while (rs.length < 3) rs = "0" + rs; }
+    showLED(ledRate, rs.length > 5 ? "99999" : rs, dec ? 2 : -1);
+    showLED(ledHeads, String(heads()), -1);
+    var over = c >= +st.threshold && +st.threshold > 0;
+    var roof = $("roof");
+    if (over && !roof.classList.contains("lit")){ roof.classList.add("lit", "blink"); $("live").textContent = "Threshold passed: this meeting could have been an email."; }
+    if (!over) roof.classList.remove("lit", "blink");
+  }
+  function renderState(){
+    var running = !!st.run.start;
+    $("meter").classList.toggle("running", running);
+    $("flag").setAttribute("aria-pressed", running ? "true" : "false");
+    $("flag").setAttribute("aria-label", running ? "Raise the flag to pause the meter" : "Drop the flag to start the meter");
+    $("flag-lbl").textContent = running ? "Hired" : "Drop flag";
+    $("lamp").className = "lamp " + (running ? "on" : "vacant"); $("lamp-t").textContent = running ? "HIRED" : (elapsed() > 0 ? "PAUSED" : "FOR HIRE");
+    $("k-start").textContent = running ? "Pause" : (elapsed() > 0 ? "Resume" : "Start");
+    $("cur-sym").textContent = sym();
+    $("tariff").textContent = fmtRate(perSecond()) + "/s";
+    $("thr-t").textContent = fmt.format(+st.threshold || 0);
+  }
+  function fmtRate(v){ try { return new Intl.NumberFormat(undefined, {style:"currency", currency:st.currency, minimumFractionDigits:3, maximumFractionDigits:3}).format(v); } catch(e){ return v.toFixed(3); } }
+
+  function start(){ if (st.run.start) return; if (!heads()){ $("live").textContent = "Add passengers first."; return; } st.run.start = Date.now(); save(); renderState(); $("live").textContent = "Meter running"; }
+  function pause(){ if (!st.run.start) return; var dt = (Date.now() - st.run.start)/1000; st.run.acc += dt; st.run.costAcc = (st.run.costAcc||0) + dt*perSecond(); st.run.start = null; save(); renderState(); $("live").textContent = "Paused at " + fmt.format(cost()); }
+  function toggle(){ st.run.start ? pause() : start(); }
+  function reset(){ st.run = {acc:0, start:null, extra:0, costAcc:0}; save(); renderState(); renderMeter(); }
+  // when tariff changes mid-run, bank the cost so far at the old tariff
+  function bank(){ if (st.run.start){ var now = Date.now(), dt = (now - st.run.start)/1000; st.run.acc += dt; st.run.costAcc = (st.run.costAcc||0) + dt*perSecond(); st.run.start = now; } }
+
+  $("flag").addEventListener("click", toggle);
+  $("k-start").addEventListener("click", toggle);
+  $("k-reset").addEventListener("click", reset);
+  $("k-extra").addEventListener("click", function(){
+    // a late joiner costs the context everyone loses: five minutes of the whole room
+    var add = perSecond()*300; st.run.extra = (st.run.extra||0) + add; save(); renderMeter(); $("live").textContent = "Late joiner surcharge " + fmt.format(add);
+  });
+  $("k-log").addEventListener("click", function(){
+    var c = cost(), e = elapsed(); if (c <= 0){ $("live").textContent = "Nothing to log yet."; return; }
+    pause(); st.log.unshift({t:Date.now(), title:$("title").value.trim() || "Untitled meeting", sec:Math.round(e), cost:Math.round(c*100)/100});
+    $("title").value = ""; reset(); renderLog(); save(); $("live").textContent = "Fare logged";
+  });
+  document.addEventListener("keydown", function(e){
+    var t = e.target; if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA")) return;
+    if (e.key === " " && !(t && t.tagName === "BUTTON")){ e.preventDefault(); toggle(); }
+    else if (e.key === "r" || e.key === "R"){ if (!e.metaKey && !e.ctrlKey) reset(); }
+  });
+
+  // ---------- passengers ----------
+  function renderPax(){
+    var tb = $("pax"); tb.innerHTML = "";
+    st.bands.forEach(function(b){
+      var tr = document.createElement("tr");
+      var c1 = document.createElement("td"); var ni = document.createElement("input"); ni.value = b.name; ni.id = "bn-" + b.id; ni.setAttribute("aria-label","Band name"); ni.maxLength = 40;
+      ni.addEventListener("change", function(){ b.name = ni.value.trim() || "Band"; save(); }); c1.appendChild(ni);
+      var c2 = document.createElement("td"); c2.className = "hide-sm"; var si = document.createElement("input"); si.type = "number"; si.min = 0; si.step = 1000; si.className = "num"; si.value = b.salary; si.id = "bs-" + b.id; si.setAttribute("aria-label","Annual salary for " + b.name);
+      si.addEventListener("change", function(){ bank(); b.salary = Math.max(0, +si.value||0); save(); renderAll(); }); c2.appendChild(si);
+      var c3 = document.createElement("td"); var stp = document.createElement("div"); stp.className = "stepper";
+      var minus = document.createElement("button"); minus.type = "button"; minus.textContent = "−"; minus.id = "bm-" + b.id; minus.setAttribute("aria-label","One fewer " + b.name);
+      var ci = document.createElement("input"); ci.type = "number"; ci.min = 0; ci.max = 999; ci.value = b.n; ci.id = "bc-" + b.id; ci.setAttribute("aria-label","Headcount for " + b.name);
+      var plus = document.createElement("button"); plus.type = "button"; plus.textContent = "+"; plus.id = "bp-" + b.id; plus.setAttribute("aria-label","One more " + b.name);
+      minus.addEventListener("click", function(){ bank(); b.n = Math.max(0, (+b.n||0) - 1); save(); renderAll(); });
+      plus.addEventListener("click", function(){ bank(); b.n = Math.min(999, (+b.n||0) + 1); save(); renderAll(); });
+      ci.addEventListener("change", function(){ bank(); b.n = Math.max(0, Math.min(999, Math.round(+ci.value||0))); save(); renderAll(); });
+      stp.appendChild(minus); stp.appendChild(ci); stp.appendChild(plus); c3.appendChild(stp);
+      var c4 = document.createElement("td"); c4.className = "rate"; c4.textContent = fmt.format((+b.salary||0) * (+st.overhead||1) / (+st.hours||1720) * (+b.n||0));
+      var c5 = document.createElement("td"); var x = document.createElement("button"); x.className = "x"; x.type = "button"; x.textContent = "×"; x.id = "bx-" + b.id; x.setAttribute("aria-label","Remove " + b.name);
+      x.addEventListener("click", function(){ bank(); st.bands = st.bands.filter(function(z){ return z !== b; }); save(); renderAll(); }); c5.appendChild(x);
+      [c1,c2,c3,c4,c5].forEach(function(c){ tr.appendChild(c); }); tb.appendChild(tr);
+    });
+  }
+  (function(){ var sel = $("preset"); PRESETS.forEach(function(p, i){ var o = document.createElement("option"); o.value = i; o.textContent = p[0] + " · " + Math.round(p[1]/1000) + "k"; sel.appendChild(o); });
+    sel.addEventListener("change", function(){ if (sel.value === "") return; var p = PRESETS[+sel.value]; bank(); st.bands.push({id:uid(), name:p[0], salary:p[1], n:1}); sel.value = ""; save(); renderAll(); }); })();
+  $("add-band").addEventListener("click", function(){ bank(); var b = {id:uid(), name:"New band", salary:50000, n:1}; st.bands.push(b); save(); renderAll(); var n = $("bn-" + b.id); if (n){ n.focus(); n.select(); } });
+
+  // ---------- settings ----------
+  $("currency").value = st.currency; $("threshold").value = st.threshold; $("overhead").value = st.overhead; $("hours").value = st.hours;
+  $("currency").addEventListener("change", function(){ st.currency = this.value; mkFmt(); save(); renderAll(); });
+  $("threshold").addEventListener("change", function(){ st.threshold = Math.max(0, +this.value||0); save(); renderAll(); });
+  $("overhead").addEventListener("change", function(){ bank(); st.overhead = Math.min(3, Math.max(1, +this.value||1.3)); this.value = st.overhead; save(); renderAll(); });
+  $("hours").addEventListener("change", function(){ bank(); st.hours = Math.min(3000, Math.max(500, +this.value||1720)); this.value = st.hours; save(); renderAll(); });
+
+  function renderQuick(){
+    var ps = perSecond(), q = $("quick"); q.innerHTML = "";
+    [15,30,45,60].forEach(function(m){ var d = document.createElement("div"); var b = document.createElement("b"); b.textContent = fmt.format(ps*m*60); var s = document.createElement("span"); s.textContent = m + " MIN"; d.appendChild(b); d.appendChild(s); q.appendChild(d); });
+    var hour = ps*3600, eq = $("equiv");
+    var cof = st.currency === "GBP" ? 3.6 : (st.currency === "JPY" ? 550 : (st.currency === "INR" ? 250 : 4.5));
+    var mins = st.threshold > 0 && ps > 0 ? Math.ceil(st.threshold/ps/60) : 0;
+    eq.textContent = "An hour of this room buys about " + Math.round(hour/cof) + " flat whites. " + (mins ? "The email alarm trips after " + mins + " minute" + (mins === 1 ? "" : "s") + "." : "");
+  }
+  function renderLog(){
+    var ul = $("log"); ul.innerHTML = ""; var tot = 0;
+    if (!st.log.length){ var li = document.createElement("li"); li.textContent = "No fares logged yet."; li.style.display = "block"; ul.appendChild(li); }
+    st.log.forEach(function(r, i){
+      tot += r.cost;
+      var li = document.createElement("li"); var a = document.createElement("span"); a.textContent = r.title;
+      var sm = document.createElement("small"); var d = new Date(r.t); sm.textContent = d.toLocaleDateString(undefined,{weekday:"short", day:"numeric", month:"short"}) + " · " + Math.round(r.sec/60) + " min"; a.appendChild(sm);
+      var b = document.createElement("b"); b.textContent = fmt.format(r.cost);
+      var x = document.createElement("button"); x.className = "x"; x.type = "button"; x.textContent = "×"; x.id = "lx-" + i; x.setAttribute("aria-label","Delete " + r.title);
+      x.addEventListener("click", function(){ st.log.splice(i,1); save(); renderLog(); });
+      li.appendChild(a); li.appendChild(b); li.appendChild(x); ul.appendChild(li);
+    });
+    $("log-total").textContent = fmt.format(tot);
+  }
+  var armed = 0;
+  $("clear-log").addEventListener("click", function(){ var b = this; if (!armed){ armed = setTimeout(function(){ armed = 0; b.textContent = "Clear log"; }, 3000); b.textContent = "Tap again"; return; } clearTimeout(armed); armed = 0; b.textContent = "Clear log"; st.log = []; save(); renderLog(); });
+
+  if (fresh){ st.run.acc = 905; st.run.costAcc = 905 * perSecond(); }
+  function renderAll(){ renderPax(); renderState(); renderMeter(); renderQuick(); renderLog(); }
+  renderAll();
+  setInterval(function(){ if (st.run.start) renderMeter(); }, 100);
+  setInterval(function(){ if (st.run.start) save(); }, 5000);
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) renderMeter(); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Regler Home Controller</title>
+<meta name="description" content="A Braun-inspired physical smart-home panel: turn the thermostat knob, flick rocker switches, dim rooms on a live floor plan and watch the power needle and energy chart respond.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wall:#b9bab6; --body:#e6e6e2; --body-2:#d7d7d2; --panel:#f1f1ee; --line:#bfbfba; --char:#232323; --char-2:#3a3a39;
+  --orange:#f0561d; --green:#3fae4a; --yellow:#f3c623; --txt:#1d1d1d; --mut:#6d6d69;
+  --sans:"Archivo","Helvetica Neue",Helvetica,Arial,sans-serif; --mono:"DM Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--wall); color:var(--txt); font-family:var(--sans); min-height:100vh;
+  background-image:linear-gradient(180deg, rgba(255,255,255,.25), transparent 30%), radial-gradient(circle at 70% 0, rgba(255,255,255,.35), transparent 50%)}
+.wrap{max-width:1180px; margin:0 auto; padding:24px max(16px,3vw) 48px}
+.top{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:22px}
+.mark{font-weight:800; font-size:14px; letter-spacing:-.01em}
+.mark span{font-weight:400; color:var(--mut); margin-left:10px}
+.back{font:500 12px var(--mono); color:var(--char); text-decoration:none; border-bottom:1px solid var(--char); padding-bottom:1px}
+.back:hover{color:var(--orange); border-color:var(--orange)}
+:focus-visible{outline:2px solid var(--orange); outline-offset:3px}
+
+.device{background:linear-gradient(180deg,#efefeb,var(--body) 40%,#dcdcd7); border-radius:18px; padding:22px;
+  box-shadow:0 1px 0 #fff inset, 0 -2px 0 rgba(0,0,0,.08) inset, 0 40px 70px -30px rgba(40,40,35,.55), 0 10px 20px -10px rgba(40,40,35,.35);
+  display:grid; grid-template-columns:300px minmax(0,1fr) 260px; grid-template-areas:"thermo plan side" "scenes energy side"; gap:18px}
+.mod{background:var(--panel); border-radius:10px; padding:18px; position:relative; box-shadow:inset 0 1px 2px rgba(0,0,0,.12), 0 1px 0 #fff}
+.mod h2{margin:0 0 14px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; display:flex; justify-content:space-between; color:var(--char)}
+.mod h2 small{font:400 11px var(--mono); letter-spacing:0; text-transform:none; color:var(--mut)}
+.thermo{grid-area:thermo} .plan{grid-area:plan} .side{grid-area:side; display:flex; flex-direction:column; gap:18px} .scenes{grid-area:scenes} .energy{grid-area:energy}
+
+/* thermostat */
+.dial{position:relative; width:230px; max-width:100%; aspect-ratio:1; margin:0 auto; touch-action:none; cursor:grab}
+.dial svg{width:100%; height:100%; display:block; overflow:visible}
+.dial:active{cursor:grabbing}
+.readout{display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px; border-top:1px solid var(--line); padding-top:12px}
+.setp{font-weight:800; font-size:54px; line-height:.9; letter-spacing:-.04em}
+.setp sup{font-size:.4em; font-weight:500; margin-left:2px}
+.cur{font:400 12px/1.6 var(--mono); color:var(--mut); text-align:right}
+.cur b{color:var(--txt); font-weight:500}
+.lamp{display:inline-block; width:8px; height:8px; border-radius:50%; background:#9b9b96; margin-right:6px; vertical-align:0; box-shadow:inset 0 1px 1px rgba(0,0,0,.4)}
+.lamp.on{background:var(--orange); box-shadow:0 0 8px var(--orange)}
+.modesw{display:flex; margin-top:14px; background:var(--body-2); border-radius:6px; padding:3px; box-shadow:inset 0 1px 3px rgba(0,0,0,.2); position:relative}
+.modesw button{flex:1; border:0; background:none; font:700 10px var(--sans); letter-spacing:.1em; text-transform:uppercase; padding:9px 0; cursor:pointer; position:relative; z-index:1; color:var(--mut)}
+.modesw button[aria-pressed="true"]{color:var(--txt)}
+.modesw .thumb{position:absolute; top:3px; bottom:3px; width:calc((100% - 6px)/3); left:3px; background:linear-gradient(#fbfbf9,#e4e4df); border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,.3); transition:transform .25s cubic-bezier(.4,1.4,.6,1)}
+
+/* plan */
+#planSvg{width:100%; height:auto; display:block}
+.room{cursor:pointer}
+.room .fl{fill:#f7f7f4; transition:fill .3s}
+.room:hover .fl{fill:#ececE7}
+.room.sel .fl{fill:#ececE6}
+.room text{font:700 9px var(--sans); letter-spacing:.08em; fill:var(--char); text-transform:uppercase; pointer-events:none}
+.room .w{font:400 8px var(--mono); fill:var(--mut); letter-spacing:0; text-transform:none}
+.glow{transition:opacity .45s ease; pointer-events:none; mix-blend-mode:multiply}
+.furn{fill:none; stroke:#b8b8b2; stroke-width:1}
+.planbar{display:flex; justify-content:space-between; align-items:center; margin-top:12px; font:400 11px var(--mono); color:var(--mut); gap:10px; flex-wrap:wrap}
+
+/* switches */
+.switches{list-style:none; margin:0; padding:0}
+.switches li{display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line)}
+.switches li:first-child{border-top:0}
+.rname{border:0; background:none; font:500 13px var(--sans); text-align:left; cursor:pointer; padding:4px 0; color:var(--txt)}
+.rname small{display:block; font:400 10.5px var(--mono); color:var(--mut)}
+.rname[aria-current="true"]{font-weight:800}
+.rname[aria-current="true"]::before{content:""; display:inline-block; width:6px; height:6px; background:var(--orange); border-radius:50%; margin-right:6px; vertical-align:2px}
+.rocker{width:46px; height:30px; border-radius:4px; border:0; padding:0; cursor:pointer; position:relative; background:#d8d8d3; box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
+.rocker::before{content:""; position:absolute; inset:3px; border-radius:3px; transition:background .12s, box-shadow .12s;
+  background:linear-gradient(90deg,#fbfbf9 0%,#f3f3f0 48%,#d2d2cc 52%,#e6e6e1 100%); box-shadow:2px 1px 3px rgba(0,0,0,.28)}
+.rocker[aria-pressed="true"]::before{background:linear-gradient(90deg,#e6e6e1 0%,#d2d2cc 48%,#f3f3f0 52%,#fbfbf9 100%); box-shadow:-2px 1px 3px rgba(0,0,0,.28)}
+.rocker::after{content:""; position:absolute; top:12px; right:9px; width:6px; height:6px; border-radius:50%; background:#aaa9a4; transition:background .15s, box-shadow .15s}
+.rocker[aria-pressed="true"]::after{background:var(--orange); box-shadow:0 0 6px var(--orange)}
+
+/* dimmer */
+.dimrow{display:grid; grid-template-columns:110px 1fr; gap:14px; align-items:center}
+.knob{width:110px; height:110px; position:relative; touch-action:none; cursor:grab}
+.knob svg{width:100%; height:100%; display:block}
+.dimval{font-weight:800; font-size:36px; letter-spacing:-.03em; line-height:1}
+.dimval small{font-size:14px; font-weight:500}
+.dimroom{font:400 11px var(--mono); color:var(--mut); margin-top:6px}
+
+/* clock */
+.clockmod{display:flex; align-items:center; gap:16px}
+#clock{width:96px; height:96px; flex:none}
+.date{font:400 12px/1.6 var(--mono); color:var(--mut)}
+.date b{display:block; font:800 20px var(--sans); color:var(--txt); letter-spacing:-.02em}
+
+/* scenes */
+.keys{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; justify-items:center}
+.key{display:flex; flex-direction:column; align-items:center; gap:8px; background:none; border:0; cursor:pointer; font:700 10px var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--char); padding:0}
+.key i{width:52px; height:52px; border-radius:50%; display:block; position:relative; transition:transform .08s;
+  background:radial-gradient(circle at 50% 35%, rgba(255,255,255,.35), transparent 55%), var(--c,#6b6b66);
+  box-shadow:0 3px 0 rgba(0,0,0,.25), 0 6px 10px -4px rgba(0,0,0,.4), inset 0 -3px 4px rgba(0,0,0,.2)}
+.key:active i,.key.hit i{transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.25), inset 0 -2px 3px rgba(0,0,0,.2)}
+.key[aria-pressed="true"] i::after{content:""; position:absolute; left:50%; top:-10px; width:5px; height:5px; margin-left:-2.5px; border-radius:50%; background:var(--orange); box-shadow:0 0 6px var(--orange)}
+.grille{margin-top:18px; height:54px; background-image:radial-gradient(circle, #2c2c2b 1.6px, transparent 2px); background-size:9px 9px; opacity:.65; border-radius:4px}
+.scene-txt{font:400 11.5px/1.5 var(--mono); color:var(--mut); margin:14px 0 0; min-height:3em}
+
+/* energy */
+.energy-grid{display:grid; grid-template-columns:190px minmax(0,1fr); gap:18px; align-items:end}
+#meter{width:100%; height:auto; display:block}
+.watts{font-weight:800; font-size:30px; letter-spacing:-.03em; text-align:center; margin-top:-6px}
+.watts small{font-size:12px; font-weight:500; color:var(--mut)}
+#chart{width:100%; height:150px; display:block}
+.legend{display:flex; gap:16px; font:400 11px var(--mono); color:var(--mut); margin-top:6px; flex-wrap:wrap}
+.legend i{display:inline-block; width:10px; height:3px; vertical-align:3px; margin-right:6px; background:var(--char)}
+.legend i.o{background:var(--orange)}
+
+.foot{display:flex; justify-content:space-between; font:400 11px var(--mono); color:#555; margin-top:18px; gap:16px; flex-wrap:wrap}
+
+@media (max-width:1060px){
+  .device{grid-template-columns:280px minmax(0,1fr); grid-template-areas:"thermo plan" "side side" "scenes energy"}
+  .side{flex-direction:row; flex-wrap:wrap} .side > .mod{flex:1 1 240px}
+}
+@media (max-width:760px){
+  .device{grid-template-columns:minmax(0,1fr); grid-template-areas:"thermo" "plan" "side" "scenes" "energy"; padding:12px; gap:12px}
+  .side{flex-direction:column}
+  .energy-grid{grid-template-columns:minmax(0,1fr)}
+  #meter{max-width:220px; margin:0 auto}
+  .mod{padding:14px}
+}
+@media (prefers-reduced-motion:reduce){ .modesw .thumb,.rocker::before,.glow{transition:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="mark">regler <span>HC 1 · Home controller · Flat 3F2, 14 Marchmont Crescent</span></div>
+    <a class="back" id="backLink" href="index.html">← Showcase</a>
+  </div>
+
+  <div class="device">
+    <section class="mod thermo" aria-label="Thermostat">
+      <h2>Heating <small id="thermoState">holding</small></h2>
+      <div class="dial" id="dial" role="slider" tabindex="0" aria-label="Target temperature" aria-valuemin="10" aria-valuemax="28" aria-valuenow="20.5">
+        <svg viewBox="-120 -120 240 240" aria-hidden="true">
+          <defs>
+            <radialGradient id="kn" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="#fdfdfb"/><stop offset=".6" stop-color="#e3e3de"/><stop offset="1" stop-color="#c5c5bf"/></radialGradient>
+            <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#b3b3ad"/></linearGradient>
+            <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-opacity=".3"/></filter>
+          </defs>
+          <g id="ticks"></g>
+          <path id="heatArc" fill="none" stroke="#f0561d" stroke-width="3" stroke-linecap="round"/>
+          <g filter="url(#sh)"><circle r="78" fill="url(#rim)"/><circle r="74" fill="url(#kn)"/></g>
+          <g id="knobRot"><line x1="0" y1="-66" x2="0" y2="-44" stroke="#f0561d" stroke-width="5" stroke-linecap="round"/>
+            <circle r="24" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="1"/></g>
+          <circle id="curDot" r="4" fill="#232323"/>
+        </svg>
+      </div>
+      <div class="readout">
+        <div class="setp" id="setp">20.5<sup>°C</sup></div>
+        <div class="cur"><span class="lamp" id="heatLamp"></span>inside <b id="curT">19.2°</b><br>outside <b>11.4°</b><br>humidity <b>54%</b></div>
+      </div>
+      <div class="modesw" role="group" aria-label="Heating mode">
+        <span class="thumb" id="modeThumb"></span>
+        <button id="mOff" aria-pressed="false">Off</button><button id="mEco" aria-pressed="false">Eco</button><button id="mHeat" aria-pressed="true">Heat</button>
+      </div>
+    </section>
+
+    <section class="mod plan" aria-label="Floor plan">
+      <h2>Lights <small id="lightsSum">3 of 7 on</small></h2>
+      <svg id="planSvg" viewBox="-6 -6 412 292" role="group" aria-label="Floor plan; select a room to toggle its light"></svg>
+      <div class="planbar"><span>Tap a room to switch · select a name to dim</span><span id="lightsW">Lighting 0 W</span></div>
+    </section>
+
+    <div class="side">
+      <section class="mod" aria-label="Room switches">
+        <h2>Switches <small>7 circuits</small></h2>
+        <ul class="switches" id="switches"></ul>
+      </section>
+      <section class="mod" aria-label="Dimmer">
+        <h2>Dimmer <small id="dimName">Living room</small></h2>
+        <div class="dimrow">
+          <div class="knob" id="dimKnob" role="slider" tabindex="0" aria-label="Brightness" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70">
+            <svg viewBox="-55 -55 110 110" aria-hidden="true">
+              <g id="dimTicks"></g>
+              <circle r="38" fill="#2a2a29"/><circle r="34" fill="url(#dk)"/>
+              <defs><radialGradient id="dk" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="#5a5a58"/><stop offset="1" stop-color="#1c1c1b"/></radialGradient></defs>
+              <g id="dimRot"><circle cy="-24" r="4" fill="#f3c623"/></g>
+            </svg>
+          </div>
+          <div><div class="dimval" id="dimVal">70<small>%</small></div><div class="dimroom" id="dimRoom">Living room · 3 lamps</div></div>
+        </div>
+      </section>
+      <section class="mod clockmod" aria-label="Clock">
+        <svg id="clock" viewBox="-50 -50 100 100" aria-hidden="true">
+          <circle r="48" fill="#1f1f1e"/><g id="cTicks"></g>
+          <line id="hH" y2="-24" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+          <line id="hM" y2="-36" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+          <g id="hS"><line y1="10" y2="-38" stroke="#f3c623" stroke-width="1.4"/><circle r="3" fill="#f3c623"/></g>
+        </svg>
+        <div class="date" id="date"><b>Tuesday</b>22 September</div>
+      </section>
+    </div>
+
+    <section class="mod scenes" aria-label="Scenes">
+      <h2>Scenes <small id="sceneName">manual</small></h2>
+      <div class="keys">
+        <button class="key" id="sMorning" style="--c:#e8e5dc" aria-pressed="false"><i></i>Morning</button>
+        <button class="key" id="sEvening" style="--c:#f0561d" aria-pressed="false"><i></i>Evening</button>
+        <button class="key" id="sNight" style="--c:#4d4a45" aria-pressed="false"><i></i>Night</button>
+        <button class="key" id="sAway" style="--c:#8c887e" aria-pressed="false"><i></i>Away</button>
+      </div>
+      <p class="scene-txt" id="sceneTxt">Four scenes set the lights and heating in one press.</p>
+      <div class="grille" aria-hidden="true"></div>
+    </section>
+
+    <section class="mod energy" aria-label="Energy">
+      <h2>Energy today <small id="kwhToday">8.4 kWh · £2.12</small></h2>
+      <div class="energy-grid">
+        <div>
+          <svg id="meter" viewBox="-100 -92 200 110" aria-hidden="true"></svg>
+          <div class="watts" id="watts">0<small> W now</small></div>
+        </div>
+        <div>
+          <svg id="chart" preserveAspectRatio="none" aria-label="Hourly consumption chart" role="img"></svg>
+          <div class="legend"><span><i></i>kWh per hour</span><span><i class="o"></i>this hour, live</span><span id="peak">peak 18:00</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="foot"><span>Designed to be understood without a manual.</span><span>Less, but better.</span></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+function el(tag, attrs, parent){ const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+/* ---------- state ---------- */
+const ROOMS = [
+  {id:'living', name:'Living room', x:0,y:0,w:230,h:150, lamps:3, watts:42, on:true, b:70, lx:115, ly:75},
+  {id:'kitchen', name:'Kitchen', x:230,y:0,w:170,h:120, lamps:4, watts:36, on:true, b:100, lx:315, ly:60},
+  {id:'hall', name:'Hall', x:230,y:120,w:70,h:160, lamps:2, watts:12, on:false, b:60, lx:265, ly:200},
+  {id:'bath', name:'Bathroom', x:300,y:120,w:100,h:80, lamps:2, watts:18, on:false, b:80, lx:350, ly:160},
+  {id:'bed', name:'Bedroom', x:0,y:150,w:150,h:130, lamps:2, watts:20, on:false, b:40, lx:75, ly:215},
+  {id:'study', name:'Study', x:150,y:150,w:80,h:130, lamps:1, watts:9, on:true, b:85, lx:190, ly:215},
+  {id:'guest', name:'Box room', x:300,y:200,w:100,h:80, lamps:1, watts:8, on:false, b:50, lx:350, ly:240},
+];
+let sel = ROOMS[0];
+const S = { target:20.5, inside:19.2, mode:'heat', scene:null, lastPower:0, needle:0 };
+
+/* ---------- thermostat ---------- */
+const TMIN = 10, TMAX = 28, SWEEP = 270;
+const ang = v => -135 + (v-TMIN)/(TMAX-TMIN)*SWEEP;
+const polar = (a, r) => [Math.sin(a*Math.PI/180)*r, -Math.cos(a*Math.PI/180)*r];
+(function ticks(){ const g = $('#ticks');
+  for (let v = TMIN; v <= TMAX; v += .5){ const a = ang(v); const major = v % 2 === 0; const [x1,y1] = polar(a, 88), [x2,y2] = polar(a, major?100:94);
+    el('line',{x1,y1,x2,y2,stroke:'#232323','stroke-width':major?1.6:.8},g);
+    if (major){ const [tx,ty] = polar(a,111); el('text',{x:tx,y:ty+3,'text-anchor':'middle','font-size':8.5,'font-family':'DM Mono,monospace',fill:'#6d6d69'},g).textContent = v; } } })();
+function arcPath(a0,a1,r){ const [x0,y0] = polar(a0,r), [x1,y1] = polar(a1,r); const large = Math.abs(a1-a0) > 180 ? 1 : 0; const sw = a1 > a0 ? 1 : 0;
+  return `M${x0} ${y0} A${r} ${r} 0 ${large} ${sw} ${x1} ${y1}`; }
+function renderThermo(){
+  $('#knobRot').setAttribute('transform', `rotate(${ang(S.target)})`);
+  const [cx,cy] = polar(ang(clamp(S.inside,TMIN,TMAX)), 84); $('#curDot').setAttribute('cx',cx); $('#curDot').setAttribute('cy',cy);
+  const heating = S.mode !== 'off' && effTarget() > S.inside + .05;
+  $('#heatArc').setAttribute('d', heating ? arcPath(ang(clamp(S.inside,TMIN,TMAX)), ang(effTarget()), 84) : '');
+  $('#setp').innerHTML = (S.mode==='off' ? 'Off' : effTarget().toFixed(1)) + (S.mode==='off' ? '' : '<sup>°C</sup>');
+  $('#curT').textContent = S.inside.toFixed(1) + '°';
+  $('#heatLamp').classList.toggle('on', heating);
+  $('#thermoState').textContent = S.mode==='off' ? 'frost guard only' : heating ? 'heating · ' + etaText() : 'holding';
+  $('#dial').setAttribute('aria-valuenow', S.target.toFixed(1)); $('#dial').setAttribute('aria-valuetext', S.target.toFixed(1)+' degrees');
+}
+function effTarget(){ return S.mode==='eco' ? Math.min(S.target, 17.5) : S.target; }
+function etaText(){ const m = Math.round((effTarget()-S.inside)*14); return m < 60 ? `~${Math.max(1,m)} min` : `~${(m/60).toFixed(1)} h`; }
+
+function makeKnob(node, get, set, min, max, step, sweep){
+  let last = null;
+  const angleOf = e => { const r = node.getBoundingClientRect(); const dx = e.clientX - (r.left+r.width/2), dy = e.clientY - (r.top+r.height/2); return Math.atan2(dx,-dy)*180/Math.PI; };
+  node.addEventListener('pointerdown', e => { node.setPointerCapture(e.pointerId); last = angleOf(e); e.preventDefault(); });
+  node.addEventListener('pointermove', e => { if (last === null) return; const a = angleOf(e); let d = a - last; if (d > 180) d -= 360; if (d < -180) d += 360; last = a;
+    set(clamp(get() + d/sweep*(max-min), min, max), true); });
+  const end = () => { if (last !== null){ last = null; set(Math.round(get()/step)*step, false); } };
+  node.addEventListener('pointerup', end); node.addEventListener('pointercancel', end);
+  node.addEventListener('wheel', e => { e.preventDefault(); set(clamp(Math.round((get() - Math.sign(e.deltaY)*step)/step)*step, min, max), false); }, {passive:false});
+  node.addEventListener('keydown', e => { const k = {ArrowUp:1,ArrowRight:1,ArrowDown:-1,ArrowLeft:-1}[e.key]; if (k){ e.preventDefault(); set(clamp(get()+k*step,min,max), false); }
+    if (e.key==='Home'){ e.preventDefault(); set(min,false);} if (e.key==='End'){ e.preventDefault(); set(max,false);} });
+}
+let tickAcc = 0;
+makeKnob($('#dial'), () => S.target, (v, drag) => { const before = Math.round(S.target*2); S.target = drag ? v : Math.round(v*2)/2;
+  if (Math.round(S.target*2) !== before) click(); clearScene(); renderThermo(); }, TMIN, TMAX, .5, SWEEP);
+
+/* mode switch */
+const MODES = ['off','eco','heat'];
+function setMode(m){ S.mode = m; MODES.forEach((k,i) => { const b = $('#m'+k[0].toUpperCase()+k.slice(1)); b.setAttribute('aria-pressed', k===m); if (k===m) $('#modeThumb').style.transform = `translateX(${i*100}%)`; }); renderThermo(); }
+MODES.forEach(k => $('#m'+k[0].toUpperCase()+k.slice(1)).addEventListener('click', () => { click(); clearScene(); setMode(k); }));
+
+/* ---------- floor plan ---------- */
+const plan = $('#planSvg');
+const defs = el('defs',{},plan);
+ROOMS.forEach(r => { const g = el('radialGradient',{id:'g-'+r.id, cx:r.lx, cy:r.ly, r:Math.max(r.w,r.h)*.75, gradientUnits:'userSpaceOnUse'},defs);
+  el('stop',{offset:0,'stop-color':'#ffcf5a','stop-opacity':.95},g); el('stop',{offset:.55,'stop-color':'#ffe39a','stop-opacity':.5},g); el('stop',{offset:1,'stop-color':'#fff3cf','stop-opacity':.15},g); });
+ROOMS.forEach(r => {
+  const g = el('g',{class:'room',id:'room-'+r.id, tabindex:0, role:'button', 'aria-label':r.name+' light'},plan);
+  el('rect',{class:'fl',x:r.x,y:r.y,width:r.w,height:r.h},g);
+  r.glow = el('rect',{class:'glow',x:r.x,y:r.y,width:r.w,height:r.h,fill:`url(#g-${r.id})`},g);
+  furniture(r, g);
+  r.lampEls = [];
+  const n = r.lamps; for (let i=0;i<n;i++){ const lx = n===1 ? r.lx : r.lx + (i-(n-1)/2)*Math.min(34, r.w/(n+1)); const c = el('circle',{cx:lx, cy:r.ly, r:3.5, fill:'#232323'},g); r.lampEls.push(c); }
+  el('text',{x:r.x+8,y:r.y+16},g).textContent = r.name;
+  r.wtxt = el('text',{class:'w',x:r.x+8,y:r.y+27},g);
+  r.g = g;
+  g.addEventListener('click', () => { toggle(r); selectRoom(r); });
+  g.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(r); selectRoom(r); } });
+});
+// walls
+const walls = el('g',{fill:'none',stroke:'#232323','stroke-width':5,'stroke-linecap':'square'},plan);
+el('rect',{x:0,y:0,width:400,height:280},walls);
+[['M230 0V34','M230 60V150','M0 150H40','M70 150H150','M150 150V280','M230 150V200','M230 230V280','M230 120H258','M284 120H400','M300 120V140','M300 170V280','M300 200H320','M350 200H400'].join(' ')]
+  .forEach(d => el('path',{d, 'stroke-width':3.5},walls));
+// windows
+const win = el('g',{stroke:'#232323','stroke-width':1.2},plan);
+[[30,0,110,0],[270,0,370,0],[0,40,0,120],[0,190,0,250],[400,140,400,180],[400,220,400,260]].forEach(([x1,y1,x2,y2]) => { el('line',{x1,y1,x2,y2,stroke:'#f1f1ee','stroke-width':5},win); el('line',{x1,y1,x2,y2},win); });
+el('text',{x:398,y:-0,'text-anchor':'end','font-size':7,'font-family':'DM Mono,monospace',fill:'#6d6d69',transform:'translate(0 290)'},plan).textContent = '0 — 2 m';
+function furniture(r, g){
+  const f = el('g',{class:'furn'},g); const R = (x,y,w,h,rx=2) => el('rect',{x,y,width:w,height:h,rx},f);
+  if (r.id==='living'){ R(24,92,110,34,4); R(24,82,110,12,3); R(150,100,50,26,13); R(168,32,40,20); el('circle',{cx:60,cy:48,r:14},f); }
+  if (r.id==='kitchen'){ R(240,8,152,18); R(372,8,20,100); R(270,56,70,34,3); }
+  if (r.id==='bed'){ R(20,190,90,70,3); R(24,194,38,16,3); R(66,194,38,16,3); R(118,248,24,24); }
+  if (r.id==='study'){ R(158,236,64,22); el('circle',{cx:190,cy:228,r:8},f); R(158,168,12,50); }
+  if (r.id==='bath'){ R(340,128,52,26,10); el('circle',{cx:316,cy:186,r:8},f); R(356,176,36,18,6); }
+  if (r.id==='guest'){ R(318,222,50,46,3); }
+  if (r.id==='hall'){ R(236,250,58,22,2); }
+}
+function renderRooms(){
+  let on = 0, w = 0;
+  ROOMS.forEach(r => { const lvl = r.on ? r.b/100 : 0; r.glow.style.opacity = lvl ? .25 + lvl*.75 : 0;
+    r.lampEls.forEach(c => { c.setAttribute('fill', r.on ? '#f0561d' : '#232323'); c.setAttribute('r', r.on ? 4.5 : 3.5); });
+    r.wtxt.textContent = r.on ? `${r.b}% · ${Math.round(r.watts*r.b/100)} W` : 'off';
+    r.g.classList.toggle('sel', r===sel); r.g.setAttribute('aria-pressed', r.on);
+    if (r.on){ on++; w += r.watts*r.b/100; }
+    if (r.rocker) { r.rocker.setAttribute('aria-pressed', r.on); r.nameBtn.setAttribute('aria-current', r===sel); r.sub.textContent = r.on ? `${r.b}% · ${r.lamps} lamp${r.lamps>1?'s':''}` : `off · ${r.lamps} lamp${r.lamps>1?'s':''}`; }
+  });
+  $('#lightsSum').textContent = `${on} of ${ROOMS.length} on`; $('#lightsW').textContent = `Lighting ${Math.round(w)} W`;
+  renderDim();
+}
+function toggle(r, v){ r.on = v === undefined ? !r.on : v; click(); clearScene(); renderRooms(); }
+function selectRoom(r){ sel = r; renderRooms(); }
+
+/* switches list */
+const ul = $('#switches');
+ROOMS.forEach(r => { const li = document.createElement('li');
+  const nb = document.createElement('button'); nb.className = 'rname'; nb.id = 'sel-'+r.id; nb.innerHTML = `${r.name}<small></small>`; nb.addEventListener('click', () => selectRoom(r));
+  const rk = document.createElement('button'); rk.className = 'rocker'; rk.id = 'sw-'+r.id; rk.setAttribute('aria-label', r.name + ' light switch'); rk.addEventListener('click', () => toggle(r));
+  li.append(nb, rk); ul.appendChild(li); r.rocker = rk; r.nameBtn = nb; r.sub = nb.querySelector('small'); });
+
+/* dimmer */
+(function(){ const g = $('#dimTicks'); for (let i=0;i<=10;i++){ const a = -135 + i*27; const [x1,y1] = polar(a,42), [x2,y2] = polar(a, i%5===0?52:48); el('line',{x1,y1,x2,y2,stroke:'#232323','stroke-width':i%5===0?1.5:.8},g); } })();
+function renderDim(){ $('#dimRot').setAttribute('transform', `rotate(${-135 + sel.b/100*270})`); $('#dimVal').innerHTML = (sel.on ? sel.b : 0) + '<small>%</small>';
+  $('#dimName').textContent = sel.name; $('#dimRoom').textContent = `${sel.name} · ${sel.lamps} lamp${sel.lamps>1?'s':''} · ${sel.on?'on':'off'}`;
+  $('#dimKnob').setAttribute('aria-valuenow', sel.b); }
+makeKnob($('#dimKnob'), () => sel.b, (v, drag) => { const before = Math.round(sel.b/5); sel.b = drag ? v : Math.round(v); if (Math.round(sel.b/5)!==before) click(.4);
+  sel.b = Math.round(sel.b); if (!sel.on && sel.b > 0) sel.on = true; if (sel.b === 0) sel.on = false; clearScene(); renderRooms(); }, 0, 100, 5, 270);
+
+/* ---------- scenes ---------- */
+const SCENES = {
+  Morning:{ txt:'Kitchen & hall bright, bathroom warm, heating to 20.5°.', rooms:{kitchen:[1,100],hall:[1,80],bath:[1,90],living:[1,50],bed:[0],study:[0],guest:[0]}, t:20.5, mode:'heat' },
+  Evening:{ txt:'Living room low and warm, study reading lamp, 21° until eleven.', rooms:{living:[1,45],kitchen:[1,35],study:[1,70],hall:[1,25],bath:[0],bed:[1,20],guest:[0]}, t:21, mode:'heat' },
+  Night:{ txt:'Everything off except a 10% hall night-light. Eco setback to 17.5°.', rooms:{living:[0],kitchen:[0],study:[0],hall:[1,10],bath:[0],bed:[0],guest:[0]}, t:17.5, mode:'eco' },
+  Away:{ txt:'All lights off, heating on frost guard. Presence lighting will randomise after dark.', rooms:{living:[0],kitchen:[0],study:[0],hall:[0],bath:[0],bed:[0],guest:[0]}, t:16, mode:'off' },
+};
+Object.keys(SCENES).forEach(name => { const b = $('#s'+name); b.addEventListener('click', () => {
+  const sc = SCENES[name]; ROOMS.forEach(r => { const v = sc.rooms[r.id]; r.on = !!v[0]; if (v[1]) r.b = v[1]; });
+  S.target = sc.t; setMode(sc.mode); S.scene = name; click(1);
+  document.querySelectorAll('.key').forEach(k => k.setAttribute('aria-pressed', k===b)); $('#sceneName').textContent = name.toLowerCase(); $('#sceneTxt').textContent = sc.txt;
+  renderRooms(); renderThermo(); }); });
+function clearScene(){ if (!S.scene) return; S.scene = null; document.querySelectorAll('.key').forEach(k => k.setAttribute('aria-pressed', false)); $('#sceneName').textContent = 'manual'; }
+
+/* ---------- click sound (tiny, optional) ---------- */
+let ac = null;
+function click(g=.7){ try{ if (!ac){ const A = window.AudioContext||window.webkitAudioContext; if (!A) return; ac = new A(); }
+  const t = ac.currentTime, len = .018; const b = ac.createBuffer(1, ac.sampleRate*len, ac.sampleRate); const d = b.getChannelData(0);
+  for (let i=0;i<d.length;i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/d.length, 6);
+  const s = ac.createBufferSource(); s.buffer = b; const f = ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value = 2400; const gn = ac.createGain(); gn.gain.value = .25*g;
+  s.connect(f); f.connect(gn); gn.connect(ac.destination); s.start(t); }catch(_){} }
+
+/* ---------- energy ---------- */
+const meter = $('#meter');
+(function(){ const g = el('g',{},meter); const MAXW = 4000;
+  el('path',{d:'M-84 0 A84 84 0 0 1 84 0', fill:'none', stroke:'#232323','stroke-width':1},g);
+  for (let w=0; w<=MAXW; w+=250){ const a = -90 + w/MAXW*180; const major = w%1000===0; const [x1,y1] = polar(a,84), [x2,y2] = polar(a, major?72:77);
+    el('line',{x1,y1,x2,y2,stroke: w>=3000 ? '#f0561d':'#232323','stroke-width':major?1.6:.8},g);
+    if (major){ const [tx,ty] = polar(a,60); el('text',{x:tx,y:ty+3,'text-anchor':'middle','font-size':9,'font-family':'DM Mono,monospace',fill:'#6d6d69'},g).textContent = w/1000; } }
+  el('text',{x:0,y:-30,'text-anchor':'middle','font-size':8,'font-family':'Archivo,sans-serif','font-weight':700,'letter-spacing':1,fill:'#232323'},g).textContent = 'kW';
+  el('line',{id:'needle',x1:0,y1:8,x2:0,y2:-80,stroke:'#f0561d','stroke-width':2,'stroke-linecap':'round'},meter);
+  el('circle',{r:6,fill:'#232323'},meter); })();
+const now = new Date(); const HOUR = now.getHours();
+const HIST = Array.from({length:24},(_,h) => { const base = .18 + .05*Math.sin(h*1.3);
+  const morn = Math.exp(-Math.pow((h-7.5)/1.3,2))*.9, eve = Math.exp(-Math.pow((h-18.5)/1.8,2))*1.4; return +(base+morn+eve).toFixed(2); });
+let liveKwh = 0, liveStart = performance.now();
+function power(){
+  let w = 165; // fridge, router, standby
+  ROOMS.forEach(r => { if (r.on) w += r.watts*r.b/100; });
+  if (S.mode !== 'off' && effTarget() > S.inside + .05) w += 1400 + (effTarget()-S.inside)*300;
+  return Math.min(w, 3900);
+}
+function drawChart(){
+  const svg = $('#chart'); const W = svg.clientWidth || 400, H = 150; svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const vals = HIST.map((v,h) => h < HOUR ? v : h === HOUR ? liveKwh : 0); const max = 2.2;
+  const bw = W/24; let o = '';
+  for (let k=0;k<=2;k++){ const y = 128 - k/2*110; o += `<line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="#d2d2cd" stroke-width="1"/><text x="${W}" y="${y-3}" text-anchor="end" font-size="9" font-family="DM Mono,monospace" fill="#6d6d69">${(k*1.1).toFixed(1)}</text>`; }
+  vals.forEach((v,h) => { const bh = v/max*110; const x = h*bw + bw*.3;
+    if (h < HOUR) o += `<rect x="${x}" y="${128-bh}" width="${bw*.4}" height="${bh}" fill="#232323"/>`;
+    else if (h === HOUR) o += `<rect x="${x-bw*.05}" y="${128-bh}" width="${bw*.5}" height="${Math.max(1,bh)}" fill="#f0561d"/><circle cx="${x+bw*.2}" cy="${120-bh}" r="3" fill="#f0561d"/>`;
+    else { const pv = HIST[h]*.9; o += `<rect x="${x}" y="${128-pv/max*110}" width="${bw*.4}" height="${pv/max*110}" fill="none" stroke="#bdbdb7" stroke-dasharray="2 2"/>`; }
+    if (h % 6 === 0) o += `<text x="${x}" y="146" font-size="9" font-family="DM Mono,monospace" fill="#6d6d69">${String(h).padStart(2,'0')}</text>`; });
+  svg.innerHTML = o;
+  const total = HIST.slice(0,HOUR).reduce((a,b)=>a+b,0) + liveKwh;
+  $('#kwhToday').textContent = `${total.toFixed(1)} kWh · £${(total*.245).toFixed(2)}`;
+}
+// seed live bar with the part of the hour already elapsed
+liveKwh = HIST[HOUR] * now.getMinutes()/60;
+
+/* ---------- clock ---------- */
+(function(){ const g = $('#cTicks'); for (let i=0;i<60;i++){ const a = i*6; const major = i%5===0; const [x1,y1] = polar(a,44), [x2,y2] = polar(a, major?38:42);
+  el('line',{x1,y1,x2,y2,stroke:'#fff','stroke-width':major?1.8:.6},g); } })();
+function renderClock(){ const d = new Date(); const s = d.getSeconds() + (reduce ? 0 : d.getMilliseconds()/1000), m = d.getMinutes() + s/60, h = d.getHours()%12 + m/60;
+  $('#hS').setAttribute('transform', `rotate(${s*6})`); $('#hM').setAttribute('transform', `rotate(${m*6})`); $('#hH').setAttribute('transform', `rotate(${h*30})`);
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  $('#date').innerHTML = `<b>${days[d.getDay()]}</b>${d.getDate()} ${months[d.getMonth()]}<br>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+/* ---------- loop ---------- */
+let lastT = performance.now(), chartAcc = 0;
+function loop(t){
+  const dt = Math.min(.1,(t-lastT)/1000); lastT = t;
+  // thermal model: accelerated x60 so you can see it move
+  const tgt = S.mode==='off' ? 14 : effTarget(); const heating = S.mode!=='off' && tgt > S.inside + .05;
+  S.inside += heating ? dt*.035 : (S.inside > tgt ? -dt*.02 : 0) ; if (!heating && Math.abs(S.inside - tgt) < .05 && S.mode!=='off') S.inside = tgt;
+  if (S.mode==='off') S.inside = Math.max(14, S.inside - dt*.015);
+  const p = power(); liveKwh += p/1000 * dt/60; // accelerated: 1 s = 1 min
+  S.needle += (p - S.needle) * (reduce ? 1 : 1 - Math.exp(-dt*4));
+  $('#needle').setAttribute('transform', `rotate(${-90 + S.needle/4000*180})`);
+  $('#watts').innerHTML = Math.round(S.needle).toLocaleString('en-GB') + '<small> W now</small>';
+  chartAcc += dt; if (chartAcc > .5){ chartAcc = 0; drawChart(); renderThermo(); }
+  renderClock(); requestAnimationFrame(loop);
+}
+addEventListener('resize', drawChart);
+setMode('heat'); renderRooms(); renderThermo(); drawChart(); renderClock();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

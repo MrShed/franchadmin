@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Night Owl Books</title>
+<meta name="description" content="A lamplit oxblood-and-forest-green site for a fictional late-night independent bookshop, with a browseable 3D bookshelf whose spines pull out to reveal covers, staff picks and events.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --forest:#15291f; --forest2:#1f3a2c; --moss:#2e5240; --ox:#5e1a22; --ox2:#7d2530; --brass:#c9a45c; --brass2:#e6cc8e; --page:#eadcc0; --ink:#0d1712;
+  --fell:"IM Fell English","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --fellsc:"IM Fell English SC","IM Fell English",Georgia,serif;
+  --sans:"Alegreya Sans","Gill Sans","Trebuchet MS",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--forest);color:var(--page);font-family:var(--sans);font-size:18px;line-height:1.6;overflow-x:hidden}
+a{color:var(--brass2)}
+:focus-visible{outline:2px solid var(--brass2);outline-offset:3px}
+.sc{font-family:var(--fellsc);letter-spacing:.08em;color:var(--brass)}
+.back{position:fixed;top:14px;left:16px;z-index:40;font-family:var(--fell);font-style:italic;font-size:17px;color:var(--brass2);text-decoration:none;padding:6px 14px;border:1px solid rgba(201,164,92,.5);background:rgba(21,41,31,.85)}
+.back:hover{background:var(--ox)}
+/* hero */
+.hero{position:relative;min-height:100vh;overflow:hidden;display:grid;grid-template-columns:1.2fr .8fr;align-items:center;padding:80px clamp(16px,6vw,96px) 60px;gap:30px;
+  background-color:var(--ox);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='160' viewBox='0 0 120 160'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='.22' stroke-width='2'%3E%3Cpath d='M60 10 C80 40 100 50 100 80 C100 110 80 120 60 150 C40 120 20 110 20 80 C20 50 40 40 60 10Z'/%3E%3Cpath d='M60 40 C70 60 80 65 80 80 C80 95 70 100 60 120 C50 100 40 95 40 80 C40 65 50 60 60 40Z'/%3E%3Ccircle cx='0' cy='0' r='10'/%3E%3Ccircle cx='120' cy='0' r='10'/%3E%3Ccircle cx='0' cy='160' r='10'/%3E%3Ccircle cx='120' cy='160' r='10'/%3E%3C/g%3E%3C/svg%3E")}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle 520px at var(--lx,70%) var(--ly,35%),rgba(255,210,130,.35),rgba(255,180,90,.12) 40%,rgba(13,23,18,.82) 75%);transition:background .1s}
+.hero > *{position:relative;z-index:1}
+.hero h1{font-family:var(--fell);font-weight:400;font-size:clamp(64px,9vw,148px);line-height:.88;margin:14px 0 22px;color:var(--page);text-shadow:0 2px 30px rgba(0,0,0,.5)}
+.hero h1 i{color:var(--brass2)}
+.hero p{max-width:40ch;margin:0 0 26px;font-size:20px;color:#e4d4b4}
+.open{display:inline-flex;gap:12px;align-items:center;border:1px solid var(--brass);padding:10px 16px;font-family:var(--fell);font-style:italic;font-size:19px}
+.open i{width:9px;height:9px;border-radius:50%;background:#e8b44a;box-shadow:0 0 10px #e8b44a;display:inline-block}
+.lampbox{justify-self:center;width:min(360px,80vw)}
+.lampbox svg{width:100%;height:auto;overflow:visible}
+.blink{animation:blink 6s infinite}
+@keyframes blink{0%,46%,50%,100%{transform:scaleY(1)}48%{transform:scaleY(.1)}}
+/* shelf */
+.shelfsec{background:linear-gradient(180deg,var(--forest),var(--forest2));padding:clamp(70px,9vw,120px) clamp(16px,5vw,72px);overflow:hidden}
+.wrap{max-width:1240px;margin:0 auto}
+h2{font-family:var(--fell);font-weight:400;font-size:clamp(44px,6vw,86px);line-height:.95;margin:8px 0 18px}
+h2 i{color:var(--brass2)}
+.intro{max-width:56ch;color:#cdbf9f;margin:0 0 40px}
+.shelf-grid{display:grid;grid-template-columns:1fr 340px;gap:clamp(24px,4vw,56px);align-items:start}
+.case{background:linear-gradient(180deg,#3a1f14,#2a150d);padding:18px 18px 4px;border:10px solid #4a2a1a;border-image:linear-gradient(180deg,#5e3822,#2e180e) 1;box-shadow:inset 0 0 60px rgba(0,0,0,.7),0 30px 60px rgba(0,0,0,.4);perspective:1400px;perspective-origin:50% 30%}
+.row{display:flex;align-items:flex-end;gap:2px;height:240px;padding:0 6px;transform-style:preserve-3d;position:relative;border-bottom:16px solid #5a341f;box-shadow:0 10px 12px -6px rgba(0,0,0,.6);margin-bottom:18px}
+.row::after{content:"";position:absolute;left:-6px;right:-6px;bottom:-16px;height:16px;background:linear-gradient(180deg,#7a4a2c,#4a2a1a)}
+.book{position:relative;flex:none;transform-style:preserve-3d;cursor:pointer;border:0;padding:0;background:none;transition:transform .7s cubic-bezier(.2,.8,.2,1);transform-origin:50% 100%}
+.book .spine,.book .cover{position:absolute;top:0;height:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.book .spine{left:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:10px 0;box-shadow:inset 3px 0 6px rgba(255,255,255,.12),inset -4px 0 8px rgba(0,0,0,.45)}
+.book .spine span{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--fell);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:78%;letter-spacing:.03em}
+.book .spine b{display:block;width:60%;height:3px;background:currentColor;opacity:.7}
+.book .cover{left:100%;width:var(--depth,150px);transform-origin:0 50%;transform:rotateY(90deg);padding:14px 12px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;box-shadow:inset 6px 0 10px rgba(0,0,0,.35)}
+.book .cover strong{display:block;font-weight:400;margin:0;font-family:var(--fell);font-weight:400;font-size:19px;line-height:1.05}
+.book .cover small{font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
+.book:hover{transform:translateY(-8px) translateZ(14px)}
+.book.out{transform:translateZ(160px) translateY(-14px) rotateY(-90deg)}
+.book:focus-visible{outline:none}
+.book:focus-visible .spine{outline:2px solid var(--brass2);outline-offset:2px}
+.card{position:sticky;top:24px;background:var(--page);color:var(--ink);padding:26px 24px;box-shadow:0 20px 50px rgba(0,0,0,.5);background-image:linear-gradient(90deg,rgba(94,26,34,.08) 1px,transparent 1px);background-size:100% 100%}
+.card .sc{color:var(--ox2)}
+.card h3{font-family:var(--fell);font-weight:400;font-size:34px;line-height:1.02;margin:8px 0 4px}
+.card .by{font-style:italic;font-family:var(--fell);font-size:19px;color:#4a3a30;margin-bottom:14px}
+.card p{margin:0 0 14px;font-size:17px}
+.card .note{border-left:3px solid var(--ox);padding-left:12px;font-family:var(--fell);font-style:italic;color:#3a2a22}
+.card .row2{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid rgba(13,23,18,.2);padding-top:14px;margin-top:6px}
+.card .price{font-family:var(--fell);font-size:28px}
+.card button{background:var(--ox);color:var(--page);border:0;padding:12px 16px;font-family:var(--sans);font-weight:700;font-size:14px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.card button:hover{background:var(--ox2)}
+.card button[aria-pressed="true"]{background:var(--moss)}
+.hint{font-family:var(--fell);font-style:italic;color:#bfae88;margin-top:14px;font-size:17px}
+.shelf-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.shelf-filter button{background:transparent;border:1px solid rgba(201,164,92,.5);color:var(--page);padding:7px 14px;font-family:var(--fell);font-size:17px;cursor:pointer}
+.shelf-filter button[aria-pressed="true"]{background:var(--brass);color:var(--ink);border-color:var(--brass)}
+/* picks */
+.picks{background:var(--ox);padding:clamp(70px,9vw,120px) clamp(16px,5vw,72px);position:relative}
+.picks::before{content:"";position:absolute;inset:0;background:radial-gradient(80% 60% at 50% 0%,rgba(255,200,120,.12),transparent 70%);pointer-events:none}
+.pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;position:relative}
+.pick{background:#4a141b;border:1px solid rgba(201,164,92,.35);padding:26px 24px 22px;position:relative}
+.pick .who{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.pick .who svg{width:52px;height:52px;flex:none}
+.pick .who b{font-family:var(--fell);font-weight:400;font-size:22px;display:block;line-height:1.1}
+.pick .who span{font-size:14px;color:#cdb68a}
+.pick h3{font-family:var(--fell);font-style:italic;font-weight:400;font-size:28px;margin:0 0 8px;line-height:1.1;color:var(--brass2)}
+.pick p{margin:0;color:#e2cfae;font-size:17px}
+/* events */
+.events{background:var(--forest);padding:clamp(70px,9vw,120px) clamp(16px,5vw,72px)}
+.ev{display:grid;grid-template-columns:110px 1fr auto;gap:26px;align-items:center;padding:22px 0;border-top:1px solid rgba(201,164,92,.3)}
+.ev .date{font-family:var(--fell);text-align:center;border:1px solid var(--brass);padding:8px 0}
+.ev .date b{display:block;font-size:40px;line-height:1;font-weight:400;color:var(--brass2)}
+.ev .date span{font-family:var(--fellsc);font-size:15px;letter-spacing:.1em}
+.ev h3{font-family:var(--fell);font-weight:400;font-size:28px;margin:0 0 4px;line-height:1.1}
+.ev p{margin:0;color:#c9bc9c;font-size:17px;max-width:60ch}
+.ev .rsvp{background:transparent;color:var(--page);border:1px solid var(--brass);padding:10px 16px;font-family:var(--fell);font-style:italic;font-size:18px;cursor:pointer;white-space:nowrap}
+.ev .rsvp:hover,.ev .rsvp[aria-pressed="true"]{background:var(--brass);color:var(--ink)}
+footer{background:var(--ink);padding:44px clamp(16px,5vw,72px) 60px;color:#a99a7c;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:26px;font-size:16px}
+footer b{font-family:var(--fell);font-weight:400;font-size:30px;color:var(--page);display:block;margin-bottom:6px}
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr}
+  .lampbox{order:-1;width:min(240px,60vw)}
+  .shelf-grid{grid-template-columns:1fr}
+  .card{position:relative;top:0}
+  .pick-grid{grid-template-columns:1fr}
+  footer{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .ev{grid-template-columns:80px 1fr;gap:16px}
+  .ev .rsvp{grid-column:2;justify-self:start}
+  .row{height:200px}
+}
+@media (prefers-reduced-motion:reduce){ .book{transition:none} .blink{animation:none} }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<header class="hero" id="hero">
+  <div>
+    <div class="sc">Est. 1987 · 14 Tallow Lane · Open till midnight</div>
+    <h1>Night Owl<br><i>Books</i></h1>
+    <p>A bookshop for people who read past their bedtime. Three floors of creaking boards, green-shaded lamps, a cat named Marginalia, and a kettle that is always, somehow, just boiled.</p>
+    <span class="open" id="openState"><i></i><span>The lamps are lit</span></span>
+  </div>
+  <div class="lampbox">
+    <svg viewBox="0 0 300 420" role="img" aria-label="An owl perched on a green library lamp">
+      <defs>
+        <radialGradient id="bulb" cx="50%" cy="0%" r="100%"><stop offset="0" stop-color="#fff2c4"/><stop offset=".5" stop-color="#f6c96a" stop-opacity=".7"/><stop offset="1" stop-color="#f6c96a" stop-opacity="0"/></radialGradient>
+        <linearGradient id="shade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#2e6b4a"/><stop offset="1" stop-color="#16402b"/></linearGradient>
+        <linearGradient id="brass" x1="0" x2="1"><stop offset="0" stop-color="#8a6a2c"/><stop offset=".5" stop-color="#f0d38c"/><stop offset="1" stop-color="#8a6a2c"/></linearGradient>
+      </defs>
+      <path d="M70 272 L230 272 L300 400 L0 400Z" fill="url(#bulb)" opacity=".38"/>
+      <!-- books under lamp -->
+      <rect x="40" y="370" width="220" height="22" fill="#5e1a22"/><rect x="56" y="350" width="190" height="20" fill="#2e5240"/><rect x="48" y="392" width="236" height="18" fill="#c9a45c"/>
+      <!-- lamp -->
+      <rect x="138" y="240" width="10" height="112" fill="url(#brass)"/>
+      <ellipse cx="143" cy="352" rx="44" ry="8" fill="url(#brass)"/>
+      <path d="M60 250 Q150 196 240 250 L230 270 L70 270Z" fill="url(#shade)" stroke="#0d1712" stroke-width="2"/>
+      <path d="M78 244 Q150 206 222 244" stroke="#8cc7a2" stroke-width="3" fill="none" opacity=".5"/>
+      <rect x="70" y="268" width="160" height="6" fill="url(#brass)"/>
+      <!-- owl -->
+      <g transform="translate(150,150)">
+        <path d="M-52 60 C-66 10 -50 -50 0 -60 C50 -50 66 10 52 60 Z" fill="#6b4a2e" stroke="#0d1712" stroke-width="2"/>
+        <path d="M-50 -46 L-38 -76 L-22 -54Z M50 -46 L38 -76 L22 -54Z" fill="#6b4a2e" stroke="#0d1712" stroke-width="2"/>
+        <path d="M-30 20 C-30 50 30 50 30 20 C30 0 -30 0 -30 20Z" fill="#c9a07a"/>
+        <g fill="none" stroke="#6b4a2e" stroke-width="2"><path d="M-20 18 q5 5 10 0 M0 18 q5 5 10 0 M-14 30 q5 5 10 0 M6 30 q5 5 10 0"/></g>
+        <circle cx="-22" cy="-22" r="22" fill="#eadcc0" stroke="#0d1712" stroke-width="2"/>
+        <circle cx="22" cy="-22" r="22" fill="#eadcc0" stroke="#0d1712" stroke-width="2"/>
+        <g class="blink" style="transform-origin:0 -22px"><circle id="eyeL" cx="-22" cy="-22" r="10" fill="#0d1712"/><circle id="eyeR" cx="22" cy="-22" r="10" fill="#0d1712"/></g>
+        <circle cx="-19" cy="-26" r="3" fill="#fff"/><circle cx="25" cy="-26" r="3" fill="#fff"/>
+        <path d="M-6 -6 L0 8 L6 -6Z" fill="#e6b44a" stroke="#0d1712" stroke-width="1.5"/>
+        <path d="M-20 62 l-4 10 M-12 62 l0 12 M12 62 l0 12 M20 62 l4 10" stroke="#e6b44a" stroke-width="4" stroke-linecap="round"/>
+        <!-- spectacles -->
+        <g fill="none" stroke="#c9a45c" stroke-width="2.5"><circle cx="-22" cy="-22" r="16"/><circle cx="22" cy="-22" r="16"/><path d="M-6 -24 Q0 -30 6 -24"/></g>
+      </g>
+    </svg>
+  </div>
+</header>
+
+<section class="shelfsec" id="shelf">
+  <div class="wrap">
+    <div class="sc">The Front Room</div>
+    <h2>Pull a book <i>off the shelf</i></h2>
+    <p class="intro">This is the actual front-room case, as of this morning. Click or tap a spine (or tab to it and press Enter) to take the book down and read what we think of it.</p>
+    <div class="shelf-filter" role="group" aria-label="Filter shelf" id="filter">
+      <button id="sf-all" data-g="all" aria-pressed="true">Everything</button>
+      <button id="sf-novel" data-g="novel" aria-pressed="false">Novels</button>
+      <button id="sf-poetry" data-g="poetry" aria-pressed="false">Poetry</button>
+      <button id="sf-night" data-g="night" aria-pressed="false">Night &amp; nature</button>
+      <button id="sf-mystery" data-g="mystery" aria-pressed="false">Mysteries</button>
+    </div>
+    <div class="shelf-grid">
+      <div class="case" id="case"></div>
+      <aside class="card" id="card" aria-live="polite"></aside>
+    </div>
+  </div>
+</section>
+
+<section class="picks" id="picks">
+  <div class="wrap">
+    <div class="sc">Staff Picks · October</div>
+    <h2>What we're <i>pressing on people</i></h2>
+    <div class="pick-grid" id="pickGrid"></div>
+  </div>
+</section>
+
+<section class="events" id="events">
+  <div class="wrap">
+    <div class="sc">After Hours</div>
+    <h2>Readings by <i>lamplight</i></h2>
+    <div id="evList"></div>
+  </div>
+</section>
+
+<footer>
+  <div><b>Night Owl Books</b>14 Tallow Lane, beneath the clock. Second-hand upstairs, new downstairs, poetry in the cupboard under the stairs.</div>
+  <div><span class="sc">Hours</span><br>Tues – Sun · 11 am to midnight<br>Mondays we sleep.</div>
+  <div><span class="sc">Membership</span><br>£30 a year: 10% off, a mug on the hook by the kettle, and first dibs on signed copies.</div>
+</footer>
+
+<script>
+(function(){
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // lamp light follows pointer in hero; owl eyes follow
+  var hero=document.getElementById('hero'), eL=document.getElementById('eyeL'), eR=document.getElementById('eyeR');
+  hero.addEventListener('pointermove',function(e){
+    var r=hero.getBoundingClientRect(); var x=(e.clientX-r.left)/r.width*100, y=(e.clientY-r.top)/r.height*100;
+    if(!reduce){ hero.style.setProperty('--lx',x+'%'); hero.style.setProperty('--ly',y+'%'); }
+    var svg=eL.ownerSVGElement.getBoundingClientRect(); var cx=svg.left+svg.width/2, cy=svg.top+svg.height*.3;
+    var a=Math.atan2(e.clientY-cy,e.clientX-cx), d=Math.min(6,Math.hypot(e.clientX-cx,e.clientY-cy)/40);
+    eL.setAttribute('cx',(-22+Math.cos(a)*d).toFixed(1)); eL.setAttribute('cy',(-22+Math.sin(a)*d).toFixed(1));
+    eR.setAttribute('cx',(22+Math.cos(a)*d).toFixed(1)); eR.setAttribute('cy',(-22+Math.sin(a)*d).toFixed(1));
+  });
+  (function(){ var h=new Date().getHours(), d=new Date().getDay(); var open=d!==1 && (h>=11); var s=document.getElementById('openState');
+    s.querySelector('span').textContent= open ? 'Open now · lamps lit until midnight' : (d===1?'Closed Mondays · we sleep':'Opens at 11 am · kettle on soon');
+    if(!open) s.querySelector('i').style.cssText='background:#6b5a3a;box-shadow:none'; })();
+
+  var B=[
+    {t:'The Lantern Keeper',a:'Ilse Marwood',g:'novel',c:['#5e1a22','#e6cc8e'],w:38,h:206,p:'£16.99',d:'A lighthouse on a fogbound island, a keeper who has not spoken in nine years, and the girl who rows out with his post.',n:'Read it in one sitting by the fire. Sorry, Tuesday.',who:'Dora'},
+    {t:'Owls of the Northern Wood',a:'R. H. Penhallow',g:'night',c:['#2e5240','#eadcc0'],w:46,h:224,p:'£24.00',d:'Thirty years of field notes on tawny, barn and long-eared owls, with the author\'s own pencil plates.',n:'The reason for our name, more or less.',who:'Ansel'},
+    {t:'Small Hours',a:'Temi Adeyemi-Clarke',g:'poetry',c:['#c9a45c','#15291f'],w:22,h:180,p:'£10.99',d:'Poems written between 2 and 5 a.m. over one sleepless year as a junior doctor.',n:'"Night shift" is the best poem I read this year.',who:'Dora'},
+    {t:'The Glasshouse Murders',a:'Vivienne Arkwright',g:'mystery',c:['#1b2f3a','#c9a45c'],w:40,h:198,p:'£9.99',d:'Kew, 1932: a botanist found dead among the orchids, and a clue written in Latin binomials.',n:'Solved it on page 212. Wrong, of course.',who:'Marcus'},
+    {t:'A Field Guide to Moths',a:'Harriet Ng',g:'night',c:['#eadcc0','#5e1a22'],w:32,h:210,p:'£18.50',d:'Every British moth that visits a lit window. Surprisingly moving.',n:'Leave the porch light on. You\'ll see.',who:'Ansel'},
+    {t:'Winter Orchard',a:'Jonah Treves',g:'novel',c:['#7d2530','#eadcc0'],w:44,h:214,p:'£17.99',d:'Three generations of apple growers and one terrible frost.',n:'Smells like woodsmoke. That\'s not how books work, and yet.',who:'Marcus'},
+    {t:'Nocturnes',a:'Selected Poems, ed. P. Oyelaran',g:'poetry',c:['#15291f','#e6cc8e'],w:28,h:190,p:'£12.00',d:'Two centuries of poems about the night, from Clare to Carson.',n:'Keep it on your nightstand. Obviously.',who:'Dora'},
+    {t:'Inspector Fenn & the Clockmaker',a:'Gerald Oakes',g:'mystery',c:['#3a2a44','#e6cc8e'],w:36,h:196,p:'£8.99',d:'The fourth Fenn: a clock that strikes thirteen and a very punctual corpse.',n:'Best in the series. Fight me.',who:'Marcus'},
+    {t:'The Salt Road',a:'Aurelie Kasprzak',g:'novel',c:['#c9a45c','#5e1a22'],w:48,h:220,p:'£19.99',d:'A caravan crosses the Sahara in 1911 carrying a stolen map and a pregnant widow.',n:'Big, generous, sandy. Book-club gold.',who:'Dora'},
+    {t:'Stargazing Without a Telescope',a:'Priya Venkataraman',g:'night',c:['#1f3a2c','#c9a45c'],w:26,h:176,p:'£11.99',d:'A patient, charming guide to the sky above a city with too many streetlights.',n:'Took it up the fire escape. Saw Saturn. Wept.',who:'Ansel'},
+    {t:'The Vicarage Poison Pen',a:'Mabel Thorne',g:'mystery',c:['#5e1a22','#c9d8c0'],w:34,h:188,p:'£8.99',d:'Anonymous letters, a church fête and a jam competition turned deadly.',n:'Cosy, sharp, very funny about vicars.',who:'Marcus'},
+    {t:'Tidewrack',a:'Oisín Fahy',g:'poetry',c:['#2e5240','#e6cc8e'],w:20,h:170,p:'£10.00',d:'A debut collection of poems from the west coast of Ireland: kelp, weather, grief.',n:'Short, salty, perfect.',who:'Dora'},
+    {t:'The Cartographer\'s Daughter',a:'Mei-Lin Cavendish',g:'novel',c:['#e6cc8e','#1f3a2c'],w:42,h:208,p:'£16.99',d:'A girl inherits a map of a city that does not exist — until she follows it.',n:'For anyone who loved Invisible Cities and wanted a plot.',who:'Ansel'},
+    {t:'Badgers at Dusk',a:'Tom Arbery',g:'night',c:['#3a2a22','#eadcc0'],w:30,h:184,p:'£14.99',d:'One man, one sett, one very long summer of sitting very still.',n:'I have never wanted to be a badger more.',who:'Ansel'},
+    {t:'Death at the Night Library',a:'Constance Reyes',g:'mystery',c:['#15291f','#e6b44a'],w:38,h:200,p:'£9.99',d:'A bookshop that opens only after dark, and a customer who never leaves.',n:'Hits a little close to home, honestly.',who:'Marcus'},
+    {t:'Lamplighter',a:'Esme Goldhawk',g:'poetry',c:['#7d2530','#e6cc8e'],w:24,h:178,p:'£11.00',d:'Poems for the lamplighters of old London, and for anyone who keeps a light on for someone.',n:'Read "Tallow" aloud at our birthday party.',who:'Dora'},
+    {t:'The Long Winter Evenings',a:'Edited by the Night Owls',g:'novel',c:['#c9a45c','#2e5240'],w:50,h:226,p:'£20.00',d:'Our own anthology: twenty-six short stories by customers, published every December.',n:'Proceeds buy books for the library in Wexham.',who:'All of us'}
+  ];
+  var caseEl=document.getElementById('case'), card=document.getElementById('card'), filter='all', outIdx=-1;
+  function pack(){
+    var avail=caseEl.clientWidth-36-12; var rows=[], cur=[], w=0;
+    B.forEach(function(b,i){ if(filter!=='all'&&b.g!==filter) return; var bw=b.w+2; if(w+bw>avail&&cur.length){ rows.push(cur); cur=[]; w=0; } cur.push(i); w+=bw; });
+    if(cur.length) rows.push(cur);
+    var small=window.innerWidth<600;
+    caseEl.innerHTML=rows.map(function(r){ return '<div class="row">'+r.map(function(i){ var b=B[i], h=small?Math.round(b.h*.82):b.h;
+      return '<button class="book'+(i===outIdx?' out':'')+'" id="book-'+i+'" data-i="'+i+'" style="width:'+b.w+'px;height:'+h+'px;--depth:'+Math.round(h*.7)+'px;color:'+b.c[1]+'" aria-label="'+b.t.replace(/"/g,'&quot;')+' by '+b.a+'">'+
+        '<span class="spine" style="background:'+b.c[0]+'"><b></b><span>'+b.t+'</span><b></b></span>'+
+        '<span class="cover" style="background:'+b.c[0]+';background-image:radial-gradient(circle at 80% 20%,'+b.c[1]+'33 0 18%,transparent 19%),linear-gradient(90deg,rgba(0,0,0,.35),transparent 12%)"><strong>'+b.t+'</strong><small>'+b.a+'</small></span></button>'; }).join('')+'</div>'; }).join('');
+  }
+  function showCard(i){
+    var b=B[i];
+    card.innerHTML='<div class="sc">'+({novel:'Fiction',poetry:'Poetry',night:'Night & Nature',mystery:'Mystery'})[b.g]+'</div><h3>'+b.t+'</h3><div class="by">'+b.a+'</div><p>'+b.d+'</p><p class="note">"'+b.n+'" — '+b.who+'</p><div class="row2"><span class="price">'+b.p+'</span><button id="hold" aria-pressed="false">Hold at the counter</button></div>';
+    document.getElementById('hold').addEventListener('click',function(){ this.setAttribute('aria-pressed','true'); this.textContent='On the hold shelf'; });
+  }
+  caseEl.addEventListener('click',function(e){ var bk=e.target.closest('.book'); if(!bk) return; var i=+bk.dataset.i;
+    caseEl.querySelectorAll('.book.out').forEach(function(x){ x.classList.remove('out'); x.setAttribute('aria-pressed','false'); });
+    if(outIdx===i){ outIdx=-1; return; }
+    outIdx=i; bk.classList.add('out'); bk.setAttribute('aria-pressed','true'); showCard(i);
+  });
+  document.getElementById('filter').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; filter=b.dataset.g; outIdx=-1;
+    this.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed',x===b); }); pack(); });
+  var rt; window.addEventListener('resize',function(){ clearTimeout(rt); rt=setTimeout(pack,150); });
+  outIdx=1; pack(); showCard(1);
+  var hint=document.createElement('p'); hint.className='hint'; hint.textContent='Tip: click the same book again to put it back.'; caseEl.parentNode.after(hint);
+
+  // staff picks
+  var picks=[
+    {n:'Dora Achterberg',r:'Owner, poetry cupboard',b:'Small Hours',q:'Temi Adeyemi-Clarke writes the way the kettle sounds at 3 a.m. — tired, warm, stubbornly hopeful. Buy two; you\'ll give one away.',col:'#c9a45c'},
+    {n:'Marcus Bellweather',r:'Crime & detection, basement',b:'Inspector Fenn & the Clockmaker',q:'Gerald Oakes is the best puzzle-setter since Christie and nobody knows it yet. Start here, then go back for the other three.',col:'#7d2530'},
+    {n:'Ansel Okonkwo',r:'Natural history, top floor',b:'A Field Guide to Moths',q:'I leave the shop window lit on purpose now. Last week we had an Elephant Hawk-moth on the glass, pink as a sugared almond.',col:'#2e5240'}
+  ];
+  document.getElementById('pickGrid').innerHTML=picks.map(function(p){ return '<article class="pick"><div class="who"><svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="25" fill="'+p.col+'"/><circle cx="26" cy="21" r="9" fill="#eadcc0"/><path d="M10 44 C14 32 38 32 42 44" fill="#eadcc0"/><circle cx="22" cy="21" r="4" fill="none" stroke="#0d1712" stroke-width="1.2"/><circle cx="31" cy="21" r="4" fill="none" stroke="#0d1712" stroke-width="1.2"/></svg><div><b>'+p.n+'</b><span>'+p.r+'</span></div></div><h3>'+p.b+'</h3><p>'+p.q+'</p></article>'; }).join('');
+
+  // events
+  var now=new Date(); function nd(days){ var d=new Date(now); d.setDate(d.getDate()+days); return d; }
+  var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var ev=[
+    {d:nd(3),t:'Ilse Marwood reads from The Lantern Keeper',p:'The lights go off; the author reads by a single storm lantern. Mulled cider from 8 pm. 40 seats.'},
+    {d:nd(9),t:'Silent Reading Night',p:'Bring a book, take a chair, say nothing for two hours. Tea and shortbread provided. Talking permitted after 10.'},
+    {d:nd(16),t:'Owl Prowl with the Wexham Wildlife Trust',p:'Meet at the shop at 9 pm; walk to the churchyard yews to listen for tawnies. Torches with red filters supplied.'},
+    {d:nd(24),t:'Poetry Under the Stairs: Open Mic',p:'Six minutes each, squeezed into the poetry cupboard. Maximum audience: eleven. Sign up at the counter.'}
+  ];
+  document.getElementById('evList').innerHTML=ev.map(function(e,i){ return '<div class="ev"><div class="date"><b>'+e.d.getDate()+'</b><span>'+M[e.d.getMonth()]+'</span></div><div><h3>'+e.t+'</h3><p>'+e.p+'</p></div><button class="rsvp" id="rsvp-'+i+'" aria-pressed="false">Save me a seat</button></div>'; }).join('');
+  document.getElementById('evList').addEventListener('click',function(e){ var b=e.target.closest('.rsvp'); if(!b) return; var on=b.getAttribute('aria-pressed')!=='true'; b.setAttribute('aria-pressed',on); b.textContent=on?'Seat saved ✓':'Save me a seat'; });
+})();
+</script>
+</body>
+</html>

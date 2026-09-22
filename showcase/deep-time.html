@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Deep Time Spiral</title>
+<meta name="description" content="Scroll through 4.54 billion years of Earth history wound into a spiral, coloured with the official ICS chronostratigraphic palette — eons, eras and periods to the latest dates, the Big Five mass extinctions, and a clock that squeezes it all into one day.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@300;500;800;900&family=Literata:ital,opsz,wght@0,7..72,300;0,7..72,400;0,7..72,600;1,7..72,300;1,7..72,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --rock:#121110;
+  --rock2:#1b1916;
+  --ink:#ece6da;
+  --mute:#9b948a;
+  --faint:#3a3631;
+  --red:#ff4b3e;
+  --disp:"Big Shoulders Display","Oswald","Arial Narrow",Impact,sans-serif;
+  --text:"Literata","Georgia","Times New Roman",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--rock)}
+body{color:var(--ink);font-family:var(--text);font-weight:300;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background:
+   radial-gradient(ellipse at 20% 0%,#2a2219 0%,transparent 50%),
+   repeating-linear-gradient(176deg,rgba(255,255,255,.012) 0 2px,transparent 2px 9px),
+   var(--rock)}
+:focus-visible{outline:2px solid #fed96a;outline-offset:3px}
+.back{position:fixed;top:14px;left:max(16px,env(safe-area-inset-left));z-index:30;font-family:var(--disp);font-weight:500;letter-spacing:.14em;text-transform:uppercase;font-size:13px;color:var(--mute);text-decoration:none}
+.back:hover{color:var(--ink)}
+.intro{min-height:88vh;display:grid;align-content:center;padding:80px max(16px,6vw) 40px;position:relative}
+.intro h1{font-family:var(--disp);font-weight:900;font-size:clamp(72px,15vw,230px);line-height:.78;margin:0;text-transform:uppercase;letter-spacing:-.01em}
+.intro h1 span{display:block;-webkit-text-stroke:1.5px var(--ink);color:transparent}
+.strata{display:flex;height:14px;margin:26px 0 0;max-width:900px}
+.strata i{display:block;height:100%}
+.intro p{max-width:40em;font-size:clamp(17px,1.5vw,20px);line-height:1.6;margin:26px 0 0;color:#d7d0c4}
+.intro .go{margin-top:28px;font-family:var(--disp);letter-spacing:.2em;text-transform:uppercase;font-size:14px;color:var(--mute)}
+
+/* scroller */
+#scrolly{position:relative;height:1100vh}
+.stage{position:sticky;top:0;height:100vh;height:100svh;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);gap:clamp(12px,3vw,48px);align-items:center;padding:0 max(16px,4vw);overflow:hidden}
+.spiralbox{position:relative;height:min(92vh,92svh);display:grid;place-items:center}
+#spiral{height:100%;width:100%;max-width:100%;display:block;overflow:visible}
+#spiral text{font-family:var(--disp);font-weight:500;fill:var(--mute);font-size:13px;letter-spacing:.06em}
+.panel{display:flex;flex-direction:column;gap:14px}
+.ma{font-family:var(--disp);font-weight:800;font-size:clamp(56px,7vw,110px);line-height:.8;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.ma small{display:block;font-size:clamp(13px,1.1vw,16px);font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:var(--mute);margin-top:10px}
+.units{display:grid;gap:6px}
+.unit{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;font-size:14px}
+.unit .k{font-family:var(--disp);font-weight:500;letter-spacing:.18em;text-transform:uppercase;font-size:11px;color:var(--mute)}
+.unit .n{font-family:var(--disp);font-weight:800;font-size:clamp(20px,2vw,28px);text-transform:uppercase;letter-spacing:.02em;display:flex;align-items:center;gap:10px;line-height:1}
+.unit .n i{width:14px;height:14px;display:inline-block;flex:none;border:1px solid rgba(0,0,0,.3)}
+.unit .r{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dayrow{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;border-top:1px solid var(--faint);padding-top:14px}
+#clock{width:clamp(92px,9vw,128px);height:auto}
+.daytime{font-family:var(--disp);font-weight:800;font-size:clamp(30px,3vw,46px);font-variant-numeric:tabular-nums;line-height:1}
+.daytime small{display:block;font-family:var(--text);font-weight:300;font-size:13px;color:var(--mute);line-height:1.4;margin-top:4px}
+.event{border-left:3px solid var(--ink);padding:4px 0 4px 14px;min-height:98px;transition:border-color .3s}
+.event .when{font-family:var(--disp);font-weight:500;letter-spacing:.16em;text-transform:uppercase;font-size:12px;color:var(--mute)}
+.event h3{font-family:var(--disp);font-weight:800;font-size:clamp(22px,2vw,30px);text-transform:uppercase;margin:2px 0 4px;line-height:1}
+.event p{margin:0;font-size:14.5px;line-height:1.5;color:#d7d0c4}
+.event.ext{border-color:var(--red)}
+.event.ext h3{color:var(--red)}
+.jumps{display:flex;flex-wrap:wrap;gap:4px}
+.jumps button{font-family:var(--disp);font-weight:500;letter-spacing:.12em;text-transform:uppercase;font-size:12px;background:transparent;color:var(--ink);border:1px solid var(--faint);padding:5px 8px;cursor:pointer}
+.jumps button:hover{border-color:var(--ink)}
+
+/* after */
+section.after{padding:90px max(16px,6vw);max-width:1300px;margin:0 auto}
+.after h2{font-family:var(--disp);font-weight:900;text-transform:uppercase;font-size:clamp(44px,7vw,100px);line-height:.85;margin:0 0 20px}
+.after .lede{max-width:44em;font-size:18px;line-height:1.6;color:#d7d0c4;margin:0 0 36px}
+.five{display:grid;gap:10px}
+.five .row{display:grid;grid-template-columns:minmax(150px,240px) 1fr 90px;gap:16px;align-items:center;padding:10px 0;border-bottom:1px solid var(--faint)}
+.five .nm{font-family:var(--disp);font-weight:800;text-transform:uppercase;font-size:22px;line-height:1}
+.five .nm small{display:block;font-family:var(--text);font-weight:300;text-transform:none;font-size:13px;color:var(--mute);margin-top:3px}
+.five .bar{height:22px;position:relative;background:repeating-linear-gradient(90deg,var(--faint) 0 1px,transparent 1px 10%)}
+.five .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--red)}
+.five .bar b{position:absolute;top:0;bottom:0;background:rgba(255,75,62,.35)}
+.five .pc{font-family:var(--disp);font-weight:800;font-size:26px;text-align:right;font-variant-numeric:tabular-nums}
+.five .why{grid-column:1/-1;font-size:14.5px;color:#cfc7ba;line-height:1.5;margin-top:-4px}
+.day{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0;border-top:1px solid var(--faint);border-left:1px solid var(--faint)}
+.day div{padding:16px 16px 18px;border-right:1px solid var(--faint);border-bottom:1px solid var(--faint)}
+.day .t{font-family:var(--disp);font-weight:800;font-size:34px;font-variant-numeric:tabular-nums;line-height:1}
+.day .e{font-size:14.5px;line-height:1.45;margin-top:6px;color:#d7d0c4}
+.day .m{font-family:var(--disp);font-weight:500;letter-spacing:.14em;font-size:11px;color:var(--mute);text-transform:uppercase;margin-top:6px}
+footer{padding:20px max(16px,6vw) 60px;color:var(--mute);font-size:13px;line-height:1.6;max-width:1300px;margin:0 auto}
+@media (max-width:860px){
+  .stage{grid-template-columns:1fr;grid-template-rows:auto 1fr;align-content:start;padding-top:44px;gap:6px}
+  .spiralbox{height:min(46svh,100vw - 32px)}
+  .panel{gap:8px}
+  .ma{font-size:48px}
+  .unit{grid-template-columns:52px 1fr auto;font-size:12px}
+  .unit .n{font-size:17px}
+  .event{min-height:0}
+  .event p{font-size:13px}
+  .dayrow{padding-top:8px}
+  #clock{width:70px}
+  .jumps{display:none}
+  .five .row{grid-template-columns:1fr 70px}
+  .five .bar{grid-column:1/-1;grid-row:2}
+}
+@media (max-height:700px) and (max-width:860px){.event p{display:none}}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<header class="intro">
+  <h1>Deep<span>Time</span></h1>
+  <div class="strata" id="strata" aria-hidden="true"></div>
+  <p>Earth is 4.54 billion years old. Wind that history into a spiral — Earth's birth at the centre, the present at the rim — and scroll. The colours are the official ones of the International Commission on Stratigraphy, the same inks printed on geological maps worldwide.</p>
+  <p class="go">↓ Scroll to wind forward</p>
+</header>
+
+<section id="scrolly" aria-label="Scroll-driven spiral of geological time">
+  <div class="stage">
+    <div class="spiralbox"><svg id="spiral" viewBox="-520 -520 1040 1040" role="img" aria-label="Spiral of geological time"></svg></div>
+    <div class="panel" aria-live="polite">
+      <div class="ma"><span id="ma">4,540</span><small id="maunit">million years ago</small></div>
+      <div class="units">
+        <div class="unit"><span class="k">Eon</span><span class="n" id="eon"><i></i>—</span><span class="r" id="eonR"></span></div>
+        <div class="unit"><span class="k">Era</span><span class="n" id="era"><i></i>—</span><span class="r" id="eraR"></span></div>
+        <div class="unit"><span class="k">Period</span><span class="n" id="per"><i></i>—</span><span class="r" id="perR"></span></div>
+      </div>
+      <div class="dayrow">
+        <svg id="clock" viewBox="-60 -60 120 120" aria-hidden="true"></svg>
+        <div class="daytime"><span id="tod">00:00:00</span><small>…if all of Earth's history were squeezed into a single day starting at midnight.</small></div>
+      </div>
+      <div class="event" id="event"><div class="when" id="evWhen"></div><h3 id="evT"></h3><p id="evP"></p></div>
+      <div class="jumps" id="jumps" role="group" aria-label="Jump to"></div>
+    </div>
+  </div>
+</section>
+
+<section class="after" aria-labelledby="h5">
+  <h2 id="h5">The Big Five</h2>
+  <p class="lede">Five times in the last half-billion years, most species on Earth vanished in a geological instant. Bars show the share of species lost, as usually estimated from the marine fossil record; the pale extension marks the range where estimates disagree.</p>
+  <div class="five" id="five"></div>
+</section>
+
+<section class="after" aria-labelledby="hday">
+  <h2 id="hday">One day on Earth</h2>
+  <p class="lede">Compress 4.54 billion years into 24 hours and each second holds 52,546 years. Animals turn up in the evening; the whole of written history fits in the last tenth of a second.</p>
+  <div class="day" id="day"></div>
+</section>
+
+<footer>Dates follow the International Chronostratigraphic Chart (ICS, v2023/09): Cambrian base 538.8 Ma, Ordovician 486.85, Silurian 443.1, Devonian 419.62, Carboniferous 358.86, Permian 298.9, Triassic 251.902, Jurassic 201.4, Cretaceous 143.1, Paleogene 66.0, Neogene 23.04, Quaternary 2.58. Archean base 4031 Ma. Earth's age 4.54 ± 0.05 Ga. Event ages are best current estimates; several remain actively debated.</footer>
+
+<script>
+(function(){
+"use strict";
+const AGE=4540;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// [name, start Ma, end Ma, colour]
+const EONS=[['Hadean',4540,4031,'#AE027E'],['Archean',4031,2500,'#F0047F'],['Proterozoic',2500,538.8,'#F73563'],['Phanerozoic',538.8,0,'#9AD9DD']];
+const ERAS=[['Hadean',4540,4031,'#AE027E'],['Eoarchean',4031,3600,'#DA037F'],['Paleoarchean',3600,3200,'#F444A9'],['Mesoarchean',3200,2800,'#F768A9'],['Neoarchean',2800,2500,'#F99BC1'],
+  ['Paleoproterozoic',2500,1600,'#F74370'],['Mesoproterozoic',1600,1000,'#FDB462'],['Neoproterozoic',1000,538.8,'#FEB342'],
+  ['Paleozoic',538.8,251.902,'#99C08D'],['Mesozoic',251.902,66.0,'#67C5CA'],['Cenozoic',66.0,0,'#F2F91D']];
+const PERIODS=[['Hadean',4540,4031,'#AE027E'],['Eoarchean',4031,3600,'#DA037F'],['Paleoarchean',3600,3200,'#F444A9'],['Mesoarchean',3200,2800,'#F768A9'],['Neoarchean',2800,2500,'#F99BC1'],
+  ['Siderian',2500,2300,'#F74F7C'],['Rhyacian',2300,2050,'#F75B89'],['Orosirian',2050,1800,'#F76898'],['Statherian',1800,1600,'#F875A7'],
+  ['Calymmian',1600,1400,'#FDC07A'],['Ectasian',1400,1200,'#F3CC8A'],['Stenian',1200,1000,'#FED99A'],
+  ['Tonian',1000,720,'#FEBF4E'],['Cryogenian',720,635,'#FECC5C'],['Ediacaran',635,538.8,'#FED96A'],
+  ['Cambrian',538.8,486.85,'#7FA056'],['Ordovician',486.85,443.1,'#009270'],['Silurian',443.1,419.62,'#B3E1B6'],['Devonian',419.62,358.86,'#CB8C37'],
+  ['Carboniferous',358.86,298.9,'#67A599'],['Permian',298.9,251.902,'#F04028'],['Triassic',251.902,201.4,'#812B92'],['Jurassic',201.4,143.1,'#34B2C9'],
+  ['Cretaceous',143.1,66.0,'#7FC64E'],['Paleogene',66.0,23.04,'#FD9A52'],['Neogene',23.04,2.58,'#FFE619'],['Quaternary',2.58,0,'#F9F97F']];
+const EVENTS=[
+  [4540,'Earth forms','Dust and rock around the young Sun accrete into a molten planet.'],
+  [4510,'Moon-forming impact','A Mars-sized body, Theia, strikes Earth; the debris coalesces into the Moon.'],
+  [4404,'Oldest crystal','A zircon grain from the Jack Hills of Western Australia — hinting at liquid water surprisingly early.'],
+  [4031,'Oldest rocks','The Acasta Gneiss of Canada’s Northwest Territories; its age also marks the start of the Archean.'],
+  [3480,'Oldest widely accepted life','Stromatolites of the Dresser Formation, Pilbara: mats built by microbes.'],
+  [2430,'Great Oxidation Event','Cyanobacterial photosynthesis finally floods the air with oxygen, poisoning much of the old anaerobic world.'],
+  [1600,'Complex cells','Eukaryotes — cells with a nucleus — are clearly present in the fossil record.'],
+  [717,'Snowball Earth','The Sturtian glaciation begins; ice reaches the tropics. A second, the Marinoan, ends about 635 Ma.'],
+  [575,'Ediacaran biota','The first large, complex organisms: soft, quilted fronds and discs on the sea floor.'],
+  [538.8,'Cambrian explosion','Most modern animal groups appear within a few tens of millions of years. The Phanerozoic begins.'],
+  [470,'Plants reach land','Fossil spores record the first land plants, relatives of liverworts.'],
+  [445,'End-Ordovician extinction','Glaciation and falling sea levels. About 85% of species lost.',1],
+  [375,'Fish with feet','Tiktaalik and kin haul out into shallow water, ancestors of all tetrapods.'],
+  [372,'Late Devonian extinction','A series of pulses stripping reefs and oceans. About 75% of species lost.',1],
+  [312,'First reptiles','Hylonomus lays eggs that do not need water.'],
+  [251.902,'The Great Dying','Siberian Traps eruptions; the worst extinction known. Around 81–96% of marine species lost.',1],
+  [233,'Dinosaurs appear','Small, fast bipeds in the Late Triassic.'],
+  [201.4,'End-Triassic extinction','The Central Atlantic magmatic province erupts as Pangaea rifts. About 76–80% of species lost.',1],
+  [150,'Archaeopteryx','Feathered dinosaurs are already flying in Jurassic Bavaria.'],
+  [130,'First flowers','Angiosperms begin a takeover of the land that is still going on.'],
+  [66.0,'Chicxulub impact','A 10 km asteroid ends the Cretaceous and the non-avian dinosaurs. About 76% of species lost.',1],
+  [7,'Human and chimpanzee lineages split','Somewhere in Africa, roughly 6–7 million years ago.'],
+  [2.58,'Ice ages begin','The Quaternary glaciations start their long pulse of advance and retreat.'],
+  [0.3,'Homo sapiens','The oldest known fossils of our species, from Jebel Irhoud, Morocco.'],
+  [0.0117,'Holocene & farming','The last ice age ends; within centuries, people are domesticating wheat, barley and goats.'],
+  [0.0052,'Writing','Cuneiform in Mesopotamia; history in the written sense begins.'],
+  [0,'Now','Where you are sitting.']
+];
+
+// intro strata strip
+document.getElementById('strata').innerHTML=PERIODS.map(p=>`<i style="background:${p[3]};flex:${p[1]-p[2]}"></i>`).join('');
+
+// ---------- spiral geometry ----------
+const TURNS=3.6, R0=70, R1=440, N=2400;
+const TH=TURNS*Math.PI*2, B=(R1-R0)/TH;
+const pts=[]; let cum=[0];
+for(let i=0;i<=N;i++){const t=i/N*TH, r=R0+B*t; pts.push([t,r]); if(i){const [t0,r0]=pts[i-1]; const x0=r0*Math.cos(t0),y0=r0*Math.sin(t0),x1=r*Math.cos(t),y1=r*Math.sin(t); cum.push(cum[i-1]+Math.hypot(x1-x0,y1-y0));}}
+const LEN=cum[N];
+const START=-Math.PI/2;
+function thetaAt(f){ // f 0..1 along arc
+  const L=f*LEN; let lo=0,hi=N; while(hi-lo>1){const m=(lo+hi)>>1; if(cum[m]<L) lo=m; else hi=m;}
+  const u=(L-cum[lo])/((cum[hi]-cum[lo])||1); return pts[lo][0]+(pts[hi][0]-pts[lo][0])*u;
+}
+const fOf=ma=>1-ma/AGE;
+function P(th,off){const r=R0+B*th+off, a=th+START; return [r*Math.cos(a),r*Math.sin(a)]}
+function arc(ma0,ma1,off){
+  const t0=thetaAt(fOf(ma0)), t1=thetaAt(fOf(ma1)); const n=Math.max(2,Math.ceil((t1-t0)/0.02));
+  let d=''; for(let i=0;i<=n;i++){const [x,y]=P(t0+(t1-t0)*i/n,off); d+=(i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);} return d;
+}
+const svg=document.getElementById('spiral');
+let s='<g id="bands">';
+const BW=[[EONS,-30,12],[ERAS,-15,12],[PERIODS,2,26]];
+BW.forEach(([set,off,w])=>set.forEach(u=>{s+=`<path d="${arc(u[1],u[2],off)}" stroke="${u[3]}" stroke-width="${w}" fill="none" opacity=".26" data-u="${u[0]}"/>`}));
+s+='</g><g id="lit"></g>';
+// event ticks
+EVENTS.forEach(([ma,t,,ext])=>{const th=thetaAt(fOf(ma)); const [x0,y0]=P(th,-38), [x1,y1]=P(th,18); s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="${ext?'#ff4b3e':'rgba(236,230,218,.45)'}" stroke-width="${ext?2.2:1}"/>`});
+// labels for eons along the spiral
+EONS.forEach(e=>{const th=thetaAt(fOf((e[1]+e[2])/2)); const [x,y]=P(th,-52); s+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" style="font-size:14px;letter-spacing:.16em">${e[0].toUpperCase()}</text>`});
+s+=`<text x="0" y="-6" text-anchor="middle" style="font-size:12px">4.54 Ga</text><text x="0" y="10" text-anchor="middle" style="font-size:11px;fill:#6f6960">EARTH FORMS</text>`;
+s+=`<g id="marker"><circle r="11" fill="none" stroke="#fff" stroke-width="2"/><circle r="3.5" fill="#fff"/></g>`;
+svg.innerHTML=s;
+const lit=document.getElementById('lit'), marker=document.getElementById('marker');
+
+// ---------- clock ----------
+const clock=document.getElementById('clock');
+clock.innerHTML=`<circle r="56" fill="none" stroke="#3a3631" stroke-width="2"/>`+
+  [...Array(24)].map((_,i)=>{const a=i/24*Math.PI*2-Math.PI/2; const r0=i%6?50:44; return `<line x1="${(Math.cos(a)*r0).toFixed(1)}" y1="${(Math.sin(a)*r0).toFixed(1)}" x2="${(Math.cos(a)*55).toFixed(1)}" y2="${(Math.sin(a)*55).toFixed(1)}" stroke="#9b948a" stroke-width="${i%6?1:2}"/>`}).join('')+
+  `<path id="sweep" fill="rgba(236,230,218,.12)"/><line id="hand" x1="0" y1="0" x2="0" y2="-48" stroke="#ece6da" stroke-width="2.5" stroke-linecap="round"/><circle r="3" fill="#ece6da"/>
+   <text y="-30" text-anchor="middle" font-size="9" fill="#9b948a" font-family="Big Shoulders Display">00</text><text y="37" text-anchor="middle" font-size="9" fill="#9b948a" font-family="Big Shoulders Display">12</text>`;
+
+// ---------- update ----------
+const $=id=>document.getElementById(id);
+const fmtMa=ma=>ma>=1? Math.round(ma).toLocaleString('en-GB') : ma>=0.001? (ma*1000).toLocaleString('en-GB',{maximumFractionDigits:ma<0.01?1:0}) : '0';
+const unitFor=(set,ma)=>set.find(u=>ma<=u[1]&&ma>u[2])||set[set.length-1];
+function setUnit(id,u){const el=$(id); el.innerHTML=`<i style="background:${u[3]}"></i>${u[0]}`; $(id+'R').textContent=`${fmt(u[1])}–${fmt(u[2])} Ma`}
+const fmt=v=>v>=100?Math.round(v).toLocaleString('en-GB'):String(+v.toFixed(2));
+function tod(ma){const s=Math.min(86399.999,(1-ma/AGE)*86400); const h=Math.floor(s/3600),m=Math.floor(s%3600/60),sec=s%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${sec<10?'0':''}${sec.toFixed(ma<5?2:0).replace(/\.00$/,'')}`;}
+let lastEv=null, lastLit='';
+function update(ma){
+  $('ma').textContent=fmtMa(ma);
+  $('maunit').textContent= ma>=1?'million years ago': ma>=0.001?'thousand years ago':'the present';
+  setUnit('eon',unitFor(EONS,ma)); setUnit('era',unitFor(ERAS,ma)); setUnit('per',unitFor(PERIODS,ma));
+  $('tod').textContent=tod(ma);
+  const f=fOf(ma), a=f*Math.PI*2;
+  $('hand').setAttribute('transform',`rotate(${(f*360).toFixed(2)})`);
+  const x=Math.sin(a)*54, y=-Math.cos(a)*54;
+  $('sweep').setAttribute('d', f<=0?'':`M0 0 L0 -54 A54 54 0 ${f>0.5?1:0} 1 ${x.toFixed(2)} ${y.toFixed(2)} Z`);
+  // lit bands up to ma
+  const key=Math.round(ma*10)/10+'';
+  if(key!==lastLit){ lastLit=key;
+    let d=''; BW.forEach(([set,off,w])=>set.forEach(u=>{ if(u[1]>ma){ d+=`<path d="${arc(u[1],Math.max(ma,u[2]),off)}" stroke="${u[3]}" stroke-width="${w}" fill="none"/>`; } }));
+    lit.innerHTML=d;
+  }
+  const [mx,my]=P(thetaAt(f),2); marker.setAttribute('transform',`translate(${mx.toFixed(1)} ${my.toFixed(1)})`);
+  // event: most recent passed
+  let ev=EVENTS[0]; for(const e of EVENTS){ if(e[0]>=ma-1e-9) ev=e; }
+  if(ev!==lastEv){ lastEv=ev;
+    $('evWhen').textContent=(ev[0]>=1?`${fmt(ev[0])} Ma`:ev[0]>0?`${(ev[0]*1000).toLocaleString('en-GB',{maximumFractionDigits:1})} thousand years ago`:'today')+' · '+tod(ev[0]);
+    $('evT').textContent=ev[1]; $('evP').textContent=ev[2];
+    $('event').classList.toggle('ext',!!ev[3]);
+  }
+}
+const scrolly=document.getElementById('scrolly');
+function progress(){
+  const r=scrolly.getBoundingClientRect(); const total=r.height-innerHeight;
+  return Math.max(0,Math.min(1,-r.top/total));
+}
+// Ease the scroll → time mapping slightly so the Phanerozoic gets room: first 70% of scroll covers 4540→541 Ma linearly, last 30% covers the Phanerozoic.
+const SPLIT=0.7, PH=538.8;
+function maFromP(p){ return p<=SPLIT? AGE-(AGE-PH)*(p/SPLIT) : PH*Math.pow(1-(p-SPLIT)/(1-SPLIT),1.6); }
+function pFromMa(ma){ return ma>=PH? (AGE-ma)/(AGE-PH)*SPLIT : SPLIT+(1-Math.pow(ma/PH,1/1.6))*(1-SPLIT); }
+let ticking=false;
+addEventListener('scroll',()=>{ if(!ticking){ticking=true;requestAnimationFrame(()=>{ticking=false;update(maFromP(progress()))})} },{passive:true});
+addEventListener('resize',()=>update(maFromP(progress())));
+
+// jumps
+const J=[['Hadean',4540],['Archean',4031],['Proterozoic',2500],['Cambrian',538.8],['Dinosaurs',233],['Chicxulub',66],['Us',0.3]];
+$('jumps').innerHTML=J.map(([n,ma],i)=>`<button id="jump-${i}" data-ma="${ma}">${n}</button>`).join('');
+$('jumps').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return;
+  const ma=+b.dataset.ma; const top=scrolly.offsetTop+pFromMa(ma-1e-6)*(scrolly.offsetHeight-innerHeight)+1;
+  window.scrollTo({top,behavior:reduce?'auto':'smooth'});});
+
+update(maFromP(progress()));
+
+// ---------- Big Five ----------
+const FIVE=[['End-Ordovician',445,85,85,'Glaciation locks up water, sea levels fall and shallow seas drain.'],
+ ['Late Devonian',372,75,75,'Repeated pulses of ocean anoxia devastate reef ecosystems.'],
+ ['End-Permian',251.9,81,96,'Siberian Traps volcanism drives warming, acidification and anoxia — life’s closest brush with total collapse.'],
+ ['End-Triassic',201.4,76,80,'Central Atlantic magmatic province eruptions as Pangaea begins to split, clearing the way for dinosaurs.'],
+ ['End-Cretaceous',66.0,76,76,'The Chicxulub asteroid impact, compounded by Deccan Traps volcanism. Non-avian dinosaurs vanish.']];
+$('five').innerHTML=FIVE.map(([n,ma,lo,hi,why])=>`<div class="row"><div class="nm">${n}<small>${fmt(ma)} million years ago · ${tod(ma)} on the clock</small></div><div class="bar" role="img" aria-label="${lo===hi?lo:lo+' to '+hi} percent of species lost"><i style="width:${lo}%"></i>${hi>lo?`<b style="left:${lo}%;width:${hi-lo}%"></b>`:''}</div><div class="pc">${lo===hi?lo:lo+'–'+hi}%</div><div class="why">${why}</div></div>`).join('');
+
+// ---------- One day ----------
+const DAYSEL=[4540,4510,4031,3480,2430,1600,717,538.8,470,375,251.902,233,66.0,7,0.3,0.0117,0.0052];
+$('day').innerHTML=DAYSEL.map(ma=>{const e=EVENTS.find(x=>x[0]===ma); return `<div><div class="t">${tod(ma).slice(0,ma<1?11:8)}</div><div class="e">${e[1]}</div><div class="m">${ma>=1?fmt(ma)+' Ma':(ma*1000).toLocaleString('en-GB',{maximumFractionDigits:1})+' ka'}</div></div>`}).join('');
+})();
+</script>
+</body>
+</html>

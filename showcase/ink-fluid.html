@@ -175,7 +175,7 @@ float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h
 void main(){vec3 a=max(texture2D(uTexture,vUv).rgb,0.);
  vec2 px=vUv*res;float fib=n(px*vec2(.05,.9))*.5+n(px*vec2(.9,.04))*.5;float grain=n(px*.6);
  vec3 pap=paper*(.965+.035*fib)-(grain-.5)*.018;
- vec3 col=pap*exp(-a*1.15);
+ vec3 col=pap*exp(-a*1.5);
  float bleed=smoothstep(.02,.35,a.r+a.g+a.b)-smoothstep(.35,1.2,a.r+a.g+a.b);col-=bleed*.025;
  vec2 q=vUv-.5;col*=1.-dot(q,q)*.22;
  gl_FragColor=vec4(col,1.);}`
@@ -224,7 +224,7 @@ function drop(x,y,r,col){
 function step(dt){
   gl.disable(gl.BLEND);
   gl.useProgram(P.curl.p);gl.uniform2f(P.curl.u.texelSize,vel.tx,vel.ty);gl.uniform1i(P.curl.u.uVelocity,vel.read.attach(0));blit(curlT);
-  gl.useProgram(P.vorticity.p);const vu=P.vorticity.u;gl.uniform2f(vu.texelSize,vel.tx,vel.ty);gl.uniform1i(vu.uVelocity,vel.read.attach(0));gl.uniform1i(vu.uCurl,curlT.attach(1));gl.uniform1f(vu.curl,14);gl.uniform1f(vu.dt,dt);blit(vel.write);vel.swap();
+  gl.useProgram(P.vorticity.p);const vu=P.vorticity.u;gl.uniform2f(vu.texelSize,vel.tx,vel.ty);gl.uniform1i(vu.uVelocity,vel.read.attach(0));gl.uniform1i(vu.uCurl,curlT.attach(1));gl.uniform1f(vu.curl,4);gl.uniform1f(vu.dt,dt);blit(vel.write);vel.swap();
   gl.useProgram(P.divergence.p);gl.uniform2f(P.divergence.u.texelSize,vel.tx,vel.ty);gl.uniform1i(P.divergence.u.uVelocity,vel.read.attach(0));blit(div);
   gl.useProgram(P.copy.p);gl.uniform1i(P.copy.u.uTexture,pressure.read.attach(0));gl.uniform1f(P.copy.u.value,.8);gl.uniform2f(P.copy.u.texelSize,vel.tx,vel.ty);blit(pressure.write);pressure.swap();
   gl.useProgram(P.pressure.p);gl.uniform2f(P.pressure.u.texelSize,vel.tx,vel.ty);gl.uniform1i(P.pressure.u.uDivergence,div.attach(0));
@@ -269,11 +269,11 @@ function composeRings(x,y,inks,n,r){for(let i=0;i<n;i++)drop(x,y,r,INKS[inks[i%i
 
 // opening composition: two nested ring clusters and one gentle comb stroke
 function opening(){
-  composeRings(.38,.56,['sumi','water','ai','water'],18,.018);
-  composeRings(.66,.40,['beni','water','sumi','water'],12,.014);
-  composeRings(.52,.28,['kincha','water'],8,.01);
+  composeRings(.4,.55,['sumi','water','ai','water'],14,.034);
+  composeRings(.7,.38,['beni','water','sumi','water'],10,.028);
+  composeRings(.2,.26,['kincha','water'],8,.022);
   // comb the rings a little so the first frame already looks marbled
-  for(let i=0;i<10;i++){const t=i/9;splat(.2+t*.3,.62-t*.1+Math.sin(t*6.28)*.03,160,Math.cos(t*6.28)*90,null,.0009);}
+  for(let i=0;i<10;i++){const t=i/9;splat(.22+t*.32,.5+Math.sin(t*6.28)*.03,70,Math.cos(t*6.28)*40,null,.0007);}
 }
 
 let last=performance.now(),dripT=0,dripX=.5,dripY=.5,dripA=0;

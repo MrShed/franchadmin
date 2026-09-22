@@ -263,9 +263,9 @@ function buildSkyline(){
     {x:.155,w:.012,h:.36,t:'tower'},{x:.19,w:.05,h:.3,t:'block'},{x:.235,w:.02,h:.33,t:'tower'},
     {x:.445,w:.014,h:.3,t:'crown'},{x:.56,w:.012,h:.52,t:'spire'},{x:.635,w:.014,h:.36,t:'clock'},{x:.905,w:.01,h:.2,t:'nelson'},{x:.86,w:.03,h:.1,t:'columns'}];
   while (x < W){
-    const xn = x/W; const lm = land.find(l => xn >= l.x - l.w/2 && xn < l.x + l.w/2);
+    const xn = x/W; const lm = land.find(l => !l.done && xn >= l.x - l.w/2 && xn < l.x + l.w/2);
     const baseH = hy(xn);
-    if (lm){
+    if (lm){ lm.done = true;
       const lx = lm.x*W - lm.w*W/2, lw = Math.max(lm.w*W, 8), top = H - base*(hy(lm.x)+lm.h);
       const y0 = H - base*baseH;
       skyNear.lineTo(lx, y0);
@@ -276,7 +276,7 @@ function buildSkyline(){
       else if (lm.t==='nelson'){ skyNear.lineTo(lx, top+base*.05); skyNear.lineTo(lx+lw*.15, top); skyNear.lineTo(lx+lw*.85, top); skyNear.lineTo(lx+lw, top+base*.05); }
       else if (lm.t==='columns'){ skyNear.lineTo(lx, top); skyNear.lineTo(lx+lw, top); }
       else { skyNear.lineTo(lx, top); skyNear.lineTo(lx+lw*.3, top); skyNear.lineTo(lx+lw*.3, top-base*.04); skyNear.lineTo(lx+lw*.55, top-base*.04); skyNear.lineTo(lx+lw*.55, top); skyNear.lineTo(lx+lw, top); }
-      skyNear.lineTo(lx+lw, y0); x = lx + lw; continue;
+      skyNear.lineTo(lx+lw, y0); x = Math.max(x+1, lx + lw); continue;
     }
     const bw = step + r()*step*1.6; const bh = baseH + .03 + r()*.08; const y = H - base*bh;
     skyNear.lineTo(x, y);

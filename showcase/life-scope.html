@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lifescope LS-70</title>
+<meta name="description" content="Conway's Game of Life on a simulated phosphor oscilloscope: curved glass, afterglow, radar sweep, a cartridge library of classic patterns and a hands-on edit mode.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --room:#121517;
+  --panel:#5d6970;
+  --panel-hi:#76838a;
+  --panel-lo:#434d53;
+  --screen:#030805;
+  --legend:#eef2ee;
+  --legend-dim:rgba(238,242,238,.62);
+  --phos:#7dff9a;
+  --knob:#1d2124;
+  --red:#d8412f;
+  --eng:"Major Mono Display","OCR A Std","Courier New",monospace;
+  --mono:"Share Tech Mono","OCR A Std",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--room)}
+body{
+  margin:0;min-height:100vh;color:var(--legend);font-family:var(--mono);
+  background:radial-gradient(70% 60% at 50% 30%,#1f2528,var(--room));
+  padding:max(18px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left));
+  display:flex;flex-direction:column;align-items:center;
+}
+:focus-visible{outline:2px solid var(--phos);outline-offset:2px}
+.top{width:100%;max-width:1200px;display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.top a{color:var(--legend-dim);text-decoration:none;font-size:13px;letter-spacing:.12em}
+.top a:hover{color:var(--legend)}
+.top p{margin:0;color:var(--legend-dim);font-size:13px;letter-spacing:.06em;max-width:62ch}
+.instrument{
+  width:100%;max-width:1200px;background:
+    linear-gradient(180deg,var(--panel-hi),var(--panel) 12%,var(--panel) 88%,var(--panel-lo));
+  border-radius:10px;padding:18px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;
+  box-shadow:0 30px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.25),inset 0 -2px 0 rgba(0,0,0,.3);
+  position:relative;
+}
+.instrument::before{content:"";position:absolute;inset:0;border-radius:10px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px)}
+.plate{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,.18);padding:0 4px 12px;flex-wrap:wrap}
+.plate h1{margin:0;font-family:var(--eng);font-weight:400;font-size:clamp(22px,3vw,34px);letter-spacing:.08em;text-transform:lowercase}
+.plate h1 small{font-size:.5em;letter-spacing:.2em;margin-left:10px;color:var(--legend-dim)}
+.plate .maker{font-family:var(--eng);font-size:12px;letter-spacing:.2em;color:var(--legend-dim);text-transform:lowercase}
+.bezel{
+  background:#1a1d1f;border-radius:18px;padding:22px;position:relative;
+  box-shadow:inset 0 3px 8px rgba(0,0,0,.8),inset 0 -1px 0 rgba(255,255,255,.08),0 1px 0 rgba(255,255,255,.15);
+}
+.screw{position:absolute;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#9aa3a8,#3a4145);box-shadow:0 1px 1px rgba(0,0,0,.6)}
+.screw::after{content:"";position:absolute;left:2px;right:2px;top:5px;height:2px;background:#2a3034;transform:rotate(35deg)}
+.s1{top:6px;left:6px}.s2{top:6px;right:6px}.s3{bottom:6px;left:6px}.s4{bottom:6px;right:6px}
+.tube{position:relative;border-radius:22px/26px;overflow:hidden;background:var(--screen);box-shadow:0 0 0 2px #0b0d0e,0 0 30px rgba(0,0,0,.9) inset}
+.tube canvas{display:block;width:100%;height:auto;cursor:crosshair;touch-action:none}
+.tube::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(120% 90% at 30% 15%,rgba(255,255,255,.07),transparent 40%);box-shadow:inset 0 0 60px rgba(0,0,0,.85)}
+.readout{display:flex;justify-content:space-between;gap:10px;margin-top:12px;font-size:13px;letter-spacing:.1em;color:var(--legend-dim);flex-wrap:wrap}
+.readout b{font-weight:400;color:var(--phos);text-shadow:0 0 6px rgba(125,255,154,.6);font-size:16px;margin-left:6px}
+.controls{display:flex;flex-direction:column;gap:14px}
+.sect{border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:14px 12px 12px;position:relative}
+.sect > h2{position:absolute;top:-8px;left:10px;margin:0;padding:0 6px;background:var(--panel);font-family:var(--eng);font-weight:400;font-size:11px;letter-spacing:.18em;text-transform:lowercase}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.key{
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#e8ece8;cursor:pointer;
+  background:linear-gradient(#2c3236,#1d2124);border:1px solid #0e1011;border-radius:4px;padding:10px 4px 9px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 0 #0b0d0e;position:relative;
+}
+.key:active{transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 1px 0 #0b0d0e}
+.key .led{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:#3a1512}
+.key[aria-pressed="true"] .led{background:var(--red);box-shadow:0 0 6px var(--red)}
+.key.phos[aria-pressed="true"] .led{background:var(--phos);box-shadow:0 0 6px var(--phos)}
+.dial{display:grid;grid-template-columns:90px 1fr 40px;align-items:center;gap:8px;margin:6px 0;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.dial output{text-align:right;color:var(--phos);font-size:12px}
+input[type=range]{width:100%;accent-color:#d9ded9}
+.carts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cart{
+  font-family:var(--mono);font-size:11.5px;text-align:left;color:#1b1f21;cursor:pointer;
+  background:linear-gradient(#e7e3d6,#cfcabb);border:1px solid #2a2e30;border-radius:3px 3px 8px 8px;padding:7px 8px 6px;
+  box-shadow:0 2px 0 #2a2e30;
+}
+.cart small{display:block;font-size:9.5px;color:#5a5a50;letter-spacing:.06em}
+.cart[aria-pressed="true"]{background:linear-gradient(#bff5c9,#9fe0ad)}
+.phos-sel{display:flex;gap:6px}
+.phos-sel button{flex:1;font-family:var(--mono);font-size:11px;padding:6px 2px;border-radius:3px;border:1px solid #0e1011;background:#1d2124;color:var(--legend-dim);cursor:pointer}
+.phos-sel button[aria-pressed="true"]{color:#0b0d0e;background:var(--c);box-shadow:0 0 10px var(--c)}
+.seedrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.seedrow input{width:100%;background:#0b0f0c;border:1px solid #0e1011;color:var(--phos);font:15px var(--mono);padding:4px 6px;border-radius:3px}
+.hint{font-size:12px;color:var(--legend-dim);line-height:1.5;margin:0}
+.nogl{padding:40px;text-align:center;color:var(--phos)}
+@media (max-width:900px){
+  .instrument{grid-template-columns:1fr;padding:12px}
+  .bezel{padding:14px}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <a href="index.html">← Showcase</a>
+  <p>John Conway's Game of Life, 1970 — rendered as it might have looked on the lab scope the week it was published.</p>
+</div>
+
+<main class="instrument">
+  <div class="plate">
+    <h1>lifescope ls-70<small>cellular monitor</small></h1>
+    <span class="maker">phosphor & sons · cambridge</span>
+  </div>
+
+  <div>
+    <div class="bezel">
+      <span class="screw s1"></span><span class="screw s2"></span><span class="screw s3"></span><span class="screw s4"></span>
+      <div class="tube"><canvas id="scope" aria-label="Game of Life display. In edit mode, click or drag to toggle cells; with a cartridge armed, click to place it."></canvas></div>
+    </div>
+    <div class="readout" aria-live="off">
+      <span>GEN<b id="gen">0</b></span><span>POP<b id="pop">0</b></span><span>RATE<b id="rateOut">12</b>/s</span><span>MODE<b id="modeOut">RUN</b></span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <section class="sect"><h2>sweep</h2>
+      <div class="keys">
+        <button class="key phos" id="runBtn" aria-pressed="true"><span class="led"></span>Run</button>
+        <button class="key" id="stepBtn"><span class="led"></span>Step</button>
+        <button class="key" id="editBtn" aria-pressed="false"><span class="led"></span>Edit</button>
+        <button class="key" id="clearBtn"><span class="led"></span>Clear</button>
+        <button class="key" id="soupBtn"><span class="led"></span>Soup</button>
+        <button class="key" id="resetBtn"><span class="led"></span>Reset</button>
+      </div>
+    </section>
+    <section class="sect"><h2>vertical · horizontal</h2>
+      <div class="dial"><label for="rate">Rate</label><input id="rate" type="range" min="1" max="60" value="12"><output id="rateVal">12</output></div>
+      <div class="dial"><label for="persist">Persistence</label><input id="persist" type="range" min="0" max="0.97" step="0.01" value="0.86"><output id="persistVal">.86</output></div>
+      <div class="dial"><label for="intensity">Intensity</label><input id="intensity" type="range" min="0.4" max="1.8" step="0.05" value="1"><output id="intVal">1.0</output></div>
+      <div class="dial"><label for="sweep">Sweep</label>
+        <select id="sweep" style="width:100%;background:#0b0f0c;color:var(--phos);border:1px solid #0e1011;font:12px var(--mono);padding:3px">
+          <option value="1">Radar</option><option value="2">Raster</option><option value="0">Off</option>
+        </select><span></span></div>
+    </section>
+    <section class="sect"><h2>phosphor</h2>
+      <div class="phos-sel" id="phos" role="group" aria-label="Phosphor type"></div>
+    </section>
+    <section class="sect"><h2>cartridges</h2>
+      <div class="carts" id="carts" role="group" aria-label="Pattern library"></div>
+      <p class="hint" style="margin-top:8px">Pick a cartridge, then click the screen to place it. <kbd>R</kbd> rotates, <kbd>Esc</kbd> disarms.</p>
+    </section>
+    <section class="sect"><h2>soup</h2>
+      <div class="seedrow"><label for="seed">Seed</label><input id="seed" type="text" inputmode="numeric" value="1970" autocomplete="off"><span id="densOut">32%</span></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const PATTERNS = [
+  { id:'gun', name:'Glider gun', note:'Gosper, 1970', rows:['........................O...........','......................O.O...........','............OO......OO............OO','...........O...O....OO............OO','OO........O.....O...OO..............','OO........O...O.OO....O.O...........','..........O.....O.......O...........','...........O...O....................','............OO......................'] },
+  { id:'pulsar', name:'Pulsar', note:'period 3', rows:['..OOO...OOO..','.............','O....O.O....O','O....O.O....O','O....O.O....O','..OOO...OOO..','.............','..OOO...OOO..','O....O.O....O','O....O.O....O','O....O.O....O','.............','..OOO...OOO..'] },
+  { id:'acorn', name:'Acorn', note:'5206 gens', rows:['.O.....','...O...','OO..OOO'] },
+  { id:'rpent', name:'R-pentomino', note:'1103 gens', rows:['.OO','OO.','.O.'] },
+  { id:'diehard', name:'Diehard', note:'dies at 130', rows:['......O.','OO......','.O...OOO'] },
+  { id:'lwss', name:'Spaceship', note:'LWSS, c/2', rows:['.O..O','O....','O...O','OOOO.'] },
+  { id:'penta', name:'Pentadecathlon', note:'period 15', rows:['..O....O..','OO.OOOO.OO','..O....O..'] },
+  { id:'glider', name:'Glider', note:'c/4 diagonal', rows:['.O.','..O','OOO'] }
+];
+const PHOS = [
+  { id:'P1', flash:[.55,1,.6], glow:[.12,.75,.3], css:'#7dff9a' },
+  { id:'P3', flash:[1,.8,.35], glow:[.85,.45,.08], css:'#ffc45a' },
+  { id:'P4', flash:[.9,.95,1], glow:[.45,.55,.85], css:'#dfe8ff' },
+  { id:'P7', flash:[.75,.85,1], glow:[.75,.85,.15], css:'#b8d0ff' }
+];
+const narrow = innerWidth < 900;
+const GW = narrow ? 96 : 160, GH = narrow ? 110 : 100, N = GW * GH;
+let cur = new Uint8Array(N), nxt = new Uint8Array(N), glow = new Float32Array(N), ghost = new Uint8Array(N);
+const tex = new Uint8Array(N * 4);
+let gen = 0, running = true, edit = false, rate = 12, persist = .86, intensity = 1, sweepMode = 1, phos = PHOS[0], seed = 1970;
+let armed = null, armedRot = 0, hover = null;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+if (reduce.matches) { rate = 4; sweepMode = 0; }
+
+// ---------- life ----------
+function stepLife() {
+  let pop = 0;
+  for (let y = 0; y < GH; y++) {
+    const ym = ((y - 1 + GH) % GH) * GW, y0 = y * GW, yp = ((y + 1) % GH) * GW;
+    for (let x = 0; x < GW; x++) {
+      const xm = (x - 1 + GW) % GW, xp = (x + 1) % GW;
+      const n = cur[ym + xm] + cur[ym + x] + cur[ym + xp] + cur[y0 + xm] + cur[y0 + xp] + cur[yp + xm] + cur[yp + x] + cur[yp + xp];
+      const a = cur[y0 + x];
+      const v = (n === 3 || (a && n === 2)) ? 1 : 0;
+      nxt[y0 + x] = v; pop += v;
+    }
+  }
+  const t = cur; cur = nxt; nxt = t; gen++;
+  return pop;
+}
+function population() { let p = 0; for (let i = 0; i < N; i++) p += cur[i]; return p; }
+function rotated(rows, rot) {
+  let g = rows.map(r => r.split(''));
+  for (let k = 0; k < rot; k++) { const h = g.length, w = g[0].length; const o = []; for (let x = 0; x < w; x++) { o.push([]); for (let y = h - 1; y >= 0; y--) o[x].push(g[y][x]); } g = o; }
+  return g;
+}
+function stamp(p, cx, cy, rot, target) {
+  const g = rotated(p.rows, rot || 0), h = g.length, w = g[0].length;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (g[y][x] !== 'O') continue;
+    const X = ((cx - (w >> 1) + x) % GW + GW) % GW, Y = ((cy - (h >> 1) + y) % GH + GH) % GH;
+    (target || cur)[Y * GW + X] = 1;
+  }
+}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function soup() {
+  const r = mulberry32(seed); cur.fill(0);
+  const d = .32, bx = Math.round(GW * .15), by = Math.round(GH * .15);
+  for (let y = by; y < GH - by; y++) for (let x = bx; x < GW - bx; x++) if (r() < d) cur[y * GW + x] = 1;
+  gen = 0;
+}
+function composition() {
+  cur.fill(0); glow.fill(0); gen = 0;
+  const P = id => PATTERNS.find(p => p.id === id);
+  if (narrow) {
+    stamp(P('gun'), 22, 12, 0); stamp(P('pulsar'), 72, 30, 0); stamp(P('acorn'), 50, 70, 0); stamp(P('penta'), 20, 95, 1); stamp(P('lwss'), 70, 96, 0);
+  } else {
+    stamp(P('gun'), 24, 14, 0); stamp(P('pulsar'), 130, 20, 0); stamp(P('penta'), 140, 72, 0); stamp(P('acorn'), 80, 62, 0); stamp(P('lwss'), 20, 80, 0); stamp(P('diehard'), 110, 45, 0);
+  }
+}
+
+// ---------- WebGL display ----------
+const canvas = $('scope');
+const gl = canvas.getContext('webgl', { antialias:false, alpha:false });
+let prog, U = {}, texObj;
+const VS = `attribute vec2 p; varying vec2 v; void main(){ v = p*.5+.5; gl_Position = vec4(p,0.,1.); }`;
+const FS = `precision highp float;
+varying vec2 v; uniform sampler2D u_t; uniform vec2 u_grid, u_res; uniform float u_time, u_int, u_sweep;
+uniform vec3 u_flash, u_glow;
+vec4 cell(vec2 g){ return texture2D(u_t, (floor(g)+.5)/u_grid); }
+vec4 soft(vec2 g){ return texture2D(u_t, g/u_grid); }
+void main(){
+  vec2 uv = v - .5;
+  float r2 = dot(uv,uv);
+  uv *= 1. + .12*r2 + .06*r2*r2;
+  vec2 q = uv + .5;
+  if (q.x < 0. || q.x > 1. || q.y < 0. || q.y > 1.) { gl_FragColor = vec4(0.,0.,0.,1.); return; }
+  q.y = 1. - q.y;
+  vec2 g = q*u_grid;
+  vec4 c = cell(g);
+  vec2 f = fract(g) - .5;
+  float dotm = smoothstep(.52, .18, length(f));
+  float alive = c.r, trail = c.g, gh = c.b;
+  // sweep boost
+  float boost = 0.;
+  if (u_sweep > .5 && u_sweep < 1.5) {
+    float a = atan(q.y-.5, q.x-.5);
+    float d = mod(u_time*1.4 - a, 6.2831853);
+    boost = exp(-d*2.2);
+  } else if (u_sweep > 1.5) {
+    float d = mod(u_time*.35 - q.y, 1.);
+    boost = exp(-d*9.)*.9;
+  }
+  vec3 col = u_flash*alive*dotm*(1.1 + .5*boost);
+  col += u_glow*trail*dotm*(.55 + .6*boost);
+  // bloom from neighbours
+  vec3 bl = vec3(0.);
+  for (int i = 0; i < 8; i++) {
+    float an = float(i)*.785398;
+    vec2 o = vec2(cos(an), sin(an));
+    vec4 s1 = soft(g + o*1.3), s2 = soft(g + o*3.);
+    bl += (s1.r*u_flash + s1.g*u_glow)*.06 + (s2.r*u_flash + s2.g*u_glow)*.025;
+  }
+  col += bl*(1. + boost);
+  col += vec3(.4,.9,1.)*gh*dotm*.55;
+  // graticule etched on the faceplate
+  vec2 div = q*vec2(10.,8.);
+  vec2 gd = abs(fract(div+.5)-.5)/fwidthx(div);
+  float line = 1. - min(min(gd.x, gd.y), 1.);
+  vec2 sub = abs(fract(q*vec2(50.,40.)+.5)-.5);
+  float tick = step(abs(q.x-.5), .006)*step(sub.y, .06) + step(abs(q.y-.5), .008)*step(sub.x, .06);
+  col += u_glow*.1*(line*.8 + tick*.8) + vec3(.02,.035,.03)*line;
+  // phosphor grain, scanlines, vignette
+  col *= .92 + .08*sin(gl_FragCoord.y*3.14159*.66);
+  col += u_glow*.018;
+  col *= 1. - smoothstep(.18, .5, r2)*.75;
+  col *= u_int;
+  gl_FragColor = vec4(1. - exp(-col*1.4), 1.);
+}`;
+function initGL() {
+  if (!gl) return false;
+  const derivs = gl.getExtension('OES_standard_derivatives');
+  let src = FS.replace('fwidthx(div)', derivs ? 'fwidth(div)' : 'vec2(.02)');
+  if (derivs) src = '#extension GL_OES_standard_derivatives : enable\n' + src;
+  const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
+  try {
+    prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, src));
+    gl.bindAttribLocation(prog, 0, 'p'); gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  } catch (e) { console.warn(e); return false; }
+  gl.useProgram(prog);
+  ['u_t','u_grid','u_res','u_time','u_int','u_sweep','u_flash','u_glow'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  texObj = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, texObj);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GW, GH, 0, gl.RGBA, gl.UNSIGNED_BYTE, tex);
+  return true;
+}
+const hasGL = initGL();
+const c2 = hasGL ? null : canvas.getContext('2d');
+
+function resize() {
+  const w = canvas.parentElement.clientWidth, d = Math.min(devicePixelRatio || 1, 2);
+  const h = w * GH / GW;
+  canvas.style.height = h + 'px';
+  canvas.width = Math.round(w * d); canvas.height = Math.round(h * d);
+  if (hasGL) gl.viewport(0, 0, canvas.width, canvas.height);
+}
+function render(t) {
+  ghost.fill(0);
+  if (armed && hover) stamp(armed, hover[0], hover[1], armedRot, ghost);
+  for (let i = 0; i < N; i++) {
+    glow[i] = cur[i] ? 1 : glow[i];
+    tex[i * 4] = cur[i] * 255; tex[i * 4 + 1] = Math.min(255, glow[i] * 255) | 0; tex[i * 4 + 2] = ghost[i] * 255; tex[i * 4 + 3] = 255;
+  }
+  if (hasGL) {
+    gl.bindTexture(gl.TEXTURE_2D, texObj);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, GW, GH, gl.RGBA, gl.UNSIGNED_BYTE, tex);
+    gl.uniform1i(U.u_t, 0); gl.uniform2f(U.u_grid, GW, GH); gl.uniform2f(U.u_res, canvas.width, canvas.height);
+    gl.uniform1f(U.u_time, t); gl.uniform1f(U.u_int, intensity); gl.uniform1f(U.u_sweep, sweepMode);
+    gl.uniform3fv(U.u_flash, phos.flash); gl.uniform3fv(U.u_glow, phos.glow);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  } else {
+    const cw = canvas.width / GW, ch = canvas.height / GH;
+    c2.fillStyle = '#020604'; c2.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < N; i++) {
+      const g = glow[i]; if (g < .02 && !ghost[i]) continue;
+      c2.fillStyle = cur[i] ? phos.css : ghost[i] ? '#6cf' : `rgba(${phos.glow.map(v => v * 255 | 0).join(',')},${g})`;
+      c2.fillRect((i % GW) * cw, ((i / GW) | 0) * ch, cw * .8, ch * .8);
+    }
+  }
+}
+function decay(dt) {
+  const k = Math.pow(persist, dt * 60 / 4);
+  for (let i = 0; i < N; i++) if (!cur[i]) glow[i] *= k;
+}
+
+// ---------- loop ----------
+let raf = 0, last = 0, acc = 0;
+function frame(now) {
+  raf = 0; if (document.hidden) return;
+  const dt = last ? Math.min(.1, (now - last) / 1000) : .016; last = now;
+  if (running) {
+    acc += dt * rate;
+    let steps = 0;
+    while (acc >= 1 && steps < 4) { stepLife(); acc -= 1; steps++; }
+    if (steps) updateReadout();
+  }
+  decay(dt);
+  render(now / 1000);
+  raf = requestAnimationFrame(frame);
+}
+function kick() { if (!raf && !document.hidden) { last = 0; raf = requestAnimationFrame(frame); } }
+document.addEventListener('visibilitychange', kick);
+function updateReadout() { $('gen').textContent = gen; $('pop').textContent = population(); $('modeOut').textContent = armed ? 'ARMED' : edit ? 'EDIT' : running ? 'RUN' : 'HOLD'; }
+
+// ---------- input ----------
+function toCell(e) {
+  const r = canvas.getBoundingClientRect();
+  let x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+  const r2 = x * x + y * y, k = 1 + .12 * r2 + .06 * r2 * r2; x *= k; y *= k;
+  return [Math.floor((x + .5) * GW), Math.floor((y + .5) * GH)];
+}
+let painting = false, paintVal = 1;
+canvas.addEventListener('pointermove', e => {
+  hover = toCell(e);
+  if (painting) { const [x, y] = hover; if (x >= 0 && y >= 0 && x < GW && y < GH) { cur[y * GW + x] = paintVal; updateReadout(); } }
+});
+canvas.addEventListener('pointerleave', () => { hover = null; });
+canvas.addEventListener('pointerdown', e => {
+  const [x, y] = toCell(e); hover = [x, y];
+  if (armed) { stamp(armed, x, y, armedRot); updateReadout(); if (!e.shiftKey) disarm(); return; }
+  if (!edit) { setEdit(true); }
+  if (x < 0 || y < 0 || x >= GW || y >= GH) return;
+  canvas.setPointerCapture(e.pointerId);
+  painting = true; paintVal = cur[y * GW + x] ? 0 : 1; cur[y * GW + x] = paintVal; updateReadout();
+});
+addEventListener('pointerup', () => { painting = false; });
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'Escape') disarm();
+  if ((e.key === 'r' || e.key === 'R') && armed) armedRot = (armedRot + 1) % 4;
+  if (e.key === ' ') { e.preventDefault(); $('runBtn').click(); }
+});
+
+// ---------- UI ----------
+function setRun(v) { running = v; $('runBtn').setAttribute('aria-pressed', v); updateReadout(); }
+function setEdit(v) { edit = v; $('editBtn').setAttribute('aria-pressed', v); if (v) setRun(false); updateReadout(); }
+function disarm() { armed = null; [...$('carts').children].forEach(b => b.setAttribute('aria-pressed', false)); updateReadout(); }
+$('runBtn').addEventListener('click', () => { if (!running) setEdit(false); setRun(!running); kick(); });
+$('stepBtn').addEventListener('click', () => { setRun(false); stepLife(); updateReadout(); });
+$('editBtn').addEventListener('click', () => setEdit(!edit));
+$('clearBtn').addEventListener('click', () => { cur.fill(0); gen = 0; updateReadout(); });
+$('soupBtn').addEventListener('click', () => { seed = (Math.random() * 99999) | 0; $('seed').value = seed; soup(); setEdit(false); setRun(true); updateReadout(); });
+$('resetBtn').addEventListener('click', () => { composition(); setEdit(false); setRun(true); updateReadout(); });
+$('seed').addEventListener('change', e => { seed = parseInt(String(e.target.value).replace(/\D/g, ''), 10) || 0; e.target.value = seed; soup(); updateReadout(); });
+$('rate').addEventListener('input', e => { rate = +e.target.value; $('rateVal').textContent = rate; $('rateOut').textContent = rate; });
+$('persist').addEventListener('input', e => { persist = +e.target.value; $('persistVal').textContent = persist.toFixed(2).replace(/^0/, ''); });
+$('intensity').addEventListener('input', e => { intensity = +e.target.value; $('intVal').textContent = intensity.toFixed(1); });
+$('sweep').addEventListener('change', e => { sweepMode = +e.target.value; });
+const phosEl = $('phos');
+PHOS.forEach(p => {
+  const b = document.createElement('button'); b.type = 'button'; b.id = 'phos-' + p.id; b.textContent = p.id; b.style.setProperty('--c', p.css);
+  b.addEventListener('click', () => { phos = p; syncPhos(); try { localStorage.setItem('lifescope.phos', p.id); } catch (e) {} });
+  phosEl.appendChild(b);
+});
+function syncPhos() { [...phosEl.children].forEach(b => b.setAttribute('aria-pressed', b.id === 'phos-' + phos.id)); document.documentElement.style.setProperty('--phos', phos.css); }
+const cartsEl = $('carts');
+PATTERNS.forEach(p => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'cart'; b.id = 'cart-' + p.id; b.setAttribute('aria-pressed', false);
+  b.innerHTML = `${p.name}<small>${p.note}</small>`;
+  b.addEventListener('click', () => {
+    const was = armed === p; disarm();
+    if (!was) { armed = p; armedRot = 0; b.setAttribute('aria-pressed', true); if (!hover) hover = [GW >> 1, GH >> 1]; }
+    updateReadout();
+  });
+  cartsEl.appendChild(b);
+});
+
+try { const s = localStorage.getItem('lifescope.phos'); const f = PHOS.find(p => p.id === s); if (f) phos = f; } catch (e) {}
+$('rate').value = rate; $('rateVal').textContent = rate; $('rateOut').textContent = rate; $('sweep').value = sweepMode;
+syncPhos(); composition();
+for (let i = 0; i < 60; i++) { stepLife(); decay(1 / 12); }
+updateReadout();
+new ResizeObserver(resize).observe(canvas.parentElement);
+resize(); render(0); kick();
+})();
+</script>
+</body>
+</html>

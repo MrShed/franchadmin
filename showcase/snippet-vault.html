@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drawer Snippet Catalog</title>
+<meta name="description" content="A card-catalog snippet library: tag drawers, instant search, syntax highlighting, one-click copy and JSON import and export, stored in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Cutive+Mono&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wall:#dfe3e6; --oak:#9c6a3c; --oak-2:#7d5230; --oak-3:#b98452; --oak-hi:#c99966; --brass:#c9a24a; --brass-2:#8f6f25;
+  --card:#ffffff; --card-rule:#b9d3ee; --card-red:#e0655f; --ink:#1e2226; --muted:#65707a; --hair:#c9d0d6;
+  --code-bg:#f6f8fa; --accent:#255e9e;
+  --serif:"Young Serif","Rockwell","Georgia",serif; --typed:"Cutive Mono","Courier New",monospace; --code:"Fira Code",ui-monospace,Menlo,Consolas,monospace;
+  /* hl */ --h-kw:#9b2f7a; --h-str:#23703b; --h-num:#a14e0b; --h-com:#8a939b; --h-fn:#255e9e; --h-ty:#7a4ec2; --h-at:#8b5a00; --h-var:#b23b2e;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--wall:#14171a;--oak:#5a3a22;--oak-2:#3e2716;--oak-3:#6e4a2d;--oak-hi:#7d5536;--card:#1f2429;--card-rule:#2c3e55;--card-red:#b44a45;--ink:#e3e7ea;--muted:#8d98a3;--hair:#323a42;--code-bg:#171b1f;--accent:#7fb1ea;
+    --h-kw:#e38bd0;--h-str:#8fd19e;--h-num:#f5a55a;--h-com:#6b7680;--h-fn:#8ab8f0;--h-ty:#c4a7ff;--h-at:#e7c26b;--h-var:#ff8a7a;color-scheme:dark}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--wall);color:var(--ink);font-family:var(--typed);font-size:15px;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;color:inherit}
+.wrap{max-width:1320px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-right)) 60px max(16px,env(safe-area-inset-left))}
+.top{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.back{font:13px var(--typed);color:var(--muted);text-decoration:none;align-self:flex-start}
+.back:hover{color:var(--accent)}
+h1{font:400 clamp(34px,5vw,58px)/.95 var(--serif);margin:0;letter-spacing:-.01em}
+h1 small{display:block;font:14px var(--typed);color:var(--muted);margin-top:6px;letter-spacing:.02em}
+.search{margin-left:auto;display:flex;gap:8px;flex:1 1 320px;max-width:520px}
+.search input{flex:1;min-width:0;font:16px var(--typed);padding:10px 12px;border:1px solid var(--hair);background:var(--card);color:var(--ink);border-radius:2px}
+.btn{font:14px var(--typed);padding:9px 14px;border:1px solid var(--ink);background:var(--card);color:var(--ink);cursor:pointer;border-radius:2px;white-space:nowrap}
+.btn.primary{background:var(--ink);color:var(--card)}
+.btn:hover{border-color:var(--accent)}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr) minmax(0,1.15fr);gap:22px;align-items:start}
+@media (max-width:1100px){.layout{grid-template-columns:220px minmax(0,1fr)}.reader{grid-column:1/-1}}
+@media (max-width:720px){.layout{grid-template-columns:minmax(0,1fr)}}
+/* cabinet */
+.cabinet{background:linear-gradient(90deg,var(--oak-2),var(--oak) 8%,var(--oak) 92%,var(--oak-2));padding:12px;border-radius:4px;box-shadow:0 20px 30px -20px rgba(0,0,0,.6),inset 0 0 0 1px rgba(0,0,0,.2);position:sticky;top:12px}
+.cabinet::before{content:"";display:block;height:8px;margin:-12px -12px 10px;background:var(--oak-3);border-radius:4px 4px 0 0;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.drawers{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:720px){.cabinet{position:static}.drawers{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.drawer{height:48px}.drawer .holder{top:6px;height:22px;width:88%;font-size:10px}.drawer .pull{bottom:5px;width:24px;height:9px}.drawer .ct{font-size:9px;bottom:2px;right:4px}}
+.drawer{position:relative;height:74px;border:0;cursor:pointer;border-radius:2px;padding:0;
+  background:repeating-linear-gradient(95deg,rgba(0,0,0,.05) 0 2px,transparent 2px 7px),linear-gradient(180deg,var(--oak-hi),var(--oak-3));
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.15),0 2px 0 rgba(0,0,0,.25);transition:transform .25s cubic-bezier(.3,1.4,.5,1)}
+.drawer .holder{position:absolute;left:50%;top:9px;transform:translateX(-50%);width:76%;height:26px;border:2px solid var(--brass);border-radius:2px;background:#f7f4ea;box-shadow:inset 0 1px 2px rgba(0,0,0,.25);display:grid;place-items:center;font:12px var(--typed);color:#2a2a2a;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px}
+.drawer .pull{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:34px;height:14px;border-radius:0 0 14px 14px;border:2px solid var(--brass);border-top:0;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent)}
+.drawer .ct{position:absolute;right:6px;bottom:4px;font:11px var(--typed);color:rgba(255,255,255,.75)}
+.drawer[aria-pressed=true]{transform:translateY(4px) scale(1.03);box-shadow:inset 0 0 0 2px var(--brass),0 8px 14px -6px rgba(0,0,0,.6)}
+.drawer[aria-pressed=true] .holder{background:#fff6cf}
+@media (prefers-reduced-motion:reduce){.drawer{transition:none}}
+.cab-foot{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.cab-foot button{flex:1;font:12px var(--typed);background:rgba(0,0,0,.25);color:#f3e7d3;border:1px solid rgba(255,255,255,.2);padding:7px;cursor:pointer;border-radius:2px}
+.cab-foot button:hover{background:rgba(0,0,0,.4)}
+/* list */
+.listhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:var(--muted);gap:10px;flex-wrap:wrap}
+.listhd select{font:13px var(--typed);background:var(--card);color:var(--ink);border:1px solid var(--hair);padding:4px 6px}
+.cards{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.icard{position:relative;background:var(--card);border:0;text-align:left;cursor:pointer;padding:12px 14px 12px;border-radius:2px;
+  background-image:linear-gradient(var(--card-red),var(--card-red)),repeating-linear-gradient(180deg,transparent 0 21px,var(--card-rule) 21px 22px);
+  background-size:100% 1px,100% 100%;background-position:0 38px,0 38px;background-repeat:no-repeat,no-repeat;
+  box-shadow:0 1px 0 var(--hair),0 6px 14px -10px rgba(0,0,0,.5);transition:transform .2s;display:block;width:100%}
+.icard:hover{transform:translateY(-2px) rotate(-.3deg)}
+.icard[aria-current=true]{box-shadow:0 0 0 2px var(--accent),0 6px 14px -10px rgba(0,0,0,.5)}
+.icard::after{content:"";position:absolute;left:50%;bottom:8px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--wall);box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+.icard .t{font:400 17px var(--serif);display:flex;justify-content:space-between;gap:10px;height:26px;overflow:hidden}
+.icard .t span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icard .lang{font:12px var(--typed);color:var(--card-red);flex-shrink:0}
+.icard pre{margin:12px 0 4px;font:12.5px/22px var(--code);white-space:pre;overflow:hidden;max-height:88px;color:var(--ink)}
+.icard .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tag{font:12px var(--typed);color:var(--accent)}
+.empty{padding:30px;text-align:center;color:var(--muted);border:2px dashed var(--hair)}
+/* reader */
+.reader{background:var(--card);border-radius:2px;box-shadow:0 1px 0 var(--hair),0 20px 36px -24px rgba(0,0,0,.6);position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+.reader .rh{padding:16px 18px 10px;border-bottom:1px solid var(--card-red);display:grid;gap:6px}
+.reader h2{font:400 26px/1.1 var(--serif);margin:0}
+.reader .rm{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);align-items:center}
+.reader .acts{display:flex;gap:6px;flex-wrap:wrap;padding:10px 18px}
+.reader pre{margin:0;padding:16px 18px;background:var(--code-bg);font:13.5px/1.6 var(--code);overflow:auto;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);tab-size:2}
+.reader .notes{padding:14px 18px 18px;font-size:14px;line-height:1.6;background-image:repeating-linear-gradient(180deg,transparent 0 23px,var(--card-rule) 23px 24px);background-position:0 6px}
+.reader .notes:empty{display:none}
+.form{padding:16px 18px;display:grid;gap:10px}
+.form label{font-size:12px;color:var(--muted);display:grid;gap:4px}
+.form input,.form select,.form textarea{font:14px var(--typed);padding:8px 10px;border:1px solid var(--hair);background:var(--card);color:var(--ink);border-radius:2px;width:100%;min-width:0}
+.form textarea.code{font:13px/1.55 var(--code);min-height:220px;tab-size:2;white-space:pre;background:var(--code-bg)}
+.form .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(30px);background:var(--ink);color:var(--card);padding:8px 16px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:40;border-radius:2px}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.io{padding:16px 18px;display:grid;gap:10px}
+.io textarea{font:12px/1.5 var(--code);min-height:220px;width:100%;padding:10px;border:1px solid var(--hair);background:var(--code-bg);color:var(--ink)}
+.io p{margin:0;font-size:13px;color:var(--muted)}
+kbd{font:12px var(--code);border:1px solid var(--hair);border-bottom-width:2px;padding:0 5px;border-radius:3px}
+/* highlight theme (inline) */
+.hljs{color:var(--ink);background:transparent}
+.hljs-keyword,.hljs-selector-tag,.hljs-built_in,.hljs-literal,.hljs-meta .hljs-keyword{color:var(--h-kw)}
+.hljs-string,.hljs-regexp,.hljs-meta .hljs-string,.hljs-template-tag,.hljs-addition{color:var(--h-str)}
+.hljs-number,.hljs-symbol,.hljs-bullet{color:var(--h-num)}
+.hljs-comment,.hljs-quote,.hljs-meta{color:var(--h-com);font-style:italic}
+.hljs-title,.hljs-title.function_,.hljs-section{color:var(--h-fn)}
+.hljs-type,.hljs-title.class_,.hljs-class .hljs-title{color:var(--h-ty)}
+.hljs-attr,.hljs-attribute,.hljs-property,.hljs-selector-class,.hljs-selector-id{color:var(--h-at)}
+.hljs-variable,.hljs-template-variable,.hljs-params,.hljs-deletion,.hljs-name,.hljs-tag{color:var(--h-var)}
+.hljs-emphasis{font-style:italic}.hljs-strong{font-weight:700}
+@media (max-width:1100px){.reader{position:static;max-height:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><a class="back" href="index.html" id="backLink">← Showcase</a>
+    <h1>Drawer<small>snippet catalogue · filed by tag, found by search</small></h1></div>
+    <div class="search"><input id="q" type="search" placeholder="Search titles, code, notes…  ( / )" aria-label="Search snippets"><button class="btn primary" id="newBtn" type="button">+ New card</button></div>
+  </div>
+  <div class="layout">
+    <aside class="cabinet" aria-label="Tag drawers">
+      <div class="drawers" id="drawers"></div>
+      <div class="cab-foot"><button type="button" id="exportBtn">Export JSON</button><button type="button" id="importBtn">Import</button></div>
+    </aside>
+    <section aria-label="Snippet cards">
+      <div class="listhd"><span id="count"></span>
+        <label>Sort <select id="sort"><option value="recent">Recently filed</option><option value="az">A–Z</option><option value="used">Most copied</option></select></label></div>
+      <div class="cards" id="cards"></div>
+    </section>
+    <section class="reader" id="reader" aria-live="polite"></section>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const KEY='drawer-snippets-v1';
+  const ls={get(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}},set(v){try{localStorage.setItem(KEY,JSON.stringify(v));return true}catch(e){return false}}};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const LANGS=['javascript','typescript','python','bash','sql','css','html','json','go','rust','yaml','dockerfile','plaintext'];
+  const now=Date.now(),D=86400000;
+  const SEED=[
+    {title:'Debounce with leading edge',lang:'javascript',tags:['js','perf'],notes:'Use leading:true for buttons so the first click is instant; trailing for search inputs.',code:`export function debounce(fn, wait = 200, { leading = false } = {}) {
+  let t;
+  return function (...args) {
+    const callNow = leading && !t;
+    clearTimeout(t);
+    t = setTimeout(() => {
+      t = null;
+      if (!leading) fn.apply(this, args);
+    }, wait);
+    if (callNow) fn.apply(this, args);
+  };
+}`},
+    {title:'Running total per customer',lang:'sql',tags:['sql','reporting'],notes:'Window functions beat self-joins. ROWS BETWEEN keeps ties from collapsing.',code:`SELECT
+  customer_id,
+  ordered_at::date AS day,
+  amount,
+  SUM(amount) OVER (
+    PARTITION BY customer_id
+    ORDER BY ordered_at
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS running_total
+FROM orders
+WHERE ordered_at >= now() - interval '90 days'
+ORDER BY customer_id, ordered_at;`},
+    {title:'Find the 20 largest files',lang:'bash',tags:['shell','ops'],notes:'Stays on one filesystem (-xdev) so it will not wander into mounted volumes.',code:`find . -xdev -type f -printf '%s\\t%p\\n' 2>/dev/null \\
+  | sort -nr \\
+  | head -20 \\
+  | awk -F'\\t' '{ printf "%8.1f MB  %s\\n", $1/1048576, $2 }'`},
+    {title:'Frozen dataclass with validation',lang:'python',tags:['python'],notes:'',code:`from dataclasses import dataclass, field
+from decimal import Decimal
+
+@dataclass(frozen=True, slots=True)
+class Money:
+    amount: Decimal
+    currency: str = "GBP"
+    tags: tuple[str, ...] = field(default_factory=tuple)
+
+    def __post_init__(self):
+        if self.amount < 0:
+            raise ValueError("amount must be non-negative")
+        if len(self.currency) != 3:
+            raise ValueError("ISO 4217 code expected")`},
+    {title:'Fluid type scale with clamp()',lang:'css',tags:['css','design'],notes:'Min at 360px viewport, max at 1280px. Tweak the vw coefficient, not the rems.',code:`:root {
+  --step-0: clamp(1rem, 0.93rem + 0.33vw, 1.19rem);
+  --step-1: clamp(1.25rem, 1.12rem + 0.6vw, 1.58rem);
+  --step-2: clamp(1.56rem, 1.34rem + 1.0vw, 2.11rem);
+  --step-3: clamp(1.95rem, 1.6rem + 1.6vw, 2.81rem);
+}
+h1 { font-size: var(--step-3); line-height: 1.05; }`},
+    {title:'Undo last commit, keep changes',lang:'bash',tags:['git'],notes:'Soft reset keeps everything staged. Use --mixed to unstage too.',code:`git reset --soft HEAD~1
+# or, if already pushed to a shared branch:
+git revert --no-edit HEAD`},
+    {title:'Postgres for local dev',lang:'yaml',tags:['docker','sql'],notes:'Healthcheck lets dependent services wait with depends_on: condition: service_healthy.',code:`services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: ledger
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+volumes:
+  pgdata:`},
+    {title:'Minimal JSON HTTP server',lang:'go',tags:['go','api'],notes:'',code:`package main
+
+import (
+\t"encoding/json"
+\t"log"
+\t"net/http"
+)
+
+func main() {
+\thttp.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+\t\tw.Header().Set("Content-Type", "application/json")
+\t\tjson.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+\t})
+\tlog.Fatal(http.ListenAndServe(":8080", nil))
+}`},
+    {title:'Email reply template — invoice chase',lang:'plaintext',tags:['text','admin'],notes:'Friendly second reminder. Swap {name}, {inv}, {days}.',code:`Hi {name},
+
+Just a gentle nudge on invoice {inv}, which is now {days} days past due.
+If it's already on its way, please ignore this — and thank you.
+
+Happy to resend a copy or split it into two payments if that helps.
+
+Best,
+Ines`}
+  ];
+  let db=ls.get();
+  if(!db||!Array.isArray(db.items)){db={items:SEED.map((s,i)=>({id:'s'+(i+1),...s,created:now-i*D*1.7,used:[4,1,7,2,3,11,0,1,5][i]||0})),sel:'s1',tag:null,sort:'recent'}}
+  let mode='view';
+  const hl=(code,lang)=>{try{if(window.hljs){if(lang&&lang!=='plaintext'&&hljs.getLanguage(lang))return hljs.highlight(code,{language:lang,ignoreIllegals:true}).value;if(lang==='plaintext')return esc(code);return hljs.highlightAuto(code).value}}catch(e){}return esc(code)};
+  function save(){ls.set(db)}
+  function tags(){const m=new Map();db.items.forEach(s=>s.tags.forEach(t=>m.set(t,(m.get(t)||0)+1)));return [...m.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))}
+  function renderDrawers(){
+    const el=$('drawers');el.innerHTML='';
+    const all=document.createElement('button');all.className='drawer';all.type='button';all.id='dr-all';all.setAttribute('aria-pressed',!db.tag);all.innerHTML=`<span class="holder">ALL CARDS</span><span class="pull"></span><span class="ct">${db.items.length}</span>`;all.onclick=()=>{db.tag=null;save();renderAll()};el.appendChild(all);
+    tags().forEach(([t,c])=>{const b=document.createElement('button');b.className='drawer';b.type='button';b.id='dr-'+t.replace(/\W/g,'_');b.setAttribute('aria-pressed',db.tag===t);b.setAttribute('aria-label','Drawer '+t+', '+c+' cards');b.innerHTML=`<span class="holder">${esc(t.toUpperCase())}</span><span class="pull"></span><span class="ct">${c}</span>`;b.onclick=()=>{db.tag=db.tag===t?null:t;save();renderAll()};el.appendChild(b)});
+  }
+  function filtered(){
+    const q=$('q').value.trim().toLowerCase();const terms=q.split(/\s+/).filter(Boolean);
+    let list=db.items.filter(s=>!db.tag||s.tags.includes(db.tag));
+    if(terms.length)list=list.filter(s=>{const hay=(s.title+' '+s.code+' '+s.notes+' '+s.tags.join(' ')+' '+s.lang).toLowerCase();return terms.every(t=>t.startsWith('#')?s.tags.includes(t.slice(1)):hay.includes(t))});
+    const so=db.sort;list.sort((a,b)=>so==='az'?a.title.localeCompare(b.title):so==='used'?(b.used-a.used):(b.created-a.created));
+    return list;
+  }
+  function renderCards(){
+    const list=filtered();const el=$('cards');
+    $('count').textContent=list.length+' of '+db.items.length+' cards'+(db.tag?' · drawer “'+db.tag+'”':'');
+    if(!list.length){el.innerHTML='<div class="empty">No cards match. Try another drawer or <kbd>#tag</kbd> search.</div>';return}
+    el.innerHTML='';
+    list.forEach(s=>{const b=document.createElement('button');b.type='button';b.className='icard';b.id='card-'+s.id;b.setAttribute('aria-current',s.id===db.sel);
+      const preview=s.code.split('\n').slice(0,4).join('\n');
+      b.innerHTML=`<div class="t"><span>${esc(s.title)}</span><span class="lang">${esc(s.lang)}</span></div><pre class="hljs">${hl(preview,s.lang)}</pre><div class="meta">${s.tags.map(t=>'<span class="tag">#'+esc(t)+'</span>').join('')}<span>· copied ${s.used}×</span></div>`;
+      b.onclick=()=>{db.sel=s.id;mode='view';save();renderCards();renderReader();if(innerWidth<1100)$('reader').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'})};
+      el.appendChild(b)});
+  }
+  function current(){return db.items.find(s=>s.id===db.sel)}
+  function renderReader(){
+    const r=$('reader');const s=current();
+    if(mode==='io'){r.innerHTML=`<div class="rh"><h2>Import / export</h2><div class="rm">JSON array of cards: title, lang, tags, code, notes.</div></div>
+      <div class="io"><textarea id="ioText" aria-label="JSON" spellcheck="false"></textarea>
+      <p>Paste JSON above, or pick a file. Import merges by title — duplicates are skipped.</p>
+      <input type="file" id="ioFile" accept="application/json,.json" aria-label="Choose JSON file">
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="ioImport" type="button">Import from text</button><button class="btn" id="ioCopy" type="button">Copy export</button><button class="btn" id="ioClose" type="button">Close</button></div></div>`;
+      $('ioText').value=JSON.stringify(db.items.map(({title,lang,tags,code,notes})=>({title,lang,tags,code,notes})),null,2);
+      $('ioCopy').onclick=()=>copy($('ioText').value,'Catalogue JSON copied');
+      $('ioClose').onclick=()=>{mode='view';renderReader()};
+      $('ioFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{$('ioText').value=rd.result;doImport(rd.result)};rd.readAsText(f)};
+      $('ioImport').onclick=()=>doImport($('ioText').value);
+      return;
+    }
+    if(mode==='edit'||mode==='new'){
+      const x=mode==='new'?{title:'',lang:'javascript',tags:[],code:'',notes:''}:s;
+      r.innerHTML=`<div class="rh"><h2>${mode==='new'?'Type a new card':'Amend card'}</h2></div>
+      <form class="form" id="f"><label>Title<input id="fTitle" required value="${esc(x.title)}"></label>
+      <div class="row"><label>Language<select id="fLang">${LANGS.map(l=>`<option${l===x.lang?' selected':''}>${l}</option>`).join('')}</select></label><label>Tags (comma separated)<input id="fTags" value="${esc(x.tags.join(', '))}"></label></div>
+      <label>Code<textarea class="code" id="fCode" spellcheck="false">${esc(x.code)}</textarea></label>
+      <label>Notes<textarea id="fNotes" rows="3">${esc(x.notes)}</textarea></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit" id="fSave">File card</button><button class="btn" type="button" id="fCancel">Cancel</button></div></form>`;
+      $('fCode').addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();e.target.setRangeText('  ',e.target.selectionStart,e.target.selectionEnd,'end')}});
+      $('fCancel').onclick=()=>{mode='view';renderReader()};
+      $('f').onsubmit=e=>{e.preventDefault();const v={title:$('fTitle').value.trim()||'Untitled',lang:$('fLang').value,tags:$('fTags').value.split(',').map(t=>t.trim().toLowerCase().replace(/^#/,'')).filter(Boolean),code:$('fCode').value,notes:$('fNotes').value.trim()};
+        if(mode==='new'){const n={id:'s'+Date.now().toString(36),...v,created:Date.now(),used:0};db.items.push(n);db.sel=n.id}else Object.assign(s,v);
+        mode='view';save();renderAll();toast('Card filed')};
+      $('fTitle').focus();return;
+    }
+    if(!s){r.innerHTML='<div class="rh"><h2>No card pulled</h2><div class="rm">Pick a card from the list, or press <kbd>n</kbd> to type a new one.</div></div>';return}
+    r.innerHTML=`<div class="rh"><div class="rm"><span style="color:var(--card-red)">${esc(s.lang)}</span><span>filed ${new Date(s.created).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span><span>${s.code.split('\n').length} lines</span><span>copied ${s.used}×</span></div><h2>${esc(s.title)}</h2><div class="rm">${s.tags.map(t=>`<button type="button" class="tag" data-t="${esc(t)}" style="background:none;border:0;padding:0;cursor:pointer">#${esc(t)}</button>`).join(' ')}</div></div>
+      <div class="acts"><button class="btn primary" id="rCopy" type="button">Copy code</button><button class="btn" id="rEdit" type="button">Edit</button><button class="btn" id="rDup" type="button">Duplicate</button><button class="btn" id="rDel" type="button">Remove</button></div>
+      <pre class="hljs"><code>${hl(s.code,s.lang)}</code></pre><div class="notes">${esc(s.notes)}</div>`;
+    r.querySelectorAll('.tag[data-t]').forEach(b=>b.onclick=()=>{db.tag=b.dataset.t;save();renderAll()});
+    $('rCopy').onclick=()=>{copy(s.code,'Copied “'+s.title+'”');s.used++;save();renderCards();renderReaderMeta()};
+    $('rEdit').onclick=()=>{mode='edit';renderReader()};
+    $('rDup').onclick=()=>{const n={...s,id:'s'+Date.now().toString(36),title:s.title+' (copy)',created:Date.now(),used:0,tags:[...s.tags]};db.items.push(n);db.sel=n.id;save();renderAll();toast('Duplicated')};
+    let armed=0;$('rDel').onclick=()=>{if(Date.now()-armed>2500){armed=Date.now();$('rDel').textContent='Click to confirm';setTimeout(()=>{const b=$('rDel');if(b)b.textContent='Remove'},2500);return}
+      db.items=db.items.filter(x=>x!==s);db.sel=(filtered()[0]||{}).id;save();renderAll();toast('Card removed')};
+  }
+  function renderReaderMeta(){const s=current();if(s&&mode==='view'){const m=$('reader').querySelector('.rm');if(m)m.lastElementChild.textContent='copied '+s.used+'×'}}
+  function doImport(txt){
+    try{let arr=JSON.parse(txt);if(!Array.isArray(arr))arr=arr.items||[];let added=0;
+      arr.forEach(o=>{if(!o||!o.code)return;if(db.items.some(x=>x.title===o.title&&x.code===o.code))return;db.items.push({id:'s'+Date.now().toString(36)+added,title:String(o.title||'Imported'),lang:LANGS.includes(o.lang)?o.lang:'plaintext',tags:Array.isArray(o.tags)?o.tags.map(String):[],code:String(o.code),notes:String(o.notes||''),created:Date.now(),used:0});added++});
+      save();mode='view';renderAll();toast(added+' card'+(added===1?'':'s')+' imported')}catch(e){toast('That is not valid JSON')}
+  }
+  function renderAll(){renderDrawers();renderCards();renderReader()}
+  function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),1700)}
+  async function copy(txt,m){try{await navigator.clipboard.writeText(txt);toast(m)}catch(e){const x=document.createElement('textarea');x.value=txt;x.style.position='fixed';x.style.opacity=0;document.body.appendChild(x);x.select();try{document.execCommand('copy');toast(m)}catch(_){toast('Copy blocked')}x.remove()}}
+  $('q').addEventListener('input',renderCards);
+  $('sort').value=db.sort||'recent';$('sort').onchange=e=>{db.sort=e.target.value;save();renderCards()};
+  $('newBtn').onclick=()=>{mode='new';renderReader();if(innerWidth<1100)$('reader').scrollIntoView()};
+  $('exportBtn').onclick=()=>{mode='io';renderReader();copy($('ioText').value,'Catalogue JSON copied');if(innerWidth<1100)$('reader').scrollIntoView()};
+  $('importBtn').onclick=()=>{mode='io';renderReader();$('ioText').value='';$('ioText').placeholder='Paste exported JSON here…';$('ioText').focus()};
+  document.addEventListener('keydown',e=>{const tg=(e.target.tagName||'').toLowerCase();if(tg==='input'||tg==='textarea'||tg==='select'||e.ctrlKey||e.metaKey)return;
+    if(e.key==='/'){e.preventDefault();$('q').focus()}else if(e.key==='n'){e.preventDefault();$('newBtn').click()}});
+  renderAll();save();
+  if(!window.hljs){addEventListener('load',()=>{if(window.hljs)renderAll()})}
+})();
+</script>
+</body>
+</html>
