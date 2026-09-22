@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Holloway Focus Timer</title>
+<meta name="description" content="A pomodoro focus timer built like an enamel kitchen appliance: twist the big dial to set minutes, run focus and break cycles, hear a real bell chime and keep a session log.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wall:#d7e6dd; --wall-2:#c6dacd; --grout:#b7cdbf;
+  --enamel:#c8322a; --enamel-hi:#e2584d; --enamel-lo:#8f1d17; --enamel-ink:#fff6ec;
+  --porcelain:#fbfaf7; --porcelain-2:#e8e6df; --mark:#1d1b19; --mark-soft:#6b6660;
+  --chrome-1:#f4f6f7; --chrome-2:#9aa3a8; --chrome-3:#5c656b;
+  --wedge:#c8322a; --wedge-op:.18;
+  --paper:#fbfdfb; --paper-ink:#1f2a24; --paper-soft:#5f6e66; --paper-line:#d9e3dc;
+  --accent:#1f6f55; --focus-ring:#0f5bd8;
+  --shadow:0 30px 60px -20px rgba(40,20,10,.45), 0 8px 18px -8px rgba(40,20,10,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --wall:#101a17; --wall-2:#0c1512; --grout:#1b2824;
+    --enamel:#8e1f19; --enamel-hi:#b43a31; --enamel-lo:#4d0d09; --enamel-ink:#ffe9dc;
+    --porcelain:#e9e6de; --porcelain-2:#c9c5bb; --mark:#18130f; --mark-soft:#5a534c;
+    --chrome-1:#d6dadd; --chrome-2:#727b80; --chrome-3:#353b3f;
+    --wedge:#b3261e; --wedge-op:.24;
+    --paper:#18221e; --paper-ink:#e4ece7; --paper-soft:#93a49b; --paper-line:#2a3833;
+    --accent:#63c7a1; --focus-ring:#7fb2ff;
+    --shadow:0 30px 60px -20px rgba(0,0,0,.8), 0 8px 18px -8px rgba(0,0,0,.6);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; min-height:100vh; color:var(--paper-ink);
+  font-family:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif; font-size:18px;
+  background-color:var(--wall);
+  background-image:
+    linear-gradient(var(--grout) 2px, transparent 2px),
+    linear-gradient(90deg, var(--grout) 2px, transparent 2px),
+    radial-gradient(circle at 30% 20%, var(--wall-2), transparent 60%);
+  background-size:72px 72px, 72px 72px, 100% 100%;
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left));
+}
+a.back{position:fixed; top:12px; left:12px; z-index:5; font-family:"Bungee",Impact,sans-serif; font-size:12px; letter-spacing:.06em;
+  color:var(--enamel-ink); background:var(--enamel); padding:6px 10px 5px; border-radius:4px; text-decoration:none;
+  box-shadow:inset 0 1px 0 var(--enamel-hi), 0 2px 0 var(--enamel-lo);}
+a.back:hover{background:var(--enamel-hi)}
+:focus-visible{outline:3px solid var(--focus-ring); outline-offset:3px}
+.wrap{max-width:1160px; margin:28px auto 0; display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); gap:32px; align-items:start}
+@media (max-width:900px){ .wrap{grid-template-columns:minmax(0,1fr); margin-top:40px} }
+
+/* ---------- The appliance ---------- */
+.appliance{
+  position:relative; border-radius:38px 38px 30px 30px; padding:26px 26px 30px;
+  background:
+    radial-gradient(120% 60% at 30% 0%, var(--enamel-hi), transparent 55%),
+    linear-gradient(180deg, var(--enamel) 0%, var(--enamel) 70%, var(--enamel-lo) 100%);
+  box-shadow: var(--shadow), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -6px 14px rgba(0,0,0,.25);
+  color:var(--enamel-ink);
+}
+.appliance::after{ /* enamel chip, the honest wear of a loved tool */
+  content:""; position:absolute; right:34px; bottom:18px; width:14px; height:9px; border-radius:40% 60% 50% 50%;
+  background:#2b2522; box-shadow:0 0 0 2px rgba(255,255,255,.18); opacity:.75;
+}
+.plate{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px}
+.brand{font-family:"Bungee",Impact,sans-serif; font-size:clamp(22px,4vw,32px); line-height:1; letter-spacing:.02em;
+  text-shadow:0 2px 0 var(--enamel-lo)}
+.brand small{display:block; font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:13px; letter-spacing:.32em; text-transform:uppercase; opacity:.85; margin-top:6px; text-shadow:none}
+.modes{display:flex; gap:6px; background:rgba(0,0,0,.18); padding:5px; border-radius:999px; box-shadow:inset 0 2px 4px rgba(0,0,0,.3)}
+.modes button{font:600 15px/1 "Barlow Condensed",sans-serif; letter-spacing:.14em; text-transform:uppercase; color:var(--enamel-ink);
+  background:transparent; border:0; padding:8px 12px; border-radius:999px; cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--porcelain); color:var(--mark); box-shadow:0 2px 0 rgba(0,0,0,.25)}
+
+.dial-wrap{position:relative; width:min(100%, 480px); margin:6px auto 0; aspect-ratio:1}
+#dial{width:100%; height:100%; display:block; touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none}
+#dial.dragging{cursor:grabbing}
+#dial:focus{outline:none}
+#dial:focus-visible .bezel{stroke:var(--focus-ring); stroke-width:5}
+#face{transition:transform .5s cubic-bezier(.2,.9,.25,1.2)}
+#dial.live #face, #dial.dragging #face{transition:none}
+.dial-num{font-family:"Bungee",Impact,sans-serif; font-size:17px; fill:var(--mark)}
+.dial-min{font-family:"Barlow Condensed",sans-serif; font-weight:700; font-size:9px; letter-spacing:.3em; fill:var(--mark-soft)}
+.hint{font:500 14px/1.3 "Barlow Condensed",sans-serif; letter-spacing:.12em; text-transform:uppercase; text-align:center; opacity:.85; margin:4px 0 0}
+
+.readout{display:flex; justify-content:center; align-items:center; gap:16px; margin-top:12px; flex-wrap:wrap}
+.window{background:#141312; color:#ffd9a0; border-radius:10px; padding:8px 16px 6px; min-width:170px; text-align:center;
+  font-family:"Bungee",Impact,sans-serif; font-size:40px; line-height:1; letter-spacing:.04em; font-variant-numeric:tabular-nums;
+  box-shadow:inset 0 3px 8px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.3); border:3px solid var(--chrome-2)}
+.window small{display:block; font:600 12px/1 "Barlow Condensed",sans-serif; letter-spacing:.3em; color:#c79a63; margin-top:6px; text-transform:uppercase}
+.pips{display:flex; gap:8px; align-items:center}
+.pip{width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,.25); box-shadow:inset 0 2px 3px rgba(0,0,0,.4)}
+.pip.on{background:radial-gradient(circle at 35% 30%, #fff 0 12%, #ffd26b 13% 45%, #e59a1b 100%); box-shadow:0 0 10px #ffc34d}
+
+.keys{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; margin-top:22px}
+.key{position:relative; font:700 17px/1 "Barlow Condensed",sans-serif; letter-spacing:.16em; text-transform:uppercase;
+  padding:18px 6px 16px; border-radius:14px; border:0; cursor:pointer; color:var(--mark);
+  background:linear-gradient(180deg, var(--porcelain), var(--porcelain-2));
+  box-shadow:0 6px 0 #6f6a62, 0 10px 16px -6px rgba(0,0,0,.5), inset 0 1px 0 #fff;
+  transition:transform .08s, box-shadow .08s}
+.key:active,.key.pressed{transform:translateY(5px); box-shadow:0 1px 0 #6f6a62, 0 3px 6px -2px rgba(0,0,0,.5), inset 0 1px 0 #fff}
+.key.go{background:linear-gradient(180deg,#2d2a27,#141312); color:#ffe6c4; box-shadow:0 6px 0 #000, 0 10px 16px -6px rgba(0,0,0,.6), inset 0 1px 0 #55504a}
+.key.go:active,.key.go.pressed{box-shadow:0 1px 0 #000, inset 0 1px 0 #55504a}
+.key kbd{display:block; font:500 11px/1 "Barlow Condensed",sans-serif; letter-spacing:.2em; opacity:.6; margin-top:6px}
+@media (max-width:480px){ .keys{grid-template-columns:repeat(2,minmax(0,1fr))} .window{font-size:34px; min-width:150px} }
+
+.task{margin-top:22px; display:flex; gap:10px; align-items:center; background:rgba(0,0,0,.16); border-radius:12px; padding:10px 12px}
+.task label{font:600 13px/1 "Barlow Condensed",sans-serif; letter-spacing:.24em; text-transform:uppercase; white-space:nowrap}
+.task input{flex:1; min-width:0; background:var(--porcelain); color:var(--mark); border:0; border-radius:8px; padding:10px 12px; font:500 18px "Barlow Condensed",sans-serif}
+
+/* ---------- The paper side ---------- */
+.card{background:var(--paper); border-radius:6px; padding:22px 22px 20px; box-shadow:var(--shadow); position:relative; margin-bottom:24px}
+.card::before{content:""; position:absolute; top:-9px; left:50%; width:62px; height:18px; transform:translateX(-50%);
+  border-radius:9px; background:linear-gradient(180deg,var(--chrome-1),var(--chrome-2)); box-shadow:0 2px 4px rgba(0,0,0,.35)}
+.card h2{font-family:"Bungee",Impact,sans-serif; font-weight:400; font-size:20px; margin:4px 0 14px; letter-spacing:.02em; color:var(--paper-ink)}
+.card h2 span{color:var(--enamel)}
+@media (prefers-color-scheme: dark){ .card h2 span{color:var(--enamel-hi)} }
+.stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:16px}
+.stat{border:2px solid var(--paper-line); border-radius:6px; padding:10px 12px}
+.stat b{display:block; font-family:"Bungee",Impact,sans-serif; font-weight:400; font-size:26px; font-variant-numeric:tabular-nums}
+.stat span{font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:var(--paper-soft)}
+.week{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; align-items:end; height:110px; padding:8px 0 0; border-bottom:2px solid var(--paper-line)}
+.week .bar{position:relative; background:repeating-linear-gradient(0deg, var(--enamel) 0 6px, var(--enamel-hi) 6px 8px); border-radius:4px 4px 0 0; min-height:3px; transition:height .6s}
+.week .bar.today{outline:2px solid var(--paper-ink); outline-offset:2px}
+.week .bar em{position:absolute; top:-18px; left:0; right:0; text-align:center; font-style:normal; font-size:12px; color:var(--paper-soft)}
+.days{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--paper-soft); text-align:center; margin-top:6px}
+.log{list-style:none; margin:0; padding:0; max-height:320px; overflow:auto}
+.log li{display:grid; grid-template-columns:auto 1fr auto auto; gap:10px; align-items:center; padding:9px 2px; border-bottom:1px dashed var(--paper-line)}
+.tag{font:700 12px/1 "Barlow Condensed",sans-serif; letter-spacing:.16em; text-transform:uppercase; padding:5px 7px; border-radius:4px; color:#fff; background:var(--enamel)}
+.tag.short{background:#1f7a5c} .tag.long{background:#2b5c93}
+.log .what{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.log .when{font-variant-numeric:tabular-nums; color:var(--paper-soft); font-size:15px}
+.x{border:0; background:none; color:var(--paper-soft); font-size:20px; line-height:1; cursor:pointer; padding:2px 6px; border-radius:4px}
+.x:hover{color:var(--enamel)}
+.empty{color:var(--paper-soft); font-style:italic; padding:8px 0}
+.row{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:12px; flex-wrap:wrap}
+.btn{font:700 14px/1 "Barlow Condensed",sans-serif; letter-spacing:.18em; text-transform:uppercase; padding:10px 14px; border-radius:6px; cursor:pointer;
+  border:2px solid var(--paper-ink); background:transparent; color:var(--paper-ink)}
+.btn:hover{background:var(--paper-ink); color:var(--paper)}
+.btn.warn{border-color:var(--enamel); color:var(--enamel)}
+.btn.warn:hover{background:var(--enamel); color:#fff}
+.settings{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px}
+.settings label{display:flex; flex-direction:column; gap:6px; font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:var(--paper-soft)}
+.settings input[type=number]{font:600 20px "Barlow Condensed",sans-serif; padding:8px 10px; border:2px solid var(--paper-line); border-radius:6px; background:transparent; color:var(--paper-ink); width:100%}
+.settings input[type=range]{accent-color:var(--enamel); width:100%}
+.check{flex-direction:row !important; align-items:center; gap:10px !important; color:var(--paper-ink) !important}
+.check input{width:20px; height:20px; accent-color:var(--enamel)}
+.shortcuts{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:16px; margin:0}
+.shortcuts dt kbd{display:inline-block; min-width:30px; text-align:center; font:700 13px/1 "Barlow Condensed",sans-serif; padding:5px 7px; border:2px solid var(--paper-line); border-bottom-width:4px; border-radius:5px}
+.shortcuts dd{margin:0; color:var(--paper-soft); align-self:center}
+.flash{animation:flash 1.2s ease-out 3}
+@keyframes flash{0%{box-shadow:0 0 0 0 rgba(255,210,107,.9), var(--shadow)}100%{box-shadow:0 0 0 30px rgba(255,210,107,0), var(--shadow)}}
+@media (prefers-reduced-motion: reduce){
+  #face{transition:none} .flash{animation:none} .week .bar{transition:none} .key{transition:none}
+}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">&larr; Showcase</a>
+
+<main class="wrap">
+  <section class="appliance" id="appliance" aria-label="Focus timer">
+    <div class="plate">
+      <div class="brand">Holloway<small>Focus Timer &middot; Model No. 25</small></div>
+      <div class="modes" role="group" aria-label="Timer mode">
+        <button id="mode-focus" data-mode="focus" aria-pressed="true">Focus</button>
+        <button id="mode-short" data-mode="short" aria-pressed="false">Short</button>
+        <button id="mode-long" data-mode="long" aria-pressed="false">Long</button>
+      </div>
+    </div>
+
+    <div class="dial-wrap">
+      <svg id="dial" viewBox="-160 -160 320 320" role="slider" tabindex="0" aria-label="Minutes dial. Drag or use arrow keys to set time" aria-valuemin="0" aria-valuemax="60" aria-valuenow="25">
+        <defs>
+          <radialGradient id="g-chrome" cx="35%" cy="25%" r="85%">
+            <stop offset="0" stop-color="var(--chrome-1)"/>
+            <stop offset=".55" stop-color="var(--chrome-2)"/>
+            <stop offset="1" stop-color="var(--chrome-3)"/>
+          </radialGradient>
+          <linearGradient id="g-ring" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="var(--chrome-1)"/>
+            <stop offset=".5" stop-color="var(--chrome-3)"/>
+            <stop offset="1" stop-color="var(--chrome-1)"/>
+          </linearGradient>
+          <radialGradient id="g-face" cx="40%" cy="30%" r="80%">
+            <stop offset="0" stop-color="var(--porcelain)"/>
+            <stop offset="1" stop-color="var(--porcelain-2)"/>
+          </radialGradient>
+          <linearGradient id="g-knob" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="var(--porcelain)"/>
+            <stop offset="1" stop-color="var(--porcelain-2)"/>
+          </linearGradient>
+          <filter id="f-drop" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity=".35"/>
+          </filter>
+        </defs>
+        <circle r="156" fill="rgba(0,0,0,.25)"/>
+        <circle class="bezel" r="152" fill="url(#g-chrome)" stroke="url(#g-ring)" stroke-width="3"/>
+        <circle r="140" fill="#1a1716"/>
+        <g id="face">
+          <circle r="137" fill="url(#g-face)"/>
+          <path id="wedge" fill="var(--wedge)" fill-opacity="var(--wedge-op)" d=""/>
+          <g id="ticks"></g>
+          <g filter="url(#f-drop)">
+            <circle r="46" fill="url(#g-knob)" stroke="rgba(0,0,0,.15)"/>
+            <rect x="-11" y="-58" width="22" height="116" rx="11" fill="url(#g-knob)" stroke="rgba(0,0,0,.18)"/>
+            <rect x="-3" y="-52" width="6" height="16" rx="3" fill="var(--enamel)"/>
+          </g>
+        </g>
+        <!-- fixed pointer -->
+        <path d="M0,-128 L-11,-152 L11,-152 Z" fill="var(--enamel)" stroke="#1a1716" stroke-width="2" stroke-linejoin="round"/>
+        <circle cy="-150" r="3" fill="#1a1716"/>
+      </svg>
+    </div>
+    <p class="hint" id="hint">Twist the dial to set &middot; press Start</p>
+
+    <div class="readout">
+      <div class="window" aria-live="off"><span id="time">25:00</span><small id="phase">Focus &middot; ready</small></div>
+      <div class="pips" id="pips" aria-label="Focus sessions this cycle"></div>
+    </div>
+
+    <div class="keys">
+      <button class="key go" id="btn-start">Start<kbd>Space</kbd></button>
+      <button class="key" id="btn-reset">Reset<kbd>R</kbd></button>
+      <button class="key" id="btn-skip">Skip<kbd>S</kbd></button>
+      <button class="key" id="btn-chime">Chime<kbd>C</kbd></button>
+    </div>
+
+    <div class="task">
+      <label for="task">Working on</label>
+      <input id="task" type="text" maxlength="80" placeholder="What gets this block?" autocomplete="off">
+    </div>
+    <p class="sr" id="announce" aria-live="polite"></p>
+  </section>
+
+  <aside>
+    <section class="card" aria-labelledby="h-today">
+      <h2 id="h-today">Today&rsquo;s <span>ledger</span></h2>
+      <div class="stats">
+        <div class="stat"><b id="st-min">0</b><span>Focus min</span></div>
+        <div class="stat"><b id="st-ses">0</b><span>Sessions</span></div>
+        <div class="stat"><b id="st-streak">0</b><span>Day streak</span></div>
+      </div>
+      <div class="week" id="week" aria-label="Focus minutes over the last 7 days"></div>
+      <div class="days" id="days"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-log">
+      <h2 id="h-log">Session <span>log</span></h2>
+      <ul class="log" id="log"></ul>
+      <div class="row">
+        <span id="log-count" style="color:var(--paper-soft)"></span>
+        <button class="btn warn" id="btn-clear">Clear log</button>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-set">
+      <h2 id="h-set">Settings &amp; <span>keys</span></h2>
+      <div class="settings">
+        <label for="set-focus">Focus min<input id="set-focus" type="number" min="1" max="60" value="25"></label>
+        <label for="set-short">Short break<input id="set-short" type="number" min="1" max="60" value="5"></label>
+        <label for="set-long">Long break<input id="set-long" type="number" min="1" max="60" value="15"></label>
+        <label for="set-every">Long every<input id="set-every" type="number" min="2" max="8" value="4"></label>
+        <label class="check" for="set-auto"><input id="set-auto" type="checkbox"> Auto-start next</label>
+        <label class="check" for="set-sound"><input id="set-sound" type="checkbox" checked> Bell chime</label>
+        <label for="set-vol" style="grid-column:1/-1">Bell volume<input id="set-vol" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+      </div>
+      <dl class="shortcuts" style="margin-top:18px">
+        <dt><kbd>Space</kbd></dt><dd>Start / pause</dd>
+        <dt><kbd>&uarr; &darr;</kbd></dt><dd>Add or remove a minute</dd>
+        <dt><kbd>1 2 3</kbd></dt><dd>Focus, short break, long break</dd>
+        <dt><kbd>R</kbd></dt><dd>Reset to the full block</dd>
+        <dt><kbd>S</kbd></dt><dd>Skip to the next phase</dd>
+        <dt><kbd>C</kbd></dt><dd>Test the bell</dd>
+      </dl>
+    </section>
+  </aside>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "holloway-focus-v1";
+  var $ = function(id){ return document.getElementById(id); };
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch(e){ return null; } }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify({settings:settings, log:log, cycle:cycle, mode:mode, task:$("task").value})); } catch(e){} }
+
+  var DEF = {focus:25, short:5, long:15, every:4, auto:false, sound:true, vol:0.6};
+  var stored = load();
+  var settings = Object.assign({}, DEF, stored && stored.settings);
+  var log = (stored && Array.isArray(stored.log)) ? stored.log : seedLog();
+  var cycle = (stored && stored.cycle) || 0;
+  var mode = (stored && stored.mode) || "focus";
+  if (stored && stored.task) $("task").value = stored.task;
+  else if (!stored) $("task").value = "Draft Q4 roadmap narrative";
+
+  function seedLog(){
+    // realistic example history so the page opens with data
+    var out = [], now = Date.now(), day = 864e5;
+    var tasks = ["Inbox triage","Write release notes","Review Mara's PR","Roadmap narrative","Invoice reconciliation","Plan workshop agenda","Refactor billing module"];
+    var plan = [[6,3],[5,4],[4,2],[3,5],[2,3],[1,4],[0,2]];
+    plan.forEach(function(p){
+      var base = new Date(now - p[0]*day); base.setHours(9,0,0,0);
+      for (var i=0;i<p[1];i++){
+        var t = base.getTime() + i*35*60000;
+        if (t > now - 60000) break;
+        out.push({t:t, mode:"focus", min:25, label:tasks[(p[0]*3+i)%tasks.length]});
+        if (i < p[1]-1) out.push({t:t+30*60000, mode:(i%4===3?"long":"short"), min:5, label:""});
+      }
+    });
+    return out.filter(function(e){ return e.t < now; }).sort(function(a,b){ return b.t-a.t; });
+  }
+
+  // ---------- dial construction ----------
+  var ticks = $("ticks"), NS = "http://www.w3.org/2000/svg";
+  function el(name, attrs, parent){ var n = document.createElementNS(NS, name); for (var k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; }
+  for (var i=0;i<60;i++){
+    var a = i*6*Math.PI/180, major = i%5===0, r1 = 133, r2 = major ? 116 : 124;
+    el("line", {x1:(r1*Math.sin(a)).toFixed(2), y1:(-r1*Math.cos(a)).toFixed(2), x2:(r2*Math.sin(a)).toFixed(2), y2:(-r2*Math.cos(a)).toFixed(2),
+      stroke:"var(--mark)", "stroke-width": major ? 3 : 1.4, "stroke-linecap":"round"}, ticks);
+    if (major){
+      var t = el("text", {x:0, y:-94, "text-anchor":"middle", "dominant-baseline":"middle", "class":"dial-num", transform:"rotate("+(i*6)+")"}, ticks);
+      t.textContent = i;
+    }
+  }
+  var lbl = el("text", {x:0, y:74, "text-anchor":"middle", "class":"dial-min"}, ticks); lbl.textContent = "MINUTES";
+  var lbl2 = el("text", {x:0, y:-66, "text-anchor":"middle", "class":"dial-min"}, ticks); lbl2.textContent = "HOLLOWAY";
+
+  function wedgePath(deg){
+    if (deg <= 0.05) return "";
+    if (deg >= 359.9) deg = 359.9;
+    var r = 134, a = deg*Math.PI/180, x = r*Math.sin(a), y = -r*Math.cos(a);
+    return "M0,0 L0,-"+r+" A"+r+","+r+" 0 "+(deg>180?1:0)+" 1 "+x.toFixed(2)+","+y.toFixed(2)+" Z";
+  }
+
+  // ---------- timer state ----------
+  var durationSec = settings[mode]*60, remaining = durationSec, running = false, endAt = 0, raf = 0, interval = 0;
+  var dial = $("dial"), face = $("face"), wedge = $("wedge");
+
+  function renderDial(sec){
+    var m = sec/60;
+    face.setAttribute("transform", "rotate(" + (-m*6).toFixed(3) + ")");
+    wedge.setAttribute("d", wedgePath(m*6));
+    dial.setAttribute("aria-valuenow", Math.round(m));
+    dial.setAttribute("aria-valuetext", fmt(sec) + " remaining");
+  }
+  // CSS transform is smoother for the transition; use style when available
+  var useCSS = true;
+  var _render = renderDial;
+  renderDial = function(sec){
+    _render(sec);
+    if (useCSS){ face.style.transform = "rotate(" + (-(sec/60)*6).toFixed(3) + "deg)"; }
+  };
+
+  function fmt(sec){ sec = Math.max(0, Math.ceil(sec)); var m = Math.floor(sec/60), s = sec%60; return (m<10?"0":"")+m+":"+(s<10?"0":"")+s; }
+  var modeName = {focus:"Focus", short:"Short break", long:"Long break"};
+
+  function render(){
+    $("time").textContent = fmt(remaining);
+    $("phase").textContent = modeName[mode] + " · " + (running ? "running" : (remaining < durationSec && remaining > 0 ? "paused" : "ready"));
+    $("btn-start").firstChild.nodeValue = running ? "Pause" : (remaining < durationSec && remaining > 0 ? "Resume" : "Start");
+    document.title = running ? fmt(remaining) + " · " + modeName[mode] : "Holloway Focus Timer";
+    renderDial(remaining);
+    ["focus","short","long"].forEach(function(m){ $("mode-"+m).setAttribute("aria-pressed", m===mode ? "true":"false"); });
+    var pips = $("pips"); pips.innerHTML = "";
+    for (var i=0;i<settings.every;i++){ var p = document.createElement("span"); p.className = "pip" + (i < cycle ? " on" : ""); pips.appendChild(p); }
+    pips.setAttribute("aria-label", cycle + " of " + settings.every + " focus sessions before a long break");
+  }
+
+  function tick(){
+    if (!running) return;
+    remaining = Math.max(0, (endAt - Date.now())/1000);
+    render();
+    if (remaining <= 0){ complete(); return; }
+    raf = requestAnimationFrame(tick);
+  }
+  function start(){
+    ensureAudio();
+    if (remaining <= 0) { remaining = durationSec; }
+    if (remaining < 1) return;
+    running = true; endAt = Date.now() + remaining*1000;
+    dial.classList.add("live");
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+    clearInterval(interval); interval = setInterval(function(){ if (document.hidden) tick(); }, 1000);
+    announce(modeName[mode] + " started, " + fmt(remaining));
+    render();
+  }
+  function pause(){
+    running = false; cancelAnimationFrame(raf); clearInterval(interval);
+    remaining = Math.max(0, (endAt - Date.now())/1000);
+    dial.classList.remove("live");
+    announce("Paused at " + fmt(remaining));
+    render();
+  }
+  function toggle(){ running ? pause() : start(); }
+  function reset(){
+    running = false; cancelAnimationFrame(raf); clearInterval(interval); dial.classList.remove("live");
+    durationSec = settings[mode]*60; remaining = durationSec; render();
+  }
+  function setMode(m, keepRunning){
+    mode = m; running = false; cancelAnimationFrame(raf); clearInterval(interval); dial.classList.remove("live");
+    durationSec = settings[m]*60; remaining = durationSec; render(); save();
+    if (keepRunning) start();
+  }
+  function nextMode(){
+    if (mode === "focus"){ return (cycle >= settings.every) ? "long" : "short"; }
+    return "focus";
+  }
+  function complete(finished){
+    if (finished === undefined) finished = true;
+    running = false; cancelAnimationFrame(raf); clearInterval(interval); dial.classList.remove("live");
+    var mins = Math.round((durationSec - (finished ? 0 : remaining))/60);
+    if (finished || mins >= 1){
+      log.unshift({t:Date.now(), mode:mode, min:Math.max(1,mins), label: mode==="focus" ? $("task").value.trim() : ""});
+      if (log.length > 500) log.length = 500;
+    }
+    if (mode === "focus" && finished) cycle = Math.min(settings.every, cycle+1);
+    if (mode === "long") cycle = 0;
+    if (finished){ chime(); flash(); }
+    var nm = nextMode();
+    announce(modeName[mode] + (finished ? " complete. " : " skipped. ") + "Next: " + modeName[nm]);
+    renderLog(); save();
+    setMode(nm, settings.auto && finished);
+  }
+  function flash(){ var a = $("appliance"); a.classList.remove("flash"); void a.offsetWidth; a.classList.add("flash"); }
+  function announce(s){ $("announce").textContent = s; }
+
+  // ---------- dial dragging ----------
+  var dragging = false, lastAng = 0, acc = 0, startSec = 0, wasRunning = false;
+  function angleOf(e){
+    var r = dial.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+    return Math.atan2(e.clientX - cx, -(e.clientY - cy)) * 180/Math.PI;
+  }
+  dial.addEventListener("pointerdown", function(e){
+    ensureAudio();
+    dragging = true; dial.classList.add("dragging"); dial.setPointerCapture(e.pointerId);
+    wasRunning = running; if (running){ remaining = Math.max(0,(endAt-Date.now())/1000); running = false; cancelAnimationFrame(raf); clearInterval(interval); }
+    lastAng = angleOf(e); acc = 0; startSec = remaining;
+    e.preventDefault();
+  });
+  dial.addEventListener("pointermove", function(e){
+    if (!dragging) return;
+    var a = angleOf(e), d = a - lastAng;
+    if (d > 180) d -= 360; if (d < -180) d += 360;
+    acc += d; lastAng = a;
+    var sec = Math.min(3600, Math.max(0, startSec - acc*10)); // 6deg per minute => 10 s per degree
+    remaining = sec; durationSec = Math.max(durationSec, sec);
+    if (!wasRunning) durationSec = sec;
+    render();
+  });
+  function endDrag(){
+    if (!dragging) return;
+    dragging = false; dial.classList.remove("dragging");
+    if (!wasRunning){ remaining = Math.round(remaining/60)*60; durationSec = remaining; }
+    if (Math.abs(acc) < 2 && !wasRunning){ render(); return; }
+    render();
+    if (wasRunning && remaining > 0) start();
+    else if (remaining > 0 && !wasRunning) announce("Set to " + fmt(remaining));
+  }
+  dial.addEventListener("pointerup", endDrag);
+  dial.addEventListener("pointercancel", endDrag);
+  dial.addEventListener("lostpointercapture", endDrag);
+
+  function nudge(min){
+    if (running){ endAt = Math.min(Date.now()+3600e3, Math.max(Date.now()+1000, endAt + min*60000)); remaining = (endAt-Date.now())/1000; durationSec = Math.max(durationSec, remaining); render(); return; }
+    remaining = Math.min(3600, Math.max(0, Math.round(remaining/60)*60 + min*60)); durationSec = remaining; render();
+  }
+  dial.addEventListener("keydown", function(e){
+    if (e.key === "ArrowUp" || e.key === "ArrowRight"){ nudge(1); e.preventDefault(); e.stopPropagation(); }
+    else if (e.key === "ArrowDown" || e.key === "ArrowLeft"){ nudge(-1); e.preventDefault(); e.stopPropagation(); }
+    else if (e.key === "PageUp"){ nudge(5); e.preventDefault(); e.stopPropagation(); }
+    else if (e.key === "PageDown"){ nudge(-5); e.preventDefault(); e.stopPropagation(); }
+  });
+
+  // ---------- audio ----------
+  var actx = null;
+  function ensureAudio(){
+    try {
+      if (!actx){ var C = window.AudioContext || window.webkitAudioContext; if (C) actx = new C(); }
+      if (actx && actx.state === "suspended") actx.resume();
+    } catch(e){ actx = null; }
+  }
+  function strike(t0, f, vol){
+    var partials = [[1,1],[2.76,.45],[5.40,.22],[8.93,.1]];
+    var out = actx.createGain(); out.gain.value = vol; out.connect(actx.destination);
+    partials.forEach(function(p){
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = "sine"; o.frequency.value = f*p[0];
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(p[1], t0 + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.4/Math.sqrt(p[0]));
+      o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 2.6);
+    });
+  }
+  function chime(force){
+    if (!settings.sound && !force) return;
+    ensureAudio(); if (!actx) return;
+    var t = actx.currentTime + 0.03, v = Math.max(0.0001, settings.vol*0.35);
+    strike(t, 880, v); strike(t+0.32, 880, v*0.9); strike(t+0.64, 1174.66, v);
+  }
+
+  // ---------- log & stats ----------
+  function dayKey(t){ var d = new Date(t); return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); }
+  function renderLog(){
+    var ul = $("log"); ul.innerHTML = "";
+    if (!log.length){ var li = document.createElement("li"); li.className = "empty"; li.style.display = "block"; li.textContent = "No sessions yet. Twist the dial and press Start."; ul.appendChild(li); }
+    log.slice(0, 60).forEach(function(e, idx){
+      var li = document.createElement("li");
+      var tag = document.createElement("span"); tag.className = "tag " + e.mode; tag.textContent = e.mode === "focus" ? "Focus" : (e.mode === "short" ? "Break" : "Long");
+      var what = document.createElement("span"); what.className = "what"; what.textContent = (e.label || (e.mode === "focus" ? "Unlabelled block" : "Stretch, water, window")) ;
+      var when = document.createElement("span"); when.className = "when";
+      var d = new Date(e.t); var today = dayKey(e.t) === dayKey(Date.now());
+      when.textContent = e.min + "m · " + (today ? "" : d.toLocaleDateString(undefined,{weekday:"short"}) + " ") + d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+      var x = document.createElement("button"); x.className = "x"; x.id = "del-" + idx; x.setAttribute("aria-label","Delete entry"); x.textContent = "×";
+      x.addEventListener("click", function(){ log.splice(idx,1); renderLog(); save(); });
+      li.appendChild(tag); li.appendChild(what); li.appendChild(when); li.appendChild(x); ul.appendChild(li);
+    });
+    $("log-count").textContent = log.length + " entr" + (log.length===1?"y":"ies");
+    renderStats();
+  }
+  function renderStats(){
+    var now = new Date(), todayK = dayKey(now), byDay = {};
+    log.forEach(function(e){ if (e.mode !== "focus") return; var k = dayKey(e.t); byDay[k] = byDay[k] || {min:0, n:0}; byDay[k].min += e.min; byDay[k].n++; });
+    var t = byDay[todayK] || {min:0,n:0};
+    $("st-min").textContent = t.min; $("st-ses").textContent = t.n;
+    var streak = 0, d = new Date(now); if (!byDay[todayK]) d.setDate(d.getDate()-1);
+    while (byDay[dayKey(d)]){ streak++; d.setDate(d.getDate()-1); }
+    $("st-streak").textContent = streak;
+    var week = $("week"), days = $("days"); week.innerHTML = ""; days.innerHTML = "";
+    var vals = [], labels = [];
+    for (var i=6;i>=0;i--){ var dd = new Date(now); dd.setDate(dd.getDate()-i); vals.push((byDay[dayKey(dd)]||{min:0}).min); labels.push(dd.toLocaleDateString(undefined,{weekday:"narrow"})); }
+    var max = Math.max(60, Math.max.apply(null, vals));
+    vals.forEach(function(v, i){
+      var b = document.createElement("div"); b.className = "bar" + (i===6 ? " today" : "");
+      b.style.height = Math.max(2, v/max*90) + "px"; b.title = v + " focus minutes";
+      var em = document.createElement("em"); em.textContent = v || ""; b.appendChild(em); week.appendChild(b);
+      var s = document.createElement("span"); s.textContent = labels[i]; days.appendChild(s);
+    });
+  }
+
+  var clearArmed = false, clearTimer = 0;
+  $("btn-clear").addEventListener("click", function(){
+    if (!clearArmed){ clearArmed = true; this.textContent = "Tap again to clear"; var b = this; clearTimer = setTimeout(function(){ clearArmed = false; b.textContent = "Clear log"; }, 3000); return; }
+    clearTimeout(clearTimer); clearArmed = false; this.textContent = "Clear log"; log = []; cycle = 0; renderLog(); render(); save();
+  });
+
+  // ---------- settings ----------
+  function bindNum(id, key, min, max){
+    var inp = $(id); inp.value = settings[key];
+    inp.addEventListener("change", function(){
+      var v = Math.round(Number(inp.value)); if (!isFinite(v)) v = DEF[key];
+      v = Math.min(max, Math.max(min, v)); inp.value = v; settings[key] = v;
+      if (key === "every") cycle = Math.min(cycle, v);
+      if (!running && key === mode){ durationSec = v*60; remaining = durationSec; }
+      render(); save();
+    });
+  }
+  bindNum("set-focus","focus",1,60); bindNum("set-short","short",1,60); bindNum("set-long","long",1,60); bindNum("set-every","every",2,8);
+  $("set-auto").checked = settings.auto; $("set-auto").addEventListener("change", function(){ settings.auto = this.checked; save(); });
+  $("set-sound").checked = settings.sound; $("set-sound").addEventListener("change", function(){ settings.sound = this.checked; save(); });
+  $("set-vol").value = settings.vol; $("set-vol").addEventListener("change", function(){ settings.vol = Number(this.value); save(); chime(true); });
+  $("task").addEventListener("input", function(){ save(); });
+
+  // ---------- buttons & keys ----------
+  $("btn-start").addEventListener("click", toggle);
+  $("btn-reset").addEventListener("click", reset);
+  $("btn-skip").addEventListener("click", function(){ complete(false); });
+  $("btn-chime").addEventListener("click", function(){ chime(true); });
+  ["focus","short","long"].forEach(function(m){ $("mode-"+m).addEventListener("click", function(){ setMode(m); }); });
+
+  function press(id){ var b = $(id); b.classList.add("pressed"); setTimeout(function(){ b.classList.remove("pressed"); }, 120); }
+  document.addEventListener("keydown", function(e){
+    var tg = e.target; if (tg && (tg.tagName === "INPUT" || tg.tagName === "TEXTAREA" || tg.isContentEditable)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key.toLowerCase();
+    if (k === " " || k === "spacebar"){ if (tg && tg.tagName === "BUTTON") return; e.preventDefault(); press("btn-start"); toggle(); }
+    else if (k === "r"){ press("btn-reset"); reset(); }
+    else if (k === "s"){ press("btn-skip"); complete(false); }
+    else if (k === "c"){ press("btn-chime"); chime(true); }
+    else if (k === "1") setMode("focus"); else if (k === "2") setMode("short"); else if (k === "3") setMode("long");
+    else if (k === "arrowup"){ e.preventDefault(); nudge(1); } else if (k === "arrowdown"){ e.preventDefault(); nudge(-1); }
+  });
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden && running) tick(); });
+
+  if (reduce) face.style.transition = "none";
+  render(); renderLog();
+  if (!stored) save();
+})();
+</script>
+</body>
+</html>
