@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Escapement Ledger</title>
+<meta name="description" content="Three and a half thousand years of timekeeping, from Egyptian shadow clocks to optical lattice clocks, plotted as error-per-day on a seventeen-decade log scale — drawn as a working cyanotype blueprint.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,600;1,200;1,300&family=Chivo+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cyan:#123e74;
+  --cyan-d:#0b2c56;
+  --cyan-l:#1d5494;
+  --line:#e9f1ff;
+  --soft:rgba(233,241,255,.62);
+  --faint:rgba(233,241,255,.16);
+  --hair:rgba(233,241,255,.09);
+  --hi:#ffe9a8;
+  --serif:"Spectral","Iowan Old Style","Georgia",serif;
+  --mono:"Chivo Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--cyan)}
+body{margin:0;color:var(--line);font-family:var(--serif);font-weight:300;-webkit-font-smoothing:antialiased;
+  background:
+   radial-gradient(ellipse 80% 60% at 20% 10%,rgba(46,110,180,.55),transparent 70%),
+   radial-gradient(ellipse 70% 50% at 90% 80%,rgba(6,26,56,.75),transparent 70%),
+   linear-gradient(var(--hair) 1px,transparent 1px) 0 0/28px 28px,
+   linear-gradient(90deg,var(--hair) 1px,transparent 1px) 0 0/28px 28px,
+   var(--cyan);
+  overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+:focus-visible{outline:1.5px dashed var(--hi);outline-offset:4px}
+a{color:inherit}
+.mono{font-family:var(--mono)}
+.back{position:absolute;top:18px;left:max(16px,env(safe-area-inset-left));font:400 11px var(--mono);letter-spacing:.12em;text-decoration:none;color:var(--soft);border:1px dashed var(--faint);padding:5px 9px}
+.back:hover{color:var(--line);border-color:var(--soft)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 max(16px,4vw)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:40px;align-items:center;min-height:min(100vh,920px);padding:80px 0 40px}
+.sheet{font:400 10.5px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--soft);display:flex;gap:18px;flex-wrap:wrap;margin-bottom:26px}
+.sheet span{border-bottom:1px solid var(--faint);padding-bottom:3px}
+h1{font-weight:200;font-size:clamp(52px,8.5vw,128px);line-height:.88;margin:0;letter-spacing:-.025em}
+h1 i{font-weight:200}
+.lede{font-size:clamp(17px,1.5vw,20px);line-height:1.6;max-width:36em;color:rgba(233,241,255,.86);margin:28px 0 0}
+.clockrow{display:grid;grid-template-columns:repeat(3,auto);gap:6px 28px;margin-top:34px;font-family:var(--mono);justify-content:start}
+.clockrow .k{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft)}
+.clockrow .v{font-size:clamp(18px,2vw,24px);font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.mech{position:relative}
+.mech svg{width:100%;height:auto;display:block;overflow:visible}
+.mech .note{font:400 10px var(--mono);letter-spacing:.08em;color:var(--soft);margin-top:6px;text-align:right}
+
+h2{font-weight:200;font-size:clamp(34px,4.6vw,62px);line-height:1;margin:0 0 14px;letter-spacing:-.015em}
+.eyebrow{font:400 10.5px var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--hi);margin:0 0 14px}
+section{padding:70px 0}
+.intro{max-width:40em;font-size:18px;line-height:1.6;color:rgba(233,241,255,.82);margin:0 0 30px}
+
+/* chart */
+.chartbox{border:1px solid var(--faint);padding:18px clamp(8px,2vw,22px) 12px;background:rgba(8,32,66,.35);position:relative}
+.chartbox::before,.chartbox::after{content:"";position:absolute;width:14px;height:14px;border:1px solid var(--soft)}
+.chartbox::before{top:-4px;left:-4px;border-right:0;border-bottom:0}
+.chartbox::after{bottom:-4px;right:-4px;border-left:0;border-top:0}
+.ctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font:400 11px var(--mono)}
+.ctl .lbl{letter-spacing:.14em;text-transform:uppercase;color:var(--soft);margin-right:4px}
+.ctl button{font:inherit;color:var(--line);background:transparent;border:1px solid var(--faint);padding:6px 10px;cursor:pointer;letter-spacing:.06em}
+.ctl button[aria-pressed="true"]{background:var(--line);color:var(--cyan-d);border-color:var(--line)}
+#chart{width:100%;height:auto;display:block;font-family:var(--mono)}
+#chart .grid line{stroke:var(--hair)}
+#chart .axis text{fill:var(--soft);font-size:10px}
+#chart .pt{cursor:pointer}
+#chart .pt circle.dot{fill:var(--cyan-d);stroke:var(--line);stroke-width:1.5;transition:r .2s}
+#chart .pt:hover circle.dot,#chart .pt.on circle.dot{fill:var(--hi);stroke:var(--hi)}
+#chart .pt text{fill:var(--line);font-size:10.5px}
+#chart .pt text.yr{fill:var(--soft);font-size:9px}
+#chart path.stair{fill:none;stroke:var(--line);stroke-width:1.2;stroke-dasharray:4 3}
+#chart path.env{fill:url(#fill);stroke:none}
+.tip{margin-top:12px;display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:16px;line-height:1.5;min-height:92px;border-top:1px dashed var(--faint);padding-top:12px}
+.tip b{font-weight:400;font-size:22px;display:block}
+.tip .n{font:400 30px var(--mono);color:var(--hi);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tip .n small{display:block;font-size:10px;color:var(--soft);letter-spacing:.14em;text-transform:uppercase}
+
+/* ledger */
+.ledger{list-style:none;margin:0;padding:0;counter-reset:l;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0;border-top:1px solid var(--faint);border-left:1px solid var(--faint)}
+.ledger li{border-right:1px solid var(--faint);border-bottom:1px solid var(--faint);padding:20px 20px 22px;position:relative;counter-increment:l;min-height:250px;display:flex;flex-direction:column}
+.ledger li::before{content:"FIG. " counter(l,upper-roman);position:absolute;top:14px;right:16px;font:400 9.5px var(--mono);letter-spacing:.14em;color:var(--soft)}
+.ledger svg{width:74px;height:74px;display:block;margin-bottom:12px;overflow:visible}
+.ledger svg *{vector-effect:non-scaling-stroke}
+.ledger .d{font:400 11px var(--mono);letter-spacing:.1em;color:var(--hi)}
+.ledger h3{font-weight:400;font-size:24px;line-height:1.1;margin:4px 0 8px}
+.ledger p{margin:0;font-size:15px;line-height:1.55;color:rgba(233,241,255,.78);flex:1}
+.ledger .acc{margin-top:14px;font:400 11px var(--mono);letter-spacing:.04em;border-top:1px dashed var(--faint);padding-top:8px;display:flex;justify-content:space-between;gap:10px}
+.ledger li:hover{background:rgba(233,241,255,.035)}
+
+/* drift race */
+.race{display:grid;gap:2px;font-family:var(--mono)}
+.race .row{display:grid;grid-template-columns:minmax(120px,210px) 1fr minmax(110px,150px);gap:14px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--hair)}
+.race .nm{font-size:11px;letter-spacing:.04em}
+.race .nm small{display:block;color:var(--soft);font-size:9.5px}
+.race .bar{height:10px;position:relative;border-left:1px solid var(--soft)}
+.race .bar i{position:absolute;left:0;top:0;bottom:0;background:repeating-linear-gradient(90deg,var(--line) 0 2px,transparent 2px 4px);min-width:1px}
+.race .val{font-size:14px;text-align:right;font-variant-numeric:tabular-nums;color:var(--hi)}
+.racehead{display:flex;justify-content:space-between;align-items:end;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.elapsed{font:300 clamp(26px,3.4vw,40px) var(--mono);font-variant-numeric:tabular-nums}
+.elapsed small{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft)}
+
+.def{display:grid;grid-template-columns:auto 1fr;gap:30px;align-items:center;border:1px solid var(--faint);padding:30px clamp(16px,3vw,40px)}
+.def .num{font:300 clamp(36px,6vw,78px) var(--mono);letter-spacing:-.03em;line-height:1;color:var(--hi)}
+.def p{margin:0;font-size:17px;line-height:1.6;color:rgba(233,241,255,.84)}
+footer{padding:40px 0 60px;font:400 10.5px var(--mono);letter-spacing:.06em;color:var(--soft);line-height:1.8}
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;min-height:0;padding-top:70px}
+  .mech{max-width:360px;margin:0 auto;width:100%}
+  .def{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .clockrow{grid-template-columns:repeat(2,auto)}
+  .race .row{grid-template-columns:1fr auto;gap:4px 10px}
+  .race .bar{grid-column:1/-1;grid-row:2}
+  .tip{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <div class="sheet"><span>Sheet 01 / 04</span><span>Horology</span><span>Scale: 1 : history</span></div>
+      <h1>The <i>Escapement</i><br>Ledger</h1>
+      <p class="lede">For three and a half thousand years we have been building machines to divide the day. Each one was an argument with its own errors — and each won by a factor of ten, a hundred, a million. This sheet plots the whole argument on one axis.</p>
+      <div class="clockrow" aria-live="off">
+        <div><div class="k">Local</div><div class="v" id="cLocal">--:--:--</div></div>
+        <div><div class="k">UTC</div><div class="v" id="cUtc">--:--:--</div></div>
+        <div><div class="k">TAI · UTC+37 s</div><div class="v" id="cTai">--:--:--</div></div>
+      </div>
+    </div>
+    <div class="mech">
+      <svg id="mech" viewBox="0 0 400 520" role="img" aria-label="Animated anchor escapement and seconds pendulum">
+        <defs>
+          <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="rgba(233,241,255,.35)" stroke-width="1"/></pattern>
+        </defs>
+        <!-- construction lines -->
+        <g stroke="rgba(233,241,255,.22)" stroke-dasharray="3 5" fill="none">
+          <line x1="200" y1="0" x2="200" y2="520"/>
+          <line x1="40" y1="150" x2="360" y2="150"/>
+          <circle cx="200" cy="150" r="118"/>
+        </g>
+        <g id="wheel" stroke="#e9f1ff" stroke-width="1.4" fill="none"></g>
+        <circle cx="200" cy="150" r="6" fill="#123e74" stroke="#e9f1ff" stroke-width="1.4"/>
+        <g id="anchor" stroke="#e9f1ff" stroke-width="1.6" fill="none">
+          <path d="M200 42 L130 92 L118 128 M200 42 L270 92 L282 128" stroke-linecap="round"/>
+          <path d="M118 128 l-8 -12 l14 -4 z M282 128 l8 -12 l-14 -4 z" fill="url(#hatch)"/>
+          <line x1="200" y1="42" x2="200" y2="500" stroke-width="1.2"/>
+          <circle cx="200" cy="42" r="7" fill="#123e74"/>
+          <g transform="translate(200 470)"><circle r="30" fill="url(#hatch)"/><circle r="30"/><circle r="3" fill="#e9f1ff"/></g>
+        </g>
+        <g font-family="Chivo Mono, monospace" font-size="9" fill="rgba(233,241,255,.75)" letter-spacing=".08em">
+          <text x="316" y="40">PALLET ARBOR</text><line x1="312" y1="37" x2="210" y2="42" stroke="rgba(233,241,255,.4)"/>
+          <text x="306" y="232">ESCAPE WHEEL · 30 T</text><line x1="302" y1="229" x2="262" y2="210" stroke="rgba(233,241,255,.4)"/>
+          <text x="16" y="400">L = 994 mm</text>
+          <text x="16" y="414">T = 2.000 s</text>
+          <text x="248" y="500">BOB</text>
+        </g>
+      </svg>
+      <div class="note">FIG. 0 — anchor escapement, seconds pendulum, beating once per second (after Clement, c. 1670)</div>
+    </div>
+  </header>
+
+  <section id="chartSec">
+    <p class="eyebrow">Sheet 02 · Error per day</p>
+    <h2>Seventeen orders of magnitude</h2>
+    <p class="intro">Each point is how far a typical good example of that machine would drift in one day. Every horizontal gridline is a factor of ten. The line falls off a cliff at 1955: when we stopped counting swings and started counting atoms.</p>
+    <div class="chartbox">
+      <div class="ctl" role="group" aria-label="Horizontal axis">
+        <span class="lbl">X axis</span>
+        <button id="ax-ord" aria-pressed="true">Sequence</button>
+        <button id="ax-log" aria-pressed="false">Years ago (log)</button>
+      </div>
+      <svg id="chart" viewBox="0 0 1000 540" role="img" aria-label="Clock error per day on a logarithmic scale, 1500 BCE to 2025"></svg>
+      <div class="tip" id="tip" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Sheet 03 · The machines</p>
+    <h2>A ledger of inventions</h2>
+    <p class="intro">Figures are typical, not record-breaking, unless stated. Accuracy claims for ancient devices are necessarily rough; the sundial also inherits the Sun's own irregularity — the equation of time swings it by up to 16 minutes across a year.</p>
+    <ol class="ledger" id="ledger"></ol>
+  </section>
+
+  <section>
+    <p class="eyebrow">Sheet 04 · Drift race</p>
+    <div class="racehead">
+      <h2 style="margin:0">Since you opened this page</h2>
+      <div class="elapsed" aria-live="off"><small>Elapsed</small><span id="elapsed">0.0 s</span></div>
+    </div>
+    <p class="intro">Each bar shows how far that machine would have wandered from true time while you've been reading, at its typical rate. Bars are drawn on the same logarithmic scale as the chart.</p>
+    <div class="race" id="race"></div>
+  </section>
+
+  <section>
+    <div class="def">
+      <div class="num">9,192,631,770</div>
+      <p>Since 1967 the second has been defined as exactly this many cycles of the radiation from the hyperfine transition of the caesium-133 atom. Optical clocks now tick about a hundred thousand times faster and beat caesium by more than a hundredfold in stability — so metrologists are preparing to redefine the second again, with the 2030 General Conference on Weights and Measures the target date.</p>
+    </div>
+  </section>
+
+  <footer>Sources: NPL (Essen &amp; Parry, 1955); NIST (F1, F2 fountains); JILA (Sr lattice clock, 8.1 × 10⁻¹⁹ systematic uncertainty, 2024); Royal Museums Greenwich (H4 trial 1761–62); Seiko (Astron 35SQ, ±5 s/month). Ancient and medieval values are order-of-magnitude estimates.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// seconds of error per day
+const M = [
+  {id:'sundial',yr:-1500,date:'c. 1500 BCE',name:'Shadow clock',where:'Egypt',spd:900,
+   txt:'An upright gnomon and a marked baseplate. It reads apparent solar time, so it drifts with the seasons, stops at night and fails in cloud.',g:'sun'},
+  {id:'clepsydra',yr:-1400,date:'c. 1400 BCE',name:'Clepsydra',where:'Karnak, Egypt',spd:1200,
+   txt:'A stone vessel leaks water through a hole near its base; the falling level marks the hours. The flow slows as the head of water drops, and changes with temperature.',g:'water'},
+  {id:'verge',yr:1300,date:'c. 1300',name:'Verge-and-foliot',where:'European towers',spd:900,
+   txt:'The first all-mechanical escapement: a weighted crossbar rocks back and forth, letting a crown wheel advance one tooth at a time. Reset daily against a sundial.',g:'verge'},
+  {id:'pendulum',yr:1656,date:'1656',name:'Pendulum clock',where:'Christiaan Huygens, The Hague',spd:15,
+   txt:'Galileo noticed that a pendulum’s period barely depends on its swing; Huygens built the clock. Error fell from about a quarter hour a day to roughly fifteen seconds.',g:'pend'},
+  {id:'h4',yr:1761,date:'1761',name:'Marine chronometer H4',where:'John Harrison, London',spd:5.1/81,
+   txt:'A large watch with a fast-beating balance, built to find longitude at sea. On its trial voyage to Jamaica it was just 5.1 seconds out after 81 days.',g:'watch'},
+  {id:'shortt',yr:1921,date:'1921',name:'Shortt free pendulum',where:'W. H. Shortt, Synchronome Co.',spd:1/365.25,
+   txt:'A master pendulum swings in a vacuum tank, doing no work; a slave clock does the counting. Around one second a year — good enough to detect wobbles in Earth’s rotation.',g:'shortt'},
+  {id:'quartz',yr:1969,date:'1969',name:'Quartz wristwatch',where:'Seiko Astron, Tokyo',spd:5/30.44,
+   txt:'A tuning-fork crystal vibrates 32,768 times a second when driven by a battery. Less precise than the best pendulums, but it put ±5 seconds a month on everyone’s wrist.',g:'quartz'},
+  {id:'caesium',yr:1955,date:'1955',name:'Caesium beam clock',where:'Essen & Parry, NPL Teddington',spd:1/(300*365.25),
+   txt:'The first practical atomic clock locks a microwave oscillator to a transition in caesium atoms. About one second in 300 years.',g:'atom'},
+  {id:'f1',yr:1999,date:'1999',name:'Caesium fountain NIST-F1',where:'Boulder, Colorado',spd:1/(20e6*365.25),
+   txt:'Lasers cool caesium to microkelvin temperatures and toss the atoms upward; they fall back through a microwave cavity, giving a long, clean measurement. One second in 20 million years.',g:'fountain'},
+  {id:'f2',yr:2014,date:'2014',name:'Caesium fountain NIST-F2',where:'Boulder, Colorado',spd:1/(300e6*365.25),
+   txt:'A cryogenically cooled flight tube cuts the heat-radiation shift. Neither gaining nor losing a second in about 300 million years.',g:'fountain'},
+  {id:'lattice',yr:2024,date:'2024',name:'Optical lattice clock',where:'JILA strontium clock, Boulder',spd:8.1e-19*86400,
+   txt:'Thousands of strontium atoms held in a lattice of laser light tick at 429 trillion times a second. Its systematic uncertainty, 8.1 × 10⁻¹⁹, is one second in roughly 39 billion years — nearly three times the age of the universe.',g:'lattice'}
+].sort((a,b)=>a.yr-b.yr);
+
+// ---------- formatting ----------
+function fmtT(s){
+  const a=Math.abs(s);
+  if(a>=60) return (s/60).toFixed(a>=600?0:1)+' min';
+  if(a>=1) return s.toFixed(a>=10?0:1)+' s';
+  const u=[[1e-3,'ms'],[1e-6,'µs'],[1e-9,'ns'],[1e-12,'ps'],[1e-15,'fs'],[1e-18,'as'],[1e-21,'zs']];
+  for(const [f,n] of u){ if(a>=f) { const v=s/f; return (v>=100?v.toFixed(0):v>=10?v.toFixed(1):v.toFixed(2))+' '+n; } }
+  return s.toExponential(1)+' s';
+}
+function oneSecondIn(spd){
+  const days=1/spd; const yrs=days/365.25;
+  if(days<1) return `1 s every ${(days*1440).toFixed(1)} min`;
+  if(yrs<1) return `1 s every ${days.toFixed(days<10?1:0)} days`;
+  if(yrs<1e3) return `1 s every ${yrs.toFixed(yrs<10?1:0)} years`;
+  if(yrs<1e6) return `1 s every ${(yrs/1e3).toFixed(0)},000 years`;
+  if(yrs<1e9) return `1 s every ${(yrs/1e6).toFixed(0)} million years`;
+  return `1 s every ${(yrs/1e9).toFixed(0)} billion years`;
+}
+
+// ---------- chart ----------
+const svg=document.getElementById('chart'), tip=document.getElementById('tip');
+const W=1000,H=540,L=86,R=28,T=24,B=58;
+const yMax=4, yMin=-14;
+const ys=v=>T+(yMax-Math.log10(v))/(yMax-yMin)*(H-T-B);
+let axisMode='ord', selected='lattice';
+const ordered=[...M]; // chronological
+function xs(m,i){
+  if(axisMode==='ord') return L+ (i+.5)/ordered.length*(W-L-R);
+  const ago=2030-m.yr; // years before 2030
+  const lo=Math.log10(3500), hi=Math.log10(5);
+  return L+(Math.log10(lo>0?ago:ago)-lo)/(hi-lo)*(W-L-R);
+}
+const NS='http://www.w3.org/2000/svg';
+function draw(){
+  let s=`<defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9f1ff" stop-opacity=".16"/><stop offset="1" stop-color="#e9f1ff" stop-opacity="0"/></linearGradient></defs><g class="grid axis">`;
+  const named={2:'100 s','1':'10 s',0:'1 second','-3':'1 millisecond','-6':'1 microsecond','-9':'1 nanosecond','-12':'1 picosecond','-14':'10 femtoseconds',3:'1,000 s','-1':'100 ms','-2':'10 ms','-4':'100 µs','-5':'10 µs','-7':'100 ns','-8':'10 ns','-10':'100 ps','-11':'10 ps','-13':'100 fs',4:'10,000 s'};
+  for(let e=yMax;e>=yMin;e--){
+    const y=ys(Math.pow(10,e));
+    s+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" ${e%3===0?'style="stroke:rgba(233,241,255,.22)"':''}/>`;
+    if(e%3===0 || e===yMin || e===yMax) s+=`<text x="${L-8}" y="${y+3}" text-anchor="end">${named[e]||''}</text>`;
+  }
+  const yDay=ys(86400);
+  s+=`</g>`;
+  if(axisMode==='log'){
+    [3000,1000,300,100,30,10].forEach(a=>{
+      const x=L+(Math.log10(a)-Math.log10(3500))/(Math.log10(5)-Math.log10(3500))*(W-L-R);
+      s+=`<g class="axis"><line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" stroke="rgba(233,241,255,.08)"/><text x="${x}" y="${H-B+34}" text-anchor="middle">${a.toLocaleString('en-GB')} yrs ago</text></g>`;
+    });
+  }
+  // staircase: best-so-far envelope
+  let best=Infinity, d='', env='';
+  const pts=ordered.map((m,i)=>({m,x:xs(m,i),y:ys(m.spd)}));
+  const byX=[...pts].sort((a,b)=>a.x-b.x);
+  byX.forEach((p,i)=>{
+    const yb = p.m.spd<best ? (best=p.m.spd, p.y) : ys(best);
+    if(i===0){d=`M${p.x},${yb}`;}
+    else { d+=` H${p.x} V${yb}`; }
+  });
+  d+=` H${W-R}`;
+  env=d+` V${H-B} H${byX[0].x} Z`;
+  s+=`<path class="env" d="${env}"/><path class="stair" d="${d}"/>`;
+  s+=`<text x="${W-R}" y="${T+12}" text-anchor="end" fill="rgba(233,241,255,.5)" font-size="10" font-family="Chivo Mono,monospace">dashed = best available at the time</text>`;
+  pts.forEach(({m,x,y},i)=>{
+    const above = i%2===0;
+    const lx = Math.min(W-R-4, Math.max(L+4,x));
+    const anchor = x> W-150 ? 'end' : x < L+60 ? 'start' : 'middle';
+    s+=`<g class="pt${m.id===selected?' on':''}" data-id="${m.id}" tabindex="0" role="button" aria-label="${m.name}, ${m.date}: ${fmtT(m.spd)} per day">
+      <line x1="${x}" x2="${x}" y1="${y}" y2="${H-B}" stroke="rgba(233,241,255,.18)" stroke-dasharray="2 3"/>
+      <circle class="dot" cx="${x}" cy="${y}" r="${m.id===selected?7:5}"/>
+      <circle cx="${x}" cy="${y}" r="16" fill="transparent"/>
+      <text x="${lx}" y="${above?y-14:y+22}" text-anchor="${anchor}">${m.name.replace('Marine chronometer ','')}</text>
+      ${axisMode==='ord'?`<text class="yr" x="${x}" y="${H-B+18+(i%2)*14}" text-anchor="middle">${m.date}</text>`:''}
+    </g>`;
+  });
+  s+=`<line x1="${L}" x2="${L}" y1="${T}" y2="${H-B}" stroke="rgba(233,241,255,.5)"/><line x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}" stroke="rgba(233,241,255,.5)"/>`;
+  s+=`<text x="16" y="${T+(H-T-B)/2}" transform="rotate(-90 16 ${T+(H-T-B)/2})" text-anchor="middle" fill="rgba(233,241,255,.6)" font-size="10" letter-spacing="2" font-family="Chivo Mono,monospace">ERROR PER DAY (LOG)</text>`;
+  svg.innerHTML=s;
+  svg.querySelectorAll('.pt').forEach(g=>{
+    const f=()=>{selected=g.dataset.id; draw(); showTip();};
+    g.addEventListener('click',f);
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f(); const n=svg.querySelector(`.pt[data-id="${selected}"]`); n&&n.focus();}});
+  });
+}
+function showTip(){
+  const m=M.find(x=>x.id===selected);
+  tip.innerHTML=`<div class="n">${fmtT(m.spd)}<small>per day</small></div><div><b>${m.name} · ${m.date}</b>${m.where}. ${oneSecondIn(m.spd)}.</div>`;
+}
+['ord','log'].forEach(k=>document.getElementById('ax-'+k).addEventListener('click',e=>{
+  axisMode=k; document.querySelectorAll('.ctl button').forEach(b=>b.setAttribute('aria-pressed',b===e.currentTarget)); draw();
+}));
+draw(); showTip();
+
+// ---------- ledger with glyphs ----------
+const G={
+  sun:`<circle cx="37" cy="52" r="26" fill="none" stroke="currentColor"/><path d="M37 52 L37 18 L50 52" fill="none" stroke="currentColor"/>${[...Array(7)].map((_,i)=>{const a=Math.PI+(i+1)/8*Math.PI;return `<line x1="${37+Math.cos(a)*20}" y1="${52+Math.sin(a)*20}" x2="${37+Math.cos(a)*26}" y2="${52+Math.sin(a)*26}" stroke="currentColor"/>`}).join('')}<line x1="37" y1="52" x2="72" y2="40" stroke="currentColor" stroke-dasharray="2 2"/>`,
+  water:`<path d="M14 10 L60 10 L54 64 L20 64 Z" fill="none" stroke="currentColor"/><path d="M17 34 L57 34" stroke="currentColor" stroke-dasharray="2 2"/>${[18,26,42,50].map(y=>`<line x1="22" y1="${y}" x2="28" y2="${y}" stroke="currentColor"/>`).join('')}<path d="M24 60 q-8 6 -10 14" fill="none" stroke="currentColor"/>`,
+  verge:`<line x1="10" y1="16" x2="64" y2="16" stroke="currentColor"/><circle cx="12" cy="16" r="5" fill="none" stroke="currentColor"/><circle cx="62" cy="16" r="5" fill="none" stroke="currentColor"/><line x1="37" y1="16" x2="37" y2="60" stroke="currentColor"/><path d="M20 60 L26 50 L32 60 L38 50 L44 60 L50 50 L56 60" fill="none" stroke="currentColor"/>`,
+  pend:`<line x1="37" y1="4" x2="37" y2="54" stroke="currentColor"/><path d="M37 4 L22 50" stroke="currentColor" stroke-dasharray="2 3"/><path d="M37 4 L52 50" stroke="currentColor" stroke-dasharray="2 3"/><circle cx="37" cy="60" r="9" fill="none" stroke="currentColor"/><path d="M18 58 A30 30 0 0 0 56 58" fill="none" stroke="currentColor"/>`,
+  watch:`<circle cx="37" cy="40" r="28" fill="none" stroke="currentColor"/><circle cx="37" cy="40" r="22" fill="none" stroke="currentColor" stroke-dasharray="1 4"/><rect x="33" y="4" width="8" height="8" fill="none" stroke="currentColor"/><line x1="37" y1="40" x2="37" y2="22" stroke="currentColor"/><line x1="37" y1="40" x2="50" y2="46" stroke="currentColor"/>`,
+  shortt:`<rect x="20" y="4" width="34" height="66" rx="17" fill="none" stroke="currentColor"/><line x1="37" y1="10" x2="37" y2="52" stroke="currentColor"/><circle cx="37" cy="56" r="7" fill="none" stroke="currentColor"/><line x1="10" y1="30" x2="20" y2="30" stroke="currentColor" stroke-dasharray="2 2"/><text x="2" y="26" font-size="7" fill="currentColor" font-family="Chivo Mono">VAC</text>`,
+  quartz:`<path d="M26 8 L26 52 Q26 64 37 64 Q48 64 48 52 L48 8" fill="none" stroke="currentColor"/><path d="M32 8 L32 50 Q32 58 37 58 Q42 58 42 50 L42 8" fill="none" stroke="currentColor"/><path d="M14 26 q6 -6 0 -12 M60 26 q-6 -6 0 -12" fill="none" stroke="currentColor"/><text x="12" y="74" font-size="7" fill="currentColor" font-family="Chivo Mono">32 768 Hz</text>`,
+  atom:`<circle cx="37" cy="37" r="4" fill="currentColor"/><ellipse cx="37" cy="37" rx="30" ry="11" fill="none" stroke="currentColor"/><ellipse cx="37" cy="37" rx="30" ry="11" fill="none" stroke="currentColor" transform="rotate(60 37 37)"/><ellipse cx="37" cy="37" rx="30" ry="11" fill="none" stroke="currentColor" transform="rotate(120 37 37)"/>`,
+  fountain:`<line x1="37" y1="70" x2="37" y2="10" stroke="currentColor" stroke-dasharray="2 3"/><path d="M28 70 Q37 -10 46 70" fill="none" stroke="currentColor"/><rect x="24" y="30" width="26" height="10" fill="none" stroke="currentColor"/>${[18,26,34,44,52].map((y,i)=>`<circle cx="${37+(i%2?2:-2)}" cy="${y}" r="1.6" fill="currentColor"/>`).join('')}`,
+  lattice:`${[...Array(5)].map((_,r)=>[...Array(5)].map((_,c)=>`<circle cx="${13+c*12}" cy="${13+r*12}" r="${(r+c)%2?1.4:2.6}" ${(r+c)%2?'fill="currentColor"':'fill="none" stroke="currentColor"'}/>`).join('')).join('')}<path d="M4 37 Q20 27 37 37 T70 37" fill="none" stroke="currentColor" stroke-dasharray="2 2"/>`
+};
+const ledger=document.getElementById('ledger');
+ledger.innerHTML=M.map(m=>`<li id="led-${m.id}"><svg viewBox="0 0 74 74" aria-hidden="true" style="color:#e9f1ff">${G[m.g]}</svg>
+  <div class="d">${m.date}</div><h3>${m.name}</h3><p>${m.txt}</p>
+  <div class="acc"><span>≈ ${fmtT(m.spd)} / day</span><span style="color:var(--soft)">${m.where.split(',')[0]}</span></div></li>`).join('');
+
+// ---------- live clocks + drift race ----------
+const cLocal=document.getElementById('cLocal'),cUtc=document.getElementById('cUtc'),cTai=document.getElementById('cTai');
+const p2=n=>String(n).padStart(2,'0');
+const hms=d=>`${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+const hmsU=d=>`${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}`;
+const race=document.getElementById('race'), elapsedEl=document.getElementById('elapsed');
+race.innerHTML=M.map(m=>`<div class="row"><div class="nm">${m.name}<small>${m.date}</small></div><div class="bar"><i id="bar-${m.id}"></i></div><div class="val" id="val-${m.id}">0</div></div>`).join('');
+const t0=performance.now();
+function raceTick(){
+  const el=(performance.now()-t0)/1000 + 0.001;
+  elapsedEl.textContent = el<60? el.toFixed(1)+' s' : `${Math.floor(el/60)} min ${String(Math.floor(el%60)).padStart(2,'0')} s`;
+  M.forEach(m=>{
+    const d=m.spd*el/86400;
+    // log bar: 1e-20 s -> 0%, 1e2 s -> 100%
+    const pct=Math.max(0,Math.min(100,(Math.log10(d)+20)/22*100));
+    document.getElementById('bar-'+m.id).style.width=pct+'%';
+    document.getElementById('val-'+m.id).textContent=fmtT(d);
+  });
+}
+function clockTick(){
+  const now=new Date();
+  cLocal.textContent=hms(now); cUtc.textContent=hmsU(now); cTai.textContent=hmsU(new Date(now.getTime()+37000));
+  raceTick();
+}
+clockTick(); setInterval(clockTick, reduce?1000:100);
+
+// ---------- escapement animation ----------
+const wheel=document.getElementById('wheel'), anchor=document.getElementById('anchor');
+(function(){
+  const N=30, R0=86, R1=108; let d='';
+  for(let i=0;i<N;i++){
+    const a=i/N*Math.PI*2, a2=a+Math.PI*2/N*0.25, a3=a+Math.PI*2/N;
+    const p=(r,t)=>`${(200+Math.cos(t)*r).toFixed(1)} ${(150+Math.sin(t)*r).toFixed(1)}`;
+    d+=(i?'L':'M')+p(R0,a)+' L'+p(R1,a2)+' L'+p(R0,a3)+' ';
+  }
+  wheel.innerHTML=`<path d="${d}Z"/><circle cx="200" cy="150" r="70"/><circle cx="200" cy="150" r="22"/>`+
+    [0,1,2,3,4].map(k=>{const a=k/5*Math.PI*2;return `<line x1="${200+Math.cos(a)*22}" y1="${150+Math.sin(a)*22}" x2="${200+Math.cos(a)*70}" y2="${150+Math.sin(a)*70}"/>`}).join('');
+})();
+let step=0, lastBeat=-1;
+function frame(t){
+  const s=t/1000; // seconds; period 2 s
+  const ang=Math.sin(Math.PI*s)*4.2;
+  anchor.setAttribute('transform',`rotate(${ang.toFixed(3)} 200 42)`);
+  const beat=Math.floor(s+0.5);
+  if(beat!==lastBeat){lastBeat=beat; step++;}
+  // wheel advances 6° per beat (half a tooth) with a quick snap
+  const frac=(s+0.5)-Math.floor(s+0.5), snap=Math.min(1,frac*10);
+  const wa=(step-1+snap)*6;
+  wheel.setAttribute('transform',`rotate(${wa.toFixed(2)} 200 150)`);
+  requestAnimationFrame(frame);
+}
+if(!reduce) requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

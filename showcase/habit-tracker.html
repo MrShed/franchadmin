@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hanko Habit Book</title>
+<meta name="description" content="A habit tracker styled like Japanese stationery: stamp each day with a vermilion hanko, watch a year of stamps build a heatmap, and keep your streaks alive.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f2f3ef; --paper-2:#e7e9e3; --sheet:#fbfbf8; --fiber:rgba(120,110,90,.08);
+  --ink:#23262b; --ink-soft:#626770; --ink-faint:#a4a9b0; --line:#dcdfd8;
+  --shu:#d8442b; --shu-deep:#a92c18; --shu-soft:rgba(216,68,43,.14);
+  --empty:#e3e6df; --empty-line:#cfd3cb;
+  --focus:#1f5fbf;
+  --shadow:0 1px 2px rgba(30,30,20,.08), 0 18px 30px -22px rgba(30,30,20,.4);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#15171b; --paper-2:#101216; --sheet:#1d2026; --fiber:rgba(255,255,255,.035);
+    --ink:#e9e7e1; --ink-soft:#a3a6ad; --ink-faint:#626770; --line:#2c3038;
+    --shu:#ef5a3c; --shu-deep:#c23b20; --shu-soft:rgba(239,90,60,.18);
+    --empty:#262a31; --empty-line:#323741;
+    --focus:#8ab4ff;
+    --shadow:0 18px 30px -18px rgba(0,0,0,.8);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; min-height:100vh; color:var(--ink); background-color:var(--paper);
+  background-image:
+    radial-gradient(ellipse 3px 1px at 20% 30%, var(--fiber), transparent),
+    radial-gradient(ellipse 1px 4px at 70% 60%, var(--fiber), transparent),
+    radial-gradient(ellipse 5px 1px at 45% 85%, var(--fiber), transparent);
+  background-size:37px 29px, 23px 41px, 53px 31px;
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",sans-serif; font-size:16px; line-height:1.5;
+  padding:max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
+}
+:focus-visible{outline:2px solid var(--focus); outline-offset:3px}
+.shell{max-width:1140px; margin:0 auto; display:grid; grid-template-columns:120px minmax(0,1fr); gap:28px}
+@media (max-width:760px){ .shell{grid-template-columns:minmax(0,1fr); gap:10px} }
+.spine{position:sticky; top:20px; align-self:start; display:flex; flex-direction:column; align-items:center; gap:18px}
+@media (max-width:760px){ .spine{position:static; flex-direction:row; justify-content:space-between; align-items:center} }
+.vtitle{display:flex; flex-direction:row-reverse; align-items:flex-start; gap:10px; margin:0; font-weight:700}
+.vtitle .k{display:flex; flex-direction:column; font-family:"Kaisei Decol","Hiragino Mincho ProN","Yu Mincho",serif; font-size:60px; line-height:1.08}
+.vtitle .en{writing-mode:vertical-rl; font-size:14px; letter-spacing:.32em; font-family:"Zen Kaku Gothic New",sans-serif; font-weight:500; color:var(--ink-soft)}
+@media (max-width:760px){ .vtitle{flex-direction:row; align-items:center} .vtitle .k{flex-direction:row; font-size:40px} .vtitle .en{writing-mode:horizontal-tb; font-size:11px; letter-spacing:.2em; max-width:90px} }
+.seal{width:74px; height:74px; border-radius:50%; border:3px solid var(--shu); color:var(--shu); display:grid; place-items:center; transform:rotate(-8deg);
+  font-family:"Kaisei Decol",serif; font-size:30px; font-weight:700; box-shadow:inset 0 0 0 2px var(--sheet), inset 0 0 0 4px var(--shu); background:var(--sheet)}
+@media (max-width:760px){ .seal{width:56px; height:56px; font-size:22px} }
+.back{font-size:13px; color:var(--ink-soft); text-decoration:none; border:1px solid var(--line); padding:4px 10px; border-radius:2px; background:var(--sheet); white-space:nowrap}
+.back:hover{color:var(--shu); border-color:var(--shu)}
+
+.today{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px 24px; border-bottom:1px solid var(--line); padding:8px 0 18px; margin-bottom:26px}
+.today h2{font-family:"Kaisei Decol",serif; font-weight:700; font-size:clamp(26px,4vw,38px); margin:0; line-height:1.1}
+.today p{margin:4px 0 0; color:var(--ink-soft)}
+.meter{display:flex; align-items:center; gap:12px}
+.meter .dots{display:flex; gap:6px}
+.meter .dot{width:16px; height:16px; border-radius:50%; border:1.5px solid var(--empty-line)}
+.meter .dot.on{background:var(--shu); border-color:var(--shu)}
+.meter b{font-family:"Kaisei Decol",serif; font-size:28px}
+
+.habit{position:relative; background:var(--sheet); box-shadow:var(--shadow); padding:30px 24px 22px; margin-bottom:34px; border-radius:2px}
+.washi{position:absolute; top:-12px; left:22px; width:150px; height:26px; transform:rotate(-2.5deg); opacity:.88;
+  clip-path:polygon(0 8%, 3% 0, 6% 10%, 9% 2%, 100% 0, 97% 12%, 100% 25%, 97% 40%, 100% 55%, 97% 70%, 100% 85%, 97% 100%, 0 100%, 3% 88%, 0 72%, 3% 58%, 0 44%, 3% 30%, 0 16%)}
+.w-sakura{background:repeating-radial-gradient(circle at 10px 13px, #f6b8c4 0 3px, #fbe3e8 3px 13px)}
+.w-seigaiha{background:radial-gradient(circle at 50% 100%, transparent 0 5px, #7aa6c9 5px 6px, transparent 6px 9px, #7aa6c9 9px 10px, #d4e5f2 10px) 0 0/20px 13px, #d4e5f2}
+.w-asanoha{background:repeating-linear-gradient(60deg, #8bb58a 0 2px, transparent 2px 12px), repeating-linear-gradient(-60deg, #8bb58a 0 2px, transparent 2px 12px), #dcebd6}
+.w-ichimatsu{background:conic-gradient(#e9b949 25%, #f7e6b4 0 50%, #e9b949 0 75%, #f7e6b4 0) 0 0/16px 16px}
+.w-kasuri{background:repeating-linear-gradient(90deg, #6f6aa8 0 6px, #cfcbe9 6px 9px, #6f6aa8 9px 11px, #cfcbe9 11px 20px)}
+.w-shima{background:repeating-linear-gradient(90deg, #d8442b 0 4px, #f4d2c8 4px 10px)}
+.habit:nth-child(even) .washi{left:auto; right:30px; transform:rotate(2deg)}
+
+.h-top{display:flex; flex-wrap:wrap; justify-content:space-between; gap:14px 20px; align-items:flex-start}
+.h-name{display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 260px}
+.h-name input{font-family:"Kaisei Decol",serif; font-size:26px; font-weight:700; color:var(--ink); border:0; background:transparent; padding:2px 0; width:100%; min-width:0; border-bottom:1px dashed transparent}
+.h-name input:hover,.h-name input:focus{border-bottom-color:var(--line)}
+.stats{display:flex; gap:0; flex-wrap:wrap}
+.stat{padding:0 14px; border-left:1px solid var(--line); text-align:left}
+.stat:first-child{border-left:0; padding-left:0}
+.stat b{display:block; font-family:"Kaisei Decol",serif; font-size:24px; line-height:1.1}
+.stat span{font-size:12px; color:var(--ink-soft); letter-spacing:.08em}
+.stat.fire b{color:var(--shu)}
+
+.week{display:flex; gap:10px; align-items:flex-end; margin:18px 0 18px; flex-wrap:wrap}
+.day{display:flex; flex-direction:column; align-items:center; gap:4px; border:0; background:transparent; cursor:pointer; padding:2px; color:var(--ink-soft); font:500 12px "Zen Kaku Gothic New",sans-serif; border-radius:6px}
+.day .box{width:40px; height:40px; border:1.5px dashed var(--empty-line); border-radius:50%; display:grid; place-items:center; position:relative}
+.day.is-today .box{width:64px; height:64px; border-style:solid; border-color:var(--ink-faint)}
+.day.is-today{color:var(--ink); font-weight:700}
+.hanko{position:absolute; inset:2px; border-radius:50%; border:2.5px solid var(--shu); color:var(--shu); display:grid; place-items:center;
+  font-family:"Kaisei Decol",serif; font-weight:700; font-size:18px; background:var(--shu-soft); transform:rotate(var(--r, -10deg));
+  box-shadow:inset 0 0 0 2px var(--sheet), inset 0 0 0 3.5px var(--shu)}
+.is-today .hanko{font-size:28px}
+.hanko.fresh{animation:stamp .42s cubic-bezier(.2,1.6,.4,1)}
+@keyframes stamp{0%{transform:scale(1.9) rotate(-30deg); opacity:0} 55%{transform:scale(.92) rotate(calc(var(--r) + 2deg)); opacity:1} 100%{transform:scale(1) rotate(var(--r))}}
+.day:hover .box{border-color:var(--shu)}
+.hint{font-size:13px; color:var(--ink-soft); margin-left:auto; align-self:center; max-width:220px}
+
+.heat-wrap{overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; scrollbar-width:thin}
+.heat{display:block; min-width:640px; width:100%; height:auto}
+.heat .cell{fill:var(--empty); stroke:var(--empty-line); stroke-width:.6; cursor:pointer}
+.heat .cell:hover{stroke:var(--shu); stroke-width:1.2}
+.heat .done{fill:var(--shu); cursor:pointer}
+.heat .done-ring{fill:none; stroke:var(--sheet); stroke-width:.9; pointer-events:none}
+.heat text{font-family:"Zen Kaku Gothic New",sans-serif; font-size:8px; fill:var(--ink-soft)}
+.h-foot{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; font-size:13px; color:var(--ink-soft)}
+.legend{display:flex; align-items:center; gap:6px}
+.legend i{width:11px; height:11px; border-radius:2px; background:var(--empty); border:1px solid var(--empty-line); display:inline-block}
+.legend i.s{border-radius:50%; background:var(--shu); border-color:var(--shu)}
+.del{border:1px solid var(--line); background:transparent; color:var(--ink-soft); font:inherit; font-size:13px; padding:4px 10px; cursor:pointer; border-radius:2px}
+.del:hover,.del.armed{border-color:var(--shu); color:var(--shu)}
+.del.armed{background:var(--shu-soft)}
+
+.add{background:var(--sheet); box-shadow:var(--shadow); padding:22px 24px; border-radius:2px; display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:12px; align-items:end}
+@media (max-width:600px){ .add{grid-template-columns:minmax(0,1fr)} }
+.add h3{grid-column:1/-1; margin:0; font-family:"Kaisei Decol",serif; font-size:22px}
+.add label{display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--ink-soft)}
+.add input{font:inherit; font-size:17px; padding:10px 12px; border:1px solid var(--line); background:var(--paper); color:var(--ink); border-radius:2px}
+.swatches{display:flex; gap:6px}
+.swatches button{width:34px; height:34px; border:2px solid transparent; border-radius:3px; cursor:pointer; padding:0}
+.swatches button[aria-pressed="true"]{border-color:var(--ink); transform:translateY(-2px)}
+.go{font:700 16px "Zen Kaku Gothic New",sans-serif; padding:11px 22px; border:0; background:var(--shu); color:#fff; border-radius:2px; cursor:pointer; letter-spacing:.08em}
+.go:hover{background:var(--shu-deep)}
+.tip{position:fixed; pointer-events:none; background:var(--ink); color:var(--sheet); font-size:12px; padding:4px 8px; border-radius:3px; z-index:20; opacity:0; transition:opacity .1s; white-space:nowrap}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+@media (prefers-reduced-motion: reduce){ .hanko.fresh{animation:none} .tip{transition:none} }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="spine">
+    <h1 class="vtitle"><span class="k"><span>習</span><span>慣</span></span><span class="en">HANKO HABIT BOOK</span></h1>
+    <div class="seal" aria-hidden="true">続</div>
+    <a class="back" href="index.html">&larr; Showcase</a>
+  </aside>
+
+  <main>
+    <section class="today" aria-label="Today">
+      <div>
+        <h2 id="today-date">Tuesday, 22 September</h2>
+        <p id="today-line">Stamp what you did today.</p>
+      </div>
+      <div class="meter"><div class="dots" id="dots"></div><b id="meter-n">0/0</b></div>
+    </section>
+
+    <div id="habits"></div>
+
+    <form class="add" id="add-form">
+      <h3>New habit page</h3>
+      <label for="add-name">Habit<input id="add-name" maxlength="48" placeholder="e.g. Stretch for ten minutes" required></label>
+      <div><span style="font-size:13px; color:var(--ink-soft); display:block; margin-bottom:6px" id="sw-label">Washi tape</span><div class="swatches" id="swatches" role="group" aria-labelledby="sw-label"></div></div>
+      <button class="go" id="add-go" type="submit">Add page</button>
+    </form>
+  </main>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+<p class="sr" id="live" aria-live="polite"></p>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "hanko-habits-v1";
+  var TAPES = ["sakura","seigaiha","asanoha","ichimatsu","kasuri","shima"];
+  var KANJI = ["済","良","完","続","正","吉"];
+  var $ = function(id){ return document.getElementById(id); };
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+  function key(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+  function addDays(d, n){ var x = new Date(d); x.setDate(x.getDate()+n); return x; }
+  var TODAY = new Date(); TODAY.setHours(0,0,0,0);
+  var todayK = key(TODAY);
+
+  function seed(){
+    var s = 1234567;
+    function rnd(){ s = (s * 16807) % 2147483647; return s / 2147483647; }
+    function hist(start, rate, wobble){
+      var days = {};
+      for (var i = start; i >= 1; i--){
+        var d = addDays(TODAY, -i);
+        var p = rate + wobble*Math.sin(i/17) - (d.getDay() === 0 || d.getDay() === 6 ? .12 : 0);
+        if (rnd() < p) days[key(d)] = 1;
+      }
+      return days;
+    }
+    var h = [
+      {id:uid(), name:"Morning pages, three sides", tape:"sakura", days:hist(300, .72, .15)},
+      {id:uid(), name:"Walk 8,000 steps", tape:"seigaiha", days:hist(210, .8, .1)},
+      {id:uid(), name:"Phone in the drawer by 10pm", tape:"asanoha", days:hist(120, .55, .2)},
+      {id:uid(), name:"Read for 20 minutes", tape:"ichimatsu", days:hist(340, .66, .18)}
+    ];
+    // make recent streaks readable
+    [5, 11, 2, 0].forEach(function(n, i){ for (var k=1;k<=n;k++) h[i].days[key(addDays(TODAY,-k))] = 1; });
+    h[0].days[todayK] = 1; h[1].days[todayK] = 1;
+    return {habits:h};
+  }
+  function load(){ try { var d = JSON.parse(localStorage.getItem(KEY)); if (d && Array.isArray(d.habits)) return d; } catch(e){} return null; }
+  var db = load() || seed();
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(db)); } catch(e){} }
+
+  function streaks(days){
+    var cur = 0, d = new Date(TODAY);
+    if (!days[key(d)]) d = addDays(d, -1);
+    while (days[key(d)]){ cur++; d = addDays(d,-1); }
+    var ks = Object.keys(days).filter(function(k){ return days[k]; }).sort(), best = 0, run = 0, prev = null;
+    ks.forEach(function(k){ var t = new Date(k+"T00:00:00"); if (prev && Math.round((t - prev)/864e5) === 1) run++; else run = 1; if (run > best) best = run; prev = t; });
+    var n30 = 0; for (var i=0;i<30;i++) if (days[key(addDays(TODAY,-i))]) n30++;
+    return {cur:cur, best:best, total:ks.length, pct:Math.round(n30/30*100)};
+  }
+  function kanjiFor(h){ var i = TAPES.indexOf(h.tape); return KANJI[i < 0 ? 0 : i]; }
+  function rot(k){ var h = 0; for (var i=0;i<k.length;i++) h = (h*33 + k.charCodeAt(i)) % 997; return (h % 24) - 14; }
+
+  var NS = "http://www.w3.org/2000/svg";
+  function svg(name, attrs, parent){ var n = document.createElementNS(NS, name); for (var a in attrs) n.setAttribute(a, attrs[a]); if (parent) parent.appendChild(n); return n; }
+
+  function heatmap(h){
+    var CELL = 11, GAP = 3, LEFT = 22, TOP = 14;
+    // start on the Monday 52 weeks back
+    var end = new Date(TODAY), start = addDays(end, -364);
+    var dow = (start.getDay() + 6) % 7; start = addDays(start, -dow);
+    var weeks = Math.ceil((Math.round((end - start)/864e5) + 1)/7);
+    var W = LEFT + weeks*(CELL+GAP), H = TOP + 7*(CELL+GAP);
+    var s = svg("svg", {viewBox:"0 0 " + W + " " + H, "class":"heat", role:"img", "aria-label":"Past year of stamps for " + h.name});
+    ["Mon","","Wed","","Fri","",""].forEach(function(l, i){ if (l){ var t = svg("text", {x:0, y:TOP + i*(CELL+GAP) + 9}, s); t.textContent = l; } });
+    var lastMonth = -1;
+    for (var w=0; w<weeks; w++){
+      for (var d=0; d<7; d++){
+        var day = addDays(start, w*7 + d); if (day > end) break;
+        var k = key(day), x = LEFT + w*(CELL+GAP), y = TOP + d*(CELL+GAP);
+        if (d === 0 && day.getMonth() !== lastMonth && day.getDate() <= 7){ lastMonth = day.getMonth(); var mt = svg("text", {x:x, y:9}, s); mt.textContent = day.toLocaleDateString(undefined,{month:"short"}); }
+        if (h.days[k]){
+          var c = svg("circle", {cx:x+CELL/2, cy:y+CELL/2, r:CELL/2, "class":"done", "data-k":k}, s);
+          svg("circle", {cx:x+CELL/2, cy:y+CELL/2, r:CELL/2 - 1.8, "class":"done-ring"}, s);
+        } else {
+          svg("rect", {x:x+.5, y:y+.5, width:CELL-1, height:CELL-1, rx:2, "class":"cell", "data-k":k}, s);
+        }
+      }
+    }
+    s.addEventListener("click", function(e){ var k = e.target.getAttribute && e.target.getAttribute("data-k"); if (k) toggle(h, k); });
+    s.addEventListener("mousemove", function(e){ var k = e.target.getAttribute && e.target.getAttribute("data-k"); showTip(e, k ? (new Date(k+"T00:00:00").toLocaleDateString(undefined,{weekday:"short", day:"numeric", month:"short", year:"numeric"}) + (h.days[k] ? " · stamped" : "")) : null); });
+    s.addEventListener("mouseleave", function(){ showTip(null, null); });
+    return s;
+  }
+  function showTip(e, text){
+    var t = $("tip"); if (!text){ t.style.opacity = 0; return; }
+    t.textContent = text; t.style.opacity = 1;
+    var x = Math.min(window.innerWidth - t.offsetWidth - 8, e.clientX + 12); t.style.left = Math.max(8, x) + "px"; t.style.top = (e.clientY - 34) + "px";
+  }
+
+  var fresh = null;
+  function toggle(h, k){
+    if (h.days[k]) delete h.days[k]; else { h.days[k] = 1; fresh = h.id + "|" + k; }
+    save();
+    var sc = document.querySelector('[data-habit="'+h.id+'"] .heat-wrap'); var left = sc ? sc.scrollLeft : null;
+    render(h.id, k);
+    var sc2 = document.querySelector('[data-habit="'+h.id+'"] .heat-wrap'); if (sc2 && left !== null) sc2.scrollLeft = left;
+    $("live").textContent = h.name + (h.days[k] ? " stamped for " : " unstamped for ") + (k === todayK ? "today" : k);
+  }
+
+  function render(focusHabit, focusKey){
+    var wrap = $("habits"); wrap.innerHTML = "";
+    var doneToday = 0;
+    db.habits.forEach(function(h){
+      if (h.days[todayK]) doneToday++;
+      var st = streaks(h.days);
+      var sec = document.createElement("section"); sec.className = "habit"; sec.dataset.habit = h.id; sec.setAttribute("aria-label", h.name);
+      var tape = document.createElement("div"); tape.className = "washi w-" + h.tape; tape.setAttribute("aria-hidden","true"); sec.appendChild(tape);
+
+      var top = document.createElement("div"); top.className = "h-top";
+      var nm = document.createElement("div"); nm.className = "h-name";
+      var ni = document.createElement("input"); ni.value = h.name; ni.id = "name-" + h.id; ni.setAttribute("aria-label","Habit name"); ni.maxLength = 48;
+      ni.addEventListener("change", function(){ h.name = ni.value.trim() || h.name; save(); });
+      nm.appendChild(ni); top.appendChild(nm);
+      var stats = document.createElement("div"); stats.className = "stats";
+      [["fire", st.cur, "current streak"],["", st.best, "best streak"],["", st.pct + "%", "last 30 days"],["", st.total, "stamps"]].forEach(function(s){
+        var d = document.createElement("div"); d.className = "stat " + s[0]; var b = document.createElement("b"); b.textContent = s[1]; var sp = document.createElement("span"); sp.textContent = s[2]; d.appendChild(b); d.appendChild(sp); stats.appendChild(d);
+      });
+      top.appendChild(stats); sec.appendChild(top);
+
+      var week = document.createElement("div"); week.className = "week"; week.setAttribute("role","group"); week.setAttribute("aria-label","Last seven days");
+      for (var i=6;i>=0;i--){
+        (function(d){
+          var k = key(d), isT = i === 0;
+          var b = document.createElement("button"); b.type = "button"; b.className = "day" + (isT ? " is-today" : ""); b.id = "d-" + h.id + "-" + k;
+          b.setAttribute("aria-pressed", h.days[k] ? "true" : "false");
+          b.setAttribute("aria-label", (isT ? "Today" : d.toLocaleDateString(undefined,{weekday:"long", day:"numeric", month:"long"})) + ", " + h.name);
+          var box = document.createElement("span"); box.className = "box";
+          if (h.days[k]){ var hk = document.createElement("span"); hk.className = "hanko" + (fresh === h.id + "|" + k ? " fresh" : ""); hk.style.setProperty("--r", rot(k + h.id) + "deg"); hk.textContent = kanjiFor(h); box.appendChild(hk); }
+          var lab = document.createElement("span"); lab.textContent = isT ? "Today" : d.toLocaleDateString(undefined,{weekday:"short"});
+          b.appendChild(box); b.appendChild(lab);
+          b.addEventListener("click", function(){ toggle(h, k); });
+          week.appendChild(b);
+        })(addDays(TODAY, -i));
+      }
+      var hint = document.createElement("span"); hint.className = "hint"; hint.textContent = h.days[todayK] ? "Stamped. See you tomorrow." : (st.cur ? "Stamp today to make it " + (st.cur+1) + " in a row." : "Press today's circle to stamp it.");
+      week.appendChild(hint);
+      sec.appendChild(week);
+
+      var hw = document.createElement("div"); hw.className = "heat-wrap"; hw.appendChild(heatmap(h)); sec.appendChild(hw);
+      var foot = document.createElement("div"); foot.className = "h-foot";
+      var lg = document.createElement("span"); lg.className = "legend"; lg.innerHTML = '<i></i> blank <i class="s"></i> stamped &middot; tap any past day to fix it';
+      var del = document.createElement("button"); del.className = "del"; del.type = "button"; del.id = "del-" + h.id; del.textContent = "Remove page";
+      var armT = 0;
+      del.addEventListener("click", function(){
+        if (!del.classList.contains("armed")){ del.classList.add("armed"); del.textContent = "Tap again to remove"; armT = setTimeout(function(){ del.classList.remove("armed"); del.textContent = "Remove page"; }, 3000); return; }
+        clearTimeout(armT); db.habits = db.habits.filter(function(z){ return z !== h; }); save(); render(); $("live").textContent = "Habit removed";
+      });
+      foot.appendChild(lg); foot.appendChild(del); sec.appendChild(foot);
+      wrap.appendChild(sec);
+      requestAnimationFrame(function(){ hw.scrollLeft = hw.scrollWidth; });
+    });
+    fresh = null;
+
+    var n = db.habits.length;
+    var dots = $("dots"); dots.innerHTML = "";
+    db.habits.forEach(function(h){ var d = document.createElement("span"); d.className = "dot" + (h.days[todayK] ? " on" : ""); d.title = h.name; dots.appendChild(d); });
+    $("meter-n").textContent = doneToday + "/" + n;
+    $("today-line").textContent = !n ? "Add your first habit page below." : (doneToday === n ? "Every page stamped. お疲れ様 — well done." : (n - doneToday) + " still to stamp today.");
+    if (focusHabit && focusKey){ var f = $("d-" + focusHabit + "-" + focusKey); if (f) f.focus(); }
+  }
+
+  $("today-date").textContent = TODAY.toLocaleDateString(undefined, {weekday:"long", day:"numeric", month:"long"});
+
+  var chosen = TAPES[4];
+  (function(){
+    var box = $("swatches");
+    TAPES.forEach(function(t){ var b = document.createElement("button"); b.type = "button"; b.className = "w-" + t; b.id = "sw-" + t; b.setAttribute("aria-label", t + " tape"); b.setAttribute("aria-pressed", t === chosen ? "true" : "false");
+      b.addEventListener("click", function(){ chosen = t; Array.prototype.forEach.call(box.children, function(c){ c.setAttribute("aria-pressed", c === b ? "true" : "false"); }); });
+      box.appendChild(b); });
+  })();
+  $("add-form").addEventListener("submit", function(e){
+    e.preventDefault(); var name = $("add-name").value.trim(); if (!name) return;
+    var h = {id:uid(), name:name, tape:chosen, days:{}}; db.habits.push(h); save(); $("add-name").value = ""; render();
+    var el = document.querySelector('[data-habit="'+h.id+'"]'); if (el && el.scrollIntoView) el.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"center"});
+    $("live").textContent = "Added " + name;
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

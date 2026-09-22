@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vorkurs Form Studio</title>
+<meta name="description" content="A Bauhaus homage in primary shapes: take Kandinsky's 1923 colour questionnaire, then drag circles, squares and triangles into your own composition — plus the school's history from Weimar to Berlin.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300..800;1,400&family=Rubik+Mono+One&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#e9e6de;
+  --ink:#141414;
+  --red:#d42a1e;
+  --blue:#1f4fa3;
+  --yel:#f3c21b;
+  --white:#faf9f5;
+  --geo:"Jost","Futura","Century Gothic","Avenir Next",sans-serif;
+  --mono:"Rubik Mono One","Arial Black","Helvetica Neue",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--geo);font-size:18px;line-height:1.45;text-transform:lowercase;overflow-x:hidden}
+.keep{text-transform:none}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.pad{padding-left:max(16px,env(safe-area-inset-left),4vw);padding-right:max(16px,env(safe-area-inset-right),4vw)}
+.back{position:fixed;left:max(12px,env(safe-area-inset-left));top:12px;z-index:30;background:var(--ink);color:var(--white);text-decoration:none;font:600 13px var(--geo);padding:7px 12px 7px 10px;display:flex;align-items:center;gap:8px}
+.back::before{content:"";width:10px;height:10px;background:var(--yel);clip-path:polygon(0 50%,100% 0,100% 100%)}
+.back:hover{background:var(--red)}
+
+/* hero */
+.hero{min-height:min(100vh,900px);display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(6,1fr);position:relative;overflow:hidden;background:var(--paper);border-bottom:10px solid var(--ink)}
+.hero .blk{position:relative}
+.h-red{grid-column:1/4;grid-row:1/4;background:var(--red)}
+.h-circ{grid-column:3/7;grid-row:2/6;border-radius:50%;background:var(--blue);mix-blend-mode:multiply;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-height:100%}
+.h-bar{grid-column:1/9;grid-row:5/6;background:var(--ink);height:26%;align-self:end}
+.h-tri{grid-column:6/9;grid-row:1/4;background:var(--yel);clip-path:polygon(50% 8%,100% 100%,0 100%)}
+.h-sq{grid-column:7/9;grid-row:5/7;background:var(--white);border:10px solid var(--ink)}
+.h-line{grid-column:4/9;grid-row:4/5;height:10px;background:var(--ink);align-self:center;transform:rotate(-8deg);transform-origin:left center}
+.hero h1{position:absolute;left:4vw;bottom:calc(16.66% + 30px);margin:0;font:400 clamp(34px,7vw,112px)/.9 var(--mono);color:var(--ink);letter-spacing:-.02em;z-index:3;mix-blend-mode:normal}
+.hero h1 span{display:block}
+.hero h1 .w{color:var(--red)}
+.hero .vert{position:absolute;right:4vw;top:50%;transform:translate(0,-50%) rotate(90deg);transform-origin:right center;font:600 14px var(--geo);letter-spacing:.4em;z-index:3;white-space:nowrap}
+.hero .dates{position:absolute;left:4vw;top:70px;z-index:3;font:500 15px var(--geo);color:var(--white);max-width:13em}
+.hero .blk{animation:assemble 1.3s cubic-bezier(.2,.9,.2,1) both}
+.h-red{animation-delay:.05s!important;--from:translate(-40%,0)}
+.h-circ{animation-delay:.25s!important;--from:scale(.2)}
+.h-tri{animation-delay:.4s!important;--from:translate(0,-60%)}
+.h-bar{animation-delay:.55s!important;--from:translate(100%,0)}
+.h-sq{animation-delay:.7s!important;--from:rotate(45deg) scale(.4)}
+.h-line{animation:none}
+@keyframes assemble{from{transform:var(--from);opacity:0}to{opacity:1}}
+
+/* sections */
+section{padding-top:80px;padding-bottom:80px;position:relative}
+.label{display:inline-flex;align-items:center;gap:12px;font:400 13px var(--mono);letter-spacing:.06em;margin-bottom:22px}
+.label i{width:18px;height:18px;display:inline-block}
+h2{font:400 clamp(30px,5vw,64px)/.95 var(--mono);margin:0 0 26px;letter-spacing:-.02em;max-width:14em}
+.two{display:grid;grid-template-columns:1.1fr 1fr;gap:6vw;align-items:start}
+.lead{font-size:clamp(20px,2vw,25px);line-height:1.35;font-weight:400}
+
+/* questionnaire */
+.quiz{background:var(--white);border:4px solid var(--ink);padding:26px;position:relative}
+.quiz::after{content:"";position:absolute;right:-18px;bottom:-18px;width:100%;height:100%;background:var(--ink);z-index:-1}
+.quiz-head{display:flex;justify-content:space-between;gap:10px;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:18px;font-size:13px;font-weight:600}
+.quiz-shapes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.qs{display:flex;flex-direction:column;align-items:center;gap:10px}
+.qs button.target{width:100%;aspect-ratio:1;background:none;border:0;padding:6px;cursor:pointer}
+.qs svg{width:100%;height:100%;display:block;overflow:visible}
+.qs svg .s{fill:transparent;stroke:var(--ink);stroke-width:4;stroke-dasharray:8 6;transition:fill .35s}
+.qs svg .s.filled{stroke-dasharray:none}
+.qs .nm{font-size:14px;font-weight:600}
+.paints{display:flex;gap:12px;margin:20px 0 6px;flex-wrap:wrap;align-items:center}
+.paint{width:44px;height:44px;border:3px solid var(--ink);cursor:pointer;padding:0}
+.paint[aria-pressed="true"]{outline:4px solid var(--ink);outline-offset:3px}
+.quiz .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.btn{font:600 15px var(--geo);text-transform:lowercase;background:var(--ink);color:var(--white);border:0;padding:11px 16px;cursor:pointer}
+.btn.alt{background:transparent;color:var(--ink);border:3px solid var(--ink);padding:8px 13px}
+.btn:hover{background:var(--red);color:var(--white)}
+.verdict{margin-top:14px;font-size:15px;min-height:3em}
+.verdict b{font-weight:700}
+
+/* composer */
+.composer{background:var(--ink);color:var(--white)}
+.composer h2{color:var(--white)}
+.cgrid{display:grid;grid-template-columns:220px 1fr;gap:24px;margin-top:10px}
+.tray{display:flex;flex-direction:column;gap:14px}
+.tray .sw{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tray .tool{aspect-ratio:1;background:#2a2a2a;border:2px solid #444;cursor:grab;padding:10px;touch-action:none}
+.tray .tool:hover,.tray .tool:focus-visible{border-color:var(--yel)}
+.tray .tool svg{width:100%;height:100%;display:block;pointer-events:none}
+.tray small{color:#b9b6ad;font-size:13px;line-height:1.4}
+.tray .colors{display:flex;gap:8px}
+.tray .colors button{flex:1;height:30px;border:2px solid #444;cursor:pointer}
+.tray .colors button[aria-pressed="true"]{border-color:var(--white);outline:2px solid var(--white);outline-offset:2px}
+.board-wrap{position:relative}
+.board{position:relative;width:100%;aspect-ratio:4/3;background:var(--paper);overflow:hidden;touch-action:none;background-image:linear-gradient(#0000000c 1px,transparent 1px),linear-gradient(90deg,#0000000c 1px,transparent 1px);background-size:5% 6.6667%}
+.shape{position:absolute;touch-action:none;cursor:move;outline:none}
+.shape svg{width:100%;height:100%;display:block;overflow:visible}
+.shape.sel svg{filter:drop-shadow(0 0 0 #000)}
+.shape.sel::after{content:"";position:absolute;inset:-6px;border:2px dashed var(--ink);pointer-events:none}
+.shape .h{position:absolute;right:-12px;bottom:-12px;width:18px;height:18px;background:var(--white);border:3px solid var(--ink);cursor:nwse-resize;display:none}
+.shape.sel .h{display:block}
+.shape:focus-visible::after{content:"";position:absolute;inset:-6px;border:2px solid var(--blue)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.bar .btn{background:#2a2a2a;border:2px solid #555;padding:8px 12px;font-size:14px}
+.bar .btn:hover{background:var(--red);border-color:var(--red)}
+.bar .btn:disabled{opacity:.35;cursor:not-allowed}
+.bar .btn:disabled:hover{background:#2a2a2a;border-color:#555}
+.hint{color:#b9b6ad;font-size:14px;margin-top:10px}
+
+/* history */
+.tl{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:4px solid var(--ink);margin-top:30px}
+.era{padding:22px 22px 30px 0;border-right:4px solid var(--ink);position:relative}
+.era:last-child{border-right:0}
+.era+.era{padding-left:22px}
+.era .yr{font:400 clamp(32px,4vw,52px)/1 var(--mono);margin-bottom:8px}
+.era h3{margin:0 0 10px;font-size:22px;font-weight:700}
+.era p{margin:0 0 10px;font-size:16px}
+.era .mk{position:absolute;right:22px;top:24px;width:36px;height:36px}
+
+/* people */
+.people{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:30px}
+.p{border:2px solid var(--ink);margin:-1px;padding:18px;min-height:220px;display:flex;flex-direction:column;justify-content:space-between;transition:background .25s,color .25s}
+.p:hover{background:var(--ink);color:var(--white)}
+.p .role{font-size:13px;font-weight:600;letter-spacing:.06em}
+.p h3{font-size:22px;margin:10px 0 6px;font-weight:700;line-height:1.1}
+.p p{margin:0;font-size:15px}
+.p svg{width:40px;height:40px}
+
+/* principles */
+.princ{background:var(--yel)}
+.plist{display:grid;grid-template-columns:repeat(2,1fr);gap:0;counter-reset:p}
+.pl{padding:24px 26px 26px 72px;border-top:3px solid var(--ink);position:relative;counter-increment:p}
+.pl::before{content:counter(p);position:absolute;left:0;top:18px;width:48px;height:48px;border-radius:50%;background:var(--ink);color:var(--yel);font:400 20px/48px var(--mono);text-align:center}
+.pl:nth-child(3n+2)::before{border-radius:0;background:var(--red);color:var(--white)}
+.pl:nth-child(3n)::before{clip-path:polygon(50% 0,100% 100%,0 100%);background:var(--blue);color:var(--white);line-height:58px;border-radius:0}
+.pl h3{margin:0 0 6px;font-size:22px}
+.pl p{margin:0;font-size:16px}
+.quote{font:400 clamp(24px,3.4vw,44px)/1.1 var(--mono);margin:50px 0 0;max-width:18em}
+.quote cite{display:block;font:600 15px var(--geo);font-style:normal;margin-top:14px}
+
+footer{background:var(--ink);color:var(--white);padding-top:34px;padding-bottom:40px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:15px}
+footer .shapes{display:flex;gap:10px;align-items:center}
+footer .shapes i{display:block;width:22px;height:22px}
+
+@media (max-width:900px){
+  .two{grid-template-columns:1fr}
+  .cgrid{grid-template-columns:1fr}
+  .tray{flex-direction:row;flex-wrap:wrap;align-items:flex-start}
+  .tray .sw{width:200px}
+  .tray>div{flex:1 1 200px}
+  .tl{grid-template-columns:1fr}
+  .era{border-right:0;border-bottom:4px solid var(--ink);padding-left:0!important}
+  .people{grid-template-columns:repeat(2,1fr)}
+  .plist{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  body{font-size:17px}
+  .hero{min-height:620px}
+  .hero .vert{display:none}
+  .people{grid-template-columns:1fr}
+  .p{min-height:0}
+  .quiz{padding:16px}
+  .quiz::after{right:-10px;bottom:-10px}
+  .board{aspect-ratio:3/4}
+}
+@media (prefers-reduced-motion:reduce){
+  .hero .blk{animation:none!important}
+  .p,.qs svg .s{transition:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html" id="back">showcase</a>
+
+<header class="hero" aria-label="bauhaus composition">
+  <div class="blk h-red"></div>
+  <div class="blk h-tri"></div>
+  <div class="blk h-circ"></div>
+  <div class="blk h-line"></div>
+  <div class="blk h-bar"></div>
+  <div class="blk h-sq"></div>
+  <div class="dates">weimar 1919 · dessau 1925 · berlin 1932 — closed 1933</div>
+  <h1><span>form</span><span class="w">folgt</span><span>funktion</span></h1>
+  <div class="vert">vorkurs · form studio · no. 23</div>
+</header>
+
+<main>
+<section class="pad" id="fragebogen">
+  <div class="two">
+    <div>
+      <div class="label"><i style="background:var(--red)"></i>01 — fragebogen</div>
+      <h2>kandinsky's questionnaire, 1923</h2>
+      <p class="lead">in the wall-painting workshop at weimar, wassily kandinsky handed out a single sheet of paper. it showed a triangle, a square and a circle, all empty, and asked the reader to fill each one with the colour it most naturally called for — and, if possible, to say why.</p>
+      <p>he believed the answer was universal: the sharp, active triangle is <b>yellow</b>; the calm, earthbound square is <b>red</b>; the deep, inward circle is <b>blue</b>. most of the students agreed. many historians since have noted that students might have known what the master wanted to hear.</p>
+      <p>try it yourself. pick a colour, then click a shape. your answers colour every shape in the composer below.</p>
+    </div>
+    <div class="quiz" id="quiz">
+      <div class="quiz-head"><span>staatliches bauhaus weimar · werkstatt für wandmalerei</span><span>bitte ausfüllen</span></div>
+      <div class="quiz-shapes">
+        <div class="qs"><button type="button" class="target" id="q-tri" data-shape="tri" aria-label="triangle — no colour yet"><svg viewBox="0 0 100 100"><path class="s" d="M50 6 L96 92 L4 92Z"/></svg></button><span class="nm">dreieck</span></div>
+        <div class="qs"><button type="button" class="target" id="q-sq" data-shape="sq" aria-label="square — no colour yet"><svg viewBox="0 0 100 100"><rect class="s" x="8" y="8" width="84" height="84"/></svg></button><span class="nm">quadrat</span></div>
+        <div class="qs"><button type="button" class="target" id="q-circ" data-shape="circ" aria-label="circle — no colour yet"><svg viewBox="0 0 100 100"><circle class="s" cx="50" cy="50" r="44"/></svg></button><span class="nm">kreis</span></div>
+      </div>
+      <div class="paints" role="group" aria-label="choose a colour">
+        <button type="button" class="paint" id="paint-yel" data-c="yel" style="background:var(--yel)" aria-label="yellow" aria-pressed="true"></button>
+        <button type="button" class="paint" id="paint-red" data-c="red" style="background:var(--red)" aria-label="red" aria-pressed="false"></button>
+        <button type="button" class="paint" id="paint-blue" data-c="blue" style="background:var(--blue)" aria-label="blue" aria-pressed="false"></button>
+        <span style="font-size:14px;margin-left:6px">← pick, then click a shape</span>
+      </div>
+      <div class="row">
+        <button type="button" class="btn" id="qReveal">compare with kandinsky</button>
+        <button type="button" class="btn alt" id="qReset">blank sheet</button>
+      </div>
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad composer" id="komposition">
+  <div class="label"><i style="background:var(--yel);clip-path:polygon(50% 0,100% 100%,0 100%)"></i>02 — komposition</div>
+  <h2>build a poster from three shapes</h2>
+  <div class="cgrid">
+    <div class="tray">
+      <div>
+        <div class="sw" id="tray">
+          <button type="button" class="tool" id="t-circ" data-kind="circ" aria-label="add circle"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="var(--blue)"/></svg></button>
+          <button type="button" class="tool" id="t-sq" data-kind="sq" aria-label="add square"><svg viewBox="0 0 100 100"><rect x="6" y="6" width="88" height="88" fill="var(--red)"/></svg></button>
+          <button type="button" class="tool" id="t-tri" data-kind="tri" aria-label="add triangle"><svg viewBox="0 0 100 100"><path d="M50 4 L97 94 L3 94Z" fill="var(--yel)"/></svg></button>
+          <button type="button" class="tool" id="t-bar" data-kind="bar" aria-label="add bar"><svg viewBox="0 0 100 100"><rect x="4" y="40" width="92" height="20" fill="var(--ink)" stroke="#666"/></svg></button>
+          <button type="button" class="tool" id="t-half" data-kind="half" aria-label="add half circle"><svg viewBox="0 0 100 100"><path d="M4 70 A46 46 0 0 1 96 70Z" fill="var(--red)"/></svg></button>
+          <button type="button" class="tool" id="t-ring" data-kind="ring" aria-label="add ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--white)" stroke-width="14"/></svg></button>
+        </div>
+        <small>drag a shape onto the paper, or click to drop it in the middle.</small>
+      </div>
+      <div>
+        <small>override colour of selected shape</small>
+        <div class="colors" id="recolor" style="margin-top:8px">
+          <button type="button" id="rc-red" data-c="red" style="background:var(--red)" aria-label="red"></button>
+          <button type="button" id="rc-blue" data-c="blue" style="background:var(--blue)" aria-label="blue"></button>
+          <button type="button" id="rc-yel" data-c="yel" style="background:var(--yel)" aria-label="yellow"></button>
+          <button type="button" id="rc-ink" data-c="ink" style="background:var(--ink);border-color:#777" aria-label="black"></button>
+          <button type="button" id="rc-white" data-c="white" style="background:var(--white)" aria-label="white"></button>
+        </div>
+      </div>
+    </div>
+    <div class="board-wrap">
+      <div class="board" id="board" aria-label="composition board"></div>
+      <div class="bar">
+        <button type="button" class="btn" id="bRot" disabled>rotate 15°</button>
+        <button type="button" class="btn" id="bFront" disabled>to front</button>
+        <button type="button" class="btn" id="bDup" disabled>duplicate</button>
+        <button type="button" class="btn" id="bDel" disabled>remove</button>
+        <button type="button" class="btn" id="bClear">clear paper</button>
+        <button type="button" class="btn" id="bSample">schmidt 1923 sample</button>
+      </div>
+      <div class="hint">select a shape: drag to move, pull the corner to resize, arrow keys nudge, r rotates, delete removes.</div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="geschichte">
+  <div class="label"><i style="background:var(--blue);border-radius:50%"></i>03 — geschichte</div>
+  <h2>fourteen years, three cities</h2>
+  <p class="lead" style="max-width:40em">the bauhaus lasted only from 1919 to 1933, never had more than about two hundred students at a time, and was pushed out of two cities before the nazis forced it shut. it still shaped almost every chair, typeface and apartment block of the century that followed.</p>
+  <div class="tl">
+    <article class="era"><svg class="mk" viewBox="0 0 40 40"><path d="M20 3 L38 37 L2 37Z" fill="var(--yel)"/></svg><div class="yr">1919</div><h3>weimar</h3><p>walter gropius merges the grand-ducal academy of art with the school of arts and crafts. the founding manifesto, with lyonel feininger's woodcut of a crystalline cathedral, calls for artists and craftsmen to build "the building of the future" together.</p><p>johannes itten's mystical vorkurs teaches materials, contrast and breathing exercises. the 1923 exhibition — "art and technology: a new unity" — marks the turn toward industry.</p></article>
+    <article class="era"><svg class="mk" viewBox="0 0 40 40"><rect x="3" y="3" width="34" height="34" fill="var(--red)"/></svg><div class="yr">1925</div><h3>dessau</h3><p>squeezed out by weimar's conservative government, the school moves to industrial dessau. gropius designs the glass-curtained school building and the masters' houses.</p><p>workshops now license products: marianne brandt's lamps, marcel breuer's tubular-steel chairs, gunta stölzl's weaving. herbert bayer sets everything in lowercase. hannes meyer, director from 1928, pushes social housing.</p></article>
+    <article class="era"><svg class="mk" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="var(--blue)"/></svg><div class="yr">1932</div><h3>berlin</h3><p>after the nazi-dominated city council closes the dessau school, ludwig mies van der rohe reopens it privately in an empty telephone factory in berlin-steglitz.</p><p>the gestapo seals the building in april 1933; the masters vote to dissolve in july. the diaspora — to chicago, black mountain college, harvard, tel aviv — carries its ideas around the world.</p></article>
+  </div>
+</section>
+
+<section class="pad" id="meister" style="padding-top:20px">
+  <div class="label"><i style="background:var(--ink)"></i>04 — meister &amp; studierende</div>
+  <h2>the people in the workshops</h2>
+  <div class="people" id="people"></div>
+</section>
+
+<section class="pad princ" id="grundsaetze">
+  <div class="label"><i style="background:var(--red)"></i>05 — grundsätze</div>
+  <h2>what they believed</h2>
+  <div class="plist">
+    <div class="pl"><h3>the workshop, not the academy</h3><p>every student learned a craft under two masters — one of form, one of craft. making came before theorising.</p></div>
+    <div class="pl"><h3>gesamtkunstwerk</h3><p>architecture as the total work of art: furniture, textiles, lamps, typography and murals designed as one environment.</p></div>
+    <div class="pl"><h3>truth to materials</h3><p>steel should look like steel and wood like wood. ornament hides a material; construction shows it off.</p></div>
+    <div class="pl"><h3>design for industry</h3><p>prototypes for mass production, so that good design would be cheap enough for the worker's flat.</p></div>
+    <div class="pl"><h3>elementary form</h3><p>circle, square, triangle; red, blue, yellow; black and white. reduce the vocabulary until everything left is essential.</p></div>
+    <div class="pl"><h3>one alphabet</h3><p>bayer's universal typeface abolished capitals: "we don't speak a capital a and a small a — why write two alphabets?" this page, in tribute, does the same.</p></div>
+  </div>
+  <p class="quote">"the ultimate aim of all creative activity is the building."<cite>— walter gropius, bauhaus manifesto, april 1919</cite></p>
+</section>
+</main>
+
+<footer class="pad">
+  <div>vorkurs form studio — a homage to the staatliches bauhaus, 1919–1933.</div>
+  <div class="shapes" aria-hidden="true"><i style="background:var(--yel);clip-path:polygon(50% 0,100% 100%,0 100%)"></i><i style="background:var(--red)"></i><i style="background:var(--blue);border-radius:50%"></i></div>
+  <a href="index.html">back to the showcase</a>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var COL={red:"#d42a1e",blue:"#1f4fa3",yel:"#f3c21b",ink:"#141414",white:"#faf9f5"};
+  var KAND={tri:"yel",sq:"red",circ:"blue"};
+  var NAME={yel:"yellow",red:"red",blue:"blue"};
+  var SHAPE={tri:"triangle",sq:"square",circ:"circle"};
+  function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+  function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+  /* ---------- people ---------- */
+  var people=[
+    ["founder · director 1919–28","walter gropius","architect of the dessau building; wrote the manifesto and steered the school toward industry.","sq"],
+    ["vorkurs master 1919–23","johannes itten","colour contrast theory, vegetarian mysticism, and the foundation course every student took.","tri"],
+    ["wall-painting master 1922–33","wassily kandinsky","point and line to plane; the colour questionnaire; the analytical drawing class.","circ"],
+    ["form master 1921–31","paul klee","the pedagogical sketchbook: taking a line for a walk. taught weaving and painting.","arrow"],
+    ["metal workshop 1923–28","lászló moholy-nagy","photograms, typophoto and light-space modulators; replaced itten and embraced the machine.","ring"],
+    ["student, then master 1920–33","josef albers","paper-folding in the vorkurs, later interaction of color and the homage to the square.","sqsq"],
+    ["metal workshop 1924–32","marianne brandt","the first woman in the metal workshop; her teapot and kandem lamps became icons.","half"],
+    ["weaving master 1925–31","gunta stölzl","made the weaving workshop the school's most commercially successful department.","stripes"],
+    ["typography 1925–28","herbert bayer","universal alphabet, lowercase letterheads, exhibition design; later aspen and container corporation.","type"],
+    ["furniture 1925–28","marcel breuer","the tubular-steel wassily chair, inspired by the handlebars of his adler bicycle.","chair"],
+    ["weaving 1922–33","anni albers","treated textile as architecture; later black mountain college and a moma solo show.","grid"],
+    ["director 1930–33","mies van der rohe","less is more. led the final berlin years and dissolved the school rather than compromise.","plus"]
+  ];
+  function glyph(k){
+    var s='<svg viewBox="0 0 40 40" aria-hidden="true">';
+    switch(k){
+      case"sq":s+='<rect x="4" y="4" width="32" height="32" fill="#d42a1e"/>';break;
+      case"tri":s+='<path d="M20 3 L38 37 L2 37Z" fill="#f3c21b"/>';break;
+      case"circ":s+='<circle cx="20" cy="20" r="17" fill="#1f4fa3"/>';break;
+      case"arrow":s+='<path d="M4 30 Q14 4 22 20 T36 10" fill="none" stroke="currentColor" stroke-width="3"/><path d="M30 6 L37 10 L31 15" fill="none" stroke="currentColor" stroke-width="3"/>';break;
+      case"ring":s+='<circle cx="20" cy="20" r="14" fill="none" stroke="#1f4fa3" stroke-width="6"/><circle cx="20" cy="20" r="4" fill="#d42a1e"/>';break;
+      case"sqsq":s+='<rect x="2" y="2" width="36" height="36" fill="#f3c21b"/><rect x="8" y="10" width="24" height="24" fill="#d42a1e"/><rect x="14" y="18" width="12" height="12" fill="#1f4fa3"/>';break;
+      case"half":s+='<path d="M4 30 A16 16 0 0 1 36 30Z" fill="#d42a1e"/><rect x="4" y="32" width="32" height="4" fill="currentColor"/>';break;
+      case"stripes":for(var i=0;i<5;i++)s+='<rect x="'+(3+i*7)+'" y="3" width="5" height="34" fill="'+["#d42a1e","#f3c21b","#1f4fa3","#d42a1e","#f3c21b"][i]+'"/>';break;
+      case"type":s+='<text x="2" y="32" font-family="Jost,Futura,sans-serif" font-size="34" font-weight="700" fill="currentColor">a</text><circle cx="31" cy="12" r="6" fill="#d42a1e"/>';break;
+      case"chair":s+='<path d="M8 36 V8 H30 V36 M8 22 H34" fill="none" stroke="currentColor" stroke-width="3"/>';break;
+      case"grid":for(var x=0;x<4;x++)for(var y=0;y<4;y++)s+='<rect x="'+(3+x*9)+'" y="'+(3+y*9)+'" width="7" height="7" fill="'+((x+y)%3===0?"#1f4fa3":(x*y)%2?"#f3c21b":"currentColor")+'"/>';break;
+      default:s+='<rect x="17" y="3" width="6" height="34" fill="currentColor"/><rect x="3" y="17" width="34" height="6" fill="#d42a1e"/>';
+    }
+    return s+'</svg>';
+  }
+  var pw=document.getElementById('people');
+  people.forEach(function(p){
+    var d=document.createElement('article');d.className='p';
+    d.innerHTML='<div>'+glyph(p[3])+'<div class="role">'+p[0]+'</div><h3>'+p[1]+'</h3></div><p>'+p[2]+'</p>';
+    pw.appendChild(d);
+  });
+
+  /* ---------- questionnaire ---------- */
+  var answers=load('vk-answers',{tri:null,sq:null,circ:null});
+  if(!answers||typeof answers!=='object')answers={tri:null,sq:null,circ:null};
+  var brush="yel";
+  var paints=document.querySelectorAll('.paint');
+  paints.forEach(function(b){b.addEventListener('click',function(){brush=b.dataset.c;paints.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});});});
+  function paintQuiz(){
+    document.querySelectorAll('.target').forEach(function(t){
+      var k=t.dataset.shape,c=answers[k],s=t.querySelector('.s');
+      s.style.fill=c?COL[c]:'transparent';
+      s.classList.toggle('filled',!!c);
+      t.setAttribute('aria-label',SHAPE[k]+' — '+(c?NAME[c]:'no colour yet'));
+    });
+    save('vk-answers',answers);
+    refreshTrayColors();
+  }
+  document.querySelectorAll('.target').forEach(function(t){
+    t.addEventListener('click',function(){answers[t.dataset.shape]=brush;paintQuiz();document.getElementById('verdict').textContent='';recolorBoard();});
+  });
+  document.getElementById('qReset').addEventListener('click',function(){answers={tri:null,sq:null,circ:null};paintQuiz();document.getElementById('verdict').textContent='';recolorBoard();});
+  document.getElementById('qReveal').addEventListener('click',function(){
+    var v=document.getElementById('verdict');
+    var filled=Object.keys(answers).filter(function(k){return answers[k];});
+    if(filled.length<3){v.innerHTML='fill all three shapes first — kandinsky wanted every blank completed.';return;}
+    var match=Object.keys(KAND).filter(function(k){return answers[k]===KAND[k];}).length;
+    var msgs=["<b>0 of 3.</b> a genuine dissenter. kandinsky would have asked you to write your reasons in the margin — and then disagreed with them.","<b>1 of 3.</b> you see some of it. itten, who had his own colour theory, would probably side with you.","<b>2 of 3.</b> nearly orthodox. one swap away from the wall-painting workshop's official answer.","<b>3 of 3.</b> yellow triangle, red square, blue circle — exactly kandinsky's answer. you'd have passed the vorkurs."];
+    v.innerHTML=msgs[match];
+  });
+  function colorFor(kind){
+    if(kind==="circ"||kind==="ring")return answers.circ||KAND.circ;
+    if(kind==="sq")return answers.sq||KAND.sq;
+    if(kind==="tri")return answers.tri||KAND.tri;
+    if(kind==="half")return answers.sq||"red";
+    return "ink";
+  }
+  function refreshTrayColors(){
+    var m={circ:'circle',sq:'rect',tri:'path',half:'path'};
+    Object.keys(m).forEach(function(k){var e=document.querySelector('#t-'+k+' '+m[k]);if(e)e.setAttribute('fill',COL[colorFor(k)]);});
+  }
+
+  /* ---------- composer ---------- */
+  var board=document.getElementById('board');
+  var shapes=[]; // {id,kind,x,y,s,rot,c(custom color or null),z}
+  var sel=null, nextId=1, zTop=1;
+  function svgFor(sh){
+    var c=COL[sh.c||colorFor(sh.kind)];
+    switch(sh.kind){
+      case"circ":return'<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="'+c+'"/></svg>';
+      case"sq":return'<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="'+c+'"/></svg>';
+      case"tri":return'<svg viewBox="0 0 100 100"><path d="M50 0 L100 100 L0 100Z" fill="'+c+'"/></svg>';
+      case"bar":return'<svg viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="'+c+'"/></svg>';
+      case"half":return'<svg viewBox="0 0 100 100"><path d="M0 75 A50 50 0 0 1 100 75Z" fill="'+c+'"/></svg>';
+      case"ring":return'<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="'+(sh.c?c:COL.ink)+'" stroke-width="16"/></svg>';
+    }
+  }
+  function place(sh){
+    var e=sh.el;
+    e.style.left=sh.x+'%';e.style.top=sh.y+'%';
+    e.style.width=sh.s+'%';
+    e.style.height=(sh.s*(sh.kind==='bar'?0.06:1)*board.clientWidth/Math.max(1,board.clientHeight))+'%';
+    e.style.transform='translate(-50%,-50%) rotate('+sh.rot+'deg)';
+    e.style.zIndex=sh.z;
+  }
+  function draw(sh){
+    if(!sh.el){
+      var e=document.createElement('div');e.className='shape';e.tabIndex=0;e.id='shape-'+sh.id;
+      e.setAttribute('role','button');
+      board.appendChild(e);sh.el=e;attach(sh);
+    }
+    sh.el.innerHTML=svgFor(sh)+'<span class="h" aria-hidden="true"></span>';
+    sh.el.setAttribute('aria-label',sh.kind+' shape, '+(sh.c||colorFor(sh.kind)));
+    place(sh);
+  }
+  function recolorBoard(){shapes.forEach(draw);}
+  function persist(){save('vk-board',shapes.map(function(s){return{kind:s.kind,x:s.x,y:s.y,s:s.s,rot:s.rot,c:s.c,z:s.z};}));}
+  function add(kind,x,y,s,rot,c,z){
+    var sh={id:nextId++,kind:kind,x:x,y:y,s:s||22,rot:rot||0,c:c||null,z:z||++zTop};
+    if(sh.z>zTop)zTop=sh.z;
+    shapes.push(sh);draw(sh);return sh;
+  }
+  function select(sh){
+    sel=sh;
+    shapes.forEach(function(s){s.el.classList.toggle('sel',s===sh);});
+    ['bRot','bFront','bDup','bDel'].forEach(function(id){document.getElementById(id).disabled=!sh;});
+  }
+  function remove(sh){if(!sh)return;board.removeChild(sh.el);shapes=shapes.filter(function(s){return s!==sh;});select(null);persist();}
+  function pct(ev){var r=board.getBoundingClientRect();return{x:(ev.clientX-r.left)/r.width*100,y:(ev.clientY-r.top)/r.height*100,r:r};}
+  function attach(sh){
+    var e=sh.el;
+    e.addEventListener('pointerdown',function(ev){
+      ev.preventDefault();ev.stopPropagation();select(sh);e.focus({preventScroll:true});
+      var resizing=ev.target.classList.contains('h');
+      var p0=pct(ev),x0=sh.x,y0=sh.y,s0=sh.s;
+      e.setPointerCapture(ev.pointerId);
+      function mv(m){
+        var p=pct(m);
+        if(resizing){
+          var dx=(p.x-sh.x), dy=(p.y-sh.y)*p.r.height/p.r.width;
+          sh.s=Math.max(4,Math.min(120,Math.sqrt(dx*dx+dy*dy)*1.414));
+        }else{sh.x=Math.max(-10,Math.min(110,x0+p.x-p0.x));sh.y=Math.max(-10,Math.min(110,y0+p.y-p0.y));}
+        place(sh);
+      }
+      function up(){e.removeEventListener('pointermove',mv);e.removeEventListener('pointerup',up);e.removeEventListener('pointercancel',up);persist();}
+      e.addEventListener('pointermove',mv);e.addEventListener('pointerup',up);e.addEventListener('pointercancel',up);
+    });
+    e.addEventListener('keydown',function(ev){
+      var st=ev.shiftKey?5:1,handled=true;
+      if(ev.key==='ArrowLeft')sh.x-=st;else if(ev.key==='ArrowRight')sh.x+=st;
+      else if(ev.key==='ArrowUp')sh.y-=st;else if(ev.key==='ArrowDown')sh.y+=st;
+      else if(ev.key==='r'||ev.key==='R')sh.rot=(sh.rot+15)%360;
+      else if(ev.key==='+'||ev.key==='=')sh.s=Math.min(120,sh.s+2);
+      else if(ev.key==='-')sh.s=Math.max(4,sh.s-2);
+      else if(ev.key==='Delete'||ev.key==='Backspace'){remove(sh);ev.preventDefault();return;}
+      else handled=false;
+      if(handled){ev.preventDefault();place(sh);persist();}
+    });
+    e.addEventListener('focus',function(){select(sh);});
+  }
+  board.addEventListener('pointerdown',function(ev){if(ev.target===board)select(null);});
+
+  // tray: drag or click
+  document.querySelectorAll('.tool').forEach(function(t){
+    var ghost=null,moved=false,start=null;
+    t.addEventListener('pointerdown',function(ev){
+      start={x:ev.clientX,y:ev.clientY};moved=false;
+      t.setPointerCapture(ev.pointerId);
+    });
+    t.addEventListener('pointermove',function(ev){
+      if(!start)return;
+      if(!moved&&Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>6){
+        moved=true;ghost=t.cloneNode(true);ghost.removeAttribute('id');
+        ghost.style.cssText='position:fixed;width:70px;height:70px;pointer-events:none;z-index:99;opacity:.85;background:none;border:0;';
+        document.body.appendChild(ghost);
+      }
+      if(ghost){ghost.style.left=(ev.clientX-35)+'px';ghost.style.top=(ev.clientY-35)+'px';}
+    });
+    function end(ev){
+      if(!start)return;
+      if(ghost){document.body.removeChild(ghost);ghost=null;}
+      if(moved){
+        var p=pct(ev);
+        if(p.x>=0&&p.x<=100&&p.y>=0&&p.y<=100){var sh=add(t.dataset.kind,p.x,p.y,t.dataset.kind==='bar'?50:22);select(sh);persist();}
+      }
+      start=null;
+    }
+    t.addEventListener('pointerup',end);
+    t.addEventListener('pointercancel',function(){if(ghost){document.body.removeChild(ghost);ghost=null;}start=null;});
+    t.addEventListener('click',function(){
+      if(moved){moved=false;return;}
+      var sh=add(t.dataset.kind,50+(Math.random()*20-10),50+(Math.random()*20-10),t.dataset.kind==='bar'?50:22);select(sh);persist();
+    });
+  });
+
+  document.querySelectorAll('#recolor button').forEach(function(b){
+    b.addEventListener('click',function(){if(!sel)return;sel.c=b.dataset.c;draw(sel);persist();});
+  });
+  document.getElementById('bRot').addEventListener('click',function(){if(sel){sel.rot=(sel.rot+15)%360;place(sel);persist();}});
+  document.getElementById('bFront').addEventListener('click',function(){if(sel){sel.z=++zTop;place(sel);persist();}});
+  document.getElementById('bDup').addEventListener('click',function(){if(sel){var n=add(sel.kind,sel.x+4,sel.y+4,sel.s,sel.rot,sel.c);select(n);persist();}});
+  document.getElementById('bDel').addEventListener('click',function(){remove(sel);});
+  function clear(){shapes.forEach(function(s){board.removeChild(s.el);});shapes=[];select(null);}
+  document.getElementById('bClear').addEventListener('click',function(){clear();persist();});
+  function sample(){
+    clear();
+    // loosely after joost schmidt's 1923 exhibition poster
+    add('sq',36,44,40,0,'ink');
+    add('circ',60,38,40,0,null);
+    add('sq',30,62,26,0,null);
+    add('tri',74,70,24,0,null);
+    add('bar',50,18,90,0,'ink');
+    add('bar',66,84,60,-90,'red');
+    add('ring',24,24,18,0,'white');
+    add('half',82,20,16,180,'yel');
+    add('bar',40,92,70,0,'blue');
+    persist();
+  }
+  document.getElementById('bSample').addEventListener('click',sample);
+
+  paintQuiz();
+  var saved=load('vk-board',null);
+  if(Array.isArray(saved)&&saved.length){saved.forEach(function(s){if(s&&s.kind)add(s.kind,+s.x,+s.y,+s.s,+s.rot,s.c,+s.z);});}
+  else sample();
+  window.addEventListener('resize',function(){shapes.forEach(place);});
+  if(window.ResizeObserver)new ResizeObserver(function(){shapes.forEach(place);}).observe(board);
+})();
+</script>
+</body>
+</html>

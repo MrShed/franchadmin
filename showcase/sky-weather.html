@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Haar Weather</title>
+<meta name="description" content="A weather app for Edinburgh where the whole sky is the interface: drag through 48 hours and watch haar, sun, rain, thunder and stars render live over the city skyline.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --serif:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:"Manrope","Segoe UI",system-ui,-apple-system,sans-serif;
+  --glass:rgba(12,20,40,.26); --glass-b:rgba(255,255,255,.2); --txt:#fff; --dim:rgba(255,255,255,.72);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#1c2c4d; color:var(--txt); font-family:var(--sans); min-height:100vh; overflow-x:hidden}
+#sky{position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0}
+.scrim{position:fixed; inset:0; z-index:1; pointer-events:none;
+  background:radial-gradient(120% 70% at 10% 10%, rgba(6,12,30,.34), transparent 60%), linear-gradient(180deg, transparent 55%, rgba(6,12,30,.35))}
+.page{position:relative; z-index:2; max-width:1240px; margin:0 auto; padding:18px max(16px,3vw) 40px; text-shadow:0 1px 18px rgba(0,10,30,.35)}
+.top{display:flex; justify-content:space-between; align-items:center; gap:16px}
+.logo{font-family:var(--serif); font-style:italic; font-weight:300; font-size:24px; letter-spacing:-.01em}
+.logo b{font-style:normal; font-weight:500; font-family:var(--sans); font-size:11px; letter-spacing:.3em; text-transform:uppercase; margin-left:10px; opacity:.75; vertical-align:middle}
+.back{color:#fff; text-decoration:none; font-size:13px; font-weight:600; padding:7px 12px; border-radius:30px; background:var(--glass); border:1px solid var(--glass-b); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px)}
+.back:hover{background:rgba(255,255,255,.2)}
+:focus-visible{outline:2px solid #fff; outline-offset:3px}
+
+.hero{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:32px; margin-top:6vh; align-items:end}
+.place{font-size:13px; font-weight:700; letter-spacing:.24em; text-transform:uppercase; display:flex; gap:10px; align-items:center}
+.place .dot{width:8px; height:8px; border-radius:50%; background:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.25)}
+.when{font-family:var(--serif); font-size:18px; font-style:italic; font-weight:300; margin-top:8px; color:var(--dim)}
+.temp{font-family:var(--serif); font-weight:300; font-size:clamp(120px,21vw,260px); line-height:.82; letter-spacing:-.06em; margin:14px 0 0 -.04em; font-variation-settings:"opsz" 144; display:flex; align-items:flex-start}
+.temp sup{font-size:.34em; margin-top:.12em; letter-spacing:0; font-weight:300}
+.cond{font-family:var(--serif); font-size:clamp(30px,4.2vw,48px); font-weight:300; font-style:italic; margin:14px 0 6px; letter-spacing:-.01em}
+.sub{color:var(--dim); font-weight:600; font-size:15px}
+.note{font-family:var(--serif); font-size:17px; line-height:1.5; max-width:30em; margin-top:18px; color:rgba(255,255,255,.9)}
+
+.tiles{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
+.tile{background:var(--glass); border:1px solid var(--glass-b); border-radius:4px 22px 4px 22px; padding:14px 16px; backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2); min-height:118px; position:relative; text-shadow:none}
+.tile h3{margin:0 0 8px; font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; font-weight:700; color:var(--dim)}
+.tile .big{font-family:var(--serif); font-size:34px; font-weight:300; line-height:1}
+.tile .big small{font-family:var(--sans); font-size:13px; font-weight:600; margin-left:4px; color:var(--dim)}
+.tile p{margin:8px 0 0; font-size:12.5px; color:var(--dim); line-height:1.4}
+.compass{position:absolute; right:14px; top:14px; width:54px; height:54px}
+.uvbar{height:6px; border-radius:3px; margin-top:12px; background:linear-gradient(90deg,#6ee07a,#f5e14a,#f59a3a,#e8453c,#b04ee0); position:relative}
+.uvbar i{position:absolute; top:-4px; width:4px; height:14px; border-radius:2px; background:#fff; box-shadow:0 0 0 2px rgba(0,0,0,.25); transition:left .4s}
+.sunarc{width:100%; height:56px; margin-top:4px}
+
+.scrub{margin-top:36px; background:var(--glass); border:1px solid var(--glass-b); border-radius:26px; padding:16px 18px 14px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); text-shadow:none}
+.scrub-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px}
+.scrub-head h2{margin:0; font-family:var(--serif); font-weight:300; font-style:italic; font-size:22px}
+.btns{display:flex; gap:8px}
+.pill{font:600 13px var(--sans); color:#fff; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25); padding:7px 14px; border-radius:30px; cursor:pointer}
+.pill:hover{background:rgba(255,255,255,.26)} .pill[aria-pressed="true"]{background:#fff; color:#12213f}
+#track{position:relative; height:150px; touch-action:none; cursor:grab; user-select:none}
+#track:active{cursor:grabbing}
+#trackSvg{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+#handle{position:absolute; top:0; bottom:0; width:2px; background:#fff; margin-left:-1px; pointer-events:none; box-shadow:0 0 12px rgba(255,255,255,.8)}
+#handle b{position:absolute; top:-6px; left:50%; transform:translateX(-50%); background:#fff; color:#12213f; font:700 12px var(--sans); padding:4px 9px; border-radius:20px; white-space:nowrap}
+#handle::after{content:""; position:absolute; bottom:22px; left:50%; width:14px; height:14px; margin-left:-7px; border-radius:50%; background:#fff; box-shadow:0 0 0 5px rgba(255,255,255,.3)}
+.lab{fill:rgba(255,255,255,.75); font:600 11px var(--sans)}
+.lab.day{fill:#fff; font-weight:700; letter-spacing:.1em}
+
+.lower{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:24px; margin-top:24px}
+.panel{background:var(--glass); border:1px solid var(--glass-b); border-radius:26px; padding:16px 18px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); text-shadow:none}
+.panel h2{margin:0 0 8px; font-family:var(--serif); font-weight:300; font-style:italic; font-size:22px}
+.week{list-style:none; margin:0; padding:0}
+.week li{display:grid; grid-template-columns:52px 34px minmax(0,1fr) 38px 110px 38px; align-items:center; gap:10px; padding:9px 0; border-top:1px solid rgba(255,255,255,.14); font-size:14px}
+.week li:first-child{border-top:0}
+.week .d{font-weight:700}
+.week .t{color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px}
+.week .lo{color:var(--dim); text-align:right}
+.range{height:5px; border-radius:3px; background:rgba(255,255,255,.18); position:relative}
+.range i{position:absolute; top:0; bottom:0; border-radius:3px; background:linear-gradient(90deg,#8fd0ff,#ffd27a)}
+.lab-chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px}
+.lab-chips p{margin:0 0 6px; width:100%; font-size:13px; color:var(--dim); line-height:1.5}
+.ico{width:30px; height:30px}
+.ico *{fill:none; stroke:#fff; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+.ico .fill{fill:#fff; stroke:none}
+.foot{margin-top:22px; font-size:12px; color:var(--dim)}
+
+@media (max-width:860px){
+  .hero,.lower{grid-template-columns:minmax(0,1fr)}
+  .hero{margin-top:3vh}
+}
+@media (max-width:460px){
+  .week li{grid-template-columns:40px 30px minmax(0,1fr) 30px 56px 30px; gap:6px; font-size:13px}
+  .tile{padding:12px; min-height:110px} .tile .big{font-size:28px}
+  .compass{width:40px; height:40px}
+  .scrub{padding:14px 12px}
+  .logo b{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="scrim"></div>
+<div class="page">
+  <div class="top">
+    <div class="logo">Haar<b>Edinburgh sky</b></div>
+    <a class="back" id="backLink" href="index.html">← Showcase</a>
+  </div>
+
+  <section class="hero">
+    <div>
+      <div class="place"><span class="dot"></span>Edinburgh · Old Town</div>
+      <div class="when" id="when">Tuesday, 14:00</div>
+      <div class="temp" id="temp" aria-live="polite">15<sup>°</sup></div>
+      <div class="cond" id="cond">Sunny spells</div>
+      <div class="sub" id="sub">Feels 13° · High 16° · Low 9°</div>
+      <p class="note" id="note"></p>
+    </div>
+    <div class="tiles">
+      <div class="tile"><h3>Wind</h3><div class="big" id="wind">18<small>km/h</small></div><p id="windTxt">SW, gusts 30</p>
+        <svg class="compass" viewBox="-30 -30 60 60" aria-hidden="true"><circle r="27" fill="none" stroke="rgba(255,255,255,.35)"/><text y="-17" text-anchor="middle" fill="#fff" font-size="9" font-family="Manrope,sans-serif" font-weight="700">N</text>
+        <g id="needle"><path d="M0 -22 L6 8 L0 3 L-6 8Z" fill="#fff"/></g></svg></div>
+      <div class="tile"><h3>Rain</h3><div class="big" id="rain">0<small>mm</small></div><p id="rainTxt">0% chance this hour</p></div>
+      <div class="tile"><h3>Humidity</h3><div class="big" id="hum">64<small>%</small></div><p id="humTxt">Dew point 8°</p></div>
+      <div class="tile"><h3>Visibility</h3><div class="big" id="vis">24<small>km</small></div><p id="visTxt">Clear to the Fife coast</p></div>
+      <div class="tile"><h3>UV index</h3><div class="big" id="uv">3<small>moderate</small></div><div class="uvbar"><i id="uvMark"></i></div></div>
+      <div class="tile"><h3>Sun</h3><svg class="sunarc" viewBox="0 0 200 56" aria-hidden="true"><path d="M10 50 Q100 -20 190 50" fill="none" stroke="rgba(255,255,255,.4)" stroke-dasharray="3 4"/><line x1="0" y1="50" x2="200" y2="50" stroke="rgba(255,255,255,.4)"/><circle id="sunDot" r="6" fill="#ffd27a"/></svg><p>Rise 07:03 · Set 19:14</p></div>
+    </div>
+  </section>
+
+  <section class="scrub" aria-label="Hourly forecast scrubber">
+    <div class="scrub-head">
+      <h2>Next 48 hours</h2>
+      <div class="btns"><button class="pill" id="nowBtn">Now</button><button class="pill" id="playBtn" aria-pressed="false">▶ Time-lapse</button></div>
+    </div>
+    <div id="track" role="slider" tabindex="0" aria-label="Forecast hour" aria-valuemin="0" aria-valuemax="47" aria-valuenow="8">
+      <svg id="trackSvg" preserveAspectRatio="none"></svg>
+      <div id="handle"><b id="handleLab">14:00</b></div>
+    </div>
+  </section>
+
+  <section class="lower">
+    <div class="panel"><h2>The week ahead</h2><ul class="week" id="week"></ul></div>
+    <div class="panel"><h2>Sky lab</h2>
+      <div class="lab-chips" id="chips"><p>Preview how any sky renders over the city. Scrubbing the timeline returns you to the forecast.</p></div>
+      <p class="foot">Forecast data is fictional. Sunrise and sunset are right for 22 September. Haar: the cold sea mist that rolls off the Firth of Forth.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+const lerp = (a,b,t) => a+(b-a)*t;
+const smooth = (a,b,x) => { const t = clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
+function hex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+function mix(a,b,t){ return [lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)]; }
+const rgb = (c,a=1) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+
+/* -------- forecast data (fictional) -------- */
+const COND = {
+  sunny:{cloud:.08}, partly:{cloud:.42}, cloudy:{cloud:.86}, showers:{cloud:.8, rain:.35}, rain:{cloud:.95, rain:.7},
+  storm:{cloud:1, rain:1, storm:1}, fog:{cloud:.25, fog:.95}, mist:{cloud:.15, fog:.45}, snow:{cloud:.9, snow:.85}, clear:{cloud:.04}
+};
+const plan = [ // from Tue 06:00
+  'fog','fog','fog','mist','partly','sunny','sunny','sunny','sunny','sunny','partly','partly','cloudy','showers','rain','rain','storm','storm','storm','rain',
+  'showers','cloudy','partly','clear','clear','clear','partly','sunny','sunny','sunny','sunny','partly','cloudy','showers','showers','partly','partly','clear',
+  'clear','clear','clear','clear','clear','clear','mist','mist','mist','mist'];
+const DAYS = ['Tue','Wed','Thu'];
+const HOURS = plan.map((c,i) => {
+  const hod = (i+6)%24; const day = Math.floor((i+6)/24);
+  const diurnal = Math.sin((hod-9)/24*Math.PI*2);
+  let temp = 11.5 + 4.2*diurnal + (day===1?-1:0) - (COND[c].rain||0)*2 - (c==='fog'?1.5:0);
+  const wind = {fog:6,mist:7,sunny:14,partly:18,cloudy:22,showers:26,rain:30,storm:44,clear:10}[c] + ((i*7)%5);
+  const dir = c==='storm'||c==='rain' ? 225 : c==='fog' ? 80 : day===1 ? 290 : 250;
+  const hum = {fog:97,mist:92,sunny:62,partly:68,cloudy:76,showers:84,rain:93,storm:95,clear:80}[c];
+  const mm = c==='storm'?4.2:c==='rain'?1.6:c==='showers'?.4:0;
+  const prob = c==='storm'?95:c==='rain'?85:c==='showers'?55:c==='cloudy'?20:c==='partly'?10:3;
+  const vis = {fog:.4,mist:3,sunny:30,partly:26,cloudy:20,showers:12,rain:7,storm:4,clear:30}[c];
+  const elev = sunElev(hod);
+  const uv = Math.max(0, Math.round(elev*5.2*(1-(COND[c].cloud||0)*.6)));
+  return {i, hod, day, cond:c, temp:Math.round(temp*10)/10, feels:Math.round(temp - wind/14), wind, gust:Math.round(wind*1.6), dir, hum, mm, prob, vis, uv,
+    press: Math.round(1016 - (i>12&&i<22 ? (i-12)*1.4 : i>=22 ? 14-(i-22)*.4 : 0))};
+});
+function sunElev(h){ const rise = 7.05, set = 19.23;
+  if (h >= rise && h <= set) return Math.sin(Math.PI*(h-rise)/(set-rise));
+  const nightLen = 24-(set-rise); const t = h > set ? h-set : h+24-set; return -Math.sin(Math.PI*t/nightLen); }
+const WEEK = [
+  ['Tue','storm','Haar, then a stormy evening',9,16],['Wed','partly','Bright, blustery NW wind',8,14],['Thu','mist','Misty start, gentle',7,15],
+  ['Fri','rain','Persistent rain from noon',10,13],['Sat','sunny','Crisp and gloriously clear',6,15],['Sun','cloudy','Grey, dry, a cold wind',8,12],['Mon','showers','Sunshine and heavy showers',7,13]];
+const NOTES = {
+  fog:'Sea haar has crept up from Leith and swallowed the Castle. It should thin once the sun gets above Arthur’s Seat.',
+  mist:'A soft mist is lying in the Grassmarket and over the Meadows. Visibility is recovering.',
+  sunny:'Proper blue-sky Edinburgh. The light is doing that golden thing on the sandstone of the Old Town.',
+  partly:'Big white clouds racing in off the Pentlands, with sunshine in between them.',
+  cloudy:'A lid of grey stratocumulus. It’s dry for now, but the westerly is picking up.',
+  showers:'Squally showers. Twenty minutes of rain, then twenty minutes of sun. Keep a hood handy.',
+  rain:'Steady rain, and the setts on the Royal Mile are slick. Walk carefully on the closes.',
+  storm:'Thunderstorms crossing the Forth, with gusts over 60 km/h on Calton Hill. Not a night for the Crags.',
+  clear:'Clear and still. Venus is low in the west after dusk, and it’ll be cold enough for a light frost on the Pentlands.',
+  snow:'Sky lab: a winter scene. Snow settles quickly on the Castle esplanade.'
+};
+const LABEL = {fog:'Haar',mist:'Mist',sunny:'Sunny',partly:'Sunny spells',cloudy:'Overcast',showers:'Showers',rain:'Rain',storm:'Thunderstorms',clear:'Clear',snow:'Snow'};
+const NOW = 8;
+
+/* -------- icons -------- */
+function icon(c, night){
+  const sun = night ? '<path d="M19 6a8 8 0 1 0 6 12 7 7 0 0 1-6-12z"/>' : '<circle cx="15" cy="13" r="5"/><path d="M15 3v2M15 21v2M5 13h2M23 13h2M8 6l1.4 1.4M22 6l-1.4 1.4"/>';
+  const cloud = '<path d="M9 25h14a5 5 0 0 0 0-10 7 7 0 0 0-13.5 2A4 4 0 0 0 9 25z"/>';
+  const drops = n => Array.from({length:n},(_,k)=>`<path d="M${10+k*5} 28l-1.5 3"/>`).join('');
+  let inner = '';
+  switch(c){
+    case 'sunny': case 'clear': inner = sun; break;
+    case 'partly': inner = `<g transform="translate(-3 -4) scale(.8)">${sun}</g>`+cloud; break;
+    case 'cloudy': inner = '<path d="M6 16h10"/>'+cloud; break;
+    case 'showers': inner = `<g transform="translate(-3 -5) scale(.7)">${sun}</g>`+`<g transform="translate(0 -4)">${cloud}</g>`+drops(2); break;
+    case 'rain': inner = `<g transform="translate(0 -4)">${cloud}</g>`+drops(3); break;
+    case 'storm': inner = `<g transform="translate(0 -5)">${cloud}</g><path d="M16 21l-3 5h4l-2 4" />`; break;
+    case 'fog': case 'mist': inner = '<path d="M4 11h22M7 16h20M4 21h18M9 26h16"/>'; break;
+    case 'snow': inner = `<g transform="translate(0 -4)">${cloud}</g><circle class="fill" cx="11" cy="28" r="1.3"/><circle class="fill" cx="17" cy="30" r="1.3"/><circle class="fill" cx="22" cy="27" r="1.3"/>`; break;
+  }
+  return `<svg class="ico" viewBox="0 0 30 32" aria-hidden="true">${inner}</svg>`;
+}
+
+/* -------- sky renderer -------- */
+const cv = $('#sky'), c = cv.getContext('2d');
+let W=0, H=0, dpr=1, mx=0, my=0, pmx=0, pmy=0;
+const P = { h: NOW+6, cloud:0, rain:0, snow:0, fog:0, storm:0, wind:15 };
+const TGT = Object.assign({}, P);
+let clouds=[], stars=[], drops=[], flakes=[], skyNear=null, skyFar=null, windows=[], flash=0, bolt=null, boltTimer=0;
+function srand(seed){ let s=seed; return ()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; }; }
+function resize(){
+  dpr = Math.min(window.devicePixelRatio||1, 2); W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); c.setTransform(dpr,0,0,dpr,0,0);
+  build();
+}
+function build(){
+  const r = srand(7);
+  clouds = Array.from({length:16},(_,i)=>{ const th = i/16; const sc = .6+r()*.9;
+    return { x:r()*1.4-.2, y:.06+r()*.42, sc, th, speed:.4+r()*.8, puffs:Array.from({length:6+Math.floor(r()*5)},()=>({dx:(r()-.5)*2.6, dy:(r()-.5)*.6 - .1, r:.45+r()*.55})) }; });
+  clouds.sort((a,b)=>a.sc-b.sc);
+  stars = Array.from({length:Math.round(W*H/5000)},()=>({x:r(), y:r()*.7, s:r()*1.3+.3, p:r()*6}));
+  drops = Array.from({length:600},()=>({x:r()*1.2, y:r(), l:.5+r()*.8, v:.8+r()*.5}));
+  flakes = Array.from({length:380},()=>({x:r(), y:r(), s:1+r()*2.6, v:.3+r()*.5, p:r()*6}));
+  buildSkyline();
+}
+function buildSkyline(){
+  const r = srand(42); const base = Math.min(H*.2, 190); const mob = W < 600;
+  const hy = xn => { // skyline height fraction profile
+    let b = .16 + .5*Math.exp(-Math.pow((xn-.2)/.085,2)) + .18*Math.exp(-Math.pow((xn-.9)/.06,2));
+    return b; };
+  // far layer: Arthur's Seat & Salisbury Crags
+  skyFar = new Path2D(); skyFar.moveTo(0,H);
+  for (let x=0; x<=W; x+=6){ const xn = x/W;
+    let h = .25 + .9*Math.exp(-Math.pow((xn-.76)/.09,2)) + .5*Math.exp(-Math.pow((xn-.66)/.05,2))*(xn<.66?1:.85) + .06*Math.sin(xn*40);
+    if (xn>.62 && xn<.665) h += (xn-.62)*8; // crags
+    skyFar.lineTo(x, H - base*.85*h - base*.25); }
+  skyFar.lineTo(W,H); skyFar.closePath();
+  // near: city
+  skyNear = new Path2D(); skyNear.moveTo(0,H); windows = [];
+  let x = 0; const step = mob ? 7 : 10;
+  const land = [
+    {x:.155,w:.012,h:.36,t:'tower'},{x:.19,w:.05,h:.3,t:'block'},{x:.235,w:.02,h:.33,t:'tower'},
+    {x:.445,w:.014,h:.3,t:'crown'},{x:.56,w:.012,h:.52,t:'spire'},{x:.635,w:.014,h:.36,t:'clock'},{x:.905,w:.01,h:.2,t:'nelson'},{x:.86,w:.03,h:.1,t:'columns'}];
+  while (x < W){
+    const xn = x/W; const lm = land.find(l => xn >= l.x - l.w/2 && xn < l.x + l.w/2);
+    const baseH = hy(xn);
+    if (lm){
+      const lx = lm.x*W - lm.w*W/2, lw = Math.max(lm.w*W, 8), top = H - base*(hy(lm.x)+lm.h);
+      const y0 = H - base*baseH;
+      skyNear.lineTo(lx, y0);
+      if (lm.t==='spire'){ skyNear.lineTo(lx, top+base*.3); skyNear.lineTo(lx+lw*.2, top+base*.26); skyNear.lineTo(lx+lw*.35, top+base*.1); skyNear.lineTo(lx+lw*.5, top); skyNear.lineTo(lx+lw*.65, top+base*.1); skyNear.lineTo(lx+lw*.8, top+base*.26); skyNear.lineTo(lx+lw, top+base*.3); }
+      else if (lm.t==='crown'){ skyNear.lineTo(lx, top+base*.12); skyNear.lineTo(lx+lw*.2, top+base*.08); skyNear.lineTo(lx+lw*.5, top); skyNear.lineTo(lx+lw*.8, top+base*.08); skyNear.lineTo(lx+lw, top+base*.12); }
+      else if (lm.t==='clock'){ skyNear.lineTo(lx, top+base*.05); skyNear.lineTo(lx+lw*.5, top-base*.04); skyNear.lineTo(lx+lw, top+base*.05); }
+      else if (lm.t==='tower'){ skyNear.lineTo(lx, top); for (let k=0;k<3;k++){ skyNear.lineTo(lx+lw*(k/3), top-4); skyNear.lineTo(lx+lw*((k+.5)/3), top-4); skyNear.lineTo(lx+lw*((k+.5)/3), top); } skyNear.lineTo(lx+lw, top); }
+      else if (lm.t==='nelson'){ skyNear.lineTo(lx, top+base*.05); skyNear.lineTo(lx+lw*.15, top); skyNear.lineTo(lx+lw*.85, top); skyNear.lineTo(lx+lw, top+base*.05); }
+      else if (lm.t==='columns'){ skyNear.lineTo(lx, top); skyNear.lineTo(lx+lw, top); }
+      else { skyNear.lineTo(lx, top); skyNear.lineTo(lx+lw*.3, top); skyNear.lineTo(lx+lw*.3, top-base*.04); skyNear.lineTo(lx+lw*.55, top-base*.04); skyNear.lineTo(lx+lw*.55, top); skyNear.lineTo(lx+lw, top); }
+      skyNear.lineTo(lx+lw, y0); x = lx + lw; continue;
+    }
+    const bw = step + r()*step*1.6; const bh = baseH + .03 + r()*.08; const y = H - base*bh;
+    skyNear.lineTo(x, y);
+    if (r() < .35){ skyNear.lineTo(x+bw*.5, y - base*.05); skyNear.lineTo(x+bw, y); }
+    else { if (r()<.3){ skyNear.lineTo(x+bw*.7, y); skyNear.lineTo(x+bw*.7, y-6); skyNear.lineTo(x+bw*.8, y-6); skyNear.lineTo(x+bw*.8, y);} skyNear.lineTo(x+bw, y); }
+    const ny = Math.floor((H - y - 8)/9);
+    for (let k=0;k<ny;k++) if (r()<.18) windows.push({x:x+2+r()*(bw-6), y:y+8+k*9, p:r()*10, on:r()});
+    x += bw;
+  }
+  skyNear.lineTo(W,H); skyNear.closePath();
+}
+const SKY = [ // elevation, top, bottom
+  [-1,'#050918','#0f1733'],[-.3,'#0a1233','#1f2a58'],[-.08,'#1f2856','#b86b5e'],[.02,'#3d5591','#f0a878'],[.12,'#4d79bd','#f6cf9f'],[.35,'#3a7bd1','#a9d2f2'],[1,'#2a6ccc','#b6dcf6']].map(s=>[s[0],hex(s[1]),hex(s[2])]);
+function skyCols(e){
+  for (let i=1;i<SKY.length;i++) if (e <= SKY[i][0]){ const a = SKY[i-1], b = SKY[i], t = (e-a[0])/(b[0]-a[0]); return [mix(a[1],b[1],t), mix(a[2],b[2],t)]; }
+  return [SKY[SKY.length-1][1], SKY[SKY.length-1][2]];
+}
+let tprev = performance.now(), T = 0;
+function frame(now){
+  const dt = Math.min(.05,(now-tprev)/1000); tprev = now; T += dt;
+  const k = 1 - Math.exp(-dt*(reduce?20:2.6));
+  for (const key in TGT) P[key] += (TGT[key]-P[key])*k;
+  pmx += (mx-pmx)*.05; pmy += (my-pmy)*.05;
+  draw(dt); requestAnimationFrame(frame);
+}
+function draw(dt){
+  const hod = ((P.h % 24)+24)%24; const e = sunElev(hod);
+  const light = clamp((e+.12)/.45, 0, 1); const night = 1 - smooth(-.15,.05,e);
+  let [top, bot] = skyCols(e);
+  const over = clamp(P.cloud*.72 + P.storm*.25 + P.fog*.35 + P.snow*.2,0,1);
+  const gTop = mix(mix(hex('#161a22'),hex('#7e8894'),light), hex('#262b35'), P.storm*.7);
+  const gBot = mix(mix(hex('#262b36'),hex('#b9c0c8'),light), hex('#4b525d'), P.storm*.6);
+  top = mix(top, gTop, over); bot = mix(bot, gBot, over*.9);
+  const g = c.createLinearGradient(0,0,0,H); g.addColorStop(0,rgb(top)); g.addColorStop(1,rgb(bot));
+  c.fillStyle = g; c.fillRect(0,0,W,H);
+  // stars
+  const starA = night*(1-P.cloud*1.1)*(1-P.fog);
+  if (starA > .01){ for (const s of stars){ const tw = reduce ? .8 : .6+.4*Math.sin(T*2+s.p); c.fillStyle = `rgba(255,255,255,${starA*tw})`; c.fillRect(s.x*W - pmx*3, s.y*H - pmy*2, s.s, s.s); } }
+  // sun / moon path
+  const dayFrac = (hod-7.05)/(19.23-7.05);
+  if (e > -.1){ const sx = W*(.08 + .84*dayFrac) - pmx*6, sy = H*(.72 - .6*Math.max(0,e));
+    const vis = (1-P.cloud*.85)*(1-P.fog*.6)*(1-P.storm);
+    const sc = mix(hex('#ff9a5a'), hex('#fff6dc'), clamp(e*3,0,1));
+    const rg = c.createRadialGradient(sx,sy,0,sx,sy,Math.max(W,H)*.45); rg.addColorStop(0,rgb(sc,.55*vis+.12*(1-P.storm))); rg.addColorStop(.08,rgb(sc,.25*vis)); rg.addColorStop(1,rgb(sc,0));
+    c.fillStyle = rg; c.fillRect(0,0,W,H);
+    c.fillStyle = rgb(sc, vis); c.beginPath(); c.arc(sx,sy,Math.min(W,H)*.035,0,Math.PI*2); c.fill(); }
+  if (night > .05){ let mt = hod >= 19 ? (hod-19.2)/12 : (hod+4.8)/12; const mx2 = W*(.1+.8*mt) - pmx*4, my2 = H*(.5 - .38*Math.sin(Math.PI*clamp(mt,0,1)));
+    const mv = night*(1-P.cloud*.9)*(1-P.fog*.5); const mr = Math.min(W,H)*.03;
+    const mg = c.createRadialGradient(mx2,my2,0,mx2,my2,mr*7); mg.addColorStop(0,`rgba(220,230,255,${.35*mv})`); mg.addColorStop(1,'rgba(220,230,255,0)'); c.fillStyle = mg; c.fillRect(0,0,W,H);
+    c.fillStyle = `rgba(240,240,230,${mv})`; c.beginPath(); c.arc(mx2,my2,mr,0,Math.PI*2); c.fill();
+    c.fillStyle = rgb(top, mv); c.beginPath(); c.arc(mx2+mr*.45,my2-mr*.2,mr*.9,0,Math.PI*2); c.fill(); }
+  // clouds
+  const cBase = mix(mix(hex('#3a4252'),hex('#ffffff'),light), hex('#4a515c'), P.storm*.8);
+  const cShade = mix(mix(hex('#1c212c'),hex('#aab4c2'),light), hex('#22262e'), P.storm*.8);
+  const warm = e > -.05 && e < .18 ? 1 - Math.abs(e-.06)/.12 : 0;
+  const cLit = mix(cBase, hex('#ffc49a'), clamp(warm,0,1)*.6);
+  const unit = Math.min(W,H)*.12;
+  for (const cl of clouds){
+    const a = smooth(cl.th-.08, cl.th+.12, P.cloud) * (1 - P.fog*.3); if (a < .01) continue;
+    if (!reduce) cl.x += dt*.004*cl.speed*(P.wind/15);
+    if (cl.x > 1.3) cl.x = -.3;
+    const s = unit*cl.sc*(1+P.storm*.5), cx = cl.x*W - pmx*10*cl.sc, cy = cl.y*H*(1+P.storm*.15) - pmy*5*cl.sc;
+    for (const p of cl.puffs){ const px = cx + p.dx*s, py = cy + p.dy*s, pr = p.r*s;
+      const gr = c.createRadialGradient(px, py - pr*.35, pr*.1, px, py, pr*1.1);
+      gr.addColorStop(0, rgb(cLit, a*.95)); gr.addColorStop(.55, rgb(mix(cLit,cShade,.5), a*.75)); gr.addColorStop(1, rgb(cShade, 0));
+      c.fillStyle = gr; c.beginPath(); c.arc(px,py,pr*1.1,0,Math.PI*2); c.fill(); }
+  }
+  // overcast deck
+  if (P.cloud > .7){ const deck = c.createLinearGradient(0,0,0,H*.55); deck.addColorStop(0, rgb(cShade, (P.cloud-.7)*2.2)); deck.addColorStop(1, rgb(cShade,0)); c.fillStyle = deck; c.fillRect(0,0,W,H*.55); }
+  // lightning
+  if (P.storm > .5 && !reduce){ boltTimer -= dt; if (boltTimer <= 0){ boltTimer = 1.5 + Math.random()*4; flash = 1; makeBolt(); } }
+  if (flash > .01){ c.fillStyle = `rgba(215,225,255,${flash*.45*P.storm})`; c.fillRect(0,0,W,H);
+    if (bolt){ c.strokeStyle = `rgba(245,248,255,${flash})`; c.lineWidth = 2.2; c.shadowColor = '#bcd0ff'; c.shadowBlur = 18; c.stroke(bolt); c.shadowBlur = 0; }
+    flash *= (flash > .6 && Math.random() < .2) ? 1.1 : .86; if (flash > 1) flash = 1; }
+  // far hills
+  const farC = mix(bot, hex('#0c1220'), .45 - P.fog*.25);
+  c.save(); c.translate(-pmx*4, 0); c.fillStyle = rgb(mix(farC, bot, P.fog*.6)); c.fill(skyFar); c.restore();
+  // fog between layers
+  const fogC = mix(hex('#3e4552'), hex('#dfe3e6'), light);
+  if (P.fog > .02){ for (let i=0;i<4;i++){ const y = H*(.55 + i*.1); const off = reduce ? 0 : Math.sin(T*.05*(i+1)+i)*W*.05;
+      const fg = c.createLinearGradient(0, y-H*.2, 0, y+H*.2); fg.addColorStop(0, rgb(fogC,0)); fg.addColorStop(.5, rgb(fogC, P.fog*.45)); fg.addColorStop(1, rgb(fogC,0));
+      c.fillStyle = fg; c.fillRect(-W*.1+off, y-H*.2, W*1.2, H*.4); } }
+  // near city
+  const nearC = mix(mix(bot, hex('#05080f'), .78), fogC, P.fog*.55);
+  c.save(); c.translate(-pmx*9, 0); c.fillStyle = rgb(nearC); c.fill(skyNear);
+  if (night > .2){ for (const w of windows){ const on = w.on < .55 + .25*Math.sin(T*.05 + w.p); if (!on) continue;
+      c.fillStyle = `rgba(255,${190+(w.p*6|0)},110,${(night-.2)*.9*(1-P.fog*.6)})`; c.fillRect(w.x, w.y, 2.2, 3); } }
+  c.restore();
+  // fog in front
+  if (P.fog > .02){ const fg = c.createLinearGradient(0,H*.3,0,H); fg.addColorStop(0, rgb(fogC,0)); fg.addColorStop(1, rgb(fogC,P.fog*.7)); c.fillStyle = fg; c.fillRect(0,0,W,H);
+    c.fillStyle = rgb(fogC, P.fog*.28); c.fillRect(0,0,W,H); }
+  // rain
+  const nRain = Math.floor(P.rain*drops.length);
+  if (nRain){ const slant = P.wind/60; c.strokeStyle = rgb(mix(hex('#9fb0c8'),hex('#dfe8f5'),light), .35+.2*light); c.lineWidth = 1; c.beginPath();
+    for (let i=0;i<nRain;i++){ const d = drops[i]; if (!reduce){ d.y += dt*d.v*1.6; d.x -= dt*d.v*slant*.6; } if (d.y > 1){ d.y -= 1.05; d.x = Math.random()*1.3; } if (d.x < -.1) d.x += 1.3;
+      const x = d.x*W, y = d.y*H, L = d.l*H*.035; c.moveTo(x,y); c.lineTo(x + slant*L, y + L); }
+    c.stroke(); }
+  // snow
+  const nSnow = Math.floor(P.snow*flakes.length);
+  if (nSnow){ c.fillStyle = 'rgba(255,255,255,.9)';
+    for (let i=0;i<nSnow;i++){ const f = flakes[i]; if (!reduce){ f.y += dt*f.v*.12; f.x += Math.sin(T*.8+f.p)*dt*.01 - dt*P.wind/3000; } if (f.y > 1){ f.y = -.02; f.x = Math.random(); } if (f.x < 0) f.x += 1;
+      c.globalAlpha = .5 + f.s/6; c.beginPath(); c.arc(f.x*W, f.y*H, f.s, 0, Math.PI*2); c.fill(); }
+    c.globalAlpha = 1; }
+}
+function makeBolt(){ bolt = new Path2D(); let x = W*(.2+Math.random()*.6), y = 0; bolt.moveTo(x,y);
+  while (y < H*.62){ y += 12+Math.random()*28; x += (Math.random()-.5)*40; bolt.lineTo(x,y);
+    if (Math.random()<.12){ let bx=x, by=y; for (let j=0;j<4;j++){ bx += (Math.random()-.3)*30; by += 14+Math.random()*16; bolt.lineTo(bx,by);} bolt.moveTo(x,y); } } }
+
+/* -------- UI -------- */
+let idx = NOW, override = null, playing = false, playTimer = null;
+function fmtHour(i){ const h = (i+6)%24; return String(h).padStart(2,'0')+':00'; }
+function dayName(i){ const d = Math.floor((i+6)/24); return ['Tuesday','Wednesday','Thursday'][d]; }
+function applyTarget(){
+  const hr = HOURS[Math.round(idx)]; const cond = override || hr.cond; const p = COND[cond];
+  TGT.cloud = p.cloud||0; TGT.rain = p.rain||0; TGT.snow = p.snow||0; TGT.fog = p.fog||0; TGT.storm = p.storm||0;
+  TGT.wind = override==='storm' ? 44 : hr.wind;
+  TGT.h = override==='clear' ? (hr.hod>6&&hr.hod<20 ? idx+6 + (23-hr.hod) : idx+6) : idx + 6;
+}
+function render(){
+  const i = Math.round(idx); const hr = HOURS[i]; const cond = override || hr.cond;
+  const night = sunElev(override==='clear' ? 23 : hr.hod) < -.05;
+  let temp = hr.temp; if (override==='snow') temp = -1; if (override==='sunny' && !night) temp = Math.max(temp, 17);
+  $('#when').textContent = (override ? 'Sky lab · ' : '') + dayName(i) + ', ' + (override==='clear' && !night ? '23:00' : fmtHour(i)) + (i===NOW && !override ? ' · now' : '');
+  $('#temp').innerHTML = Math.round(temp) + '<sup>°</sup>';
+  $('#cond').textContent = cond==='sunny' && night ? 'Clear' : cond==='partly' && night ? 'Partly cloudy' : LABEL[cond];
+  const dayHours = HOURS.filter(h => h.day === hr.day); const hi = Math.round(Math.max(...dayHours.map(h=>h.temp))), lo = Math.round(Math.min(...dayHours.map(h=>h.temp)));
+  $('#sub').textContent = `Feels ${Math.round(override==='snow'?-5:hr.feels)}° · High ${hi}° · Low ${lo}°`;
+  $('#note').textContent = NOTES[cond==='partly'&&night?'clear':cond];
+  const wind = override==='storm'?44:hr.wind; $('#wind').innerHTML = wind + '<small>km/h</small>';
+  const dirs = ['N','NE','E','SE','S','SW','W','NW']; $('#windTxt').textContent = `From the ${dirs[Math.round(hr.dir/45)%8]}, gusts ${Math.round(wind*1.6)}`;
+  $('#needle').setAttribute('transform', `rotate(${hr.dir+180})`);
+  const mm = override==='storm'?4.2:override==='rain'?1.6:override?0:hr.mm; const prob = override==='storm'||override==='rain'||override==='snow'?90:override?5:hr.prob;
+  $('#rain').innerHTML = mm + '<small>' + (override==='snow' ? 'cm snow' : 'mm') + '</small>'; $('#rainTxt').textContent = prob + '% chance this hour';
+  const hum = override==='fog'?97:hr.hum; $('#hum').innerHTML = hum + '<small>%</small>'; $('#humTxt').textContent = 'Dew point ' + Math.round(temp - (100-hum)/5) + '°';
+  const vis = override==='fog'?.4:override==='snow'?1.5:hr.vis; $('#vis').innerHTML = vis + '<small>km</small>';
+  $('#visTxt').textContent = vis < 1 ? 'Can’t see the Castle from Princes St' : vis < 5 ? 'Arthur’s Seat is a ghost' : vis < 15 ? 'Hazy over the Forth' : 'Clear to the Fife coast';
+  const uv = night ? 0 : (override==='sunny' ? 4 : override ? 1 : hr.uv); const uvL = ['low','low','low','moderate','moderate','moderate','high','high'][uv]||'high';
+  $('#uv').innerHTML = uv + '<small>' + uvL + '</small>'; $('#uvMark').style.left = `calc(${Math.min(uv/8,1)*100}% - 2px)`;
+  const hod = override==='clear' && !night ? 23 : hr.hod; const f = clamp((hod-7.05)/(19.23-7.05),0,1);
+  const sx = 10 + 180*f, sy = (1-f)*(1-f)*50 + 2*(1-f)*f*-20 + f*f*50; const sd = $('#sunDot'); sd.setAttribute('cx', sx); sd.setAttribute('cy', sy); sd.setAttribute('opacity', hod>7.05&&hod<19.23?1:.25);
+  // handle
+  $('#handle').style.left = (idx/47*100) + '%'; $('#handleLab').textContent = (i===NOW?'Now · ':'') + fmtHour(i);
+  $('#track').setAttribute('aria-valuenow', i); $('#track').setAttribute('aria-valuetext', `${dayName(i)} ${fmtHour(i)}, ${LABEL[hr.cond]}, ${Math.round(hr.temp)} degrees`);
+  document.querySelectorAll('#chips .pill').forEach(b => b.setAttribute('aria-pressed', b.dataset.c === override));
+}
+function setIdx(v, keepOverride){ idx = clamp(v, 0, 47); if (!keepOverride) override = null; applyTarget(); render(); }
+
+/* scrubber svg */
+function drawTrack(){
+  const svg = $('#trackSvg'); const w = $('#track').clientWidth, h = 150; svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const temps = HOURS.map(x=>x.temp); const tmin = Math.min(...temps)-1, tmax = Math.max(...temps)+1;
+  const X = i => i/47*w, Y = t => 30 + (1-(t-tmin)/(tmax-tmin))*56;
+  let d = ''; HOURS.forEach((hr,i)=>{ d += (i?'L':'M') + X(i).toFixed(1) + ' ' + Y(hr.temp).toFixed(1); });
+  let out = `<defs><linearGradient id="tf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>`;
+  // night bands
+  HOURS.forEach((hr,i)=>{ if (sunElev(hr.hod) < 0) out += `<rect x="${X(i)-w/94}" y="18" width="${w/47+.5}" height="${h-44}" fill="rgba(0,10,40,.18)"/>`; });
+  out += `<path d="${d} L${w} 108 L0 108Z" fill="url(#tf)"/><path d="${d}" fill="none" stroke="#fff" stroke-width="2"/>`;
+  HOURS.forEach((hr,i)=>{ if (hr.mm) out += `<rect x="${X(i)-2}" y="${108 - hr.mm*4}" width="4" height="${hr.mm*4}" rx="1" fill="#9fd4ff"/>`; });
+  const every = w < 520 ? 6 : 3;
+  HOURS.forEach((hr,i)=>{ const hodl = hr.hod; if (hodl===0){ out += `<line x1="${X(i)}" x2="${X(i)}" y1="8" y2="${h-18}" stroke="rgba(255,255,255,.45)" stroke-dasharray="2 3"/><text class="lab day" x="${X(i)+5}" y="14">${DAYS[hr.day].toUpperCase()}</text>`; }
+    if (i % every === 0){ out += `<text class="lab" x="${X(i)}" y="${h-4}" text-anchor="${i===0?'start':'middle'}">${String(hodl).padStart(2,'0')}</text>`;
+      out += `<text class="lab" x="${X(i)}" y="${Y(hr.temp)-8}" text-anchor="${i===0?'start':'middle'}">${Math.round(hr.temp)}°</text>`; } });
+  HOURS.forEach((hr,i)=>{ if (i % every === 0){ const night = sunElev(hr.hod) < 0; out += `<g transform="translate(${X(i)-(i===0?0:10)} 112) scale(.66)">${icon(hr.cond, night).replace('<svg class="ico" viewBox="0 0 30 32" aria-hidden="true">','').replace('</svg>','')}</g>`; } });
+  svg.innerHTML = out.replace(/<g transform="translate\(([^)]*)\) scale\(\.66\)">/g, '<g class="ico" transform="translate($1) scale(.66)">');
+}
+const track = $('#track');
+function fromPointer(e){ const r = track.getBoundingClientRect(); return clamp((e.clientX - r.left)/r.width, 0, 1)*47; }
+let dragging = false;
+track.addEventListener('pointerdown', e => { dragging = true; track.setPointerCapture(e.pointerId); stopPlay(); setIdx(Math.round(fromPointer(e))); });
+track.addEventListener('pointermove', e => { if (dragging) setIdx(Math.round(fromPointer(e))); });
+track.addEventListener('pointerup', () => dragging = false); track.addEventListener('pointercancel', () => dragging = false);
+track.addEventListener('keydown', e => {
+  const map = {ArrowRight:1, ArrowUp:1, ArrowLeft:-1, ArrowDown:-1, PageUp:6, PageDown:-6};
+  if (e.key in map){ e.preventDefault(); stopPlay(); setIdx(Math.round(idx)+map[e.key]); }
+  if (e.key==='Home'){ e.preventDefault(); setIdx(0); } if (e.key==='End'){ e.preventDefault(); setIdx(47); }
+});
+$('#nowBtn').addEventListener('click', () => { stopPlay(); setIdx(NOW); });
+function stopPlay(){ playing = false; clearInterval(playTimer); $('#playBtn').setAttribute('aria-pressed','false'); $('#playBtn').textContent = '▶ Time-lapse'; }
+$('#playBtn').addEventListener('click', () => {
+  if (playing){ stopPlay(); return; }
+  playing = true; $('#playBtn').setAttribute('aria-pressed','true'); $('#playBtn').textContent = '❚❚ Pause';
+  if (idx >= 47) setIdx(0);
+  playTimer = setInterval(() => { if (idx >= 47){ stopPlay(); return; } setIdx(Math.round(idx)+1); }, reduce ? 900 : 650);
+});
+
+// week
+$('#week').innerHTML = WEEK.map(w => { const lo = 4, hi = 18; return `<li><span class="d">${w[0]}</span>${icon(w[1])}<span class="t">${w[2]}</span><span class="lo">${w[3]}°</span>
+  <span class="range"><i style="left:${(w[3]-lo)/(hi-lo)*100}%; right:${100-(w[4]-lo)/(hi-lo)*100}%"></i></span><span>${w[4]}°</span></li>`; }).join('');
+// chips
+const chips = $('#chips');
+[['sunny','Sunny'],['rain','Rain'],['snow','Snow'],['storm','Storm'],['fog','Haar'],['clear','Night']].forEach(([k,l]) => {
+  const b = document.createElement('button'); b.className = 'pill'; b.id = 'lab-'+k; b.dataset.c = k; b.textContent = l; b.setAttribute('aria-pressed','false');
+  b.addEventListener('click', () => { stopPlay(); override = override===k ? null : k;
+    if (override==='sunny' && sunElev(HOURS[Math.round(idx)].hod) < .2) idx = NOW;
+    applyTarget(); render(); });
+  chips.appendChild(b);
+});
+
+addEventListener('pointermove', e => { mx = (e.clientX/innerWidth - .5)*2; my = (e.clientY/innerHeight - .5)*2; });
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { resize(); drawTrack(); }, 120); });
+
+resize(); drawTrack(); applyTarget(); Object.assign(P, TGT); render();
+requestAnimationFrame(t => { tprev = t; frame(t); });
+})();
+</script>
+</body>
+</html>

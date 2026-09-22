@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contact Sheet Hundred</title>
+<meta name="description" content="A lightbox contact sheet of 33 hand-built HTML pages: tools, toys, worlds and experiments.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@300;800;900&family=IBM+Plex+Mono:wght@400;600&family=Caveat+Brush&family=Newsreader:ital,opsz,wght@1,6..72,400&display=swap">
+<style>
+  :root {
+    --lightbox: #eef1ee;
+    --lightbox-glow: #ffffff;
+    --film: #17130f;
+    --film-edge: #2a221a;
+    --sprocket: #eef1ee;
+    --edge-print: #e8a93a;
+    --grease: #d4202a;
+    --ink: #17130f;
+    --muted: #5d6660;
+    --display: "Big Shoulders Display", "Oswald", "Arial Narrow", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --hand: "Caveat Brush", "Comic Sans MS", cursive;
+    --serif: "Newsreader", Georgia, serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --lightbox: #1b1f1d; --lightbox-glow: #2b312e; --sprocket: #1b1f1d;
+      --ink: #e9ece9; --muted: #98a39d; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --lightbox: #1b1f1d; --lightbox-glow: #2b312e; --sprocket: #1b1f1d;
+    --ink: #e9ece9; --muted: #98a39d; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--lightbox); }
+  body {
+    margin: 0; color: var(--ink); font-family: var(--mono); font-size: 14px;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, var(--lightbox-glow), transparent 70%),
+      repeating-linear-gradient(0deg, transparent 0 79px, color-mix(in srgb, var(--muted) 12%, transparent) 79px 80px),
+      repeating-linear-gradient(90deg, transparent 0 79px, color-mix(in srgb, var(--muted) 12%, transparent) 79px 80px),
+      var(--lightbox);
+    padding-inline: clamp(16px, 4vw, 56px);
+    padding-block: 32px 80px;
+    min-height: 100vh;
+  }
+  header.masthead {
+    display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 24px;
+    max-width: 1500px; margin: 0 auto 28px;
+  }
+  .masthead h1 {
+    font-family: var(--display); font-weight: 900; text-transform: uppercase;
+    font-size: clamp(56px, 11vw, 168px); line-height: .82; letter-spacing: -.01em; margin: 0;
+    text-wrap: balance;
+  }
+  .masthead h1 span { display: block; font-weight: 300; color: var(--muted); }
+  .masthead h1 .hundred { color: var(--grease); font-weight: 900; }
+  .slate {
+    font-size: 12px; line-height: 1.7; text-transform: uppercase; letter-spacing: .08em;
+    border: 1.5px solid var(--ink); padding: 12px 14px; min-width: 240px;
+    display: grid; grid-template-columns: auto 1fr; column-gap: 14px;
+  }
+  .slate dt { color: var(--muted); }
+  .slate dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .lede {
+    max-width: 1500px; margin: 0 auto 24px; font-family: var(--serif); font-style: italic;
+    font-size: clamp(18px, 2vw, 22px); color: var(--muted); max-inline-size: 60ch; margin-inline: auto 0;
+  }
+  .lede-wrap { max-width: 1500px; margin: 0 auto; }
+  .lede-wrap .lede { margin: 0 0 24px; }
+  .lede .g { font-family: var(--hand); font-style: normal; color: var(--grease); font-size: 1.25em; }
+  nav.chips {
+    max-width: 1500px; margin: 0 auto 28px; display: flex; flex-wrap: wrap; gap: 8px;
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; padding-block: 10px;
+    background: linear-gradient(var(--lightbox) 70%, transparent);
+  }
+  .chip {
+    font: 600 12px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em;
+    background: transparent; color: var(--ink); border: 1.5px solid var(--ink);
+    padding: 9px 12px; cursor: pointer; border-radius: 0;
+  }
+  .chip sup { font-size: 9px; margin-left: 4px; color: var(--muted); }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--lightbox); }
+  .chip[aria-pressed="true"] sup { color: var(--edge-print); }
+  .chip:focus-visible, .frame a:focus-visible { outline: 3px solid var(--grease); outline-offset: 3px; }
+
+  /* film strip */
+  ul.sheet {
+    list-style: none; margin: 0 auto; padding: 22px 14px; max-width: 1500px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0;
+    background:
+      radial-gradient(circle at 50% 50%, var(--sprocket) 0 3.2px, transparent 3.7px) 0 5px / 18px 12px repeat-x,
+      radial-gradient(circle at 50% 50%, var(--sprocket) 0 3.2px, transparent 3.7px) 0 calc(100% - 5px) / 18px 12px repeat-x,
+      var(--film);
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,.45), 0 2px 0 var(--film-edge) inset;
+    transform: rotate(-.35deg);
+  }
+  .frame { position: relative; padding: 10px 8px 12px; border-right: 1px dashed #3a3027; }
+  .frame a { display: block; color: #eee7dc; text-decoration: none; }
+  .num {
+    display: flex; justify-content: space-between; font: 600 11px/1 var(--mono);
+    color: var(--edge-print); letter-spacing: .12em; margin-bottom: 7px;
+  }
+  .num i { font-style: normal; opacity: .7; }
+  .pic {
+    display: block; aspect-ratio: 16 / 10; max-width: 100%; overflow: hidden; background: #0c0a08;
+    border-radius: 3px; position: relative;
+  }
+  .pic img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block;
+    filter: saturate(.85) contrast(1.02); transition: transform .5s cubic-bezier(.2,.7,.2,1), filter .4s; }
+  .noimg { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--display); font-size: 28px; color: #6d5f50; text-align: center; padding: 10px; }
+  .frame a:hover .pic img, .frame a:focus-visible .pic img { transform: scale(1.045); filter: saturate(1.1); }
+  .frame a:hover .cap b { color: var(--edge-print); }
+  .cap { display: grid; gap: 2px; margin-top: 9px; }
+  .cap b { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: .01em; text-transform: uppercase; line-height: 1; transition: color .2s; }
+  .cap em { font-style: normal; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #9b8b78; }
+  .cap small { font-size: 11.5px; line-height: 1.45; color: #c9bfb2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .grease {
+    position: absolute; top: 18px; right: 8px; font-family: var(--hand); color: var(--grease);
+    font-size: 26px; transform: rotate(8deg); text-shadow: 0 1px 0 rgba(0,0,0,.4); pointer-events: none;
+  }
+  .useful .pic { outline: 3px solid var(--grease); outline-offset: -3px; border-radius: 46% 54% 50% 50% / 8% 6% 10% 7%; }
+  .frame[hidden] { display: none !important; }
+  footer { max-width: 1500px; margin: 36px auto 0; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; text-transform: uppercase; letter-spacing: .08em; }
+  @media (max-width: 640px) {
+    header.masthead { grid-template-columns: 1fr; }
+    .slate { min-width: 0; }
+    ul.sheet { transform: none; grid-template-columns: 1fr; }
+    .frame { border-right: 0; border-bottom: 1px dashed #3a3027; }
+  }
+  @media (prefers-reduced-motion: reduce) { .pic img { transition: none; } }
+</style>
+</head>
+<body>
+<header class="masthead">
+  <h1><span>Contact sheet</span>One <span class="hundred">Hundred</span></h1>
+  <dl class="slate">
+    <dt>Roll</dt><dd>HTML · 001</dd>
+    <dt>Frames</dt><dd>{{COUNT}}</dd>
+    <dt>Marked</dt><dd>8 to keep</dd>
+    <dt>Stock</dt><dd>Single-file, no build</dd>
+  </dl>
+</header>
+<div class="lede-wrap">
+  <p class="lede">Every frame is one self-contained page — no frameworks, no stock photos, each in its own visual language. The ones circled in <span class="g">grease pencil</span> are tools meant for daily use; the rest are here to be looked at.</p>
+</div>
+<nav class="chips" aria-label="Filter by category"><button type="button" class="chip" id="chip-all" data-g="All" aria-pressed="true">All<sup>33</sup></button><button type="button" class="chip" id="chip-tools" data-g="Tools" aria-pressed="false">Tools<sup>8</sup></button><button type="button" class="chip" id="chip-generative" data-g="Generative" aria-pressed="false">Generative<sup>4</sup></button><button type="button" class="chip" id="chip-brands" data-g="Brands" aria-pressed="false">Brands<sup>3</sup></button><button type="button" class="chip" id="chip-games" data-g="Games" aria-pressed="false">Games<sup>3</sup></button><button type="button" class="chip" id="chip-explainers" data-g="Explainers" aria-pressed="false">Explainers<sup>3</sup></button><button type="button" class="chip" id="chip-movements" data-g="Movements" aria-pressed="false">Movements<sup>3</sup></button><button type="button" class="chip" id="chip-editorial" data-g="Editorial" aria-pressed="false">Editorial<sup>3</sup></button><button type="button" class="chip" id="chip-interfaces" data-g="Interfaces" aria-pressed="false">Interfaces<sup>2</sup></button><button type="button" class="chip" id="chip-experiments" data-g="Experiments" aria-pressed="false">Experiments<sup>4</sup></button></nav>
+<ul class="sheet" id="sheet">
+      <li class="frame useful" data-group="Tools">
+        <a href="focus-timer.html" id="f-focus-timer">
+          <span class="num">001<i>1A</i></span>
+          <span class="pic"><span class="noimg">Holloway Focus Timer</span></span>
+          <span class="grease" aria-label="Useful tool">keep</span>
+          <span class="cap"><b>Holloway Focus Timer</b><em>Tools</em><small>A pomodoro focus timer built like an enamel kitchen appliance: twist the big dial to set minutes, run focus and break cycles, hear a real bell chime and keep a session log.</small></span>
+        </a>
+      </li>
+      <li class="frame useful" data-group="Tools">
+        <a href="kanban.html" id="f-kanban">
+          <span class="num">002<i>2A</i></span>
+          <span class="pic"><span class="noimg">Pinboard Kanban</span></span>
+          <span class="grease" aria-label="Useful tool">keep</span>
+          <span class="cap"><b>Pinboard Kanban</b><em>Tools</em><small>A personal kanban board on real-feeling cork: pin index cards into columns, drag them by mouse or touch, add labels, due dates and WIP limits, and export or import the whole board as JSON.</small></span>
+        </a>
+      </li>
+      <li class="frame useful" data-group="Tools">
+        <a href="budget-planner.html" id="f-budget-planner">
+          <span class="num">003<i>3A</i></span>
+          <span class="pic"><span class="noimg">Greenleaf Ledger</span></span>
+          <span class="grease" aria-label="Useful tool">keep</span>
+          <span class="cap"><b>Greenleaf Ledger</b><em>Tools</em><small>A monthly envelope budget on green accountant</small></span>
+        </a>
+      </li>
+      <li class="frame useful" data-group="Tools">
+        <a href="habit-tracker.html" id="f-habit-tracker">
+          <span class="num">004<i>4A</i></span>
+          <span class="pic"><span class="noimg">Hanko Habit Book</span></span>
+          <span class="grease" aria-label="Useful tool">keep</span>
+          <span class="cap"><b>Hanko Habit Book</b><em>Tools</em><small>A habit tracker styled like Japanese stationery: stamp each day with a vermilion hanko, watch a year of stamps build a heatmap, and keep your streaks alive.</small></span>
+        </a>
+      </li>
+      <li class="frame useful" data-group="Tools">
+        <a href="invoice-studio.html" id="f-invoice-studio">
+          <span class="num">005<i>5A</i></span>
+          <span class="pic"><span class="noimg">Raster Invoice Studio</span></span>
+          <span class="grease" aria-label="Useful tool">keep</span>
+          <span class="cap"><b>Raster Invoice Studio</b><em>Tools</em><small>A Swiss-grid invoice builder with line items, per-line tax, discounts, multi-currency, auto numbering and a live A4 preview saved in your browser.</small></span>
+        </a>
+      </li>
+      <li class="frame useful" data-group="Tools">
+        <a href="color-lab.html" id="f-color-lab">
+          <span class="num">006<i>6A</i></span>
+          <span class="pic"><span class="noimg">Fandeck Colour Lab</span></span>
+          <span class="grease" aria-label="Useful tool">keep</span>
+          <span class="cap"><b>Fandeck Colour Lab</b><em>Tools</em><small>A paint-chip palette generator: harmonies from a base colour, lock and shuffle with the spacebar, a WCAG contrast matrix and CSS, JSON or Tailwind export.</small></span>
+        </a>
+      </li>
+      <li class="frame useful" data-group="Tools">
+        <a href="unit-converter.html" id="f-unit-converter">
+          <span class="num">007<i>7A</i></span>
+          <span class="pic"><span class="noimg">Vernier Unit Rule</span></span>
+          <span class="grease" aria-label="Useful tool">keep</span>
+          <span class="cap"><b>Vernier Unit Rule</b><em>Tools</em><small>A brass slide-rule unit converter for length, mass, volume, temperature, cooking ingredients, speed, data sizes and pressure, with a draggable scale and every-unit readout.</small></span>
+        </a>
+      </li>
+      <li class="frame useful" data-group="Tools">
+        <a href="cron-decoder.html" id="f-cron-decoder">
+          <span class="num">008<i>8A</i></span>
+          <span class="pic"><span class="noimg">Keypunch Cron Console</span></span>
+          <span class="grease" aria-label="Useful tool">keep</span>
+          <span class="cap"><b>Keypunch Cron Console</b><em>Tools</em><small>A cron expression builder and explainer: plain-English description, next ten run times, a weekly firing map and a punch-card field editor with presets and a saved job deck.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Generative">
+        <a href="flow-field.html" id="f-flow-field">
+          <span class="num">009<i>9A</i></span>
+          <span class="pic"><span class="noimg">Aizome Currents</span></span>
+          
+          <span class="cap"><b>Aizome Currents</b><em>Generative</em><small>A simplex-noise flow field painter where thousands of particles lay down ink trails in the colours of Japanese indigo dyeing; click the cloth to reseed.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Generative">
+        <a href="reaction-diffusion.html" id="f-reaction-diffusion">
+          <span class="num">010<i>10A</i></span>
+          <span class="pic"><span class="noimg">Morphogen Plate VII</span></span>
+          
+          <span class="cap"><b>Morphogen Plate VII</b><em>Generative</em><small>A living Gray–Scott reaction–diffusion specimen running on the GPU, presented as a stained laboratory plate you can paint into, with coral, mitosis and fingerprint presets.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Generative">
+        <a href="murmuration.html" id="f-murmuration">
+          <span class="num">011<i>11A</i></span>
+          <span class="pic"><span class="noimg">Saltmere Murmuration</span></span>
+          
+          <span class="cap"><b>Saltmere Murmuration</b><em>Generative</em><small>Thousands of simulated starlings wheel over a sunset fen in a live boids murmuration; your cursor is the peregrine that splits the flock.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Generative">
+        <a href="mandelbrot.html" id="f-mandelbrot">
+          <span class="num">012<i>12A</i></span>
+          <span class="pic"><span class="noimg">Carta Mandelbrotiana</span></span>
+          
+          <span class="cap"><b>Carta Mandelbrotiana</b><em>Generative</em><small>A deep-zoom Mandelbrot and Julia explorer drawn as an antique sea chart, with perturbation-theory GPU rendering, contour soundings, a Julia lens on hover and a gazetteer of famous places.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Brands">
+        <a href="balloon-festival.html" id="f-balloon-festival">
+          <span class="num">013<i>13A</i></span>
+          <span class="pic"><span class="noimg">Mesa Dawn Fiesta</span></span>
+          
+          <span class="cap"><b>Mesa Dawn Fiesta</b><em>Brands</em><small>A 1970s-poster landing page for a fictional high-desert hot air balloon fiesta, with balloons drifting through a parallax dawn sky, a day-by-day schedule and an interactive launch field map.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Brands">
+        <a href="mycelium-guild.html" id="f-mycelium-guild">
+          <span class="num">014<i>14A</i></span>
+          <span class="pic"><span class="noimg">Thornwood Foraging Guild</span></span>
+          
+          <span class="cap"><b>Thornwood Foraging Guild</b><em>Brands</em><small>A dark forest-floor site for a fictional mushroom foraging guild, with a bioluminescent mycelium network you can seed by clicking, species cards with spore prints and a fruiting-season calendar.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Brands">
+        <a href="horologe.html" id="f-horologe">
+          <span class="num">015<i>15A</i></span>
+          <span class="pic"><span class="noimg">Verrier Horlogerie</span></span>
+          
+          <span class="cap"><b>Verrier Horlogerie</b><em>Brands</em><small>A black-velvet and rose-gold site for a fictional independent watchmaker, centred on a live skeleton movement whose gears, escapement and balance beat in real time and whose hands show the actual time.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Games">
+        <a href="nokia-snake.html" id="f-nokia-snake">
+          <span class="num">016<i>16A</i></span>
+          <span class="pic"><span class="noimg">Koivu Snake II</span></span>
+          
+          <span class="cap"><b>Koivu Snake II</b><em>Games</em><small>A playable Snake II on a pixel-accurate 84×48 monochrome LCD inside a chunky 2000-era handset, with a working keypad, DTMF key tones and a user</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Games">
+        <a href="fusion-2048.html" id="f-fusion-2048">
+          <span class="num">017<i>17A</i></span>
+          <span class="pic"><span class="noimg">Stellar Fusion Chart</span></span>
+          
+          <span class="cap"><b>Stellar Fusion Chart</b><em>Games</em><small>A 2048-style sliding puzzle where matching tiles fuse into the next element, from hydrogen towards iron, styled as a periodic wall chart that records every discovery.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Games">
+        <a href="type-racer.html" id="f-type-racer">
+          <span class="num">018<i>18A</i></span>
+          <span class="pic"><span class="noimg">Pace Notes Rally</span></span>
+          
+          <span class="cap"><b>Pace Notes Rally</b><em>Games</em><small>A typing race against a ghost car on a gravel special stage, with 80s rally livery, real quotations as pace notes, a live WPM speedometer, accuracy and stage records.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Explainers">
+        <a href="solar-scale.html" id="f-solar-scale">
+          <span class="num">019<i>19A</i></span>
+          <span class="pic"><span class="noimg">One Moon Per Pixel</span></span>
+          
+          <span class="cap"><b>One Moon Per Pixel</b><em>Explainers</em><small>Fall through the solar system at true scale — one pixel equals the Moon</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Explainers">
+        <a href="periodic-table.html" id="f-periodic-table">
+          <span class="num">020<i>20A</i></span>
+          <span class="pic"><span class="noimg">Hall of Elements</span></span>
+          
+          <span class="cap"><b>Hall of Elements</b><em>Explainers</em><small>A museum-wall periodic table of all 118 elements: recolour by family, state, electronegativity or discovery year, sweep a temperature dial from absolute zero to 6,000 K, and open any element to watch its Bohr model spin.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Explainers">
+        <a href="time-machines.html" id="f-time-machines">
+          <span class="num">021<i>21A</i></span>
+          <span class="pic"><span class="noimg">The Escapement Ledger</span></span>
+          
+          <span class="cap"><b>The Escapement Ledger</b><em>Explainers</em><small>Three and a half thousand years of timekeeping, from Egyptian shadow clocks to optical lattice clocks, plotted as error-per-day on a seventeen-decade log scale — drawn as a working cyanotype blueprint.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Movements">
+        <a href="swiss-poster.html" id="f-swiss-poster">
+          <span class="num">022<i>22A</i></span>
+          <span class="pic"><span class="noimg">Raster Poster Werk</span></span>
+          
+          <span class="cap"><b>Raster Poster Werk</b><em>Movements</em><small>An homage to the International Typographic Style — Basel, Zürich, the grid — with a kinetic grid poster generator and a switchable modular grid overlay.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Movements">
+        <a href="bauhaus.html" id="f-bauhaus">
+          <span class="num">023<i>23A</i></span>
+          <span class="pic"><span class="noimg">Vorkurs Form Studio</span></span>
+          
+          <span class="cap"><b>Vorkurs Form Studio</b><em>Movements</em><small>A Bauhaus homage in primary shapes: take Kandinsky</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Movements">
+        <a href="frutiger-aero.html" id="f-frutiger-aero">
+          <span class="num">024<i>24A</i></span>
+          <span class="pic"><span class="noimg">Aqua Horizon Club</span></span>
+          
+          <span class="cap"><b>Aqua Horizon Club</b><em>Movements</em><small>A sincere love letter to Frutiger Aero — glossy bubbles, clean water, green hills and optimistic glass — with poppable bubbles and a glossy aqua button forge.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Editorial">
+        <a href="lighthouse-keepers.html" id="f-lighthouse-keepers">
+          <span class="num">025<i>25A</i></span>
+          <span class="pic"><span class="noimg">The Last Keepers</span></span>
+          
+          <span class="cap"><b>The Last Keepers</b><em>Editorial</em><small>A long-form magazine feature on the end of the manned lighthouse, read by the sweep of a rotating beam across a storm sea at night.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Editorial">
+        <a href="sourdough.html" id="f-sourdough">
+          <span class="num">026<i>26A</i></span>
+          <span class="pic"><span class="noimg">Coldhouse Country Loaf</span></span>
+          
+          <span class="cap"><b>Coldhouse Country Loaf</b><em>Editorial</em><small>A sourdough country loaf on flour-dusted slate, with a live baker</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Editorial">
+        <a href="fossil-hall.html" id="f-fossil-hall">
+          <span class="num">027<i>27A</i></span>
+          <span class="pic"><span class="noimg">Pellow Fossil Cabinet</span></span>
+          
+          <span class="cap"><b>Pellow Fossil Cabinet</b><em>Editorial</em><small>A museum catalogue of eight fossils in an oak collector</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Interfaces">
+        <a href="walkman.html" id="f-walkman">
+          <span class="num">028<i>28A</i></span>
+          <span class="pic"><span class="noimg">Kōdo Stride Walkman</span></span>
+          
+          <span class="cap"><b>Kōdo Stride Walkman</b><em>Interfaces</em><small>A yellow sports cassette walkman you can actually play: latching keys, spinning reels, winding tape and ten synthesised lo-fi and chiptune tracks on a hand-lettered J-card.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Interfaces">
+        <a href="sky-weather.html" id="f-sky-weather">
+          <span class="num">029<i>29A</i></span>
+          <span class="pic"><span class="noimg">Haar Weather</span></span>
+          
+          <span class="cap"><b>Haar Weather</b><em>Interfaces</em><small>A weather app for Edinburgh where the whole sky is the interface: drag through 48 hours and watch haar, sun, rain, thunder and stars render live over the city skyline.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Experiments">
+        <a href="galaxy.html" id="f-galaxy">
+          <span class="num">030<i>30A</i></span>
+          <span class="pic"><span class="noimg">Spiral Foundry</span></span>
+          
+          <span class="cap"><b>Spiral Foundry</b><em>Experiments</em><small>A Three.js spiral galaxy generator with 100,000 particles, live parameter controls and drag-to-orbit camera.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Experiments">
+        <a href="rubiks.html" id="f-rubiks">
+          <span class="num">031<i>31A</i></span>
+          <span class="pic"><span class="noimg">Twistbox Nine</span></span>
+          
+          <span class="cap"><b>Twistbox Nine</b><em>Experiments</em><small>A fully working CSS-3D Rubik</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Experiments">
+        <a href="particle-type.html" id="f-particle-type">
+          <span class="num">032<i>32A</i></span>
+          <span class="pic"><span class="noimg">Mercury Letters</span></span>
+          
+          <span class="cap"><b>Mercury Letters</b><em>Experiments</em><small>Particle typography in liquid chrome: type any word and thousands of mercury beads pour into its letterforms, flee the cursor and burst on click.</small></span>
+        </a>
+      </li>
+      <li class="frame" data-group="Experiments">
+        <a href="ink-fluid.html" id="f-ink-fluid">
+          <span class="num">033<i>33A</i></span>
+          <span class="pic"><span class="noimg">Sumi Nagare</span></span>
+          
+          <span class="cap"><b>Sumi Nagare</b><em>Experiments</em><small>A WebGL stable-fluids marbling tray: drop sumi, indigo and safflower inks onto water in suminagashi rings and comb them into currents with Navier-Stokes flow.</small></span>
+        </a>
+      </li>
+</ul>
+<footer><span>Developed on the lightbox · 2026</span><span>Click any frame to enlarge</span></footer>
+<script>
+  const chips = document.querySelectorAll('.chip');
+  const frames = document.querySelectorAll('.frame');
+  function apply(g) {
+    chips.forEach(c => c.setAttribute('aria-pressed', String(c.dataset.g === g)));
+    frames.forEach(f => { f.hidden = !(g === 'All' || f.dataset.group === g); });
+    try { localStorage.setItem('sheet-filter', g); } catch (e) {}
+  }
+  chips.forEach(c => c.addEventListener('click', () => apply(c.dataset.g)));
+  let saved = 'All';
+  try { saved = localStorage.getItem('sheet-filter') || 'All'; } catch (e) {}
+  if ([...chips].some(c => c.dataset.g === saved)) apply(saved);
+</script>
+</body>
+</html>

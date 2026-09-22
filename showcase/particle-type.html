@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mercury Letters</title>
+<meta name="description" content="Particle typography in liquid chrome: type any word and thousands of mercury beads pour into its letterforms, flee the cursor and burst on click.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Martian+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#05071a;
+  --ink2:#0b1033;
+  --chrome:#dfe6f7;
+  --steel:#8e97b8;
+  --amber:#f0c592;
+  --line:rgba(223,230,247,.16);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--ink);color:var(--chrome);font-family:"Martian Mono",ui-monospace,Menlo,Consolas,monospace;font-weight:300;overflow:hidden;-webkit-font-smoothing:antialiased}
+canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.vignette{position:fixed;inset:0;pointer-events:none;background:
+  radial-gradient(120% 80% at 50% 45%,transparent 40%,rgba(0,0,0,.65) 100%),
+  radial-gradient(60% 40% at 50% 110%,rgba(240,197,146,.10),transparent 70%)}
+.top{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;padding:max(18px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) 0 max(22px,env(safe-area-inset-left));pointer-events:none;z-index:2}
+.mark{font-family:"Instrument Serif",Didot,"Bodoni 72",Georgia,serif;font-size:clamp(22px,2.4vw,30px);line-height:1;letter-spacing:.01em}
+.mark i{color:var(--amber)}
+.mark small{display:block;font-family:"Martian Mono",monospace;font-size:9px;letter-spacing:.34em;color:var(--steel);text-transform:uppercase;margin-top:8px}
+.back{pointer-events:auto;color:var(--steel);font-size:10px;letter-spacing:.24em;text-transform:uppercase;text-decoration:none;padding:6px 0;border-bottom:1px solid transparent}
+.back:hover,.back:focus-visible{color:var(--chrome);border-color:var(--amber);outline:none}
+.side{position:fixed;left:max(22px,env(safe-area-inset-left));top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;font-size:9px;letter-spacing:.4em;color:var(--steel);text-transform:uppercase;pointer-events:none;z-index:2}
+.side b{color:var(--chrome);font-weight:400}
+.dock{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(760px,calc(100% - 32px));z-index:3}
+.field{display:flex;align-items:stretch;border:1px solid var(--line);background:linear-gradient(180deg,rgba(11,16,51,.72),rgba(5,7,26,.82));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.field label{display:flex;align-items:center;padding:0 14px;font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--steel);border-right:1px solid var(--line);white-space:nowrap}
+#word{flex:1;min-width:0;background:transparent;border:0;color:var(--chrome);font-family:"Instrument Serif",Didot,Georgia,serif;font-style:italic;font-size:26px;padding:10px 14px;outline:none}
+#word::placeholder{color:#4a527a}
+.field:focus-within{border-color:rgba(240,197,146,.6);box-shadow:0 0 0 1px rgba(240,197,146,.25),0 10px 40px rgba(0,0,0,.4)}
+.btn{background:none;border:0;border-left:1px solid var(--line);color:var(--chrome);font:inherit;font-size:10px;letter-spacing:.22em;text-transform:uppercase;padding:0 16px;cursor:pointer;transition:background .2s,color .2s}
+.btn:hover{background:rgba(223,230,247,.08);color:#fff}
+.btn:focus-visible,.chip:focus-visible,input[type=range]:focus-visible{outline:1px solid var(--amber);outline-offset:-3px}
+.row2{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{background:none;border:1px solid var(--line);color:var(--steel);font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:16px;padding:3px 12px 4px;cursor:pointer;transition:all .2s}
+.chip:hover,.chip[aria-pressed=true]{color:var(--ink);background:linear-gradient(180deg,#f7fbff,#b9c3dd 45%,#5a5f7d 52%,#e6c9a4 70%,#fff);border-color:transparent}
+.knobs{display:flex;gap:14px;align-items:center;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--steel)}
+.knobs label{display:flex;gap:8px;align-items:center}
+input[type=range]{-webkit-appearance:none;appearance:none;width:90px;height:16px;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:1px;background:var(--steel)}
+input[type=range]::-moz-range-track{height:1px;background:var(--steel)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;margin-top:-4.5px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#9aa3c4 55%,#2a2f4a)}
+input[type=range]::-moz-range-thumb{width:10px;height:10px;border:0;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#9aa3c4 55%,#2a2f4a)}
+.count{position:fixed;right:max(22px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);writing-mode:vertical-rl;font-size:9px;letter-spacing:.4em;color:var(--steel);text-transform:uppercase;pointer-events:none;z-index:2}
+.count b{color:var(--amber);font-weight:400}
+@media (max-width:640px){
+  .side,.count{display:none}
+  .field label{display:none}
+  #word{font-size:22px}
+  .knobs{width:100%;justify-content:space-between}
+  input[type=range]{width:80px}
+  .top{padding-left:16px;padding-right:16px}
+  .dock{width:calc(100% - 32px)}
+}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Particle text. Move the pointer to part the beads, click or tap to burst them."></canvas>
+<div class="vignette"></div>
+<header class="top">
+  <div class="mark">Mercury <i>Letters</i><small>Quicksilver type foundry</small></div>
+  <a class="back" href="index.html">← Showcase</a>
+</header>
+<div class="side">Move to part · Click to burst · <b>Type to recast</b></div>
+<div class="count"><b id="nP">0</b> beads in suspension</div>
+
+<section class="dock" aria-label="Type controls">
+  <form class="field" id="form" autocomplete="off">
+    <label for="word">Cast</label>
+    <input id="word" maxlength="14" value="quicksilver" aria-label="Word to form from particles" spellcheck="false">
+    <button class="btn" id="btnCast" type="submit">Pour</button>
+    <button class="btn" id="btnBurst" type="button">Burst</button>
+  </form>
+  <div class="row2">
+    <div class="chips" role="group" aria-label="Sample words">
+      <button class="chip" id="w1" type="button" data-w="quicksilver" aria-pressed="true">quicksilver</button>
+      <button class="chip" id="w2" type="button" data-w="Molten">Molten</button>
+      <button class="chip" id="w3" type="button" data-w="Hg 80">Hg 80</button>
+      <button class="chip" id="w4" type="button" data-w="mirror">mirror</button>
+      <button class="chip" id="w5" type="button" data-w="Chrome">Chrome</button>
+    </div>
+    <div class="knobs">
+      <label for="dens">Density <input id="dens" type="range" min="4" max="8" step="1" value="7"></label>
+      <label for="visc">Viscosity <input id="visc" type="range" min="0" max="100" step="1" value="55"></label>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+'use strict';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cv=document.getElementById('c'),g=cv.getContext('2d');
+let W=0,H=0,dpr=1;
+const off=document.createElement('canvas'),og=off.getContext('2d',{willReadFrequently:true});
+let parts=[];let word='quicksilver';let gap=5;let visc=.55;
+const mouse={x:-9999,y:-9999,active:false};
+let box={top:0,bottom:1};
+
+// chrome ramp: sky -> horizon white -> dark ground band -> amber reflection -> bright rim
+const STOPS=[[0,[22,30,78]],[.18,[92,120,196]],[.38,[226,236,255]],[.47,[255,255,255]],[.5,[40,38,62]],[.56,[88,62,52]],[.68,[240,197,146]],[.82,[255,236,210]],[1,[150,160,200]]];
+const BINS=48;const ramp=[];
+for(let i=0;i<BINS;i++){const t=i/(BINS-1);let a=STOPS[0],b=STOPS[STOPS.length-1];for(let k=0;k<STOPS.length-1;k++)if(t>=STOPS[k][0]&&t<=STOPS[k+1][0]){a=STOPS[k];b=STOPS[k+1];break;}
+  const u=(t-a[0])/((b[0]-a[0])||1);ramp.push(`rgb(${a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*u)).join(',')})`);}
+
+function resize(){
+  dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;
+  cv.width=W*dpr;cv.height=H*dpr;g.setTransform(dpr,0,0,dpr,0,0);
+  cast(word,true);
+}
+function sample(text){
+  off.width=W;off.height=H;og.clearRect(0,0,W,H);
+  const maxW=W*(W<640?.9:.8);let fs=Math.min(H*.5,W*.34);
+  const fam='"Instrument Serif", Didot, "Bodoni 72", Georgia, serif';
+  og.font=`italic ${fs}px ${fam}`;let m=og.measureText(text);
+  if(m.width>maxW){fs*=maxW/m.width;og.font=`italic ${fs}px ${fam}`;m=og.measureText(text);}
+  og.fillStyle='#fff';og.textAlign='center';og.textBaseline='middle';
+  const cy=H*(W<640?.42:.45);og.fillText(text,W/2,cy);
+  box={top:cy-fs*.55,bottom:cy+fs*.45};
+  const step=Math.max(2,Math.round(gap*(W<640?.75:1)));
+  const d=og.getImageData(0,0,W,H).data;const pts=[];
+  for(let y=0;y<H;y+=step)for(let x=0;x<W;x+=step){if(d[(y*W+x)*4+3]>128)pts.push([x+(Math.random()-.5)*1.2,y+(Math.random()-.5)*1.2]);}
+  return {pts,fs};
+}
+function cast(text,instant){
+  word=text||' ';
+  const {pts,fs}=sample(word);
+  // shuffle targets so beads travel across the word
+  for(let i=pts.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[pts[i],pts[j]]=[pts[j],pts[i]];}
+  const n=Math.max(pts.length,1);
+  while(parts.length<n){const src=parts.length?parts[Math.random()*parts.length|0]:null;
+    parts.push({x:src?src.x:Math.random()*W,y:src?src.y:H+Math.random()*80,vx:0,vy:0,tx:0,ty:0,r:1,ph:Math.random()*6.28,dust:false});}
+  if(parts.length>n*1.4)parts.length=Math.round(n*1.2);
+  const r=Math.max(1.1,gap*(W<640?.42:.5));
+  parts.forEach((p,i)=>{if(i<pts.length){p.tx=pts[i][0];p.ty=pts[i][1];p.dust=false;}else{p.dust=true;p.tx=Math.random()*W;p.ty=Math.random()*H;}
+    p.r=r*(.75+Math.random()*.5);if(instant&&!p.dust){p.x=p.tx;p.y=p.ty;p.vx=p.vy=0;}});
+  document.getElementById('nP').textContent=pts.length.toLocaleString('en-GB');
+}
+function burst(x,y,power){
+  for(const p of parts){const dx=p.x-x,dy=p.y-y;const d=Math.hypot(dx,dy)+1;const f=power*(0.4+Math.random())*Math.min(1,380/d);
+    p.vx+=dx/d*f+(Math.random()-.5)*power*.3;p.vy+=dy/d*f+(Math.random()-.5)*power*.3;}
+}
+
+let t=0,last=performance.now();
+function frame(now){
+  const dt=Math.min(.033,(now-last)/1000);last=now;t+=dt;
+  // ink backdrop with slight trail for liquid smear
+  g.globalCompositeOperation='source-over';
+  g.fillStyle=reduce?'#05071a':'rgba(5,7,26,.42)';g.fillRect(0,0,W,H);
+  const k=.012+(1-visc)*.03, damp=.80+visc*.13;
+  const R=Math.min(150,Math.max(80,W*.09));
+  const bins=new Array(BINS);for(let i=0;i<BINS;i++)bins[i]=[];
+  const hh=(box.bottom-box.top)||1;
+  const wob=reduce?0:1;
+  for(const p of parts){
+    if(p.dust){p.tx+=Math.sin(t*.3+p.ph)*.3;p.ty-=.15;if(p.ty<-10)p.ty=H+10;}
+    let ax=(p.tx-p.x)*k,ay=(p.ty-p.y)*k;
+    if(mouse.active){const dx=p.x-mouse.x,dy=p.y-mouse.y;const d2=dx*dx+dy*dy;if(d2<R*R){const d=Math.sqrt(d2)+.01;const f=(1-d/R);ax+=dx/d*f*f*9;ay+=dy/d*f*f*9;}}
+    p.vx=(p.vx+ax)*damp;p.vy=(p.vy+ay)*damp;p.x+=p.vx;p.y+=p.vy;
+    // shade: vertical position within word + ripple, velocity bends the reflection
+    const sp=Math.min(1,Math.hypot(p.vx,p.vy)*.05);
+    let u=(p.y-box.top)/hh+.06*Math.sin(p.x*.012+t*1.3*wob)+.05*Math.sin(p.x*.031-t*.7*wob)-sp*.35;
+    u=u<0?0:u>1?1:u;
+    let bi=Math.min(BINS-1,Math.max(0,Math.round(u*(BINS-1))));
+    bins[bi].push(p);
+  }
+  for(let i=0;i<BINS;i++){const b=bins[i];if(!b.length)continue;g.fillStyle=ramp[i];g.beginPath();
+    for(const p of b){const rr=p.dust?p.r*.45:p.r;g.moveTo(p.x+rr,p.y);g.arc(p.x,p.y,rr,0,6.283);}g.fill();}
+  // specular glints
+  g.globalCompositeOperation='lighter';g.fillStyle='rgba(255,255,255,.9)';g.beginPath();
+  const gl=Math.min(parts.length,90);for(let i=0;i<gl;i++){const p=parts[(i*97+(t*40|0)*13)%parts.length];if(p.dust)continue;const rr=p.r*.45;g.moveTo(p.x-p.r*.25+rr,p.y-p.r*.3);g.arc(p.x-p.r*.25,p.y-p.r*.3,rr,0,6.283);}g.fill();
+  // cursor ring
+  if(mouse.active){g.globalCompositeOperation='source-over';g.strokeStyle='rgba(240,197,146,.35)';g.lineWidth=1;g.beginPath();g.arc(mouse.x,mouse.y,R*.55,0,6.283);g.stroke();}
+  requestAnimationFrame(frame);
+}
+
+// input
+cv.addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouse.active=true;});
+cv.addEventListener('pointerleave',()=>{mouse.active=false;});
+cv.addEventListener('pointerdown',e=>{mouse.x=e.clientX;mouse.y=e.clientY;burst(e.clientX,e.clientY,reduce?8:28);idleT=0;});
+cv.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')mouse.active=false;});
+const input=document.getElementById('word');
+document.getElementById('form').addEventListener('submit',e=>{e.preventDefault();pour(input.value.trim()||'mercury');});
+let typeT=0;input.addEventListener('input',()=>{clearTimeout(typeT);typeT=setTimeout(()=>pour(input.value.trim()||' ',true),260);});
+document.getElementById('btnBurst').addEventListener('click',()=>burst(W/2,(box.top+box.bottom)/2,reduce?8:32));
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{input.value=c.dataset.w;pour(c.dataset.w);}));
+document.getElementById('dens').addEventListener('input',e=>{gap=10-(+e.target.value);cast(word);});
+document.getElementById('visc').addEventListener('input',e=>{visc=+e.target.value/100;});
+function pour(w,noBurst){idleT=0;if(!noBurst)burst(W/2,(box.top+box.bottom)/2,14);cast(w);document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.w===w)));}
+
+// idle cycling through sample words
+let idleT=0;const cycle=['quicksilver','Molten','Hg 80','mirror','Chrome'];let ci=0;
+setInterval(()=>{if(reduce||document.activeElement===input)return;idleT+=1;if(idleT>=7){idleT=0;ci=(cycle.indexOf(word)+1)%cycle.length;input.value=cycle[ci];pour(cycle[ci]);}},1000);
+
+addEventListener('resize',()=>{clearTimeout(resize._t);resize._t=setTimeout(resize,120);});
+gap=3;
+const start=()=>{resize();requestAnimationFrame(frame);};
+if(document.fonts&&document.fonts.load){Promise.race([document.fonts.load('italic 100px "Instrument Serif"'),new Promise(r=>setTimeout(r,1200))]).then(start,start);}else start();
+})();
+</script>
+</body>
+</html>

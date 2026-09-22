@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aqua Horizon Club</title>
+<meta name="description" content="A sincere love letter to Frutiger Aero — glossy bubbles, clean water, green hills and optimistic glass — with poppable bubbles and a glossy aqua button forge.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=Commissioner:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky1:#1a8fe3;
+  --sky2:#6cc6ff;
+  --sky3:#e6f7ff;
+  --grass1:#5bd13b;
+  --grass2:#1f8f2a;
+  --ink:#0a3a5c;
+  --ink2:#2a6184;
+  --glass:rgba(255,255,255,.28);
+  --glass-b:rgba(255,255,255,.7);
+  --round:"Comfortaa","Varela Round","Trebuchet MS",sans-serif;
+  --body:"Commissioner","Segoe UI","Frutiger","Myriad Pro","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 38%,var(--sky3) 70%,#fff 100%);background-attachment:fixed;background-color:var(--sky2);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;overflow-x:hidden;min-height:100vh}
+a{color:#0a64b8}
+:focus-visible{outline:3px solid #fff;outline-offset:3px;box-shadow:0 0 0 6px #1a8fe3}
+#bubbles{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.page{position:relative;z-index:1}
+.pad{padding-left:max(16px,env(safe-area-inset-left),5vw);padding-right:max(16px,env(safe-area-inset-right),5vw)}
+
+/* aqua pill */
+.aqua{--h:205;position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;font:700 16px var(--round);color:#fff;text-decoration:none;border:1px solid hsl(var(--h) 80% 30% / .8);border-radius:999px;padding:12px 26px;cursor:pointer;
+  background:linear-gradient(180deg,hsl(var(--h) 95% 78%) 0%,hsl(var(--h) 90% 55%) 50%,hsl(var(--h) 95% 42%) 51%,hsl(var(--h) 95% 62%) 100%);
+  box-shadow:0 2px 6px hsl(var(--h) 80% 20% / .45),inset 0 -3px 8px hsl(var(--h) 100% 85% / .7),inset 0 1px 1px #fff;text-shadow:0 1px 2px hsl(var(--h) 80% 20% / .6);overflow:hidden;isolation:isolate;transition:transform .15s,filter .2s}
+.aqua::before{content:"";position:absolute;left:8%;right:8%;top:2px;height:48%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.15));z-index:-1}
+.aqua:hover{filter:brightness(1.08) saturate(1.1)}
+.aqua:active{transform:translateY(1px) scale(.98)}
+.aqua.green{--h:112}
+.back{position:fixed;top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));z-index:20;padding:7px 16px;font-size:13px}
+
+/* hero */
+.hero{position:relative;min-height:min(100vh,860px);display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding-top:90px;padding-bottom:220px}
+.hero svg.land{position:absolute;left:0;bottom:0;width:100%;height:46%;min-height:260px;z-index:0}
+.flare{position:absolute;right:12%;top:10%;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,#fff 0 12%,rgba(255,255,240,.8) 18%,rgba(255,255,255,0) 62%);filter:blur(1px);z-index:0;animation:breathe 6s ease-in-out infinite}
+.flare::after{content:"";position:absolute;left:50%;top:50%;width:700px;height:2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);transform:translate(-50%,-50%) rotate(-24deg)}
+.ghost{position:absolute;border-radius:50%;z-index:0;mix-blend-mode:screen}
+.ghost.g1{right:26%;top:30%;width:40px;height:40px;background:radial-gradient(circle,rgba(160,255,200,.6),rgba(160,255,200,0) 70%)}
+.ghost.g2{right:36%;top:44%;width:70px;height:70px;background:radial-gradient(circle,rgba(255,240,150,.35),rgba(255,240,150,0) 70%)}
+.ghost.g3{right:48%;top:60%;width:24px;height:24px;background:radial-gradient(circle,rgba(170,210,255,.8),rgba(170,210,255,0) 70%)}
+@keyframes breathe{50%{transform:scale(1.08);opacity:.85}}
+.hero-inner{position:relative;z-index:2;max-width:760px}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font:600 13px var(--round);color:#fff;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.6);border-radius:999px;padding:6px 14px 6px 8px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);text-shadow:0 1px 1px #0a3a5c55}
+.eyebrow i{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 18%,#8ff07a 30%,#1f9c1f 90%);box-shadow:0 1px 2px #0005}
+.hero h1{font:700 clamp(46px,8.4vw,112px)/.95 var(--round);margin:18px 0 18px;color:#fff;letter-spacing:-.02em;
+  text-shadow:0 2px 0 rgba(0,70,140,.25),0 10px 30px rgba(0,60,130,.35);position:relative}
+.hero h1 .refl{display:block;height:.5em;overflow:hidden;transform:scaleY(-1);opacity:.28;margin-top:-.02em;-webkit-mask-image:linear-gradient(0deg,#000,transparent 80%);mask-image:linear-gradient(0deg,#000,transparent 80%);pointer-events:none;user-select:none}
+.hero p.lead{font-size:clamp(18px,2vw,22px);color:#fff;max-width:36em;text-shadow:0 1px 2px rgba(0,50,100,.4);margin:0 0 26px;font-weight:500}
+.hero .cta{display:flex;gap:14px;flex-wrap:wrap}
+.popcount{margin-top:18px;font:600 14px var(--round);color:#fff;text-shadow:0 1px 2px #0a3a5c80}
+
+/* glass panels */
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,.34));border:1px solid rgba(255,255,255,.85);border-radius:22px;box-shadow:0 20px 50px rgba(10,58,92,.18),inset 0 1px 0 #fff;backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);position:relative;overflow:hidden}
+.glass::before{content:"";position:absolute;left:0;right:0;top:0;height:46%;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none}
+.glass>*{position:relative}
+section{padding-top:70px;padding-bottom:70px}
+h2{font:700 clamp(30px,4.4vw,52px)/1.05 var(--round);margin:0 0 16px;color:var(--ink);letter-spacing:-.01em}
+h2 .gl{background:linear-gradient(180deg,#39b3ff,#0667c9 55%,#0a4c9a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font:600 13px var(--round);letter-spacing:.14em;text-transform:uppercase;color:#1678c8;margin-bottom:8px}
+
+.intro{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:stretch}
+.intro .glass{padding:30px}
+.intro .glass p{margin:0 0 1em}
+.gadget{padding:22px;display:flex;flex-direction:column;gap:16px}
+.gadget .clock{display:flex;align-items:center;gap:18px}
+.gadget svg{flex:none}
+.gadget .time{font:700 42px var(--round);color:var(--ink)}
+.gadget .date{font-size:14px;color:var(--ink2)}
+.weather{display:flex;align-items:center;gap:14px;border-top:1px solid rgba(10,58,92,.15);padding-top:14px}
+.weather b{font:700 30px var(--round)}
+.weather span{font-size:14px;color:var(--ink2)}
+.meter{height:14px;border-radius:999px;background:rgba(255,255,255,.6);border:1px solid rgba(10,58,92,.2);overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,.15)}
+.meter i{display:block;height:100%;width:72%;border-radius:999px;background:linear-gradient(180deg,#b6ff9a,#3fcf2a 50%,#23a31a 51%,#6de04d);position:relative;animation:load 3s ease-in-out infinite alternate}
+.meter i::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(-45deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px);animation:stripes 1s linear infinite}
+@keyframes load{from{width:38%}to{width:92%}}
+@keyframes stripes{to{background-position:22px 0}}
+
+/* motifs */
+.motifs{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:26px}
+.motif{padding:22px;min-height:230px;display:flex;flex-direction:column;gap:10px}
+.motif svg{width:74px;height:74px}
+.motif h3{margin:0;font:700 20px var(--round)}
+.motif p{margin:0;font-size:15px;color:var(--ink2)}
+
+/* history */
+.water{position:relative;background:linear-gradient(180deg,#27b7e8 0%,#0f86c9 45%,#07508e 100%);color:#fff;overflow:hidden}
+.water h2{color:#fff}
+.water .sub{color:#b8f1ff}
+.water svg.wave{position:absolute;left:0;top:-1px;width:200%;height:60px;animation:drift 14s linear infinite}
+@keyframes drift{to{transform:translateX(-50%)}}
+.caustics{position:absolute;inset:0;background:radial-gradient(ellipse 60px 20px at 20% 30%,rgba(255,255,255,.18),transparent 70%),radial-gradient(ellipse 90px 24px at 70% 55%,rgba(255,255,255,.14),transparent 70%),radial-gradient(ellipse 50px 16px at 40% 80%,rgba(255,255,255,.12),transparent 70%);background-size:300px 200px;animation:caus 9s ease-in-out infinite alternate;pointer-events:none}
+@keyframes caus{to{background-position:60px 30px}}
+.tl{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px;position:relative}
+.tl .glass{padding:22px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.08));border-color:rgba(255,255,255,.5);color:#fff}
+.tl .yr{font:700 34px var(--round);color:#dff9ff}
+.tl h3{margin:4px 0 8px;font:700 19px var(--round)}
+.tl p{margin:0;font-size:15px;color:#e7f7ff}
+.fish{position:absolute;right:-120px;top:48%;width:110px;animation:swim 22s linear infinite;z-index:0;opacity:.95}
+@keyframes swim{to{transform:translateX(calc(-100vw - 260px))}}
+
+/* forge */
+.forge{display:grid;grid-template-columns:1fr 1.1fr;gap:26px;margin-top:22px}
+.controls{padding:24px;display:grid;gap:16px}
+.ctl label{display:flex;justify-content:space-between;font:600 14px var(--round);margin-bottom:6px}
+.ctl input[type=text]{width:100%;font:500 16px var(--body);border:1px solid rgba(10,58,92,.25);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.8);color:var(--ink);box-shadow:inset 0 2px 4px rgba(0,0,0,.08)}
+input[type=range]{width:100%;accent-color:#1a8fe3}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid rgba(10,58,92,.25);background:rgba(255,255,255,.7);border-radius:999px;padding:6px 12px;font:600 13px var(--round);cursor:pointer;color:var(--ink)}
+.chip[aria-pressed="true"]{background:linear-gradient(180deg,#8fd8ff,#1a8fe3);color:#fff;border-color:#0f6db5}
+.preview{padding:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:360px;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(210,240,255,.4))}
+.stagebox{width:100%;min-height:200px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;padding:30px 10px 44px;position:relative;background:linear-gradient(180deg,#e9f7ff,#c9ecff 60%,#b8e5ff);box-shadow:inset 0 1px 4px rgba(0,0,0,.08)}
+.stagebox.dark{background:linear-gradient(180deg,#0d2b44,#0a1f33);}
+.stagebox.grass{background:linear-gradient(180deg,#9fe0ff 0 55%,#6ad34a 55%,#2b9c23)}
+#forged{font-size:20px;-webkit-box-reflect:below 4px linear-gradient(transparent 55%,rgba(255,255,255,.35))}
+.badge{position:absolute;right:18px;top:14px;width:78px;height:78px;display:grid;place-items:center;font:700 14px/1 var(--round);color:#fff;text-align:center;transform:rotate(12deg);text-shadow:0 1px 1px #7a3b00}
+.badge svg{position:absolute;inset:0;width:100%;height:100%}
+.badge span{position:relative}
+textarea#css{width:100%;height:130px;font:12.5px/1.45 ui-monospace,Consolas,monospace;border-radius:12px;border:1px solid rgba(10,58,92,.25);padding:10px;background:rgba(255,255,255,.85);color:#0a3a5c;resize:vertical}
+.copyrow{display:flex;gap:10px;align-items:center;width:100%}
+.copyrow span{font-size:13px;color:var(--ink2)}
+
+/* people */
+.people{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:24px}
+.person{padding:20px;display:flex;gap:14px;align-items:flex-start}
+.orb{flex:none;width:52px;height:52px;border-radius:50%;box-shadow:0 4px 10px rgba(0,60,120,.25),inset 0 -4px 8px rgba(255,255,255,.5);position:relative}
+.orb::after{content:"";position:absolute;left:18%;right:18%;top:6%;height:42%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0))}
+.person h3{margin:0 0 4px;font:700 17px var(--round)}
+.person p{margin:0;font-size:14.5px;color:var(--ink2)}
+
+footer{position:relative;padding-top:40px;padding-bottom:50px;text-align:left}
+footer .glass{padding:22px 26px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}
+footer small{color:var(--ink2)}
+
+@media (max-width:980px){
+  .intro,.forge{grid-template-columns:1fr}
+  .motifs{grid-template-columns:repeat(2,1fr)}
+  .tl,.people{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .motifs{grid-template-columns:1fr}
+  .motif{min-height:0}
+  .hero{padding-bottom:180px}
+  .flare{right:-20px;top:40px;width:130px;height:130px}
+  .badge{width:62px;height:62px;font-size:12px;right:8px;top:8px}
+}
+@media (prefers-reduced-motion:reduce){
+  .flare,.meter i,.meter i::after,.water svg.wave,.caustics,.fish{animation:none!important}
+  .fish{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="bubbles" aria-hidden="true"></canvas>
+<a class="aqua back" id="back" href="index.html">‹ Showcase</a>
+
+<div class="page">
+<header class="hero pad">
+  <div class="flare" aria-hidden="true"></div>
+  <div class="ghost g1" aria-hidden="true"></div><div class="ghost g2" aria-hidden="true"></div><div class="ghost g3" aria-hidden="true"></div>
+  <svg class="land" viewBox="0 0 1440 400" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="hill1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9df06b"/><stop offset=".35" stop-color="#4fc92c"/><stop offset="1" stop-color="#1b7d1f"/></linearGradient>
+      <linearGradient id="hill2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c3ff8a"/><stop offset=".3" stop-color="#6ddc3a"/><stop offset="1" stop-color="#218c22"/></linearGradient>
+      <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    </defs>
+    <path d="M0 210 C 260 110 520 120 760 190 S 1200 150 1440 120 V400 H0Z" fill="url(#hill1)"/>
+    <path d="M0 290 C 300 200 640 210 900 280 S 1300 250 1440 230 V400 H0Z" fill="url(#hill2)"/>
+    <path d="M60 282 C 320 212 620 220 860 276 C 620 236 330 232 60 292Z" fill="url(#shine)"/>
+    <path d="M340 182 C 520 140 660 150 760 186 C 640 164 500 162 340 190Z" fill="url(#shine)" opacity=".7"/>
+  </svg>
+  <div class="hero-inner">
+    <span class="eyebrow"><i></i>Est. 2004 · Clear skies ahead</span>
+    <h1 id="h1">Aqua Horizon<span class="refl" aria-hidden="true">Aqua Horizon</span></h1>
+    <p class="lead">A sincere, un-ironic celebration of Frutiger Aero — the glossy, sky-blue, eco-optimistic look of the mid-2000s, when every interface was made of glass and water and every future looked green.</p>
+    <div class="cta">
+      <a class="aqua" id="goForge" href="#forge">Open the Button Forge</a>
+      <a class="aqua green" id="goHistory" href="#history">Dive into the history</a>
+    </div>
+    <div class="popcount" id="popcount" aria-live="polite">Tip: click the bubbles. They pop.</div>
+  </div>
+</header>
+
+<main>
+<section class="pad" id="about">
+  <div class="intro">
+    <div class="glass">
+      <div class="sub">Welcome to the future (as of 2006)</div>
+      <h2>Tomorrow, rendered in <span class="gl">glass</span></h2>
+      <p>For roughly a decade — the fall of 2004 to around 2013 — consumer technology looked like a spa brochure. Desktop wallpapers showed dew on grass blades. Taskbars turned translucent. Buttons swelled into lickable gel pills. Stock photos promised clean energy, clean water and a world where the laptop and the lagoon were friends.</p>
+      <p>Nobody called it anything at the time. The name <b>Frutiger Aero</b> arrived in 2017, coined by researcher Sofi Lee and later documented by the Consumer Aesthetics Research Institute: <i>Frutiger</i> for Adrian Frutiger's humanist sans that was everywhere on signs and screens, <i>Aero</i> for the glass window theme of the era's biggest desktop OS.</p>
+      <p>Look past the gloss and there is a real idea: that technology would be <b>natural, transparent and hopeful</b>. The internet was going to connect everyone. Solar was going to be cheap. Everything would be clean.</p>
+    </div>
+    <div class="glass gadget" aria-label="desktop gadget">
+      <div class="sub">Sidebar gadgets</div>
+      <div class="clock">
+        <svg id="clockface" width="96" height="96" viewBox="0 0 100 100" aria-hidden="true">
+          <defs><radialGradient id="cf" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#d9f1ff"/><stop offset="1" stop-color="#7cc6f0"/></radialGradient>
+          <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8f7ff"/><stop offset="1" stop-color="#2779b7"/></linearGradient></defs>
+          <circle cx="50" cy="50" r="48" fill="url(#rim)"/>
+          <circle cx="50" cy="50" r="42" fill="url(#cf)"/>
+          <g id="ticks"></g>
+          <line id="hh" x1="50" y1="50" x2="50" y2="28" stroke="#0a3a5c" stroke-width="4" stroke-linecap="round"/>
+          <line id="mh" x1="50" y1="50" x2="50" y2="16" stroke="#0a3a5c" stroke-width="2.6" stroke-linecap="round"/>
+          <line id="sh" x1="50" y1="56" x2="50" y2="14" stroke="#1ba3ff" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="50" cy="50" r="3" fill="#1ba3ff"/>
+          <ellipse cx="50" cy="28" rx="30" ry="16" fill="#fff" opacity=".45"/>
+        </svg>
+        <div><div class="time" id="digital">--:--</div><div class="date" id="date"></div></div>
+      </div>
+      <div class="weather">
+        <svg width="64" height="54" viewBox="0 0 64 54" aria-hidden="true"><defs><radialGradient id="sun" cx=".4" cy=".35"><stop offset="0" stop-color="#fff9c2"/><stop offset=".6" stop-color="#ffd11a"/><stop offset="1" stop-color="#ff9d00"/></radialGradient><linearGradient id="cl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#cfe7f7"/></linearGradient></defs><circle cx="24" cy="20" r="16" fill="url(#sun)"/><path d="M18 46 a10 10 0 0 1 4 -19 a13 13 0 0 1 25 3 a8 8 0 0 1 3 16Z" fill="url(#cl)" stroke="#a9cde6"/></svg>
+        <div><b>24°</b><br><span>Sunny intervals · Pollen low · Optimism very high</span></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-bottom:6px"><span>Downloading the future…</span><span>Please wait</span></div>
+        <div class="meter"><i></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="motifs">
+    <div class="glass motif"><svg viewBox="0 0 80 80" aria-hidden="true"><defs><radialGradient id="bub" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".25" stop-color="#c9f1ff" stop-opacity=".35"/><stop offset=".85" stop-color="#5fc3ff" stop-opacity=".25"/><stop offset="1" stop-color="#1a8fe3" stop-opacity=".8"/></radialGradient></defs><circle cx="40" cy="42" r="32" fill="url(#bub)"/><circle cx="18" cy="16" r="9" fill="url(#bub)"/><circle cx="64" cy="14" r="6" fill="url(#bub)"/></svg><h3>Bubbles &amp; droplets</h3><p>Water was the era's master symbol: purity, clarity, freshness. Bubbles rose behind every login screen.</p></div>
+    <div class="glass motif"><svg viewBox="0 0 80 80" aria-hidden="true"><defs><linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c7ff8f"/><stop offset=".5" stop-color="#4fcf2a"/><stop offset="1" stop-color="#157a17"/></linearGradient></defs><path d="M12 70 C 10 30 40 8 72 8 C 70 44 46 70 12 70Z" fill="url(#leaf)"/><path d="M12 70 C 30 50 46 34 64 16" stroke="#e8ffd5" stroke-width="2.4" fill="none"/><ellipse cx="44" cy="24" rx="16" ry="6" fill="#fff" opacity=".5" transform="rotate(-38 44 24)"/></svg><h3>Grass, leaves, auroras</h3><p>Bright nature, shot macro and over-saturated. Nature was a feature, and technology was going to protect it.</p></div>
+    <div class="glass motif"><svg viewBox="0 0 80 80" aria-hidden="true"><defs><linearGradient id="gel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe3ff"/><stop offset=".5" stop-color="#1a8fe3"/><stop offset=".51" stop-color="#0667c9"/><stop offset="1" stop-color="#46b8ff"/></linearGradient></defs><rect x="6" y="24" width="68" height="32" rx="16" fill="url(#gel)" stroke="#0a4c9a"/><rect x="14" y="26" width="52" height="13" rx="7" fill="#fff" opacity=".75"/></svg><h3>Gel &amp; glass</h3><p>Skeuomorphic buttons with a hard horizon line of gloss. Title bars you could see through. Reflections on every floor.</p></div>
+    <div class="glass motif"><svg viewBox="0 0 80 80" aria-hidden="true"><defs><radialGradient id="globe" cx=".35" cy=".3"><stop offset="0" stop-color="#bff3ff"/><stop offset=".6" stop-color="#1ba3ff"/><stop offset="1" stop-color="#084f94"/></radialGradient></defs><circle cx="40" cy="40" r="32" fill="url(#globe)"/><path d="M22 30 q8 -8 16 -2 t10 10 q-6 8 -14 4 q-8 4 -12 -12Z M50 50 q8 -4 12 4 q-4 10 -12 6Z" fill="#5ee04a"/><ellipse cx="34" cy="22" rx="18" ry="8" fill="#fff" opacity=".55"/></svg><h3>Globes &amp; connection</h3><p>Glowing Earths, swooshes and lens flares — a planet networked, green and cheerful.</p></div>
+  </div>
+</section>
+
+<section class="water pad" id="history">
+  <svg class="wave" viewBox="0 0 2880 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 Q 180 0 360 30 T 720 30 T 1080 30 T 1440 30 T 1800 30 T 2160 30 T 2520 30 T 2880 30 V0 H0Z" fill="#e6f7ff"/></svg>
+  <div class="caustics" aria-hidden="true"></div>
+  <svg class="fish" viewBox="0 0 110 60" aria-hidden="true"><defs><linearGradient id="fishg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd27a"/><stop offset=".5" stop-color="#ff8a1a"/><stop offset="1" stop-color="#e05a00"/></linearGradient></defs><path d="M8 30 C 22 8 60 6 78 30 C 60 54 22 52 8 30Z" fill="url(#fishg)"/><path d="M76 30 L104 10 L98 30 L104 50Z" fill="#ff9f3a"/><circle cx="24" cy="26" r="4" fill="#fff"/><circle cx="23" cy="26" r="2" fill="#123"/><path d="M20 16 C 36 10 54 12 66 22" stroke="#fff" stroke-width="3" opacity=".6" fill="none"/></svg>
+  <div style="position:relative">
+    <div class="sub">A short history</div>
+    <h2>How the world turned to glass</h2>
+    <p style="max-width:44em;margin:0;color:#e7f7ff">The look didn't come from one studio. It bubbled up from operating systems, phone makers, stock-photo libraries and ad agencies all reaching for the same promise at once.</p>
+  </div>
+  <div class="tl">
+    <div class="glass"><div class="yr">2000–04</div><h3>Aqua arrives</h3><p>A new desktop OS debuts pinstripes, candy-drop buttons and translucent scroll thumbs. The web copies it within months: gel buttons, reflective logos, "beta" starbursts.</p></div>
+    <div class="glass"><div class="yr">2006–07</div><h3>Glass goes mainstream</h3><p>The "Aero" glass theme ships to hundreds of millions of PCs: blurred title bars, glowing taskbars, a dew-drop wallpaper collection. Touchscreen phones and music players adopt the same glossy language.</p></div>
+    <div class="glass"><div class="yr">2008–10</div><h3>Eco-optimism peaks</h3><p>Green energy ad campaigns, Wii-white consoles, spa-like kiosks, aquarium screensavers. Frutiger and its cousins run on every airport sign and app store banner.</p></div>
+    <div class="glass"><div class="yr">2011–13</div><h3>The flattening</h3><p>Flat design sweeps in: "authentically digital", no shadows, no gloss. Metro tiles, then a major mobile OS in 2013. The bubbles go quiet.</p></div>
+    <div class="glass"><div class="yr">2017</div><h3>It gets a name</h3><p>Sofi Lee names it Frutiger Aero. Online archivists at the Consumer Aesthetics Research Institute start cataloguing it alongside Y2K and Global Village Coffeehouse.</p></div>
+    <div class="glass"><div class="yr">2020s</div><h3>Revival</h3><p>A generation that grew up with it rediscovers it on video platforms. Nostalgia edits, "Aero" playlists, and — this is the sincere part — a real longing for a future that felt clean.</p></div>
+  </div>
+</section>
+
+<section class="pad" id="forge">
+  <div class="sub">Interactive</div>
+  <h2>The Aqua <span class="gl">Button Forge</span></h2>
+  <p style="max-width:44em;margin:0">Every mid-2000s website needed one: a swollen, glossy call-to-action with a hard highlight and a reflection on the floor. Mix yours, then copy the CSS.</p>
+  <div class="forge">
+    <div class="glass controls">
+      <div class="ctl"><label for="fText">Label</label><input type="text" id="fText" value="Sign up free!" maxlength="28"></div>
+      <div class="ctl"><label for="fHue">Hue <span id="hueOut">205°</span></label><input type="range" id="fHue" min="0" max="359" value="205"></div>
+      <div class="ctl"><label for="fGloss">Gloss <span id="glossOut">85%</span></label><input type="range" id="fGloss" min="0" max="100" value="85"></div>
+      <div class="ctl"><label for="fRound">Roundness <span id="roundOut">pill</span></label><input type="range" id="fRound" min="4" max="40" value="40"></div>
+      <div class="ctl"><label for="fSize">Size <span id="sizeOut">20px</span></label><input type="range" id="fSize" min="14" max="30" value="20"></div>
+      <div class="ctl"><label id="bgLbl">Stage</label>
+        <div class="chips" role="group" aria-labelledby="bgLbl">
+          <button type="button" class="chip" id="bgSky" data-bg="" aria-pressed="true">Sky</button>
+          <button type="button" class="chip" id="bgGrass" data-bg="grass" aria-pressed="false">Meadow</button>
+          <button type="button" class="chip" id="bgDark" data-bg="dark" aria-pressed="false">Night glass</button>
+        </div>
+      </div>
+      <div class="ctl"><label id="badgeLbl">Starburst badge</label>
+        <div class="chips" role="group" aria-labelledby="badgeLbl">
+          <button type="button" class="chip" id="bdBeta" data-b="BETA" aria-pressed="true">BETA</button>
+          <button type="button" class="chip" id="bdNew" data-b="NEW!" aria-pressed="false">NEW!</button>
+          <button type="button" class="chip" id="bdFree" data-b="100% FREE" aria-pressed="false">100% FREE</button>
+          <button type="button" class="chip" id="bdNone" data-b="" aria-pressed="false">None</button>
+        </div>
+      </div>
+      <button type="button" class="aqua green" id="surprise">Surprise me</button>
+    </div>
+    <div class="glass preview">
+      <div class="stagebox" id="stage">
+        <div class="badge" id="badge"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="bst" cx=".4" cy=".35"><stop offset="0" stop-color="#fff3a6"/><stop offset=".5" stop-color="#ffb400"/><stop offset="1" stop-color="#ff6a00"/></radialGradient></defs><path id="burst" fill="url(#bst)" stroke="#d45a00" stroke-width="1.5"/></svg><span id="badgeText">BETA</span></div>
+        <button type="button" class="aqua" id="forged">Sign up free!</button>
+      </div>
+      <textarea id="css" readonly aria-label="Generated CSS"></textarea>
+      <div class="copyrow"><button type="button" class="aqua" id="copyBtn" style="padding:8px 18px;font-size:14px">Copy CSS</button><span id="copyMsg" aria-live="polite"></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="people" style="padding-top:20px">
+  <div class="sub">Names behind the gloss</div>
+  <h2>People &amp; things to thank</h2>
+  <div class="people">
+    <div class="glass person"><div class="orb" style="background:radial-gradient(circle at 40% 70%,#6cf,#0667c9)"></div><div><h3>Adrian Frutiger</h3><p>Swiss type designer (1928–2015). His humanist sans, drawn for Charles de Gaulle airport's signage, gave the aesthetic its first name and its friendly, open voice.</p></div></div>
+    <div class="glass person"><div class="orb" style="background:radial-gradient(circle at 40% 70%,#b9ff7a,#1f9c1f)"></div><div><h3>Sofi Lee</h3><p>The researcher who coined "Frutiger Aero" in 2017 and gave a nameless decade something to be called.</p></div></div>
+    <div class="glass person"><div class="orb" style="background:radial-gradient(circle at 40% 70%,#ffd6ff,#a35bff)"></div><div><h3>CARI</h3><p>The Consumer Aesthetics Research Institute: an online collective that archives commercial styles — Frutiger Aero, Y2K, McBling — with scholarly care.</p></div></div>
+    <div class="glass person"><div class="orb" style="background:radial-gradient(circle at 40% 70%,#fff4a8,#ff9d00)"></div><div><h3>Stock photographers</h3><p>The unsung auteurs: macro dew drops, koi ponds, glowing wind turbines, businesspeople on bright green lawns.</p></div></div>
+    <div class="glass person"><div class="orb" style="background:radial-gradient(circle at 40% 70%,#aef3ff,#00a2b8)"></div><div><h3>Wallpaper artists</h3><p>The anonymous hands behind aurora swirls and water-surface desktops that millions stared at every morning.</p></div></div>
+    <div class="glass person"><div class="orb" style="background:radial-gradient(circle at 40% 70%,#e0f2ff,#6f9bbd)"></div><div><h3>You, circa 2008</h3><p>Customising a glossy profile page, arranging gadgets on a translucent sidebar, believing — correctly — that the future could be kind.</p></div></div>
+  </div>
+</section>
+</main>
+
+<footer class="pad">
+  <div class="glass">
+    <div><b style="font-family:var(--round)">Aqua Horizon Club</b><br><small>A sincere homage. All bubbles hand-rendered in your browser, no stock photography was harmed.</small></div>
+    <a class="aqua" href="index.html" id="footBack">Back to the Showcase</a>
+  </div>
+</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- bubbles canvas ---------- */
+  var cv=document.getElementById('bubbles'),cx=cv.getContext('2d'),W=0,H=0,dpr=1;
+  var bubbles=[],pops=[],popped=0;
+  function size(){dpr=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;cx.setTransform(dpr,0,0,dpr,0,0);}
+  size();window.addEventListener('resize',size);
+  function spawn(y){var r=8+Math.pow(Math.random(),2.2)*48;return{x:Math.random()*W,y:y!=null?y:H+r+Math.random()*H*.3,r:r,vy:.25+Math.random()*.6+(r<20?.3:0),ph:Math.random()*6.28,wob:.3+Math.random()*.8,hue:185+Math.random()*40};}
+  var N=Math.round(Math.min(34,Math.max(14,W/42)));
+  for(var i=0;i<N;i++)bubbles.push(spawn(Math.random()*H));
+  function drawBubble(b){
+    var g=cx.createRadialGradient(b.x-b.r*.35,b.y-b.r*.4,b.r*.05,b.x,b.y,b.r);
+    g.addColorStop(0,'rgba(255,255,255,.9)');
+    g.addColorStop(.25,'rgba(230,248,255,.18)');
+    g.addColorStop(.8,'hsla('+b.hue+',100%,75%,.12)');
+    g.addColorStop(.96,'hsla('+b.hue+',100%,88%,.55)');
+    g.addColorStop(1,'rgba(255,255,255,.0)');
+    cx.fillStyle=g;cx.beginPath();cx.arc(b.x,b.y,b.r,0,6.283);cx.fill();
+    // rim tint
+    cx.strokeStyle='hsla('+(b.hue+60)+',100%,85%,.35)';cx.lineWidth=Math.max(.8,b.r*.04);cx.beginPath();cx.arc(b.x,b.y,b.r*.96,.2,2.4);cx.stroke();
+    // highlight
+    cx.fillStyle='rgba(255,255,255,.85)';cx.beginPath();cx.ellipse(b.x-b.r*.38,b.y-b.r*.46,b.r*.22,b.r*.12,-.6,0,6.283);cx.fill();
+    cx.fillStyle='rgba(255,255,255,.5)';cx.beginPath();cx.arc(b.x+b.r*.45,b.y+b.r*.42,b.r*.07,0,6.283);cx.fill();
+  }
+  function frame(){
+    cx.clearRect(0,0,W,H);
+    for(var i=0;i<bubbles.length;i++){
+      var b=bubbles[i];
+      if(!reduce){b.y-=b.vy;b.ph+=.012;b.x+=Math.sin(b.ph)*b.wob*.4;}
+      if(b.y<-b.r-10)bubbles[i]=spawn();
+      drawBubble(b);
+    }
+    for(var j=pops.length-1;j>=0;j--){
+      var p=pops[j];p.t+=1;
+      var k=p.t/28;
+      cx.strokeStyle='rgba(255,255,255,'+(1-k)+')';cx.lineWidth=2*(1-k)+.5;
+      cx.beginPath();cx.arc(p.x,p.y,p.r*(1+k*.6),0,6.283);cx.stroke();
+      for(var s=0;s<10;s++){var a=s/10*6.283+p.r;var d=p.r*(1+k*1.4);cx.fillStyle='rgba(255,255,255,'+(1-k)+')';cx.beginPath();cx.arc(p.x+Math.cos(a)*d,p.y+Math.sin(a)*d,2*(1-k)+.4,0,6.283);cx.fill();}
+      if(p.t>28)pops.splice(j,1);
+    }
+    if(!reduce||pops.length)requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  var pc=document.getElementById('popcount');
+  var popMsgs=["Pop!","Two! Refreshing.","Three. Pure hydration.","You're a natural.","Keep it clean, keep it green.","Bubble champion of 2007."];
+  document.addEventListener('pointerdown',function(e){
+    if(e.target.closest('a,button,input,textarea,label,.glass'))return;
+    for(var i=bubbles.length-1;i>=0;i--){
+      var b=bubbles[i];
+      if(Math.hypot(e.clientX-b.x,e.clientY-b.y)<b.r+6){
+        pops.push({x:b.x,y:b.y,r:b.r,t:0});bubbles[i]=spawn();popped++;
+        pc.textContent=(popMsgs[Math.min(popped-1,popMsgs.length-1)])+'  ·  '+popped+' popped';
+        if(reduce)requestAnimationFrame(frame);
+        break;
+      }
+    }
+  });
+
+  /* ---------- clock gadget ---------- */
+  var ticks=document.getElementById('ticks'),svgns="http://www.w3.org/2000/svg";
+  for(var t=0;t<12;t++){var l=document.createElementNS(svgns,'line');var a=t/12*Math.PI*2;l.setAttribute('x1',50+Math.sin(a)*36);l.setAttribute('y1',50-Math.cos(a)*36);l.setAttribute('x2',50+Math.sin(a)*(t%3?39:40.5));l.setAttribute('y2',50-Math.cos(a)*(t%3?39:40.5));l.setAttribute('stroke','#2a6184');l.setAttribute('stroke-width',t%3?1.2:2.4);l.setAttribute('stroke-linecap','round');ticks.appendChild(l);}
+  function hand(id,deg){document.getElementById(id).setAttribute('transform','rotate('+deg+' 50 50)');}
+  function tick(){var d=new Date();var h=d.getHours(),m=d.getMinutes(),s=d.getSeconds();hand('hh',(h%12)*30+m*.5);hand('mh',m*6+s*.1);hand('sh',s*6);
+    document.getElementById('digital').textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+    document.getElementById('date').textContent=d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});}
+  tick();setInterval(tick,1000);
+
+  /* ---------- button forge ---------- */
+  var q=function(id){return document.getElementById(id);};
+  var st={text:"Sign up free!",hue:205,gloss:85,round:40,size:20,bg:"",badge:"BETA"};
+  try{var sv=JSON.parse(localStorage.getItem('aqua-forge')||'null');if(sv&&typeof sv==='object'){for(var k in st)if(k in sv)st[k]=sv[k];}}catch(e){}
+  // starburst
+  var pts=[];for(var i2=0;i2<32;i2++){var ang=i2/32*Math.PI*2,rr=i2%2?40:49;pts.push((50+Math.cos(ang)*rr).toFixed(1)+','+(50+Math.sin(ang)*rr).toFixed(1));}
+  q('burst').setAttribute('d','M'+pts.join('L')+'Z');
+  function cssFor(){
+    var h=st.hue,g=st.gloss/100,r=st.round>=40?'999px':st.round+'px';
+    return ".aqua-btn{\n  position:relative;overflow:hidden;isolation:isolate;\n  font:700 "+st.size+"px/1 'Comfortaa',sans-serif;color:#fff;\n  padding:"+Math.round(st.size*.6)+"px "+Math.round(st.size*1.4)+"px;border-radius:"+r+";\n  border:1px solid hsl("+h+" 80% 30% / .8);\n  background:linear-gradient(180deg,hsl("+h+" 95% 78%) 0%,hsl("+h+" 90% 55%) 50%,hsl("+h+" 95% 42%) 51%,hsl("+h+" 95% 62%) 100%);\n  box-shadow:0 2px 6px hsl("+h+" 80% 20% / .45),inset 0 -3px 8px hsl("+h+" 100% 85% / .7),inset 0 1px 1px #fff;\n  text-shadow:0 1px 2px hsl("+h+" 80% 20% / .6);\n}\n.aqua-btn::before{\n  content:\"\";position:absolute;left:8%;right:8%;top:2px;height:48%;\n  border-radius:"+r+";z-index:-1;\n  background:linear-gradient(180deg,rgba(255,255,255,"+(.95*g).toFixed(2)+"),rgba(255,255,255,"+(.15*g).toFixed(2)+"));\n}";
+  }
+  var styleEl=document.createElement('style');document.head.appendChild(styleEl);
+  function render(){
+    var b=q('forged');
+    b.textContent=st.text||' ';
+    b.style.setProperty('--h',st.hue);
+    b.style.fontSize=st.size+'px';
+    b.style.padding=Math.round(st.size*.6)+'px '+Math.round(st.size*1.4)+'px';
+    b.style.borderRadius=st.round>=40?'999px':st.round+'px';
+    styleEl.textContent='#forged::before{opacity:'+(st.gloss/100)+';border-radius:'+(st.round>=40?'999px':st.round+'px')+'}';
+    q('hueOut').textContent=st.hue+'°';q('glossOut').textContent=st.gloss+'%';q('roundOut').textContent=st.round>=40?'pill':st.round+'px';q('sizeOut').textContent=st.size+'px';
+    q('fText').value=st.text;q('fHue').value=st.hue;q('fGloss').value=st.gloss;q('fRound').value=st.round;q('fSize').value=st.size;
+    q('stage').className='stagebox'+(st.bg?' '+st.bg:'');
+    document.querySelectorAll('[data-bg]').forEach(function(c){c.setAttribute('aria-pressed',c.dataset.bg===st.bg?'true':'false');});
+    document.querySelectorAll('[data-b]').forEach(function(c){c.setAttribute('aria-pressed',c.dataset.b===st.badge?'true':'false');});
+    q('badge').style.display=st.badge?'grid':'none';q('badgeText').textContent=st.badge;
+    q('css').value=cssFor();
+    try{localStorage.setItem('aqua-forge',JSON.stringify(st));}catch(e){}
+  }
+  q('fText').addEventListener('input',function(e){st.text=e.target.value;render();});
+  [['fHue','hue'],['fGloss','gloss'],['fRound','round'],['fSize','size']].forEach(function(p){q(p[0]).addEventListener('input',function(e){st[p[1]]=+e.target.value;render();});});
+  document.querySelectorAll('[data-bg]').forEach(function(c){c.addEventListener('click',function(){st.bg=c.dataset.bg;render();});});
+  document.querySelectorAll('[data-b]').forEach(function(c){c.addEventListener('click',function(){st.badge=c.dataset.b;render();});});
+  var labels=["Download now!","Get Started","Join the Beta","Go Green","Sync Your Life","Try it Free","Tag, Share, Blog!","Web 2.0 Ready"];
+  q('surprise').addEventListener('click',function(){st.hue=Math.floor(Math.random()*360);st.gloss=60+Math.floor(Math.random()*41);st.round=Math.random()<.6?40:8+Math.floor(Math.random()*24);st.text=labels[Math.floor(Math.random()*labels.length)];st.size=16+Math.floor(Math.random()*12);render();});
+  q('forged').addEventListener('click',function(){var b=q('forged');b.animate?b.animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:reduce?1:380,easing:'cubic-bezier(.3,1.6,.5,1)'}):0;});
+  q('copyBtn').addEventListener('click',function(){
+    var ta=q('css'),msg=q('copyMsg');
+    function ok(){msg.textContent='Copied to clipboard. Very 2007 of you.';}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(ok,function(){ta.select();msg.textContent='Selected — press Ctrl+C to copy.';});}
+    else{ta.select();msg.textContent='Selected — press Ctrl+C to copy.';}
+  });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keypunch Cron Console</title>
+<meta name="description" content="A cron expression builder and explainer: plain-English description, next ten run times, a weekly firing map and a punch-card field editor with presets and a saved job deck.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#c9d0d8; --frame:#aeb7c2; --ink:#16202c; --muted:#4d5a69; --hair:#98a2ae;
+  --card:#efe1b6; --card-edge:#d9c78f; --card-ink:#b0322a; --card-print:#1d2a5c; --hole:#1b2230;
+  --crt:#07112a; --crt-2:#0c1a3d; --c-blue:#6fa8ff; --c-cyan:#63e6e6; --c-white:#e8eef8; --c-yellow:#ffe066; --c-pink:#ff8fc7; --c-red:#ff6b5b;
+  --plex:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace; --vt:"VT323","IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0a0f1a;--frame:#131b2b;--ink:#dfe6f1;--muted:#8b98ad;--hair:#27324a;--card:#d8c894;--card-edge:#b8a66d;--hole:#0a0f1a;color-scheme:dark}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--plex);font-size:14px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+:focus-visible{outline:2px dashed var(--c-red);outline-offset:2px}
+.wrap{max-width:1200px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-right)) 70px max(16px,env(safe-area-inset-left))}
+.bar{display:flex;justify-content:space-between;gap:10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--ink);padding-bottom:8px}
+.bar a{color:inherit;text-decoration:none}
+.bar a:hover{color:var(--ink)}
+.lamps{display:flex;gap:6px;align-items:center}
+.lamp{width:10px;height:10px;border-radius:50%;background:#555;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)}
+.lamp.on{background:#ffb347;box-shadow:0 0 8px #ffb347}
+.lamp.run{background:#5ee07a;box-shadow:0 0 8px #5ee07a}
+.lamp.err{background:#ff5a4a;box-shadow:0 0 8px #ff5a4a}
+h1{font:400 clamp(46px,8vw,96px)/.85 var(--vt);letter-spacing:.02em;margin:26px 0 4px;text-transform:uppercase}
+.lede{margin:0 0 22px;color:var(--muted);max-width:60ch}
+/* console */
+.console{background:var(--crt);border-radius:10px;padding:18px;box-shadow:inset 0 0 0 2px #000,inset 0 0 60px rgba(111,168,255,.12),0 0 0 10px var(--frame),0 18px 40px -20px rgba(0,0,0,.6);color:var(--c-white);font-family:var(--vt);font-size:22px;position:relative;overflow:hidden;margin:10px 10px 30px}
+.console::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);pointer-events:none}
+.c-row{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.c-lbl{color:var(--c-blue)}
+.expr{font:inherit;font-size:clamp(26px,6.4vw,44px);color:var(--c-yellow);background:transparent;border:0;border-bottom:2px solid var(--c-blue);width:100%;min-width:0;padding:4px 2px;letter-spacing:.12em;caret-color:var(--c-yellow);outline:none}
+.expr:focus{border-bottom-color:var(--c-yellow)}
+.fields-legend{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:8px;color:var(--c-cyan);font-size:18px}
+.fields-legend span{border-top:1px solid rgba(99,230,230,.4);padding-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fields-legend span.bad{color:var(--c-red);border-top-color:var(--c-red)}
+.human{margin:14px 0 0;font-size:clamp(24px,3.4vw,32px);line-height:1.1;color:var(--c-white)}
+.human b{color:var(--c-pink);font-weight:400}
+.err{color:var(--c-red);min-height:1.1em;margin-top:6px}
+.blink{animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.blink{animation:none}}
+.opts{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:18px;color:var(--c-blue)}
+.opts button{font:inherit;background:transparent;color:var(--c-cyan);border:1px solid rgba(99,230,230,.5);padding:2px 10px;cursor:pointer}
+.opts button[aria-pressed=true]{background:var(--c-cyan);color:var(--crt)}
+.opts button:hover{border-color:var(--c-yellow)}
+/* grid */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
+@media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
+h2{font:700 12px var(--plex);letter-spacing:.18em;text-transform:uppercase;margin:0 0 10px;display:flex;gap:10px;align-items:center}
+h2::before{content:"";width:14px;height:14px;background:var(--ink);clip-path:polygon(0 0,70% 0,100% 30%,100% 100%,0 100%)}
+.runs{list-style:none;margin:0;padding:0;counter-reset:r;border-top:1px solid var(--ink)}
+.runs li{display:grid;grid-template-columns:34px 1fr auto;gap:8px;padding:7px 0;border-bottom:1px dashed var(--hair);counter-increment:r;align-items:baseline}
+.runs li::before{content:counter(r,decimal-leading-zero);color:var(--muted);font-size:12px}
+.runs li .d{font-weight:500}
+.runs li .rel{color:var(--muted);font-size:12px}
+.heat{display:grid;grid-template-columns:34px repeat(24,minmax(0,1fr));gap:2px;font-size:10px;color:var(--muted)}
+.heat i{aspect-ratio:1;background:var(--frame);display:block;border-radius:1px}
+.heat .hd{text-align:center}
+.heat-note{font-size:12px;color:var(--muted);margin-top:8px}
+/* punch card */
+.cardwrap{margin-top:34px}
+.card{background:var(--card);color:var(--card-print);border-radius:4px 4px 4px 4px;clip-path:polygon(22px 0,100% 0,100% 100%,0 100%,0 22px);padding:26px 18px 16px;position:relative;box-shadow:0 20px 30px -24px rgba(0,0,0,.7)}
+.card::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(100%/80 - 1px),rgba(29,42,92,.06) calc(100%/80 - 1px) calc(100%/80));pointer-events:none}
+.card .interp{position:absolute;top:6px;left:30px;right:14px;font:600 13px var(--plex);letter-spacing:.35em;white-space:nowrap;overflow:hidden;color:#222}
+.card .brandline{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--card-ink);margin-bottom:10px;border-bottom:1px solid var(--card-ink);padding-bottom:4px;gap:10px;flex-wrap:wrap}
+.prow{display:grid;grid-template-columns:92px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dotted rgba(176,50,42,.5)}
+@media (max-width:640px){.prow{grid-template-columns:minmax(0,1fr) auto}.prow .cells{grid-column:1/-1;grid-row:2}}
+.prow .nm{font:700 11px var(--plex);letter-spacing:.14em;text-transform:uppercase;color:var(--card-ink)}
+.prow .nm small{display:block;font-weight:400;color:var(--card-print);letter-spacing:.04em;text-transform:none;font-size:11px}
+.cells{display:grid;gap:2px}
+.cells button{appearance:none;border:0;padding:0;background:transparent;font:500 9px var(--plex);color:var(--card-print);height:22px;cursor:pointer;position:relative;min-width:0}
+.cells button::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:14px;transform:translate(-50%,-50%) scale(.2);background:var(--hole);opacity:0;transition:transform .18s cubic-bezier(.3,1.6,.5,1),opacity .1s}
+.cells button[aria-pressed=true]{color:transparent}
+.cells button[aria-pressed=true]::after{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.cells button:hover{background:rgba(29,42,92,.08)}
+@media (prefers-reduced-motion:reduce){.cells button::after{transition:none}}
+.rowbtns{display:flex;gap:4px}
+.rowbtns button{font:600 10px var(--plex);letter-spacing:.08em;border:1px solid var(--card-ink);color:var(--card-ink);background:transparent;padding:3px 6px;cursor:pointer}
+.rowbtns button:hover{background:var(--card-ink);color:var(--card)}
+/* presets & deck */
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font:500 12px var(--plex);background:var(--frame);color:var(--ink);border:1px solid var(--hair);padding:6px 10px;cursor:pointer;border-radius:2px}
+.presets button:hover{border-color:var(--ink)}
+.presets button code{color:var(--muted);margin-left:6px}
+.deck{display:grid;gap:6px;margin-top:10px}
+.deck .job{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;background:var(--card);color:var(--card-print);padding:8px 10px;clip-path:polygon(10px 0,100% 0,100% 100%,0 100%,0 10px)}
+.deck .job button.load{background:none;border:0;text-align:left;font:inherit;color:inherit;cursor:pointer;min-width:0}
+.deck .job b{display:block;font-size:13px}
+.deck .job code{font-size:12px;color:var(--card-ink)}
+.deck .job .x{background:none;border:0;color:var(--card-ink);cursor:pointer;font:700 16px var(--plex)}
+.addjob{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-top:10px}
+.addjob input{font:inherit;padding:8px;border:1px solid var(--hair);background:var(--frame);color:var(--ink);min-width:0}
+.addjob button{font:700 12px var(--plex);letter-spacing:.1em;padding:8px 12px;background:var(--ink);color:var(--bg);border:0;cursor:pointer}
+.sec{margin-top:34px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"><a href="index.html" id="backLink">← Showcase</a><span class="lamps" aria-hidden="true">SYS <i class="lamp on"></i> RUN <i class="lamp run" id="lampRun"></i> CHK <i class="lamp" id="lampErr"></i></span></div>
+  <h1>Keypunch<br>Cron Console</h1>
+  <p class="lede">Type a crontab schedule, or punch holes in the card below. The console decodes it in plain English and lists exactly when it will fire.</p>
+
+  <div class="console" role="region" aria-label="Cron console">
+    <div class="c-row"><span class="c-lbl">JOB SCHEDULE ===&gt;</span></div>
+    <input class="expr" id="expr" spellcheck="false" autocomplete="off" aria-label="Cron expression" aria-describedby="human">
+    <div class="fields-legend" id="legend"></div>
+    <p class="human" id="human" aria-live="polite"></p>
+    <div class="err" id="err"></div>
+    <div class="opts">
+      <span>ZONE</span><button type="button" id="tzLocal" aria-pressed="true">LOCAL</button><button type="button" id="tzUtc" aria-pressed="false">UTC</button>
+      <span>&nbsp;CLOCK</span><button type="button" id="h24" aria-pressed="true">24H</button><button type="button" id="h12" aria-pressed="false">12H</button>
+      <button type="button" id="copyExpr">COPY</button><span id="copied" style="color:var(--c-yellow)"></span><span class="blink" aria-hidden="true">█</span>
+    </div>
+  </div>
+
+  <div class="cols">
+    <section>
+      <h2>Next ten runs</h2>
+      <ol class="runs" id="runs"></ol>
+    </section>
+    <section>
+      <h2>Firing map · next 7 days</h2>
+      <div class="heat" id="heat" role="img" aria-label="Runs per hour over the next week"></div>
+      <p class="heat-note" id="heatNote"></p>
+    </section>
+  </div>
+
+  <div class="cardwrap">
+    <h2>Field editor · punch to select</h2>
+    <div class="card" id="card">
+      <div class="interp" id="interp" aria-hidden="true"></div>
+      <div class="brandline"><span>Keypunch Data Systems · Form K-5081</span><span>Cron · five-field schedule card</span></div>
+      <div id="rows"></div>
+    </div>
+  </div>
+
+  <div class="cols sec">
+    <section>
+      <h2>Presets</h2>
+      <div class="presets" id="presets"></div>
+    </section>
+    <section>
+      <h2>Job deck</h2>
+      <div class="deck" id="deck"></div>
+      <div class="addjob"><input id="jobName" placeholder="Name this schedule, e.g. nightly backup" aria-label="Job name"><button type="button" id="addJob">FILE CARD</button></div>
+    </section>
+  </div>
+</div>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const KEY='keypunch-cron-v1';
+  const ls={get(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}},set(v){try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}};
+  const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const DOWL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const F=[
+    {k:'min',label:'Minute',min:0,max:59},
+    {k:'hour',label:'Hour',min:0,max:23},
+    {k:'dom',label:'Day of month',min:1,max:31},
+    {k:'mon',label:'Month',min:1,max:12,names:MON},
+    {k:'dow',label:'Day of week',min:0,max:6,names:DOW}
+  ];
+  const MACROS={'@yearly':'0 0 1 1 *','@annually':'0 0 1 1 *','@monthly':'0 0 1 * *','@weekly':'0 0 * * 0','@daily':'0 0 * * *','@midnight':'0 0 * * *','@hourly':'0 * * * *'};
+  const PRESETS=[['Every 5 minutes','*/5 * * * *'],['Weekdays 09:00','0 9 * * 1-5'],['Office hours, every 15 min','*/15 9-17 * * 1-5'],['Nightly 02:30','30 2 * * *'],['Sunday 04:00 backup','0 4 * * 0'],['1st of month, midnight','0 0 1 * *'],['Quarterly report','0 8 1 1,4,7,10 *'],['Twice daily','0 6,18 * * *'],['15th OR any Friday','0 10 15 * 5'],['New Year','0 0 1 1 *']];
+  const saved=ls.get()||{};
+  let st={expr:saved.expr||'*/15 9-17 * * 1-5',utc:!!saved.utc,h12:!!saved.h12,deck:Array.isArray(saved.deck)?saved.deck:[
+    {name:'Invoice reminders',expr:'0 9 * * 1'},{name:'Log rotation',expr:'5 0 * * *'},{name:'Warehouse sync',expr:'*/10 6-22 * * *'}]};
+  function persist(){ls.set(st)}
+  function nameVal(tok,f){
+    if(/^\d+$/.test(tok))return +tok;
+    if(f.names){const i=f.names.findIndex(n=>n.toLowerCase()===tok.toLowerCase());if(i>=0)return f.k==='mon'?i+1:i}
+    return NaN;
+  }
+  function parseField(raw,f){
+    const set=new Set();if(raw==null||raw==='')throw 'missing';
+    for(const part of raw.split(',')){
+      let [rng,stepS]=part.split('/');let step=1;
+      if(stepS!==undefined){step=+stepS;if(!/^\d+$/.test(stepS)||step<1)throw 'bad step "'+stepS+'"'}
+      const mx=f.k==='dow'?7:f.max;let a,b;
+      if(rng==='*'||rng==='?'){a=f.min;b=f.max}
+      else if(rng.includes('-')){const[x,y]=rng.split('-');a=nameVal(x,f);b=nameVal(y,f)}
+      else{a=nameVal(rng,f);b=stepS!==undefined?f.max:a}
+      if(isNaN(a)||isNaN(b))throw 'unknown value "'+rng+'"';
+      if(a<f.min||b>mx||a>b)throw 'out of range '+f.min+'–'+mx;
+      for(let v=a;v<=b;v+=step)set.add(f.k==='dow'?v%7:v);
+    }
+    return [...set].sort((x,y)=>x-y);
+  }
+  function parse(expr){
+    let e=expr.trim().replace(/\s+/g,' ');
+    if(MACROS[e.toLowerCase()])e=MACROS[e.toLowerCase()];
+    const parts=e.split(' ');
+    const res={raw:parts,vals:[],errs:[]};
+    if(parts.length!==5){res.fatal='Expected 5 fields (minute hour day month weekday), found '+parts.filter(Boolean).length;}
+    F.forEach((f,i)=>{try{res.vals[i]=parseField(parts[i],f)}catch(err){res.errs[i]=String(err);res.vals[i]=[]}});
+    res.ok=!res.fatal&&!res.errs.some(Boolean);
+    return res;
+  }
+  const isAll=(v,f)=>v.length===f.max-f.min+1;
+  const pad=n=>String(n).padStart(2,'0');
+  function list(arr){if(arr.length<=1)return arr.join('');return arr.slice(0,-1).join(', ')+' and '+arr[arr.length-1]}
+  function fmtTime(h,m){if(!st.h12)return pad(h)+':'+pad(m);const ap=h<12?'am':'pm';const hh=h%12||12;return hh+':'+pad(m)+ap}
+  function describeTok(raw,f,unit,nameArr){
+    // turn raw field into words
+    const bits=raw.split(',').map(p=>{
+      const[r,s]=p.split('/');const nm=v=>{const n=nameVal(v,f);return nameArr?nameArr[(f.k==='mon'?n-1:n%7)]:String(n)};
+      if(r==='*'&&s)return 'every '+ord(+s,unit);
+      if(r==='*')return 'every '+unit;
+      if(r.includes('-')){const[a,b]=r.split('-');return (s?'every '+ord(+s,unit)+' ':'')+nm(a)+' through '+nm(b)}
+      return s?'every '+ord(+s,unit)+' from '+nm(r):nm(r);
+    });
+    return list(bits);
+  }
+  function ord(n,unit){return n===1?unit:n+' '+unit+'s'}
+  function describe(p){
+    const [mR,hR,dR,moR,wR]=p.raw;const[m,h,d,mo,w]=p.vals;
+    let t='';
+    const mStar=mR==='*',hStar=hR==='*';
+    const hRange=/^\d+-\d+$/.test(hR)?hR.split('-').map(Number):null;
+    if(mStar&&hStar)t='Every minute';
+    else if(m.length===1&&h.length>=1&&h.length<=6&&!hStar)t='At '+list(h.map(x=>'<b>'+fmtTime(x,m[0])+'</b>'));
+    else if(m.length===1&&hStar)t=m[0]===0?'At the top of <b>every hour</b>':'At <b>'+m[0]+' minutes past</b> every hour';
+    else{
+      const mt=/^\*\/\d+$/.test(mR)?'<b>Every '+mR.split('/')[1]+' minutes</b>':mStar?'<b>Every minute</b>':'At minute <b>'+describeTok(mR,F[0],'minute')+'</b>';
+      let ht='';
+      if(hStar)ht='';
+      else if(hRange)ht=', between <b>'+fmtTime(hRange[0],0)+'</b> and <b>'+fmtTime(hRange[1],59)+'</b>';
+      else if(/^\*\/\d+$/.test(hR))ht=', every '+hR.split('/')[1]+' hours';
+      else ht=', during hour'+(h.length>1?'s ':' ')+'<b>'+list(h.map(x=>fmtTime(x,0)))+'</b>';
+      t=mt+ht;
+    }
+    const dAll=dR==='*',wAll=wR==='*';
+    let dt='';
+    const wText=()=>{if(/^\d-\d$|^[a-z]{3}-[a-z]{3}$/i.test(wR)){const[a,b]=wR.split('-');return '<b>'+DOWL[nameVal(a,F[4])%7]+' through '+DOWL[nameVal(b,F[4])%7]+'</b>'}return '<b>'+list(w.map(x=>DOWL[x]))+'</b>'};
+    const dText=()=>'day <b>'+describeTok(dR,F[2],'day')+'</b> of the month';
+    if(!dAll&&!wAll)dt=', on '+dText()+' <i>or</i> on '+wText();
+    else if(!dAll)dt=', on '+dText();
+    else if(!wAll)dt=', '+(w.length===1?'every ':'on ')+wText();
+    let mt='';
+    if(moR!=='*')mt=', in <b>'+(/^\*\/\d+$/.test(moR)?'every '+moR.split('/')[1]+' months':list(mo.map(x=>MONL[x-1])))+'</b>';
+    return t+dt+mt+'.';
+  }
+  // time helpers (local or utc)
+  function parts(t){const d=new Date(t);return st.utc?{Y:d.getUTCFullYear(),M:d.getUTCMonth()+1,D:d.getUTCDate(),h:d.getUTCHours(),m:d.getUTCMinutes(),w:d.getUTCDay()}:{Y:d.getFullYear(),M:d.getMonth()+1,D:d.getDate(),h:d.getHours(),m:d.getMinutes(),w:d.getDay()}}
+  function mk(Y,M,D,h,m){return st.utc?Date.UTC(Y,M-1,D,h,m):new Date(Y,M-1,D,h,m).getTime()}
+  function nextRuns(p,from,count,until){
+    const S=p.vals.map(v=>new Set(v));const out=[];
+    const dStar=p.raw[2]==='*'||p.raw[2]==='?',wStar=p.raw[4]==='*'||p.raw[4]==='?';
+    let t=Math.floor(from/60000)*60000+60000;let guard=0;
+    while(out.length<count&&guard++<400000){
+      if(until&&t>until)break;
+      const x=parts(t);
+      if(!S[3].has(x.M)){t=mk(x.Y,x.M+1,1,0,0);continue}
+      const dm=S[2].has(x.D),wm=S[4].has(x.w);
+      const dayOk=dStar&&wStar?true:dStar?wm:wStar?dm:(dm||wm);
+      if(!dayOk){t=mk(x.Y,x.M,x.D+1,0,0);continue}
+      if(!S[1].has(x.h)){t=mk(x.Y,x.M,x.D,x.h+1,0);continue}
+      if(!S[0].has(x.m)){t+=60000;continue}
+      out.push(t);t+=60000;
+    }
+    return out;
+  }
+  function rel(ms){const s=Math.round(ms/1000);if(s<60)return 'in '+s+'s';const m=Math.round(s/60);if(m<60)return 'in '+m+' min';const h=Math.round(m/60);if(h<48)return 'in '+h+' h';return 'in '+Math.round(h/24)+' days'}
+  function fmtRun(t){const x=parts(t);return DOW[x.w]+' '+pad(x.D)+' '+MON[x.M-1]+' '+x.Y+' · '+fmtTime(x.h,x.m)+(st.utc?' UTC':'')}
+  // compact rebuild from set
+  function compact(vals,f){
+    const n=f.max-f.min+1;if(vals.length===n)return '*';if(!vals.length)return null;
+    if(vals.length>2&&vals[0]===f.min){const s=vals[1]-vals[0];let ok=true;for(let i=1;i<vals.length;i++)if(vals[i]-vals[i-1]!==s)ok=false;if(ok&&vals[vals.length-1]+s>f.max)return '*/'+s}
+    const out=[];let i=0;while(i<vals.length){let j=i;while(j+1<vals.length&&vals[j+1]===vals[j]+1)j++;out.push(j-i>=2?vals[i]+'-'+vals[j]:j>i?vals[i]+','+vals[j]:String(vals[i]));i=j+1}
+    return out.join(',');
+  }
+  // punch card
+  function buildCard(){
+    const rows=$('rows');rows.innerHTML='';
+    F.forEach((f,fi)=>{
+      const n=f.max-f.min+1;const r=document.createElement('div');r.className='prow';
+      const perLine=innerWidth<640?(n>31?15:n>12?16:n):n;
+      r.innerHTML=`<div class="nm">${f.label}<small id="tok${fi}"></small></div><div class="cells" id="cells${fi}" style="grid-template-columns:repeat(${perLine},minmax(0,1fr))"></div><div class="rowbtns"><button type="button" id="all${fi}">ALL</button><button type="button" id="clr${fi}">CLR</button></div>`;
+      rows.appendChild(r);
+      const cells=r.querySelector('.cells');
+      for(let v=f.min;v<=f.max;v++){const b=document.createElement('button');b.type='button';b.id='c'+fi+'_'+v;b.dataset.v=v;b.textContent=f.names?f.names[f.k==='mon'?v-1:v].slice(0,f.k==='mon'?3:2):v;b.setAttribute('aria-label',f.label+' '+(f.names?f.names[f.k==='mon'?v-1:v]:v));cells.appendChild(b)}
+      cells.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;toggle(fi,+b.dataset.v)});
+      r.querySelector('#all'+fi).onclick=()=>setField(fi,'*');
+      r.querySelector('#clr'+fi).onclick=()=>setField(fi,f.k==='min'?'0':f.k==='hour'?'0':String(f.min));
+    });
+  }
+  function currentParts(){let e=st.expr.trim().replace(/\s+/g,' ');if(MACROS[e.toLowerCase()])e=MACROS[e.toLowerCase()];const p=e.split(' ');while(p.length<5)p.push('*');return p.slice(0,5)}
+  function setField(fi,tok){const p=currentParts();p[fi]=tok;st.expr=p.join(' ');$('expr').value=st.expr;render()}
+  function toggle(fi,v){
+    const pr=parse(st.expr);let vals=pr.errs[fi]||!pr.vals[fi]?[]:pr.vals[fi].slice();
+    const i=vals.indexOf(v);if(i>=0)vals.splice(i,1);else vals.push(v);vals.sort((a,b)=>a-b);
+    const tok=compact(vals,F[fi]);if(tok===null)return;setField(fi,tok);
+  }
+  function renderCard(p){
+    F.forEach((f,fi)=>{const set=new Set(p.vals[fi]||[]);document.querySelectorAll('#cells'+fi+' button').forEach(b=>b.setAttribute('aria-pressed',set.has(+b.dataset.v)));$('tok'+fi).textContent=p.raw[fi]||'—'});
+    $('interp').textContent=st.expr.toUpperCase();
+  }
+  function heat(p){
+    const now=Date.now();const start=parts(now);const base=mk(start.Y,start.M,start.D,0,0);
+    const grid=Array.from({length:7},()=>new Array(24).fill(0));
+    if(p.ok){const runs=nextRuns(p,base-60000,20000,base+7*86400000);runs.forEach(t=>{const dd=Math.floor((t-base)/86400000);if(dd>=0&&dd<7){grid[dd][parts(t).h]++}})}
+    const mx=Math.max(1,...grid.flat());let total=grid.flat().reduce((a,b)=>a+b,0);
+    let h='<span></span>'+Array.from({length:24},(_,i)=>`<span class="hd">${i%6===0?pad(i):''}</span>`).join('');
+    grid.forEach((row,di)=>{const x=parts(base+di*86400000+3600000*12);h+=`<span>${DOW[x.w]}</span>`+row.map(c=>`<i title="${c} run${c===1?'':'s'}" style="${c?`background:color-mix(in srgb, var(--c-blue) ${25+75*c/mx}%, var(--crt))`:''}"></i>`).join('')});
+    $('heat').innerHTML=h;
+    $('heatNote').textContent=p.ok?(total>=20000?'20,000+':total.toLocaleString())+' runs in the next 7 days'+(total?' · busiest hour: '+mx+' runs':''):'—';
+  }
+  function render(){
+    const p=parse(st.expr);
+    $('legend').innerHTML=F.map((f,i)=>`<span class="${p.errs[i]?'bad':''}">${(p.raw[i]||'?')} ${f.label.toUpperCase()}</span>`).join('');
+    $('lampErr').className='lamp'+(p.ok?'':' err');$('lampRun').className='lamp'+(p.ok?' run':'');
+    if(!p.ok){
+      $('err').textContent='** CHECK ** '+(p.fatal||F.map((f,i)=>p.errs[i]?f.label+': '+p.errs[i]:'').filter(Boolean).join(' · '));
+      $('human').textContent='Unable to decode schedule.';$('runs').innerHTML='';heat(p);renderCard(p);persist();return;
+    }
+    $('err').textContent='';
+    $('human').innerHTML=describe(p);
+    const now=Date.now();const runs=nextRuns(p,now,10);
+    $('runs').innerHTML=runs.length?runs.map(t=>`<li><span class="d">${fmtRun(t)}</span><span class="rel">${rel(t-now)}</span></li>`).join(''):'<li><span>No run found in the search window (check day/month combination, e.g. 31 February).</span></li>';
+    heat(p);renderCard(p);persist();
+  }
+  $('expr').value=st.expr;
+  $('expr').addEventListener('input',e=>{st.expr=e.target.value;render()});
+  const setTz=u=>{st.utc=u;$('tzLocal').setAttribute('aria-pressed',!u);$('tzUtc').setAttribute('aria-pressed',u);render()};
+  const setClk=h=>{st.h12=h;$('h24').setAttribute('aria-pressed',!h);$('h12').setAttribute('aria-pressed',h);render()};
+  $('tzLocal').onclick=()=>setTz(false);$('tzUtc').onclick=()=>setTz(true);$('h24').onclick=()=>setClk(false);$('h12').onclick=()=>setClk(true);
+  $('copyExpr').onclick=async()=>{try{await navigator.clipboard.writeText(st.expr);$('copied').textContent='COPIED'}catch(e){$('copied').textContent='SELECT + COPY';$('expr').select()}setTimeout(()=>$('copied').textContent='',1500)};
+  PRESETS.forEach(([n,e],i)=>{const b=document.createElement('button');b.type='button';b.id='pre'+i;b.innerHTML=n+'<code>'+e+'</code>';b.onclick=()=>{st.expr=e;$('expr').value=e;render()};$('presets').appendChild(b)});
+  function renderDeck(){
+    $('deck').innerHTML=st.deck.length?'':'<p style="color:var(--muted);margin:0">No cards filed.</p>';
+    st.deck.forEach((j,i)=>{const d=document.createElement('div');d.className='job';d.innerHTML=`<button class="load" type="button" id="job${i}"><b></b><code></code></button><button class="x" type="button" id="jobx${i}" aria-label="Remove job">×</button>`;
+      d.querySelector('b').textContent=j.name;d.querySelector('code').textContent=j.expr;
+      d.querySelector('.load').onclick=()=>{st.expr=j.expr;$('expr').value=j.expr;render();window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})};
+      d.querySelector('.x').onclick=()=>{st.deck.splice(i,1);renderDeck();persist()};$('deck').appendChild(d)});
+  }
+  $('addJob').onclick=()=>{const n=$('jobName').value.trim()||'Untitled job';st.deck.unshift({name:n,expr:st.expr.trim()});$('jobName').value='';renderDeck();persist()};
+  $('jobName').addEventListener('keydown',e=>{if(e.key==='Enter')$('addJob').click()});
+  let lastW=innerWidth<640;addEventListener('resize',()=>{const w=innerWidth<640;if(w!==lastW){lastW=w;buildCard();render()}});
+  buildCard();setTz(st.utc);setClk(st.h12);renderDeck();
+  setInterval(render,30000);
+})();
+</script>
+</body>
+</html>

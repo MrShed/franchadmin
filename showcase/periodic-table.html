@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hall of Elements</title>
+<meta name="description" content="A museum-wall periodic table of all 118 elements: recolour by family, state, electronegativity or discovery year, sweep a temperature dial from absolute zero to 6,000 K, and open any element to watch its Bohr model spin.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;0,6..96,800;1,6..96,400&family=Archivo+Narrow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wall:#16312f;
+  --wall2:#10262a;
+  --paper:#f8f8f5;
+  --ink:#131515;
+  --rule:#1d1f1f;
+  --mute:#6b706e;
+  --brass:#c8a867;
+  --serif:"Bodoni Moda","Didot","Bodoni 72","Times New Roman",serif;
+  --sans:"Archivo Narrow","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  /* category inks */
+  --c-alkali:#e0694a; --c-alkaline:#e9a23b; --c-transition:#d9c9a3; --c-post:#9fb8ad; --c-metalloid:#83a36b;
+  --c-nonmetal:#5fa7c9; --c-halogen:#3d7fb4; --c-noble:#8b76b5; --c-lanthanide:#e3a3a8; --c-actinide:#c7798b; --c-unknown:#c9c9c4;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--wall);background-image:radial-gradient(ellipse at 50% -10%,#2a4f4b 0%,transparent 60%),radial-gradient(ellipse at 50% 120%,#0a1a1c 0%,transparent 60%);
+  color:var(--paper);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.back{position:absolute;top:16px;left:max(16px,env(safe-area-inset-left));font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);text-decoration:none}
+.back:hover{text-decoration:underline}
+.wrap{max-width:1360px;margin:0 auto;padding:64px max(16px,3vw) 60px}
+
+/* placard header */
+.head{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;margin-bottom:28px}
+.gallery{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--brass);margin:0 0 8px}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(46px,8vw,112px);line-height:.9;margin:0;letter-spacing:-.01em}
+h1 i{font-weight:400}
+.placard{background:var(--paper);color:var(--ink);padding:14px 18px;max-width:340px;font-size:13px;line-height:1.5;box-shadow:0 18px 30px -18px rgba(0,0,0,.7)}
+.placard b{font-family:var(--serif);font-size:15px;display:block;margin-bottom:2px}
+
+/* controls */
+.ctrls{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:center;margin:0 0 18px}
+.seg{display:flex;border:1px solid rgba(248,248,245,.35)}
+.seg button{font:600 12px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;background:transparent;color:var(--paper);border:0;padding:10px 14px;cursor:pointer}
+.seg button+button{border-left:1px solid rgba(248,248,245,.35)}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+.temp{display:flex;align-items:center;gap:12px;flex:1;min-width:260px}
+.temp label{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);white-space:nowrap}
+.temp input{flex:1;accent-color:var(--brass);min-width:120px}
+.temp output{font-family:var(--serif);font-size:22px;min-width:150px;font-variant-numeric:tabular-nums}
+.temp output small{font-family:var(--sans);font-size:12px;color:#b9c4c0;margin-left:6px}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.presets button{font:500 11px var(--sans);letter-spacing:.08em;background:transparent;color:#cfd8d4;border:1px solid rgba(248,248,245,.2);padding:5px 8px;cursor:pointer}
+.presets button:hover{border-color:var(--brass);color:#fff}
+
+/* the chart */
+.frame{background:var(--paper);color:var(--ink);padding:clamp(10px,2vw,26px);box-shadow:0 40px 60px -30px rgba(0,0,0,.8),0 0 0 10px #0d1f21,0 0 0 11px var(--brass);margin:10px}
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.grid{display:grid;grid-template-columns:repeat(18,minmax(40px,1fr));grid-template-rows:repeat(7,auto) 14px repeat(2,auto);gap:3px;min-width:760px;position:relative}
+.cell{position:relative;aspect-ratio:1/1.12;border:1px solid var(--rule);background:var(--paper);padding:3px 4px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;text-align:left;font:inherit;color:var(--ink);
+  transition:background-color .5s ease, color .5s ease, transform .15s ease;overflow:hidden}
+.cell:hover{transform:translateY(-2px);z-index:2;box-shadow:0 6px 10px -6px rgba(0,0,0,.5)}
+.cell[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:1px;z-index:3}
+.cell .z{font-size:clamp(8px,.72vw,11px);font-weight:600;letter-spacing:.02em;opacity:.8}
+.cell .s{font-family:var(--serif);font-weight:600;font-size:clamp(15px,1.9vw,27px);line-height:.9;letter-spacing:-.02em}
+.cell .n{font-size:clamp(6.5px,.62vw,9.5px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.02em}
+.cell .v{position:absolute;right:4px;top:3px;font-size:clamp(7px,.62vw,9.5px);opacity:.85;font-variant-numeric:tabular-nums}
+.cell.dim{opacity:.18}
+.cell.ph{cursor:default;background:repeating-linear-gradient(135deg,transparent 0 4px,rgba(0,0,0,.08) 4px 5px);justify-content:center;align-items:center;font-size:10px;letter-spacing:.06em}
+.cell.ph:hover{transform:none;box-shadow:none}
+.glabel{font-size:9px;text-align:center;color:var(--mute);align-self:end;letter-spacing:.1em}
+.plabel{position:absolute;left:-14px;font-size:9px;color:var(--mute)}
+
+/* key inside the chart (top middle empty zone) */
+.key{grid-column:3 / 13;grid-row:1 / 4;align-self:start;padding:4px 10px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:4px 14px;font-size:11px}
+.key .t{grid-column:1/-1;font-family:var(--serif);font-style:italic;font-size:clamp(14px,1.5vw,20px);margin-bottom:4px}
+.key button{all:unset;display:flex;align-items:center;gap:6px;cursor:pointer;padding:1px 0}
+.key button:focus-visible{outline:2px solid var(--ink)}
+.key i{width:14px;height:14px;border:1px solid var(--rule);flex:none}
+.key .ramp{grid-column:1/-1;height:12px;border:1px solid var(--rule);margin-top:4px}
+.key .rl{grid-column:1/-1;display:flex;justify-content:space-between;font-size:10px;color:var(--mute)}
+.key button[aria-pressed="true"] span{text-decoration:underline;text-underline-offset:3px}
+
+/* detail label */
+.detail{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(220px,300px);gap:clamp(16px,3vw,40px);margin:40px 10px 0;align-items:stretch}
+.card{background:var(--paper);color:var(--ink);padding:24px 26px;position:relative;box-shadow:0 18px 30px -18px rgba(0,0,0,.7)}
+.card .no{font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--mute)}
+.card .big{font-family:var(--serif);font-weight:800;font-size:clamp(90px,12vw,170px);line-height:.8;margin:10px 0 6px;letter-spacing:-.04em}
+.card h2{font-family:var(--serif);font-weight:400;font-style:italic;font-size:clamp(28px,3vw,40px);margin:0}
+.card .cat{display:inline-flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+.card .cat i{width:12px;height:12px;border:1px solid var(--rule)}
+table.facts{border-collapse:collapse;width:100%;font-size:14px}
+table.facts th{text-align:left;font-weight:500;color:var(--mute);letter-spacing:.06em;padding:7px 10px 7px 0;border-bottom:1px solid #ddd;font-size:12px;text-transform:uppercase;white-space:nowrap}
+table.facts td{padding:7px 0;border-bottom:1px solid #ddd;font-variant-numeric:tabular-nums}
+.bohr{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0f2224;border:1px solid rgba(200,168,103,.4);padding:14px}
+.bohr svg{width:100%;max-width:280px;height:auto}
+.bohr .cap{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);margin-top:10px;text-align:center}
+.bohr .cfg{font-family:var(--serif);font-size:18px;color:var(--paper);margin-top:4px}
+.orbit{transform-origin:150px 150px;animation:spin linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.foot{margin:44px 10px 0;font-size:12px;color:#9fb0ab;line-height:1.6;max-width:90ch}
+@media (max-width:980px){.detail{grid-template-columns:1fr 1fr}.bohr{grid-column:1/-1}}
+@media (max-width:640px){
+  .head{grid-template-columns:1fr}
+  .detail{grid-template-columns:1fr}
+  .frame{margin:6px 0;box-shadow:0 0 0 4px #0d1f21,0 0 0 5px var(--brass)}
+  .detail,.foot{margin-left:0;margin-right:0}
+  .temp output{min-width:0}
+  .seg{width:100%}.seg button{flex:1;padding:10px 4px;letter-spacing:.06em;font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){.orbit{animation:none}.cell{transition:none}}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="wrap">
+  <header class="head">
+    <div>
+      <p class="gallery">Gallery IV · The Chemistry Rooms</p>
+      <h1>The <i>Hall</i> of<br>Elements</h1>
+    </div>
+    <aside class="placard"><b>Wall chart, 118 elements</b>Every substance you have ever touched is assembled from these. Recolour the chart, turn the thermostat, and select any square to read its label.</aside>
+  </header>
+
+  <div class="ctrls">
+    <div class="seg" role="group" aria-label="Colour by">
+      <button id="m-cat" data-m="cat" aria-pressed="true">Family</button>
+      <button id="m-state" data-m="state" aria-pressed="false">State</button>
+      <button id="m-en" data-m="en" aria-pressed="false">Electroneg.</button>
+      <button id="m-year" data-m="year" aria-pressed="false">Discovery</button>
+    </div>
+    <div class="temp">
+      <label for="t">Temperature</label>
+      <input id="t" type="range" min="0" max="6000" step="1" value="298">
+      <output id="tout" for="t">298 K</output>
+    </div>
+    <div class="presets" role="group" aria-label="Temperature presets">
+      <button id="p0" data-t="0">Absolute zero</button>
+      <button id="p1" data-t="298">Room · 25 °C</button>
+      <button id="p2" data-t="737">Venus surface</button>
+      <button id="p3" data-t="1811">Iron melts</button>
+      <button id="p4" data-t="5772">Sun's surface</button>
+    </div>
+  </div>
+
+  <div class="frame"><div class="scroller"><div class="grid" id="grid" aria-label="Periodic table"></div></div></div>
+
+  <section class="detail" aria-live="polite">
+    <div class="card" id="cardA"></div>
+    <div class="card" id="cardB"></div>
+    <div class="bohr"><svg id="bohr" viewBox="0 0 300 300" role="img" aria-label="Bohr model"></svg><div class="cap">Bohr model · electrons per shell</div><div class="cfg" id="cfg"></div></div>
+  </section>
+
+  <p class="foot">Standard atomic weights per IUPAC (bracketed values give the mass number of the longest-lived isotope). Electronegativity on the Pauling scale. Melting and boiling points at one atmosphere; carbon and arsenic sublime, helium only freezes under pressure, and properties of elements beyond fermium are largely unmeasured. Discovery years follow the usual first isolation or identification; "antiquity" marks elements known since ancient times.</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+// Z|sym|name|mass|cat|EN|mp K|bp K|year(0=antiquity)|shells
+const RAW = `1|H|Hydrogen|1.008|nonmetal|2.20|14.01|20.28|1766|1
+2|He|Helium|4.0026|noble||0|4.22|1868|2
+3|Li|Lithium|6.94|alkali|0.98|453.65|1603|1817|2,1
+4|Be|Beryllium|9.0122|alkaline|1.57|1560|2742|1798|2,2
+5|B|Boron|10.81|metalloid|2.04|2349|4200|1808|2,3
+6|C|Carbon|12.011|nonmetal|2.55|3915|3915|0|2,4
+7|N|Nitrogen|14.007|nonmetal|3.04|63.15|77.36|1772|2,5
+8|O|Oxygen|15.999|nonmetal|3.44|54.36|90.19|1774|2,6
+9|F|Fluorine|18.998|halogen|3.98|53.48|85.03|1886|2,7
+10|Ne|Neon|20.180|noble||24.56|27.07|1898|2,8
+11|Na|Sodium|22.990|alkali|0.93|370.94|1156.09|1807|2,8,1
+12|Mg|Magnesium|24.305|alkaline|1.31|923|1363|1755|2,8,2
+13|Al|Aluminium|26.982|post|1.61|933.47|2743|1825|2,8,3
+14|Si|Silicon|28.085|metalloid|1.90|1687|3538|1824|2,8,4
+15|P|Phosphorus|30.974|nonmetal|2.19|317.3|553.6|1669|2,8,5
+16|S|Sulfur|32.06|nonmetal|2.58|388.36|717.8|0|2,8,6
+17|Cl|Chlorine|35.45|halogen|3.16|171.6|239.11|1774|2,8,7
+18|Ar|Argon|39.95|noble||83.81|87.30|1894|2,8,8
+19|K|Potassium|39.098|alkali|0.82|336.53|1032|1807|2,8,8,1
+20|Ca|Calcium|40.078|alkaline|1.00|1115|1757|1808|2,8,8,2
+21|Sc|Scandium|44.956|transition|1.36|1814|3109|1879|2,8,9,2
+22|Ti|Titanium|47.867|transition|1.54|1941|3560|1791|2,8,10,2
+23|V|Vanadium|50.942|transition|1.63|2183|3680|1801|2,8,11,2
+24|Cr|Chromium|51.996|transition|1.66|2180|2944|1797|2,8,13,1
+25|Mn|Manganese|54.938|transition|1.55|1519|2334|1774|2,8,13,2
+26|Fe|Iron|55.845|transition|1.83|1811|3134|0|2,8,14,2
+27|Co|Cobalt|58.933|transition|1.88|1768|3200|1735|2,8,15,2
+28|Ni|Nickel|58.693|transition|1.91|1728|3003|1751|2,8,16,2
+29|Cu|Copper|63.546|transition|1.90|1357.77|2835|0|2,8,18,1
+30|Zn|Zinc|65.38|transition|1.65|692.68|1180|1746|2,8,18,2
+31|Ga|Gallium|69.723|post|1.81|302.91|2673|1875|2,8,18,3
+32|Ge|Germanium|72.630|metalloid|2.01|1211.4|3106|1886|2,8,18,4
+33|As|Arsenic|74.922|metalloid|2.18|887|887|1250|2,8,18,5
+34|Se|Selenium|78.971|nonmetal|2.55|494|958|1817|2,8,18,6
+35|Br|Bromine|79.904|halogen|2.96|265.8|332.0|1826|2,8,18,7
+36|Kr|Krypton|83.798|noble|3.00|115.78|119.93|1898|2,8,18,8
+37|Rb|Rubidium|85.468|alkali|0.82|312.45|961|1861|2,8,18,8,1
+38|Sr|Strontium|87.62|alkaline|0.95|1050|1655|1790|2,8,18,8,2
+39|Y|Yttrium|88.906|transition|1.22|1799|3609|1794|2,8,18,9,2
+40|Zr|Zirconium|91.224|transition|1.33|2128|4682|1789|2,8,18,10,2
+41|Nb|Niobium|92.906|transition|1.6|2750|5017|1801|2,8,18,12,1
+42|Mo|Molybdenum|95.95|transition|2.16|2896|4912|1778|2,8,18,13,1
+43|Tc|Technetium|[98]|transition|1.9|2430|4538|1937|2,8,18,13,2
+44|Ru|Ruthenium|101.07|transition|2.2|2607|4423|1844|2,8,18,15,1
+45|Rh|Rhodium|102.91|transition|2.28|2237|3968|1804|2,8,18,16,1
+46|Pd|Palladium|106.42|transition|2.20|1828.05|3236|1802|2,8,18,18
+47|Ag|Silver|107.87|transition|1.93|1234.93|2435|0|2,8,18,18,1
+48|Cd|Cadmium|112.41|transition|1.69|594.22|1040|1817|2,8,18,18,2
+49|In|Indium|114.82|post|1.78|429.75|2345|1863|2,8,18,18,3
+50|Sn|Tin|118.71|post|1.96|505.08|2875|0|2,8,18,18,4
+51|Sb|Antimony|121.76|metalloid|2.05|903.78|1860|0|2,8,18,18,5
+52|Te|Tellurium|127.60|metalloid|2.1|722.66|1261|1782|2,8,18,18,6
+53|I|Iodine|126.90|halogen|2.66|386.85|457.4|1811|2,8,18,18,7
+54|Xe|Xenon|131.29|noble|2.6|161.4|165.03|1898|2,8,18,18,8
+55|Cs|Caesium|132.91|alkali|0.79|301.7|944|1860|2,8,18,18,8,1
+56|Ba|Barium|137.33|alkaline|0.89|1000|2118|1772|2,8,18,18,8,2
+57|La|Lanthanum|138.91|lanthanide|1.10|1193|3737|1839|2,8,18,18,9,2
+58|Ce|Cerium|140.12|lanthanide|1.12|1068|3716|1803|2,8,18,19,9,2
+59|Pr|Praseodymium|140.91|lanthanide|1.13|1208|3793|1885|2,8,18,21,8,2
+60|Nd|Neodymium|144.24|lanthanide|1.14|1297|3347|1885|2,8,18,22,8,2
+61|Pm|Promethium|[145]|lanthanide|1.13|1315|3273|1945|2,8,18,23,8,2
+62|Sm|Samarium|150.36|lanthanide|1.17|1345|2067|1879|2,8,18,24,8,2
+63|Eu|Europium|151.96|lanthanide|1.2|1099|1802|1901|2,8,18,25,8,2
+64|Gd|Gadolinium|157.25|lanthanide|1.2|1585|3546|1880|2,8,18,25,9,2
+65|Tb|Terbium|158.93|lanthanide|1.2|1629|3503|1843|2,8,18,27,8,2
+66|Dy|Dysprosium|162.50|lanthanide|1.22|1680|2840|1886|2,8,18,28,8,2
+67|Ho|Holmium|164.93|lanthanide|1.23|1734|2993|1878|2,8,18,29,8,2
+68|Er|Erbium|167.26|lanthanide|1.24|1802|3141|1843|2,8,18,30,8,2
+69|Tm|Thulium|168.93|lanthanide|1.25|1818|2223|1879|2,8,18,31,8,2
+70|Yb|Ytterbium|173.05|lanthanide|1.1|1097|1469|1878|2,8,18,32,8,2
+71|Lu|Lutetium|174.97|lanthanide|1.27|1925|3675|1907|2,8,18,32,9,2
+72|Hf|Hafnium|178.49|transition|1.3|2506|4876|1923|2,8,18,32,10,2
+73|Ta|Tantalum|180.95|transition|1.5|3290|5731|1802|2,8,18,32,11,2
+74|W|Tungsten|183.84|transition|2.36|3695|6203|1783|2,8,18,32,12,2
+75|Re|Rhenium|186.21|transition|1.9|3459|5869|1925|2,8,18,32,13,2
+76|Os|Osmium|190.23|transition|2.2|3306|5285|1803|2,8,18,32,14,2
+77|Ir|Iridium|192.22|transition|2.20|2719|4403|1803|2,8,18,32,15,2
+78|Pt|Platinum|195.08|transition|2.28|2041.4|4098|1735|2,8,18,32,17,1
+79|Au|Gold|196.97|transition|2.54|1337.33|3243|0|2,8,18,32,18,1
+80|Hg|Mercury|200.59|transition|2.00|234.32|629.88|0|2,8,18,32,18,2
+81|Tl|Thallium|204.38|post|1.62|577|1746|1861|2,8,18,32,18,3
+82|Pb|Lead|207.2|post|2.33|600.61|2022|0|2,8,18,32,18,4
+83|Bi|Bismuth|208.98|post|2.02|544.7|1837|1753|2,8,18,32,18,5
+84|Po|Polonium|[209]|post|2.0|527|1235|1898|2,8,18,32,18,6
+85|At|Astatine|[210]|halogen|2.2|575|610|1940|2,8,18,32,18,7
+86|Rn|Radon|[222]|noble|2.2|202|211.5|1899|2,8,18,32,18,8
+87|Fr|Francium|[223]|alkali|0.79|300|950|1939|2,8,18,32,18,8,1
+88|Ra|Radium|[226]|alkaline|0.9|973|2010|1898|2,8,18,32,18,8,2
+89|Ac|Actinium|[227]|actinide|1.1|1323|3471|1899|2,8,18,32,18,9,2
+90|Th|Thorium|232.04|actinide|1.3|2023|5061|1829|2,8,18,32,18,10,2
+91|Pa|Protactinium|231.04|actinide|1.5|1841|4300|1913|2,8,18,32,20,9,2
+92|U|Uranium|238.03|actinide|1.38|1405.3|4404|1789|2,8,18,32,21,9,2
+93|Np|Neptunium|[237]|actinide|1.36|912|4447|1940|2,8,18,32,22,9,2
+94|Pu|Plutonium|[244]|actinide|1.28|912.5|3505|1940|2,8,18,32,24,8,2
+95|Am|Americium|[243]|actinide|1.13|1449|2880|1944|2,8,18,32,25,8,2
+96|Cm|Curium|[247]|actinide|1.28|1613|3383|1944|2,8,18,32,25,9,2
+97|Bk|Berkelium|[247]|actinide|1.3|1259|2900|1949|2,8,18,32,27,8,2
+98|Cf|Californium|[251]|actinide|1.3|1173|1743|1950|2,8,18,32,28,8,2
+99|Es|Einsteinium|[252]|actinide|1.3|1133||1952|2,8,18,32,29,8,2
+100|Fm|Fermium|[257]|actinide|1.3|||1952|2,8,18,32,30,8,2
+101|Md|Mendelevium|[258]|actinide|1.3|||1955|2,8,18,32,31,8,2
+102|No|Nobelium|[259]|actinide|1.3|||1966|2,8,18,32,32,8,2
+103|Lr|Lawrencium|[266]|actinide|1.3|||1961|2,8,18,32,32,8,3
+104|Rf|Rutherfordium|[267]|transition||||1964|2,8,18,32,32,10,2
+105|Db|Dubnium|[268]|transition||||1967|2,8,18,32,32,11,2
+106|Sg|Seaborgium|[269]|transition||||1974|2,8,18,32,32,12,2
+107|Bh|Bohrium|[270]|transition||||1981|2,8,18,32,32,13,2
+108|Hs|Hassium|[269]|transition||||1984|2,8,18,32,32,14,2
+109|Mt|Meitnerium|[278]|unknown||||1982|2,8,18,32,32,15,2
+110|Ds|Darmstadtium|[281]|unknown||||1994|2,8,18,32,32,16,2
+111|Rg|Roentgenium|[282]|unknown||||1994|2,8,18,32,32,17,2
+112|Cn|Copernicium|[285]|unknown||||1996|2,8,18,32,32,18,2
+113|Nh|Nihonium|[286]|unknown||||2003|2,8,18,32,32,18,3
+114|Fl|Flerovium|[289]|unknown||||1998|2,8,18,32,32,18,4
+115|Mc|Moscovium|[290]|unknown||||2003|2,8,18,32,32,18,5
+116|Lv|Livermorium|[293]|unknown||||2000|2,8,18,32,32,18,6
+117|Ts|Tennessine|[294]|unknown||||2010|2,8,18,32,32,18,7
+118|Og|Oganesson|[294]|unknown||||2002|2,8,18,32,32,18,8`;
+
+const CATS = {
+  alkali:['Alkali metal','--c-alkali'], alkaline:['Alkaline earth','--c-alkaline'], transition:['Transition metal','--c-transition'],
+  post:['Post-transition metal','--c-post'], metalloid:['Metalloid','--c-metalloid'], nonmetal:['Reactive nonmetal','--c-nonmetal'],
+  halogen:['Halogen','--c-halogen'], noble:['Noble gas','--c-noble'], lanthanide:['Lanthanide','--c-lanthanide'],
+  actinide:['Actinide','--c-actinide'], unknown:['Properties unknown','--c-unknown']
+};
+const css = getComputedStyle(document.documentElement);
+const catColor = k => css.getPropertyValue(CATS[k][1]).trim();
+
+const EL = RAW.split('\n').map(l=>{
+  const [z,s,n,m,c,en,mp,bp,y,sh]=l.split('|');
+  return {z:+z,s,n,m,c,en:en===''?null:+en,mp:mp===''?null:+mp,bp:bp===''?null:+bp,y:+y,sh:sh.split(',').map(Number)};
+});
+
+function pos(z){
+  if(z===1) return [1,1]; if(z===2) return [18,1];
+  if(z<=4) return [z-2,2]; if(z<=10) return [z+8,2];
+  if(z<=12) return [z-10,3]; if(z<=18) return [z,3];
+  if(z<=36) return [z-18,4]; if(z<=54) return [z-36,5];
+  if(z<=56) return [z-54,6]; if(z<=71) return [z-57+3,9]; if(z<=86) return [z-68,6];
+  if(z<=88) return [z-86,7]; if(z<=103) return [z-89+3,10]; return [z-100,7];
+}
+
+const grid = document.getElementById('grid');
+// key
+const key=document.createElement('div'); key.className='key'; key.id='key'; grid.appendChild(key);
+
+const cells = {};
+EL.forEach(e=>{
+  const [col,row]=pos(e.z);
+  const b=document.createElement('button');
+  b.className='cell'; b.id='el-'+e.s; b.type='button';
+  b.style.gridColumn=col; b.style.gridRow=row;
+  b.setAttribute('aria-label',`${e.z} ${e.n}`); b.setAttribute('aria-pressed','false');
+  b.innerHTML=`<span class="z">${e.z}</span><span class="v"></span><span class="s">${e.s}</span><span class="n">${e.n}</span>`;
+  b.addEventListener('click',()=>select(e));
+  grid.appendChild(b); cells[e.z]=b; e.el=b;
+});
+[['57–71',6],['89–103',7]].forEach(([t,row])=>{
+  const p=document.createElement('div'); p.className='cell ph'; p.style.gridColumn=3; p.style.gridRow=row; p.textContent=t; grid.appendChild(p);
+});
+
+// ---------- colour modes ----------
+let mode='cat', T=298, filterCat=null;
+function stateAt(e,t){
+  if(e.mp===null && e.bp===null) return 'unknown';
+  if(e.bp!==null && t>=e.bp) return 'gas';
+  if(e.mp!==null && t>=e.mp) return 'liquid';
+  if(e.mp===null) return 'unknown';
+  return 'solid';
+}
+const STATE = {solid:['Solid','#2b2f2e','#f8f8f5'],liquid:['Liquid','#2f7fb3','#fff'],gas:['Gas','#f1efe6','#131515'],unknown:['Unknown','#d9d9d4','#6b706e']};
+function mix(a,b,t){const pa=hex(a),pb=hex(b);return `rgb(${pa.map((v,i)=>Math.round(v+(pb[i]-v)*t)).join(',')})`}
+function hex(h){h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.substr(i,2),16))}
+function ramp(t){ // sequential: pale straw -> deep teal-ink
+  const stops=['#fbf4d8','#e7cf7c','#c98a45','#8e4b3d','#3f2a44'];
+  t=Math.max(0,Math.min(1,t)); const i=Math.min(stops.length-2,Math.floor(t*(stops.length-1))); const f=t*(stops.length-1)-i;
+  return mix(stops[i],stops[i+1],f);
+}
+function lum(rgb){const m=rgb.match(/\d+/g).map(Number);return (0.299*m[0]+0.587*m[1]+0.114*m[2])/255}
+
+function paint(){
+  EL.forEach(e=>{
+    let bg='#f8f8f5', fg='#131515', v='';
+    if(mode==='cat'){ bg=catColor(e.c); }
+    else if(mode==='state'){ const s=stateAt(e,T); bg=STATE[s][1]; fg=STATE[s][2]; }
+    else if(mode==='en'){ if(e.en===null){bg='#ecece8';fg='#9a9e9c';v='—'} else {bg=ramp((e.en-0.7)/(3.98-0.7)); v=e.en.toFixed(2)} }
+    else if(mode==='year'){ const y=e.y||1600; bg=e.y===0?'#3f2a44':ramp(1-(Math.min(2010,Math.max(1650,y))-1650)/360); v=e.y===0?'anc.':e.y; }
+    if(mode!=='state' && bg.startsWith('rgb')) fg = lum(bg)<.5?'#f8f8f5':'#131515';
+    else if(mode==='cat') fg='#131515';
+    e.el.style.backgroundColor=bg; e.el.style.color=fg;
+    e.el.querySelector('.v').textContent=v;
+    e.el.classList.toggle('dim', mode==='cat' && filterCat && e.c!==filterCat);
+  });
+  drawKey();
+}
+function drawKey(){
+  let h='';
+  if(mode==='cat'){
+    h=`<div class="t">Families of elements</div>`+Object.entries(CATS).map(([k,[n]])=>`<button id="k-${k}" data-k="${k}" aria-pressed="${filterCat===k}"><i style="background:${catColor(k)}"></i><span>${n}</span></button>`).join('');
+  } else if(mode==='state'){
+    const counts={solid:0,liquid:0,gas:0,unknown:0}; EL.forEach(e=>counts[stateAt(e,T)]++);
+    h=`<div class="t">State of matter at ${T.toLocaleString('en-GB')} K (${(T-273.15).toLocaleString('en-GB',{maximumFractionDigits:0})} °C)</div>`+
+      Object.entries(STATE).map(([k,[n,c]])=>`<span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border:1px solid #1d1f1f;background:${c}"></i>${n} · ${counts[k]}</span>`).join('');
+  } else if(mode==='en'){
+    h=`<div class="t">Electronegativity (Pauling)</div><div class="ramp" style="background:linear-gradient(90deg,${[0,.25,.5,.75,1].map(ramp).join(',')})"></div><div class="rl"><span>0.7 · gives electrons away</span><span>3.98 · fluorine, the greediest</span></div>`;
+  } else {
+    h=`<div class="t">Year of discovery</div><div class="ramp" style="background:linear-gradient(90deg,#3f2a44 0 8%,${[1,.75,.5,.25,0].map(ramp).join(',')})"></div><div class="rl"><span>Antiquity · 1650</span><span>1830</span><span>2010</span></div>`;
+  }
+  key.innerHTML=h;
+  key.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{filterCat = filterCat===b.dataset.k?null:b.dataset.k; paint();}));
+}
+
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
+  mode=b.dataset.m; document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b)); paint();
+}));
+const tIn=document.getElementById('t'), tOut=document.getElementById('tout');
+function setT(v,switchMode){
+  T=+v; tIn.value=T;
+  tOut.innerHTML=`${T.toLocaleString('en-GB')} K<small>${(T-273.15).toLocaleString('en-GB',{maximumFractionDigits:0})} °C</small>`;
+  if(switchMode && mode!=='state'){ document.getElementById('m-state').click(); return; }
+  paint(); if(current) renderDetail(current);
+}
+tIn.addEventListener('input',()=>setT(tIn.value,true));
+document.querySelectorAll('.presets button').forEach(b=>b.addEventListener('click',()=>setT(b.dataset.t,true)));
+
+// ---------- detail ----------
+let current=null;
+const cardA=document.getElementById('cardA'), cardB=document.getElementById('cardB'), bohr=document.getElementById('bohr'), cfg=document.getElementById('cfg');
+const k2c = k => (k-273.15).toLocaleString('en-GB',{maximumFractionDigits:1});
+function select(e){
+  if(current) current.el.setAttribute('aria-pressed','false');
+  current=e; e.el.setAttribute('aria-pressed','true');
+  renderDetail(e); renderBohr(e);
+}
+function renderDetail(e){
+  const st=stateAt(e,T), room=stateAt(e,298);
+  const age = e.y ? `${e.y} · ${2026-e.y} years ago` : 'Known since antiquity';
+  cardA.innerHTML=`<div class="no">Element no. ${e.z} · period ${periodOf(e.z)}${groupOf(e.z)?' · group '+groupOf(e.z):''}</div>
+    <div class="big">${e.s}</div><h2>${e.n}</h2>
+    <div class="cat"><i style="background:${catColor(e.c)}"></i>${CATS[e.c][0]}</div>`;
+  const rows=[
+    ['Atomic weight', e.m],
+    ['Protons · electrons', `${e.z} · ${e.z}`],
+    ['Electronegativity', e.en===null?'not determined':e.en.toFixed(2)],
+    ['Melts', e.mp===null? (e.z===2?'only under pressure':'unknown') : e.mp===e.bp? `sublimes at ${e.mp.toLocaleString('en-GB')} K` : `${e.mp.toLocaleString('en-GB')} K · ${k2c(e.mp)} °C`],
+    ['Boils', e.bp===null?'unknown': e.mp===e.bp?'—':`${e.bp.toLocaleString('en-GB')} K · ${k2c(e.bp)} °C`],
+    ['At room temp.', STATE[room][0]],
+    [`At ${T.toLocaleString('en-GB')} K`, STATE[st][0]],
+    ['Discovered', age]
+  ];
+  cardB.innerHTML=`<table class="facts"><tbody>${rows.map(([k,v])=>`<tr><th scope="row">${k}</th><td>${v}</td></tr>`).join('')}</tbody></table>`;
+}
+function periodOf(z){return z<=2?1:z<=10?2:z<=18?3:z<=36?4:z<=54?5:z<=86?6:7}
+function groupOf(z){const [c,r]=pos(z);return r>=9?null:c}
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function renderBohr(e){
+  const n=e.sh.length, rMax=138, r0=34;
+  const step=(rMax-r0)/Math.max(1,n-1||1);
+  let s=`<defs><radialGradient id="nuc" cx="40%" cy="35%"><stop offset="0" stop-color="#f6e2b4"/><stop offset="1" stop-color="#b0833b"/></radialGradient></defs>`;
+  const nucR=Math.min(24,8+Math.cbrt(e.z)*3.2);
+  s+=`<circle cx="150" cy="150" r="${nucR}" fill="url(#nuc)"/><text x="150" y="154" text-anchor="middle" font-family="Bodoni Moda,serif" font-size="12" fill="#1a1a1a" font-weight="600">${e.z}+</text>`;
+  e.sh.forEach((cnt,i)=>{
+    const r = n===1 ? 70 : r0+step*i+ (i===0?4:0);
+    s+=`<circle cx="150" cy="150" r="${r}" fill="none" stroke="rgba(200,168,103,.45)" stroke-width=".8"/>`;
+    const dur=(6+i*4.5)*(i%2?-1:1);
+    s+=`<g class="orbit" style="animation-duration:${Math.abs(dur)}s;animation-direction:${dur<0?'reverse':'normal'}">`;
+    for(let k=0;k<cnt;k++){
+      const a=k/cnt*Math.PI*2 + i*0.4;
+      s+=`<circle cx="${(150+Math.cos(a)*r).toFixed(2)}" cy="${(150+Math.sin(a)*r).toFixed(2)}" r="${cnt>18?2.3:3.2}" fill="#9fd2e8"/>`;
+    }
+    s+='</g>';
+  });
+  bohr.innerHTML=s;
+  cfg.textContent=e.sh.join(' · ');
+  bohr.setAttribute('aria-label',`Bohr model of ${e.n}: ${e.sh.join(', ')} electrons per shell`);
+}
+
+paint(); select(EL[78]); // gold
+setT(298,false);
+})();
+</script>
+</body>
+</html>

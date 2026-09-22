@@ -74,13 +74,13 @@ button{font-family:inherit; cursor:pointer}
 .tile{
   position:absolute; top:0; left:0; border-radius:3px; color:#0f141b; overflow:hidden;
   transition:transform 110ms ease-out; will-change:transform;
-  display:block; padding:6% 8%;
+  display:block; padding:calc(var(--cs,100px)*.07) calc(var(--cs,100px)*.08);
   box-shadow:inset 0 -3px 0 rgba(0,0,0,.18), 0 6px 16px -8px rgba(0,0,0,.7);
 }
-.tile .z{font-size:clamp(9px,2.4vw,13px); font-weight:600; display:flex; justify-content:space-between}
-.tile .s{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:900; font-size:clamp(30px,9.5vw,58px); line-height:.9; margin-top:4%}
-.tile .n{font-size:clamp(8px,2vw,11px); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.tile .m{font-size:clamp(7px,1.8vw,10px); opacity:.7}
+.tile .z{font-size:calc(var(--cs,100px)*.11); font-weight:600; display:flex; justify-content:space-between}
+.tile .s{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:900; font-size:calc(var(--cs,100px)*.46); line-height:.95; margin-top:auto}
+.tile .n{font-size:calc(var(--cs,100px)*.095); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
 .tile.pop .inner{animation:pop 200ms ease-out}
 .tile.new .inner{animation:appear 200ms ease-out}
 .inner{width:100%; height:100%; display:flex; flex-direction:column}
@@ -275,7 +275,7 @@ aside h3 small{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(
   }
   function place(t){
     const x = geom.pad + t.x*(geom.cell+geom.gap), y = geom.pad + t.y*(geom.cell+geom.gap);
-    t.el.style.width = t.el.style.height = geom.cell + 'px';
+    t.el.style.width = t.el.style.height = geom.cell + 'px'; t.el.style.setProperty('--cs', geom.cell + 'px');
     t.el.style.transform = `translate(${x}px,${y}px)`;
   }
   function tileHTML(v){

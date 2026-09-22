@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Greenleaf Ledger</title>
+<meta name="description" content="A monthly envelope budget on green accountant's ledger paper: log income, give every pound a job, track spending against each envelope and keep a running transaction book.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400;1,6..72,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#eef5e6; --paper-2:#e3eed8; --rule:#b9d3a8; --rule-strong:#8fb87a; --margin:#d65b5b;
+  --ink:#1d2b1f; --ink-soft:#4f6651; --ink-faint:#7f957f;
+  --head:#2e5a36; --head-ink:#f2f8ea;
+  --good:#2b7a3d; --warn:#b7791f; --bad:#b83232;
+  --bar-bg:#d6e6c9; --bar:#4f8f5b; --bar-over:#c94a4a;
+  --field:#fbfdf7; --focus:#1d5fd1;
+  --stamp:#a13030;
+  --shadow:0 1px 0 rgba(0,0,0,.05), 0 20px 40px -24px rgba(20,50,20,.45);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#11201a; --paper-2:#0d1a15; --rule:#1f3a2c; --rule-strong:#2f5840; --margin:#9b3b3b;
+    --ink:#dcebd8; --ink-soft:#9dbb9f; --ink-faint:#6d8a70;
+    --head:#1b3b26; --head-ink:#dff0d8;
+    --good:#6fcf83; --warn:#e3b04f; --bad:#ff7b7b;
+    --bar-bg:#1b3326; --bar:#5fae6d; --bar-over:#e06464;
+    --field:#0c1813; --focus:#8ab4ff;
+    --stamp:#ff8a8a;
+    --shadow:0 20px 40px -20px rgba(0,0,0,.8);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; min-height:100vh; color:var(--ink); background-color:var(--paper-2);
+  font-family:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; font-size:15px;
+  font-variant-numeric:tabular-nums lining-nums;
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left));
+}
+:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+.serif{font-family:"Newsreader","Iowan Old Style","Palatino Linotype",Georgia,serif}
+.book{
+  max-width:1200px; margin:0 auto; position:relative; background-color:var(--paper);
+  background-image:
+    linear-gradient(90deg, transparent 0 46px, var(--margin) 46px 47px, transparent 47px 50px, var(--margin) 50px 51px, transparent 51px),
+    repeating-linear-gradient(180deg, transparent 0 27px, var(--rule) 27px 28px);
+  box-shadow:var(--shadow); border:1px solid var(--rule-strong); padding:22px 24px 30px 70px;
+}
+@media (max-width:640px){ .book{padding:18px 14px 24px 30px; background-image:linear-gradient(90deg, transparent 0 16px, var(--margin) 16px 17px, transparent 17px 20px, var(--margin) 20px 21px, transparent 21px), repeating-linear-gradient(180deg, transparent 0 27px, var(--rule) 27px 28px)} }
+.topbar{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; border-bottom:3px double var(--rule-strong); padding-bottom:14px; margin-bottom:20px}
+.back{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); text-decoration:none; border-bottom:1px solid var(--rule-strong)}
+.back:hover{color:var(--ink)}
+h1{font-family:"Newsreader",Georgia,serif; font-weight:400; font-style:italic; font-size:clamp(34px,6vw,56px); line-height:.95; margin:10px 0 4px; letter-spacing:-.01em}
+h1 b{font-style:normal; font-weight:600}
+.sub{color:var(--ink-soft); font-size:13px; letter-spacing:.06em}
+.controls{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.month{display:flex; align-items:center; gap:4px; border:1px solid var(--rule-strong); background:var(--field)}
+.month button{border:0; background:transparent; color:var(--ink); font:500 18px/1 "DM Mono",monospace; padding:8px 12px; cursor:pointer}
+.month button:hover{background:var(--paper-2)}
+.month span{font-family:"Newsreader",Georgia,serif; font-size:19px; min-width:150px; text-align:center}
+select,input{font:inherit; color:var(--ink); background:var(--field); border:1px solid var(--rule-strong); padding:7px 8px; border-radius:0}
+input[type=number]{text-align:right}
+.lbl{font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft)}
+
+.summary{display:grid; grid-template-columns:1.3fr 1fr 1fr 1fr; gap:0; border:1px solid var(--rule-strong); margin-bottom:26px; background:var(--field)}
+.summary > div{padding:14px 16px; border-right:1px solid var(--rule)}
+.summary > div:last-child{border-right:0}
+.summary .big{font-size:clamp(22px,3.2vw,32px); font-weight:500; margin-top:6px; letter-spacing:-.02em}
+.assign{position:relative}
+.assign .big{font-family:"Newsreader",Georgia,serif; font-size:clamp(30px,4.5vw,44px); font-weight:600}
+.assign .note{font-size:12px; color:var(--ink-soft); margin-top:2px}
+.stamp{position:absolute; right:12px; top:12px; transform:rotate(-8deg); border:2px solid var(--stamp); color:var(--stamp); font:600 11px/1 "DM Mono",monospace; letter-spacing:.18em; padding:5px 7px; text-transform:uppercase; opacity:.85}
+.stamp.ok{border-color:var(--good); color:var(--good)}
+@media (max-width:800px){ .summary{grid-template-columns:1fr 1fr} .summary > div:nth-child(2){border-right:0} .summary > div:nth-child(-n+2){border-bottom:1px solid var(--rule)} }
+
+.grid{display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); gap:32px}
+@media (max-width:960px){ .grid{grid-template-columns:minmax(0,1fr)} }
+h2{font-family:"Newsreader",Georgia,serif; font-weight:600; font-size:24px; margin:0 0 10px; display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap}
+h2 small{font-family:"DM Mono",monospace; font-weight:400; font-size:12px; color:var(--ink-soft); letter-spacing:.08em}
+
+table{width:100%; border-collapse:collapse}
+th{font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--head-ink); background:var(--head); font-weight:500; padding:7px 8px; text-align:right}
+th:first-child{text-align:left}
+td{padding:4px 8px; height:28px; border-bottom:1px solid var(--rule); vertical-align:middle; text-align:right}
+td:first-child{text-align:left}
+td + td, th + th{border-left:1px solid var(--rule-strong)}
+tr.group td{font-family:"Newsreader",Georgia,serif; font-style:italic; font-size:17px; color:var(--head); padding-top:12px; border-bottom:1px solid var(--rule-strong); text-align:left}
+@media (prefers-color-scheme: dark){ tr.group td{color:var(--good)} }
+tr.group td + td{border-left:0}
+td input{width:100%; background:transparent; border:0; border-bottom:1px dotted transparent; padding:3px 2px; font-size:15px}
+td input:hover{border-bottom-color:var(--rule-strong)}
+td input:focus{background:var(--field); border-bottom-color:var(--ink)}
+.plan-in{max-width:110px; margin-left:auto; display:block}
+.left.neg{color:var(--bad); font-weight:500}
+.left.pos{color:var(--good)}
+.barcell{width:26%; min-width:90px}
+.bar{position:relative; height:12px; background:var(--bar-bg); border:1px solid var(--rule-strong)}
+.bar i{position:absolute; left:0; top:0; bottom:0; background:repeating-linear-gradient(90deg, var(--bar) 0 5px, color-mix(in srgb, var(--bar) 80%, #fff) 5px 6px); transition:width .5s}
+.bar.over i{background:repeating-linear-gradient(90deg, var(--bar-over) 0 5px, color-mix(in srgb, var(--bar-over) 80%, #fff) 5px 6px)}
+.bar b{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--ink); opacity:.55}
+.x{border:0; background:none; color:var(--ink-faint); cursor:pointer; font:500 16px/1 "DM Mono",monospace; padding:2px 5px}
+.x:hover{color:var(--bad)}
+tfoot td{font-weight:500; border-top:3px double var(--rule-strong); border-bottom:0}
+.addrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:center}
+.addrow input, .addrow select{flex:1 1 120px; min-width:0}
+.addrow input.amt{flex:0 1 110px}
+.btn{font:500 13px/1 "DM Mono",monospace; letter-spacing:.08em; text-transform:uppercase; padding:9px 12px; border:1px solid var(--ink); background:var(--ink); color:var(--paper); cursor:pointer}
+.btn:hover{background:transparent; color:var(--ink)}
+.btn.ghost{background:transparent; color:var(--ink)}
+.btn.ghost:hover{background:var(--ink); color:var(--paper)}
+.card{margin-bottom:30px}
+.tx-list{max-height:460px; overflow:auto; border:1px solid var(--rule-strong); background:var(--field)}
+.tx-list table td{font-size:14px}
+.tx-list thead th{position:sticky; top:0; z-index:1}
+.payee{text-align:left !important; max-width:0; width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.payee small{display:block; color:var(--ink-faint); font-size:11px}
+.inc-amt{color:var(--good)}
+.pace{margin-top:14px; font-size:13px; color:var(--ink-soft); line-height:1.6; border-left:3px solid var(--rule-strong); padding-left:12px}
+.pace strong{color:var(--ink)}
+.msg{font-size:13px; color:var(--ink-soft); margin-top:8px; min-height:18px}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+.foot{margin-top:24px; font-size:12px; color:var(--ink-faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px}
+@media (prefers-reduced-motion: reduce){ .bar i{transition:none} }
+@media (max-width:560px){
+  .barcell{display:none}
+  .hide-sm{display:none}
+  td{padding:4px 5px}
+}
+</style>
+</head>
+<body>
+<main class="book">
+  <div class="topbar">
+    <div>
+      <a class="back" href="index.html">&larr; Showcase</a>
+      <h1><b>Greenleaf</b> Ledger</h1>
+      <div class="sub">Envelope budgeting &middot; every <span id="cur-word">pound</span> gets a job</div>
+    </div>
+    <div class="controls">
+      <div class="month" role="group" aria-label="Month">
+        <button id="m-prev" aria-label="Previous month">&lsaquo;</button>
+        <span id="m-label" aria-live="polite">September 2026</span>
+        <button id="m-next" aria-label="Next month">&rsaquo;</button>
+      </div>
+      <label class="lbl" for="currency">Currency</label>
+      <select id="currency">
+        <option value="GBP">GBP &pound;</option><option value="EUR">EUR &euro;</option><option value="USD">USD $</option>
+        <option value="CAD">CAD $</option><option value="AUD">AUD $</option><option value="NZD">NZD $</option>
+        <option value="CHF">CHF</option><option value="JPY">JPY &yen;</option><option value="INR">INR &#8377;</option>
+        <option value="SEK">SEK kr</option><option value="ZAR">ZAR R</option>
+      </select>
+    </div>
+  </div>
+
+  <section class="summary" aria-label="Month summary">
+    <div class="assign"><div class="lbl">Left to assign</div><div class="big" id="s-assign">0</div><div class="note" id="s-assign-note"></div><span class="stamp" id="s-stamp">Balanced</span></div>
+    <div><div class="lbl">Income</div><div class="big" id="s-income">0</div></div>
+    <div><div class="lbl">Spent so far</div><div class="big" id="s-spent">0</div></div>
+    <div><div class="lbl">Left in envelopes</div><div class="big" id="s-left">0</div></div>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="h-env">
+      <h2 id="h-env">Envelopes <small id="env-count"></small></h2>
+      <table id="env-table">
+        <thead><tr><th scope="col">Envelope</th><th scope="col">Planned</th><th scope="col" class="hide-sm">Spent</th><th scope="col">Left</th><th scope="col" class="barcell">Used</th><th scope="col"><span class="sr">Remove</span></th></tr></thead>
+        <tbody id="env-body"></tbody>
+        <tfoot><tr><td>Totals</td><td id="t-plan"></td><td id="t-spent" class="hide-sm"></td><td id="t-left"></td><td class="barcell"></td><td></td></tr></tfoot>
+      </table>
+      <form class="addrow" id="env-form">
+        <label class="sr" for="env-name">Envelope name</label><input id="env-name" placeholder="New envelope, e.g. Dentist" required maxlength="40">
+        <label class="sr" for="env-group">Group</label><input id="env-group" placeholder="Group" list="groups" maxlength="30">
+        <datalist id="groups"></datalist>
+        <label class="sr" for="env-plan">Planned amount</label><input id="env-plan" class="amt" type="number" step="0.01" min="0" placeholder="0.00">
+        <button class="btn" id="env-add" type="submit">Add</button>
+      </form>
+      <div class="pace" id="pace"></div>
+      <div class="addrow" style="margin-top:14px">
+        <button class="btn ghost" id="copy-prev" type="button">Copy plan from previous month</button>
+        <button class="btn ghost" id="reset" type="button">Reset to sample</button>
+      </div>
+      <p class="msg" id="env-msg" aria-live="polite"></p>
+    </section>
+
+    <div>
+      <section class="card" aria-labelledby="h-inc">
+        <h2 id="h-inc">Income <small id="inc-total"></small></h2>
+        <table><thead><tr><th scope="col">Source</th><th scope="col">Amount</th><th scope="col"><span class="sr">Remove</span></th></tr></thead><tbody id="inc-body"></tbody></table>
+        <form class="addrow" id="inc-form">
+          <label class="sr" for="inc-name">Income source</label><input id="inc-name" placeholder="Source" required maxlength="40">
+          <label class="sr" for="inc-amt">Income amount</label><input id="inc-amt" class="amt" type="number" step="0.01" min="0" placeholder="0.00" required>
+          <button class="btn" id="inc-add" type="submit">Add</button>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="h-tx">
+        <h2 id="h-tx">Transactions <small id="tx-count"></small></h2>
+        <form class="addrow" id="tx-form" style="margin:0 0 10px">
+          <label class="sr" for="tx-date">Date</label><input id="tx-date" type="date" required style="flex:0 1 150px">
+          <label class="sr" for="tx-payee">Payee</label><input id="tx-payee" placeholder="Payee" required maxlength="50">
+          <label class="sr" for="tx-env">Envelope</label><select id="tx-env"></select>
+          <label class="sr" for="tx-amt">Amount spent</label><input id="tx-amt" class="amt" type="number" step="0.01" placeholder="0.00" required>
+          <button class="btn" id="tx-add" type="submit">Record</button>
+        </form>
+        <div class="addrow" style="margin:0 0 10px">
+          <label class="lbl" for="tx-filter">Show</label>
+          <select id="tx-filter"><option value="">All envelopes</option></select>
+        </div>
+        <div class="tx-list">
+          <table><thead><tr><th scope="col">Date</th><th scope="col">Payee</th><th scope="col">Amount</th><th scope="col"><span class="sr">Remove</span></th></tr></thead><tbody id="tx-body"></tbody></table>
+        </div>
+        <p class="msg">Negative amounts record refunds back into an envelope.</p>
+      </section>
+    </div>
+  </div>
+  <div class="foot"><span>Saved on this device only.</span><span id="saved">&nbsp;</span></div>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "greenleaf-ledger-v1";
+  var $ = function(id){ return document.getElementById(id); };
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+  function r2(n){ return Math.round((Number(n)||0)*100)/100; }
+  function mkey(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
+  var today = new Date();
+  var current = mkey(today);
+
+  function sample(){
+    var k = current, y = today.getFullYear(), m = today.getMonth();
+    function d(day){ day = Math.min(day, today.getDate()); return y + "-" + String(m+1).padStart(2,"0") + "-" + String(day).padStart(2,"0"); }
+    var env = [
+      ["Home","Rent",1150],["Home","Council tax",148],["Home","Energy",95],["Home","Phone & broadband",55],
+      ["Everyday","Groceries",320],["Everyday","Transport",160],["Everyday","Eating out",120],["Everyday","Personal care",45],
+      ["Fun","Subscriptions",32],["Fun","Hobbies",60],["Fun","Gifts",40],
+      ["Future","Emergency fund",300],["Future","Holiday fund",150],["Future","Pension top-up",100]
+    ].map(function(e){ return {id:uid(), group:e[0], name:e[1], plan:e[2]}; });
+    function E(n){ return env.filter(function(e){ return e.name===n; })[0].id; }
+    var tx = [
+      [1,"Harrow Lettings","Rent",1150],[1,"Brentmoor Council","Council tax",148],[2,"Octave Energy","Energy",95],
+      [2,"Fernway Mobile","Phone & broadband",55],[3,"Allotment Grocers","Groceries",46.20],[4,"TfL Oyster top-up","Transport",40],
+      [5,"The Lantern & Crow","Eating out",34.50],[6,"Northfield Market","Groceries",27.85],[7,"Streamly","Subscriptions",10.99],
+      [8,"Bramble Bakery","Eating out",8.40],[9,"Allotment Grocers","Groceries",61.10],[10,"TfL Oyster top-up","Transport",40],
+      [11,"Kiln Pottery Studio","Hobbies",45],[12,"Boots","Personal care",18.75],[13,"Transfer to savings","Emergency fund",300],
+      [14,"Northfield Market","Groceries",33.40],[15,"Pho Saigon","Eating out",41.20],[16,"Paperchase","Gifts",14.99],
+      [17,"TfL Oyster top-up","Transport",40],[18,"Allotment Grocers","Groceries",52.65],[19,"Audiobook club","Subscriptions",7.99],
+      [20,"Transfer to holiday pot","Holiday fund",150],[21,"The Lantern & Crow","Eating out",29.00],[22,"Northfield Market","Groceries",38.90]
+    ].filter(function(t){ return t[0] <= today.getDate(); }).map(function(t){ return {id:uid(), date:d(t[0]), payee:t[1], env:E(t[2]), amt:t[3]}; });
+    var months = {}; months[k] = {income:[{id:uid(), name:"Salary (Tiller & Moss Ltd)", amt:3150},{id:uid(), name:"Freelance illustration", amt:280}], env:env, tx:tx};
+    return {currency:"GBP", months:months};
+  }
+  function load(){ try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && s.months) return s; } catch(e){} return null; }
+  var db = load() || sample();
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(db)); $("saved").textContent = "Saved " + new Date().toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}); } catch(e){ $("saved").textContent = "Not saved (storage unavailable)"; } }
+  function month(){ if (!db.months[current]) db.months[current] = {income:[], env:[], tx:[]}; return db.months[current]; }
+
+  var fmtCache = {};
+  function money(n, opts){
+    var c = db.currency || "GBP", key = c + (opts ? "s" : "");
+    if (!fmtCache[key]){ try { fmtCache[key] = new Intl.NumberFormat(undefined, Object.assign({style:"currency", currency:c}, opts||{})); } catch(e){ fmtCache[key] = {format:function(v){ return c + " " + v.toFixed(2); }}; } }
+    return fmtCache[key].format(n);
+  }
+  var words = {GBP:"pound", EUR:"euro", USD:"dollar", CAD:"dollar", AUD:"dollar", NZD:"dollar", CHF:"franc", JPY:"yen", INR:"rupee", SEK:"krona", ZAR:"rand"};
+
+  function spentBy(m){ var s = {}; m.tx.forEach(function(t){ s[t.env] = r2((s[t.env]||0) + t.amt); }); return s; }
+
+  function render(){
+    var m = month(), sp = spentBy(m);
+    var d = new Date(current + "-01T00:00:00");
+    $("m-label").textContent = d.toLocaleDateString(undefined, {month:"long", year:"numeric"});
+    $("cur-word").textContent = words[db.currency] || "unit";
+    $("currency").value = db.currency;
+
+    var income = r2(m.income.reduce(function(a,b){ return a + b.amt; }, 0));
+    var plan = r2(m.env.reduce(function(a,b){ return a + b.plan; }, 0));
+    var spent = r2(m.tx.reduce(function(a,b){ return a + b.amt; }, 0));
+    var assign = r2(income - plan);
+    $("s-income").textContent = money(income); $("s-spent").textContent = money(spent); $("s-left").textContent = money(r2(plan - spent));
+    $("s-assign").textContent = money(assign);
+    $("s-assign").style.color = assign < 0 ? "var(--bad)" : (assign === 0 ? "var(--good)" : "var(--ink)");
+    var st = $("s-stamp");
+    if (assign === 0 && income > 0){ st.textContent = "Balanced"; st.className = "stamp ok"; st.hidden = false; }
+    else if (assign < 0){ st.textContent = "Over-assigned"; st.className = "stamp"; st.hidden = false; }
+    else st.hidden = true;
+    $("s-assign-note").textContent = assign > 0 ? "Give it a job below." : (assign < 0 ? "Planned more than you earn." : (income ? "Every " + (words[db.currency]||"unit") + " has a job." : "Add income to begin."));
+
+    // envelopes grouped
+    var body = $("env-body"); body.innerHTML = "";
+    var groups = []; m.env.forEach(function(e){ if (groups.indexOf(e.group) < 0) groups.push(e.group); });
+    groups.forEach(function(g){
+      var tr = document.createElement("tr"); tr.className = "group"; var td = document.createElement("td"); td.colSpan = 6; td.textContent = g || "Ungrouped"; tr.appendChild(td); body.appendChild(tr);
+      m.env.filter(function(e){ return e.group === g; }).forEach(function(e){
+        var s = sp[e.id] || 0, left = r2(e.plan - s), pct = e.plan > 0 ? s/e.plan : (s > 0 ? 1.01 : 0);
+        var row = document.createElement("tr");
+        var c1 = document.createElement("td"); var ni = document.createElement("input"); ni.value = e.name; ni.id = "en-"+e.id; ni.setAttribute("aria-label","Envelope name"); ni.maxLength = 40;
+        ni.addEventListener("change", function(){ e.name = ni.value.trim() || e.name; save(); render(); }); c1.appendChild(ni);
+        var c2 = document.createElement("td"); var pi = document.createElement("input"); pi.type = "number"; pi.step = "0.01"; pi.min = "0"; pi.className = "plan-in"; pi.value = e.plan; pi.id = "ep-"+e.id; pi.setAttribute("aria-label","Planned for " + e.name);
+        pi.addEventListener("change", function(){ e.plan = Math.max(0, r2(pi.value)); save(); render(); var n = $("ep-"+e.id); }); c2.appendChild(pi);
+        var c3 = document.createElement("td"); c3.className = "hide-sm"; c3.textContent = money(s);
+        var c4 = document.createElement("td"); c4.className = "left " + (left < 0 ? "neg" : (left > 0 ? "pos" : "")); c4.textContent = money(left);
+        var c5 = document.createElement("td"); c5.className = "barcell";
+        var bar = document.createElement("div"); bar.className = "bar" + (pct > 1 ? " over" : ""); bar.title = Math.round(pct*100) + "% used";
+        var fill = document.createElement("i"); fill.style.width = Math.min(100, pct*100) + "%"; bar.appendChild(fill);
+        // pace marker: how far through the month we are
+        var pm = paceFrac(); if (pm !== null){ var mk = document.createElement("b"); mk.style.left = (pm*100) + "%"; bar.appendChild(mk); }
+        c5.appendChild(bar);
+        var c6 = document.createElement("td"); var x = document.createElement("button"); x.className = "x"; x.textContent = "×"; x.id = "ed-"+e.id; x.setAttribute("aria-label","Remove envelope " + e.name);
+        x.addEventListener("click", function(){
+          if (m.tx.some(function(t){ return t.env === e.id; })){ $("env-msg").textContent = "“" + e.name + "” has transactions. Move or delete them first."; return; }
+          m.env = m.env.filter(function(z){ return z !== e; }); save(); render();
+        }); c6.appendChild(x);
+        [c1,c2,c3,c4,c5,c6].forEach(function(c){ row.appendChild(c); }); body.appendChild(row);
+      });
+    });
+    $("t-plan").textContent = money(plan); $("t-spent").textContent = money(spent); $("t-left").textContent = money(r2(plan-spent));
+    $("env-count").textContent = m.env.length + " envelopes";
+    var dl = $("groups"); dl.innerHTML = ""; groups.forEach(function(g){ var o = document.createElement("option"); o.value = g; dl.appendChild(o); });
+
+    // pace text
+    var pf = paceFrac(), pace = $("pace");
+    if (pf !== null){
+      var dim = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(), daysLeft = Math.max(1, dim - today.getDate() + 1);
+      var flexIds = m.env.filter(function(e){ return !/^(Home|Future)$/i.test(e.group); });
+      var flexLeft = r2(flexIds.reduce(function(a,e){ return a + (e.plan - (sp[e.id]||0)); }, 0));
+      var overs = m.env.filter(function(e){ return (sp[e.id]||0) > e.plan; }).map(function(e){ return e.name; });
+      pace.innerHTML = "";
+      pace.appendChild(txt("Day " + today.getDate() + " of " + dim + ". The dark tick on each bar marks where an even pace would be. "));
+      var s1 = document.createElement("strong"); s1.textContent = money(Math.max(0, flexLeft/daysLeft)) + " a day"; pace.appendChild(s1);
+      pace.appendChild(txt(" is safe to spend across day-to-day envelopes for the remaining " + daysLeft + " days."));
+      if (overs.length){ pace.appendChild(document.createElement("br")); var s2 = document.createElement("strong"); s2.style.color = "var(--bad)"; s2.textContent = "Over: " + overs.join(", ") + "."; pace.appendChild(s2); }
+    } else pace.textContent = current < mkey(today) ? "This month is closed. Totals are final." : "A future month. Plan ahead; nothing spent yet.";
+
+    // income
+    var ib = $("inc-body"); ib.innerHTML = "";
+    m.income.forEach(function(i){
+      var row = document.createElement("tr");
+      var a = document.createElement("td"); var ai = document.createElement("input"); ai.value = i.name; ai.id = "in-"+i.id; ai.setAttribute("aria-label","Income source"); ai.addEventListener("change", function(){ i.name = ai.value.trim() || i.name; save(); }); a.appendChild(ai);
+      var b = document.createElement("td"); var bi = document.createElement("input"); bi.type = "number"; bi.step = "0.01"; bi.min = "0"; bi.className = "plan-in inc-amt"; bi.value = i.amt; bi.id = "ia-"+i.id; bi.setAttribute("aria-label","Amount for " + i.name);
+      bi.addEventListener("change", function(){ i.amt = Math.max(0, r2(bi.value)); save(); render(); }); b.appendChild(bi);
+      var c = document.createElement("td"); var x = document.createElement("button"); x.className = "x"; x.textContent = "×"; x.id = "id-"+i.id; x.setAttribute("aria-label","Remove income " + i.name);
+      x.addEventListener("click", function(){ m.income = m.income.filter(function(z){ return z !== i; }); save(); render(); }); c.appendChild(x);
+      row.appendChild(a); row.appendChild(b); row.appendChild(c); ib.appendChild(row);
+    });
+    if (!m.income.length){ var er = document.createElement("tr"); var et = document.createElement("td"); et.colSpan = 3; et.textContent = "No income recorded yet."; et.style.color = "var(--ink-faint)"; er.appendChild(et); ib.appendChild(er); }
+    $("inc-total").textContent = money(income);
+
+    // tx envelope selects
+    [$("tx-env"), $("tx-filter")].forEach(function(sel, k){
+      var keep = sel.value; sel.innerHTML = k ? '<option value="">All envelopes</option>' : "";
+      m.env.forEach(function(e){ var o = document.createElement("option"); o.value = e.id; o.textContent = e.name; sel.appendChild(o); });
+      if (keep && m.env.some(function(e){ return e.id === keep; })) sel.value = keep;
+    });
+
+    var tb = $("tx-body"); tb.innerHTML = "";
+    var f = $("tx-filter").value, list = m.tx.filter(function(t){ return !f || t.env === f; }).slice().sort(function(a,b){ return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+    list.forEach(function(t){
+      var e = m.env.filter(function(z){ return z.id === t.env; })[0];
+      var row = document.createElement("tr");
+      var a = document.createElement("td"); a.textContent = new Date(t.date+"T00:00:00").toLocaleDateString(undefined,{day:"2-digit", month:"short"}); a.style.whiteSpace = "nowrap";
+      var b = document.createElement("td"); b.className = "payee"; b.textContent = t.payee; var sm = document.createElement("small"); sm.textContent = e ? e.name : "(deleted envelope)"; b.appendChild(sm);
+      var c = document.createElement("td"); c.textContent = money(t.amt); if (t.amt < 0) c.style.color = "var(--good)";
+      var dd = document.createElement("td"); var x = document.createElement("button"); x.className = "x"; x.textContent = "×"; x.id = "td-"+t.id; x.setAttribute("aria-label","Delete transaction " + t.payee);
+      x.addEventListener("click", function(){ m.tx = m.tx.filter(function(z){ return z !== t; }); save(); render(); }); dd.appendChild(x);
+      row.appendChild(a); row.appendChild(b); row.appendChild(c); row.appendChild(dd); tb.appendChild(row);
+    });
+    if (!list.length){ var r = document.createElement("tr"); var c0 = document.createElement("td"); c0.colSpan = 4; c0.textContent = "Nothing recorded yet."; c0.style.color = "var(--ink-faint)"; r.appendChild(c0); tb.appendChild(r); }
+    $("tx-count").textContent = m.tx.length + " entries";
+    var prev = prevKey(); $("copy-prev").disabled = !db.months[prev] || !db.months[prev].env.length;
+  }
+  function txt(s){ return document.createTextNode(s); }
+  function paceFrac(){ if (current !== mkey(today)) return null; var dim = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate(); return today.getDate()/dim; }
+  function shift(k, n){ var p = k.split("-").map(Number); var d = new Date(p[0], p[1]-1+n, 1); return mkey(d); }
+  function prevKey(){ return shift(current, -1); }
+
+  $("m-prev").addEventListener("click", function(){ current = shift(current,-1); setDateDefault(); render(); });
+  $("m-next").addEventListener("click", function(){ current = shift(current,1); setDateDefault(); render(); });
+  $("currency").addEventListener("change", function(){ db.currency = this.value; fmtCache = {}; save(); render(); });
+
+  $("env-form").addEventListener("submit", function(e){
+    e.preventDefault(); var m = month();
+    var name = $("env-name").value.trim(); if (!name) return;
+    m.env.push({id:uid(), name:name, group:$("env-group").value.trim() || "Everyday", plan:Math.max(0, r2($("env-plan").value))});
+    $("env-name").value = ""; $("env-plan").value = ""; save(); render(); $("env-name").focus();
+  });
+  $("inc-form").addEventListener("submit", function(e){
+    e.preventDefault(); var m = month();
+    m.income.push({id:uid(), name:$("inc-name").value.trim(), amt:Math.max(0, r2($("inc-amt").value))});
+    $("inc-name").value = ""; $("inc-amt").value = ""; save(); render();
+  });
+  $("tx-form").addEventListener("submit", function(e){
+    e.preventDefault(); var m = month();
+    if (!m.env.length){ $("env-msg").textContent = "Add an envelope first."; return; }
+    var amt = r2($("tx-amt").value); if (!amt) return;
+    m.tx.push({id:uid(), date:$("tx-date").value, payee:$("tx-payee").value.trim(), env:$("tx-env").value, amt:amt});
+    $("tx-payee").value = ""; $("tx-amt").value = ""; save(); render(); $("tx-payee").focus();
+  });
+  $("tx-filter").addEventListener("change", render);
+  $("copy-prev").addEventListener("click", function(){
+    var p = db.months[prevKey()]; if (!p) return; var m = month();
+    var have = {}; m.env.forEach(function(e){ have[e.name] = true; });
+    var added = 0;
+    p.env.forEach(function(e){ if (!have[e.name]){ m.env.push({id:uid(), name:e.name, group:e.group, plan:e.plan}); added++; } });
+    if (!m.income.length) p.income.forEach(function(i){ m.income.push({id:uid(), name:i.name, amt:i.amt}); });
+    $("env-msg").textContent = added ? "Copied " + added + " envelopes from last month." : "All envelopes already present.";
+    save(); render();
+  });
+  var armT = 0;
+  $("reset").addEventListener("click", function(){
+    var b = this;
+    if (!b.dataset.armed){ b.dataset.armed = "1"; b.textContent = "Tap again: erase all months"; armT = setTimeout(function(){ delete b.dataset.armed; b.textContent = "Reset to sample"; }, 3000); return; }
+    clearTimeout(armT); delete b.dataset.armed; b.textContent = "Reset to sample";
+    var cur = db.currency; db = sample(); db.currency = cur; current = mkey(today); save(); render(); $("env-msg").textContent = "Sample ledger restored.";
+  });
+
+  function setDateDefault(){ var t = new Date(); $("tx-date").value = current === mkey(t) ? t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0") : current + "-01"; }
+  setDateDefault();
+  render();
+})();
+</script>
+</body>
+</html>

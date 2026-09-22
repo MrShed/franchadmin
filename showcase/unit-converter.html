@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vernier Unit Rule</title>
+<meta name="description" content="A brass slide-rule unit converter for length, mass, volume, temperature, cooking ingredients, speed, data sizes and pressure, with a draggable scale and every-unit readout.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=B612+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#dfe3e0; --board:#e9ece9; --grid:rgba(40,60,60,.07); --ink:#1b1a17; --muted:#5f625d; --hair:#b9bdb7;
+  --brass-1:#e9c878; --brass-2:#c79a45; --brass-3:#8c6423; --engr:#2a1d08; --glass:rgba(255,255,255,.28); --hairline:#c0261b;
+  --panel:#f6f7f5; --field:#ffffff;
+  --cond:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --mono:"B612 Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#17120f;--board:#1f1814;--grid:rgba(233,200,120,.05);--ink:#efe6d4;--muted:#a3978a;--hair:#3e342c;--panel:#241c17;--field:#1a1411;--glass:rgba(255,255,255,.08);--hairline:#ff5a45;color-scheme:dark}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--cond);font-size:17px;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+:focus-visible{outline:2px solid var(--hairline);outline-offset:3px}
+.wrap{max-width:1180px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right)) 80px max(16px,env(safe-area-inset-left))}
+.top{display:flex;justify-content:space-between;align-items:center;font:12px var(--mono);color:var(--muted);letter-spacing:.06em}
+.top a{color:inherit;text-decoration:none;border-bottom:1px solid var(--hair)}
+.top a:hover{color:var(--ink)}
+.plate{margin:22px 0 26px;padding:20px 24px;border-radius:6px;background:linear-gradient(170deg,var(--brass-1),var(--brass-2) 55%,var(--brass-3));color:var(--engr);position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -2px 0 rgba(0,0,0,.25),0 14px 30px -18px rgba(0,0,0,.6);display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;overflow:hidden}
+.plate::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 1px,transparent 1px 3px);mix-blend-mode:overlay;pointer-events:none}
+.plate .screw{position:absolute;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff6d8,#a57a32 60%,#5a3d10);box-shadow:inset 0 0 0 1px rgba(0,0,0,.3)}
+.plate .screw::after{content:"";position:absolute;left:2px;right:2px;top:5px;height:2px;background:rgba(40,25,5,.7);transform:rotate(35deg)}
+.plate h1{margin:0;font-weight:700;font-size:clamp(40px,7vw,76px);line-height:.88;letter-spacing:.01em;text-transform:uppercase;text-shadow:0 1px 0 rgba(255,255,255,.45)}
+.plate p{margin:6px 0 0;font:13px var(--mono);letter-spacing:.04em;opacity:.8}
+.plate .serial{font:12px var(--mono);text-align:right;opacity:.75;line-height:1.5}
+.cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.cats button{font:600 15px var(--cond);letter-spacing:.08em;text-transform:uppercase;padding:8px 14px;border:1px solid var(--hair);background:var(--panel);color:var(--muted);border-radius:3px;cursor:pointer}
+.cats button[aria-pressed=true]{background:linear-gradient(180deg,var(--brass-1),var(--brass-2));color:var(--engr);border-color:var(--brass-3);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.io{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:end}
+@media (max-width:720px){.io{grid-template-columns:minmax(0,1fr)}.io .swap{justify-self:center;transform:rotate(90deg)}}
+.field{background:var(--panel);border:1px solid var(--hair);border-radius:4px;padding:10px 12px 12px}
+.field label{display:block;font:11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,150px);gap:8px}
+.field input{font:700 clamp(28px,4vw,40px) var(--mono);width:100%;min-width:0;background:var(--field);color:var(--ink);border:1px solid var(--hair);border-radius:3px;padding:6px 10px}
+.field select,.ing select{font:600 17px var(--cond);background:var(--field);color:var(--ink);border:1px solid var(--hair);border-radius:3px;padding:6px 8px;width:100%;min-width:0}
+.swap{width:48px;height:48px;border-radius:50%;border:1px solid var(--brass-3);background:radial-gradient(circle at 40% 35%,var(--brass-1),var(--brass-2) 60%,var(--brass-3));color:var(--engr);font:700 20px var(--mono);cursor:pointer;margin-bottom:14px;box-shadow:0 4px 10px -4px rgba(0,0,0,.5)}
+.swap:active{transform:scale(.95)}
+.ing{display:none;margin-top:12px;gap:10px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.ing.on{display:flex;flex-wrap:wrap}
+.ing select{width:auto}
+.formula{font:13px var(--mono);color:var(--muted);margin:12px 0 0;min-height:1.4em}
+.formula b{color:var(--ink)}
+/* rule */
+.rule{margin:22px 0 8px;position:relative;border-radius:6px;overflow:hidden;box-shadow:0 18px 30px -20px rgba(0,0,0,.6),inset 0 0 0 1px var(--brass-3);touch-action:pan-y;cursor:ew-resize;background:var(--brass-3)}
+.rule canvas{display:block;width:100%;height:180px}
+.rule-hint{display:flex;justify-content:space-between;font:11px var(--mono);color:var(--muted);letter-spacing:.06em;gap:10px;flex-wrap:wrap}
+.cols{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:24px;margin-top:30px}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+h2{font:700 22px var(--cond);text-transform:uppercase;letter-spacing:.1em;margin:0 0 10px;display:flex;align-items:center;gap:10px}
+h2::after{content:"";flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--muted) 0 1px,transparent 1px 6px);opacity:.6}
+table.all{width:100%;border-collapse:collapse;font-size:17px}
+.all td{padding:7px 6px;border-bottom:1px solid var(--hair)}
+.all td.v{font:15px var(--mono);text-align:right;word-break:break-all}
+.all tr{cursor:pointer}
+.all tr:hover td{background:var(--panel)}
+.all tr.cur td{color:var(--hairline)}
+.all td.u{white-space:nowrap}
+.all td.u small{color:var(--muted);font-size:13px;margin-left:6px}
+.hist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.hist li button{width:100%;text-align:left;background:var(--panel);border:1px solid var(--hair);border-left:4px solid var(--brass-2);border-radius:3px;padding:8px 10px;font:14px var(--mono);color:var(--ink);cursor:pointer}
+.hist li button span{color:var(--muted)}
+.prec{display:flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--muted);margin-bottom:12px}
+.prec input{accent-color:var(--brass-2)}
+.small-btn{font:12px var(--mono);background:none;border:1px solid var(--hair);color:var(--muted);border-radius:3px;padding:5px 9px;cursor:pointer}
+.small-btn:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="index.html" id="backLink">← Showcase</a><span>Model VR-8 · eight scales</span></div>
+
+  <div class="plate">
+    <span class="screw" style="left:8px;top:8px"></span><span class="screw" style="right:8px;top:8px"></span><span class="screw" style="left:8px;bottom:8px"></span><span class="screw" style="right:8px;bottom:8px"></span>
+    <div><h1>Vernier<br>Unit Rule</h1><p>Precision conversion instrument — drag the scale or type a value.</p></div>
+    <div class="serial">No. 04718<br>Est. Sheffield<br>Brass &amp; boxwood</div>
+  </div>
+
+  <div class="cats" id="cats" role="group" aria-label="Quantity"></div>
+
+  <div class="io">
+    <div class="field"><label for="vFrom">From</label><div class="row"><input id="vFrom" inputmode="decimal" autocomplete="off"><select id="uFrom" aria-label="From unit"></select></div></div>
+    <button class="swap" id="swap" type="button" aria-label="Swap units">⇄</button>
+    <div class="field"><label for="vTo">To</label><div class="row"><input id="vTo" inputmode="decimal" autocomplete="off"><select id="uTo" aria-label="To unit"></select></div></div>
+  </div>
+  <div class="ing" id="ingRow"><label for="ingredient">Ingredient</label><select id="ingredient"></select><span id="ingNote"></span></div>
+  <p class="formula" id="formula"></p>
+
+  <div class="rule" id="rule" tabindex="0" role="slider" aria-label="Slide rule, drag or use arrow keys to change the value" aria-valuenow="0"><canvas id="cv"></canvas></div>
+  <div class="rule-hint"><span>↔ drag the rule · ←/→ nudge · shift for coarse</span><span id="ruleRead"></span></div>
+
+  <div class="cols">
+    <section>
+      <h2>Every scale</h2>
+      <div class="prec"><label for="sig">Significant figures</label><input type="range" id="sig" min="3" max="10" value="6"><b id="sigOut">6</b></div>
+      <table class="all" id="all"></table>
+    </section>
+    <section>
+      <h2>Logbook</h2>
+      <div class="prec"><span>Recent conversions, kept on this device.</span><button class="small-btn" id="clearHist" type="button">Clear</button></div>
+      <ul class="hist" id="hist"></ul>
+    </section>
+  </div>
+</div>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const KEY='vernier-rule-v1';
+  const ls={get(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}},set(v){try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}};
+  const lin=(k,name,sym)=>({name,sym,to:v=>v*k,from:v=>v/k});
+  const ING={flour:['Plain flour',125],sugar:['Caster / granulated sugar',200],brown:['Brown sugar (packed)',220],icing:['Icing sugar',120],butter:['Butter',227],rice:['Rice (uncooked)',185],oats:['Rolled oats',90],honey:['Honey',340],cocoa:['Cocoa powder',85],milk:['Milk',245],water:['Water',236.6],almond:['Ground almonds',96]};
+  let ing='flour';
+  const cook=()=>{const g=ING[ing][1];return [lin(1,'Grams','g'),lin(1000,'Kilograms','kg'),lin(28.349523125,'Ounces','oz'),lin(453.59237,'Pounds','lb'),lin(g,'US cups','cup'),lin(g/16,'Tablespoons','tbsp'),lin(g/48,'Teaspoons','tsp'),lin(g/236.5882365,'Millilitres (by volume)','mL'),lin(g/2,'Sticks (½ cup)','stick')]};
+  const CATS={
+    length:{label:'Length',units:[lin(1e-6,'Micrometres','µm'),lin(.001,'Millimetres','mm'),lin(.01,'Centimetres','cm'),lin(1,'Metres','m'),lin(1000,'Kilometres','km'),lin(.0254,'Inches','in'),lin(.3048,'Feet','ft'),lin(.9144,'Yards','yd'),lin(1609.344,'Miles','mi'),lin(1852,'Nautical miles','nmi')],d:[5,'mi','km']},
+    mass:{label:'Mass',units:[lin(1e-6,'Milligrams','mg'),lin(.001,'Grams','g'),lin(1,'Kilograms','kg'),lin(1000,'Tonnes','t'),lin(.028349523125,'Ounces','oz'),lin(.45359237,'Pounds','lb'),lin(6.35029318,'Stone','st')],d:[11,'st','kg']},
+    volume:{label:'Volume',units:[lin(.001,'Millilitres','mL'),lin(1,'Litres','L'),lin(1000,'Cubic metres','m³'),lin(.00492892159375,'US teaspoons','tsp'),lin(.01478676478125,'US tablespoons','tbsp'),lin(.0295735295625,'US fluid ounces','fl oz'),lin(.2365882365,'US cups','cup'),lin(.56826125,'UK pints','pt UK'),lin(.473176473,'US pints','pt US'),lin(4.54609,'UK gallons','gal UK'),lin(3.785411784,'US gallons','gal US')],d:[2,'pt UK','L']},
+    temp:{label:'Temperature',units:[{name:'Celsius',sym:'°C',to:v=>v,from:v=>v},{name:'Fahrenheit',sym:'°F',to:v=>(v-32)*5/9,from:v=>v*9/5+32},{name:'Kelvin',sym:'K',to:v=>v-273.15,from:v=>v+273.15},{name:'Rankine',sym:'°R',to:v=>(v-491.67)*5/9,from:v=>(v+273.15)*9/5},{name:'Gas mark',sym:'GM',to:v=>v>=1?121+14*v:121+14*v,from:v=>(v-121)/14}],d:[180,'°C','°F']},
+    cooking:{label:'Cooking',units:null,d:[2,'cup','g']},
+    speed:{label:'Speed',units:[lin(1,'Metres / second','m/s'),lin(1/3.6,'Kilometres / hour','km/h'),lin(.44704,'Miles / hour','mph'),lin(.514444,'Knots','kn'),lin(.3048,'Feet / second','ft/s'),lin(343,'Mach (sea level)','Ma')],d:[70,'mph','km/h']},
+    data:{label:'Data',units:[lin(.125,'Bits','bit'),lin(1,'Bytes','B'),lin(1e3,'Kilobytes','kB'),lin(1024,'Kibibytes','KiB'),lin(1e6,'Megabytes','MB'),lin(1048576,'Mebibytes','MiB'),lin(1e9,'Gigabytes','GB'),lin(1073741824,'Gibibytes','GiB'),lin(1e12,'Terabytes','TB'),lin(1099511627776,'Tebibytes','TiB'),lin(1e15,'Petabytes','PB')],d:[500,'GB','GiB']},
+    pressure:{label:'Pressure',units:[lin(1,'Pascals','Pa'),lin(1000,'Kilopascals','kPa'),lin(100,'Millibar / hPa','mbar'),lin(1e5,'Bar','bar'),lin(101325,'Atmospheres','atm'),lin(6894.757293,'Pounds / sq inch','psi'),lin(133.322387,'mm of mercury','mmHg'),lin(3386.389,'Inches of mercury','inHg')],d:[32,'psi','bar']}
+  };
+  const saved=ls.get()||{};
+  let st={cat:saved.cat||'cooking',v:saved.v??2,from:saved.from||'cup',to:saved.to||'g',sig:saved.sig||6,hist:Array.isArray(saved.hist)?saved.hist:[
+    {cat:'temp',v:180,from:'°C',to:'°F',ing:null},{cat:'length',v:26.2,from:'mi',to:'km'},{cat:'data',v:4.7,from:'GB',to:'MiB'}],ing:saved.ing||'flour'};
+  ing=ING[st.ing]?st.ing:'flour';
+  const units=()=>st.cat==='cooking'?cook():CATS[st.cat].units;
+  const U=sym=>units().find(u=>u.sym===sym)||units()[0];
+  const conv=(v,a,b)=>U(b).from(U(a).to(v));
+  function fmt(n,sig){
+    sig=sig||st.sig;if(!isFinite(n))return '—';if(n===0)return '0';
+    const a=Math.abs(n);
+    if(a>=1e15||a<1e-6){return n.toExponential(Math.max(0,sig-1)).replace(/\.?0+e/,'e')}
+    let s=Number(n.toPrecision(sig));
+    const parts=s.toString().split('.');parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    return parts.join('.');
+  }
+  const parse=s=>{s=String(s).replace(/,/g,'').replace(/\s/g,'');if(/^[-+]?\d*\.?\d+\s*\/\s*\d+$/.test(s)){const[a,b]=s.split('/');return +a/+b}return parseFloat(s)};
+  // build cats
+  Object.entries(CATS).forEach(([k,c])=>{const b=document.createElement('button');b.type='button';b.id='cat-'+k;b.textContent=c.label;b.onclick=()=>setCat(k);$('cats').appendChild(b)});
+  Object.entries(ING).forEach(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v[0];$('ingredient').appendChild(o)});
+  function fillUnits(){
+    const opts=units().map(u=>`<option value="${u.sym}">${u.sym} — ${u.name}</option>`).join('');
+    $('uFrom').innerHTML=opts;$('uTo').innerHTML=opts;$('uFrom').value=st.from;$('uTo').value=st.to;
+    if($('uFrom').value!==st.from){st.from=units()[0].sym;$('uFrom').value=st.from}
+    if($('uTo').value!==st.to){st.to=units()[1].sym;$('uTo').value=st.to}
+  }
+  function setCat(k,keep){
+    st.cat=k;if(!keep){const d=CATS[k].d;st.v=d[0];st.from=d[1];st.to=d[2]}
+    document.querySelectorAll('#cats button').forEach(b=>b.setAttribute('aria-pressed',b.id==='cat-'+k));
+    $('ingRow').classList.toggle('on',k==='cooking');$('ingredient').value=ing;
+    fillUnits();spanLock=null;update();logLater();
+  }
+  let editing=null;
+  function update(){
+    const out=conv(st.v,st.from,st.to);
+    if(editing!=='from')$('vFrom').value=fmt(st.v);
+    if(editing!=='to')$('vTo').value=fmt(out);
+    const one=conv(1,st.from,st.to);
+    const isLin=st.cat!=='temp';
+    $('formula').innerHTML=isLin?`1 ${st.from} = <b>${fmt(one,8)}</b> ${st.to} &nbsp;·&nbsp; 1 ${st.to} = <b>${fmt(1/one,8)}</b> ${st.from}`:`${fmt(st.v)} ${st.from} → <b>${fmt(out)} ${st.to}</b> &nbsp;·&nbsp; offset scale (not a simple ratio)`;
+    if(st.cat==='cooking')$('ingNote').textContent='1 cup ≈ '+ING[ing][1]+' g';
+    $('all').innerHTML=units().map(u=>{const v=conv(st.v,st.from,u.sym);return `<tr class="${u.sym===st.to?'cur':''}" data-sym="${u.sym}" tabindex="0"><td class="u">${u.sym}<small>${u.name}</small></td><td class="v">${fmt(v)}</td></tr>`}).join('');
+    $('rule').setAttribute('aria-valuenow',st.v);$('rule').setAttribute('aria-valuetext',fmt(st.v)+' '+st.from+' equals '+fmt(out)+' '+st.to);
+    $('ruleRead').textContent=`${fmt(st.v)} ${st.from} ⟷ ${fmt(out)} ${st.to}`;
+    draw();persist();
+  }
+  $('all').addEventListener('click',e=>{const tr=e.target.closest('tr');if(tr){st.to=tr.dataset.sym;$('uTo').value=st.to;update();logLater()}});
+  $('all').addEventListener('keydown',e=>{if(e.key==='Enter'){const tr=e.target.closest('tr');if(tr){st.to=tr.dataset.sym;$('uTo').value=st.to;update()}}});
+  $('vFrom').addEventListener('input',e=>{const v=parse(e.target.value);if(isFinite(v)){editing='from';st.v=v;spanLock=null;update();editing=null;logLater()}});
+  $('vTo').addEventListener('input',e=>{const v=parse(e.target.value);if(isFinite(v)){editing='to';st.v=conv(v,st.to,st.from);spanLock=null;update();editing=null;logLater()}});
+  [$('vFrom'),$('vTo')].forEach(i=>i.addEventListener('blur',()=>update()));
+  $('uFrom').onchange=e=>{st.from=e.target.value;spanLock=null;update();logLater()};
+  $('uTo').onchange=e=>{st.to=e.target.value;update();logLater()};
+  $('swap').onclick=()=>{const out=conv(st.v,st.from,st.to);[st.from,st.to]=[st.to,st.from];st.v=Number(out.toPrecision(12));fillUnits();spanLock=null;update();logLater()};
+  $('ingredient').onchange=e=>{ing=st.ing=e.target.value;update();logLater()};
+  $('sig').value=st.sig;$('sigOut').textContent=st.sig;
+  $('sig').oninput=e=>{st.sig=+e.target.value;$('sigOut').textContent=st.sig;update()};
+  // history
+  let logT;
+  function logLater(){clearTimeout(logT);logT=setTimeout(()=>{
+    const e={cat:st.cat,v:st.v,from:st.from,to:st.to,ing:st.cat==='cooking'?ing:null};
+    st.hist=st.hist.filter(h=>!(h.cat===e.cat&&h.from===e.from&&h.to===e.to&&h.ing===e.ing));st.hist.unshift(e);st.hist=st.hist.slice(0,10);renderHist();persist()},1200)}
+  function renderHist(){
+    $('hist').innerHTML=st.hist.map((h,i)=>{let res='';try{const save=[st.cat,ing];st.cat=h.cat;if(h.ing)ing=h.ing;res=fmt(conv(h.v,h.from,h.to));st.cat=save[0];ing=save[1]}catch(e){}
+      return `<li><button type="button" id="h${i}" data-i="${i}">${fmt(h.v)} ${h.from} → ${res} ${h.to} <span>· ${CATS[h.cat]?CATS[h.cat].label:''}${h.ing?' · '+ING[h.ing][0]:''}</span></button></li>`}).join('')||'<li style="font:13px var(--mono);color:var(--muted)">Nothing logged yet.</li>';
+  }
+  $('hist').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const h=st.hist[+b.dataset.i];if(h.ing)ing=st.ing=h.ing;setCat(h.cat,true);st.v=h.v;st.from=h.from;st.to=h.to;fillUnits();update()});
+  $('clearHist').onclick=()=>{st.hist=[];renderHist();persist()};
+  function persist(){ls.set({cat:st.cat,v:st.v,from:st.from,to:st.to,sig:st.sig,hist:st.hist,ing})}
+  // canvas rule
+  const cv=$('cv'),ctx=cv.getContext('2d');let W=0,H=180,dpr=1,spanLock=null;
+  function resize(){dpr=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;cv.width=W*dpr;cv.height=H*dpr;draw()}
+  function nice(x){const e=Math.pow(10,Math.floor(Math.log10(x)));const f=x/e;return (f<1.5?1:f<3.5?2:f<7.5?5:10)*e}
+  function span(){if(spanLock)return spanLock;const a=Math.abs(st.v)||1;const s=Math.pow(10,Math.floor(Math.log10(a)));return s*6*(W<500?.6:1)}
+  const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  function strip(y,h,a,b,unit,flip,grad){
+    // brass strip
+    const g=ctx.createLinearGradient(0,y,0,y+h);grad.forEach((c,i)=>g.addColorStop(i/(grad.length-1),c));ctx.fillStyle=g;ctx.fillRect(0,y,W,h);
+    ctx.fillStyle='rgba(255,255,255,.05)';for(let x=0;x<W;x+=3)ctx.fillRect(x,y,1,h);
+    const px=v=>(v-a)/(b-a)*W;
+    const step=nice((b-a)/(W<500?5:9));const minor=step/(String(step/Math.pow(10,Math.floor(Math.log10(step))))[0]==='2'?4:5);
+    ctx.strokeStyle='#2a1d08';ctx.fillStyle='#2a1d08';ctx.lineWidth=1;
+    const base=flip?y:y+h;const dir=flip?1:-1;
+    const i0=Math.floor(a/minor),i1=Math.ceil(b/minor);
+    for(let i=i0;i<=i1;i++){const v=i*minor;
+      const x=Math.round(px(v))+.5;const isMaj=Math.abs(v/step-Math.round(v/step))<1e-6;const isHalf=!isMaj&&Math.abs((v/(step/2))-Math.round(v/(step/2)))<1e-6;
+      const len=isMaj?h*.42:isHalf?h*.28:h*.17;
+      ctx.beginPath();ctx.moveTo(x,base);ctx.lineTo(x,base+dir*len);ctx.lineWidth=isMaj?1.4:1;ctx.stroke();
+      if(isMaj){ctx.font='600 13px "B612 Mono", monospace';ctx.textAlign='center';ctx.textBaseline=flip?'top':'bottom';const lab=fmt(Math.abs(v)<step*1e-6?0:v,5);ctx.fillText(lab,x,base+dir*(len+4))}
+    }
+    // unit badge
+    ctx.font='700 15px "Barlow Condensed", sans-serif';ctx.textAlign='left';ctx.textBaseline=flip?'bottom':'top';
+    const tw=ctx.measureText(unit).width;ctx.fillStyle='rgba(42,29,8,.85)';ctx.fillRect(8,flip?y+h-24:y+6,tw+14,18);ctx.fillStyle='#f3d995';ctx.fillText(unit,15,flip?y+h-8:y+8);
+  }
+  function draw(){
+    if(!W)return;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+    const sp=span();const a=st.v-sp/2,b=st.v+sp/2;
+    const mid=H/2;
+    strip(0,mid-1,a,b,st.from,false,['#f0d58d','#d3a653','#b3843a']);
+    const ta=conv(a,st.from,st.to),tb=conv(b,st.from,st.to);
+    strip(mid+1,mid-1,ta,tb,st.to,true,['#b3843a','#cfa150','#e8c878']);
+    ctx.fillStyle='#3b2a0e';ctx.fillRect(0,mid-1,W,2);
+    // cursor glass
+    const cx=W/2,gw=64;
+    const gg=ctx.createLinearGradient(cx-gw/2,0,cx+gw/2,0);gg.addColorStop(0,'rgba(255,255,255,.05)');gg.addColorStop(.3,'rgba(255,255,255,.28)');gg.addColorStop(1,'rgba(255,255,255,.08)');
+    ctx.fillStyle=gg;ctx.fillRect(cx-gw/2,0,gw,H);ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1;ctx.strokeRect(cx-gw/2+.5,.5,gw-1,H-1);
+    ctx.strokeStyle=css('--hairline')||'#c0261b';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+  }
+  let drag=null;
+  const rule=$('rule');
+  rule.addEventListener('pointerdown',e=>{drag={x:e.clientX,v:st.v,sp:span()};spanLock=drag.sp;rule.setPointerCapture(e.pointerId)});
+  rule.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x;let v=drag.v-dx*drag.sp/W;const q=nice(drag.sp/200);st.v=Math.round(v/q)*q;st.v=Number(st.v.toPrecision(10));update()});
+  const end=()=>{if(drag){drag=null;logLater()}};
+  rule.addEventListener('pointerup',end);rule.addEventListener('pointercancel',end);
+  rule.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;e.preventDefault();const sp=span();const q=nice(sp/(e.shiftKey?10:100));st.v=Number((st.v+(e.key==='ArrowRight'?q:-q)).toPrecision(10));spanLock=sp;update();logLater()});
+  rule.addEventListener('blur',()=>{spanLock=null;draw()});
+  addEventListener('resize',resize);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
+  setCat(st.cat,true);renderHist();resize();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pellow Fossil Cabinet</title>
+<meta name="description" content="A museum catalogue of eight fossils in an oak collector's cabinet: pull a drawer to see engraved specimen plates, accession cards and their place in deep time.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --oak:#3a2615;
+  --oak-2:#4b321c;
+  --oak-3:#5f4126;
+  --brass:#c9a45c;
+  --brass-hi:#f0d596;
+  --baize:#2d3b31;
+  --baize-2:#24302a;
+  --card:#e9e4d6;
+  --card-ink:#2b2621;
+  --type:#3a352e;
+  --bone:#e2d3b3;
+  --wall:#171210;
+  --text:#e8dcc4;
+  --muted:#a8977a;
+  --display:"Cormorant SC", "Trajan Pro", Georgia, serif;
+  --serif:"Cormorant Garamond", Garamond, Georgia, serif;
+  --type-f:"Courier Prime", "Courier New", monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--wall)}
+body{
+  margin:0;background:var(--wall);color:var(--text);font-family:var(--serif);font-size:20px;line-height:1.5;overflow-x:hidden;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(240,213,150,.10), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0 2px, transparent 2px 7px);
+}
+:focus-visible{outline:2px solid var(--brass-hi);outline-offset:3px}
+.back{position:absolute;top:16px;left:16px;font-family:var(--type-f);font-size:13px;color:var(--muted);text-decoration:none;letter-spacing:.06em;border-bottom:1px dotted var(--muted)}
+.back:hover,.back:focus-visible{color:var(--brass-hi)}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+header{padding:80px 0 30px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:40px;align-items:end}
+.inst{font-family:var(--type-f);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass)}
+h1{font-family:var(--display);font-weight:500;font-size:clamp(48px,8.5vw,120px);line-height:.88;margin:18px 0 0;letter-spacing:.02em;color:var(--bone)}
+h1 i{font-family:var(--serif);font-style:italic;font-weight:400;text-transform:none;display:block;font-size:.5em;color:var(--brass);letter-spacing:0;margin-top:.2em}
+header p{margin:0 0 .8em;color:var(--text)}
+header p.small{font-size:17px;color:var(--muted);font-style:italic}
+
+/* time bar */
+.deep{margin:36px 0 50px}
+.deep h2{font-family:var(--type-f);font-weight:400;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bar{position:relative;height:74px;display:flex;border:1px solid rgba(201,164,92,.4)}
+.bar .per{appearance:none;border:0;padding:0;margin:0;font:inherit;position:relative;border-right:1px solid rgba(0,0,0,.35);height:100%;border-right:1px solid rgba(0,0,0,.35);overflow:hidden;cursor:pointer;background:var(--c);filter:saturate(.55) brightness(.62);transition:filter .3s}
+.bar .per:hover,.bar .per.on,.bar .per:focus-visible{filter:saturate(.9) brightness(.9)}
+.bar .per span{position:absolute;left:4px;bottom:4px;font-family:var(--type-f);font-size:11px;color:#140f0b;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+.pin{position:absolute;top:-10px;width:2px;height:94px;background:var(--brass-hi);transform:translateX(-1px);pointer-events:none;transition:left .6s cubic-bezier(.3,.7,.2,1)}
+.pin::before{content:"";position:absolute;top:-6px;left:-5px;width:12px;height:12px;background:var(--brass-hi);transform:rotate(45deg)}
+.pin b{position:absolute;top:-34px;left:8px;white-space:nowrap;font-family:var(--type-f);font-weight:400;font-size:13px;color:var(--brass-hi)}
+.ticks{display:flex;justify-content:space-between;font-family:var(--type-f);font-size:11px;color:var(--muted);margin-top:6px}
+.dot{position:absolute;bottom:-9px;width:8px;height:8px;border-radius:50%;background:var(--bone);transform:translateX(-4px);border:1px solid #000;pointer-events:none}
+
+/* cabinet */
+.cabinet{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:28px;align-items:start}
+.drawers{
+  padding:14px;background:
+    linear-gradient(90deg, rgba(0,0,0,.25), transparent 8%, transparent 92%, rgba(0,0,0,.25)),
+    repeating-linear-gradient(92deg, var(--oak) 0 7px, var(--oak-2) 7px 9px, var(--oak) 9px 19px, #432b17 19px 21px);
+  border:1px solid #1a1009;box-shadow:0 30px 60px -20px rgba(0,0,0,.8), inset 0 0 0 4px #2b1b0e;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:sticky;top:16px
+}
+.drawer{
+  all:unset;box-sizing:border-box;cursor:pointer;position:relative;height:96px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.06), transparent 30%, rgba(0,0,0,.2)),
+    repeating-linear-gradient(90deg, var(--oak-3) 0 5px, var(--oak-2) 5px 6px, var(--oak-3) 6px 14px, #563a21 14px 15px);
+  border:1px solid #1d1209;box-shadow:inset 0 0 0 3px rgba(0,0,0,.2), 0 2px 0 rgba(0,0,0,.4);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:transform .35s cubic-bezier(.3,.7,.2,1), box-shadow .35s
+}
+.drawer .holder{background:linear-gradient(var(--brass-hi),var(--brass) 50%,#8c6d33);padding:3px;border-radius:2px;box-shadow:0 1px 2px rgba(0,0,0,.6)}
+.drawer .holder span{display:block;background:var(--card);color:var(--card-ink);font-family:var(--type-f);font-size:11px;padding:3px 8px;letter-spacing:.04em;white-space:nowrap}
+.drawer .knob{width:26px;height:10px;border-radius:0 0 13px 13px;background:linear-gradient(var(--brass-hi),#7b5d2a);box-shadow:0 2px 3px rgba(0,0,0,.6)}
+.drawer .nm{font-family:var(--display);font-size:15px;color:var(--bone);letter-spacing:.06em;text-shadow:0 1px 0 #000}
+.drawer:hover{transform:translateY(-2px)}
+.drawer[aria-pressed="true"]{transform:scale(.96);box-shadow:inset 0 0 30px rgba(0,0,0,.9);filter:brightness(.7)}
+.drawer.dim{opacity:.35}
+.drawer:focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px}
+
+.tray-wrap{perspective:1400px}
+.tray{
+  position:relative;background:var(--baize);border:14px solid transparent;
+  border-image:repeating-linear-gradient(92deg, var(--oak-3) 0 6px, var(--oak-2) 6px 8px, #563a21 8px 16px) 14;
+  box-shadow:0 40px 80px -30px rgba(0,0,0,.9), inset 0 0 60px rgba(0,0,0,.55);
+  padding:26px;transform-origin:50% 0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='1.2' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .25 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.tray.slide{animation:slide .7s cubic-bezier(.2,.8,.2,1)}
+@keyframes slide{from{transform:translateY(-40px) rotateX(18deg);opacity:.2}to{transform:none;opacity:1}}
+.tray-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:26px;align-items:start}
+.plate{position:relative;background:var(--mx,#cbbd9c);box-shadow:0 14px 26px rgba(0,0,0,.55), inset 0 0 40px rgba(0,0,0,.25);aspect-ratio:1/1;overflow:hidden}
+.plate::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.035' numOctaves='4' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .5 -.05'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");mix-blend-mode:multiply;opacity:.55}
+.plate svg{width:100%;height:100%;display:block;position:relative;z-index:1}
+.plate svg .draw{stroke-dasharray:var(--len,3000);stroke-dashoffset:0}
+.tray.slide .plate svg .draw{animation:ink 1.8s ease-out}
+@keyframes ink{from{stroke-dashoffset:var(--len,3000)}to{stroke-dashoffset:0}}
+.scale{position:absolute;left:14px;bottom:12px;z-index:2;background:rgba(233,228,214,.85);padding:3px 7px;font-family:var(--type-f);font-size:11px;color:#1d1813;display:flex;align-items:center;gap:6px}
+.scale i{display:block;width:60px;height:6px;background:linear-gradient(90deg,#1d1813 50%,transparent 50%) 0 0/20px 6px;border:1px solid #1d1813}
+
+.card{
+  background:var(--card);color:var(--card-ink);padding:18px 18px 22px;font-family:var(--type-f);font-size:14px;line-height:1.55;
+  box-shadow:0 10px 20px rgba(0,0,0,.5);transform:rotate(.6deg);position:relative;
+  background-image:linear-gradient(transparent 0 36px, #b44e4e 36px 37px, transparent 37px), repeating-linear-gradient(transparent 0 21.7px, rgba(60,90,140,.22) 21.7px 22.7px);
+  background-position:0 0, 0 14px
+}
+.card::before{content:"";position:absolute;top:-8px;left:40%;width:70px;height:18px;background:rgba(220,210,180,.7);transform:rotate(-2deg);box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.card .acc{font-weight:700;font-size:15px;letter-spacing:.06em;display:flex;justify-content:space-between;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.card dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 12px}
+.card dt{color:#7a6e5c;text-transform:uppercase;font-size:11px;letter-spacing:.08em;padding-top:3px}
+.card dd{margin:0}
+.card dd i{font-family:var(--type-f)}
+.card .notes{margin-top:14px;font-size:13.5px}
+.tray h3{font-family:var(--display);font-weight:500;font-size:clamp(32px,4vw,50px);margin:0 0 4px;color:var(--bone);line-height:1}
+.tray .sub{font-style:italic;color:var(--brass);margin:0 0 18px;font-size:20px}
+.tray .essay{grid-column:1 / 3;color:var(--text);columns:2 300px;column-gap:32px;font-size:19px;margin-top:6px}
+.tray .essay p{margin:0 0 .8em}
+.tray .essay p:first-child::first-letter{font-family:var(--display);font-size:3.2em;float:left;line-height:.8;margin:.05em .08em 0 0;color:var(--brass-hi)}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:18px;font-family:var(--type-f);font-size:13px}
+.nav button{all:unset;cursor:pointer;color:var(--brass-hi);padding:6px 0;border-bottom:1px dotted var(--brass)}
+.nav button:focus-visible{outline:2px solid var(--brass-hi)}
+.nav span{color:var(--muted)}
+
+.essay-main{max-width:40em;margin:80px auto 0;font-size:21px}
+.essay-main h2{font-family:var(--display);font-weight:500;font-size:clamp(30px,4vw,48px);color:var(--bone);margin:0 0 .4em;line-height:1}
+footer{margin:80px 0 0;padding:30px 0 60px;border-top:1px solid rgba(201,164,92,.3);font-family:var(--type-f);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;letter-spacing:.05em}
+
+@media (max-width:960px){
+  header,.cabinet{grid-template-columns:minmax(0,1fr)}
+  .drawers{position:static;grid-template-columns:repeat(4,minmax(0,1fr))}
+  .drawer{height:84px}
+  .drawer .nm{font-size:12px}
+  .tray-grid{grid-template-columns:minmax(0,1fr)}
+  .tray .essay{grid-column:1}
+}
+@media (max-width:560px){
+  .drawers{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tray{padding:14px;border-width:10px}
+  .bar .per span{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .tray.slide,.tray.slide .plate svg .draw{animation:none}
+  .pin{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Showcase</a>
+  <header>
+    <div>
+      <span class="inst">Pellow Museum of Natural History · Gallery IV</span>
+      <h1>The Fossil Cabinet<i>a catalogue of eight drawers</i></h1>
+    </div>
+    <div>
+      <p>In 1887 the Reverend Absalom Pellow left the museum his collector's cabinet: forty-eight oak drawers, lined in green baize, each with a brass label-holder and a pencilled accession number. Most of the drawers now live in the stores. Eight of them are open to you here.</p>
+      <p class="small">Pull a drawer to open it. Click a period on the strip of deep time to find the drawers from that age. Arrow keys move between specimens.</p>
+    </div>
+  </header>
+
+  <section class="deep" aria-label="Geologic time">
+    <h2><span>Phanerozoic Eon · 538.8 million years ago to today</span><span id="pinAge">—</span></h2>
+    <div class="bar" id="bar"></div>
+    <div class="ticks"><span>539 Ma</span><span>400</span><span>300</span><span>200</span><span>100</span><span>today</span></div>
+  </section>
+
+  <section class="cabinet">
+    <div class="drawers" id="drawers" role="group" aria-label="Cabinet drawers"></div>
+    <div class="tray-wrap"><div class="tray" id="tray" aria-live="polite"></div></div>
+  </section>
+
+  <section class="essay-main">
+    <h2>On keeping stones that were animals</h2>
+    <p>A fossil is not a bone. It is a replacement: over thousands or millions of years, mineral-laden water seeps through buried remains and deposits crystals, grain by grain, in the spaces where the living tissue used to be. What you are looking at in these drawers is stone that has taken the shape of something else, preserved so faithfully that the growth lines on a trilobite's eye can still be counted.</p>
+    <p>Pellow's generation catalogued their finds on index cards, typed or written in iron-gall ink, and we have kept that tradition. Each specimen carries an accession number — the year it entered the collection and its sequence that year — so that any drawer, from any decade, can be traced back to the day someone first wrote it into the register. Several of our most famous pieces are casts, and we say so on the card: the original Archaeopteryx and the Tyrannosaurus are far too precious to live in a provincial cabinet, but the plaster remembers them well.</p>
+    <p>The strip of colour above is the Phanerozoic, the eon of visible life, drawn to scale. Notice how much of it has already passed before the first dinosaur appears, and how thin the slice is in which anything resembling us has walked about. The drawers are small. The time they hold is not.</p>
+  </section>
+
+  <footer><span>Pellow Museum of Natural History · Gallery IV · Catalogue edition 12</span><span>Period colours after the International Commission on Stratigraphy</span><span>Specimen plates drawn in the browser</span></footer>
+</div>
+
+<script>
+(function(){
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PERIODS=[
+  ['Cambrian',538.8,'#7FA056'],['Ordovician',485.4,'#009270'],['Silurian',443.8,'#B3E1B6'],['Devonian',419.2,'#CB8C37'],
+  ['Carboniferous',358.9,'#67A599'],['Permian',298.9,'#F04028'],['Triassic',251.9,'#812B92'],['Jurassic',201.4,'#34B2C9'],
+  ['Cretaceous',145,'#7FC64E'],['Paleogene',66,'#FD9A52'],['Neogene',23.03,'#FFE619'],['Quaternary',2.58,'#F9F97F']
+];
+const TOTAL=538.8;
+const pos=ma=>(1-ma/TOTAL)*100;
+
+/* ---------------- drawings ---------------- */
+const INK='#241c14';
+function ammonite(){
+  const cx=200,cy=205,b=Math.log(1.6)/(2*Math.PI),a=150/Math.pow(1.6,4);
+  const r=t=>a*Math.exp(b*t);
+  let spiral='',ribs='',fill='';
+  for(let t=-4*Math.PI;t<=8*Math.PI;t+=0.05){const x=cx+r(t)*Math.cos(t),y=cy+r(t)*Math.sin(t);spiral+=(spiral?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}
+  // outer edge
+  for(let t=6*Math.PI;t<=8*Math.PI;t+=0.05){const x=cx+r(t)*Math.cos(t),y=cy+r(t)*Math.sin(t);fill+=(fill?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}
+  for(let t=8*Math.PI;t>=6*Math.PI;t-=0.05){const x=cx+r(t-2*Math.PI)*Math.cos(t),y=cy+r(t-2*Math.PI)*Math.sin(t);fill+='L'+x.toFixed(1)+' '+y.toFixed(1);}
+  for(let t=-2*Math.PI;t<=8*Math.PI;t+=0.085){
+    const r1=r(t),r0=r(t-2*Math.PI),rm=(r1+r0)/2,tb=t-0.05;
+    const x1=cx+r0*Math.cos(t),y1=cy+r0*Math.sin(t),xm=cx+rm*Math.cos(tb),ym=cy+rm*Math.sin(tb),x2=cx+r1*Math.cos(t+.02),y2=cy+r1*Math.sin(t+.02);
+    ribs+=`M${x1.toFixed(1)} ${y1.toFixed(1)}Q${xm.toFixed(1)} ${ym.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  }
+  return `<circle cx="${cx}" cy="${cy}" r="158" fill="rgba(0,0,0,.18)"/>
+  <path d="${fill}Z" fill="rgba(80,62,40,.28)"/>
+  <circle cx="${cx}" cy="${cy}" r="150" fill="none" stroke="${INK}" stroke-width="2.4" class="draw" style="--len:1000"/>
+  <path d="${ribs}" fill="none" stroke="${INK}" stroke-width="1.15" opacity=".8"/>
+  <path d="${spiral}" fill="none" stroke="${INK}" stroke-width="2.2" class="draw" style="--len:3800"/>
+  <circle cx="${cx}" cy="${cy}" r="6" fill="${INK}" opacity=".7"/>`;
+}
+function trilobite(){
+  let s=`<g transform="translate(200 206)">`;
+  s+=`<path d="M-120 -70 Q-122 -150 0 -158 Q122 -150 120 -70 Q100 -62 72 -64 L-72 -64 Q-100 -62 -120 -70Z" fill="rgba(40,40,44,.25)" stroke="${INK}" stroke-width="2.2" class="draw" style="--len:800"/>`;
+  s+=`<path d="M-120 -70 L-138 -12 M120 -70 L138 -12" stroke="${INK}" stroke-width="2" fill="none"/>`;
+  s+=`<path d="M-28 -64 Q-36 -140 0 -146 Q36 -140 28 -64Z" fill="rgba(0,0,0,.18)" stroke="${INK}" stroke-width="1.8"/>`;
+  s+=`<path d="M-26 -120 Q0 -112 26 -120 M-27 -96 Q0 -88 27 -96" stroke="${INK}" fill="none" stroke-width="1.2"/>`;
+  s+=`<path d="M-58 -108 q-14 12 -2 26 q16 -10 2 -26Z M58 -108 q14 12 2 26 q-16 -10 -2 -26Z" fill="${INK}" opacity=".55"/>`;
+  for(let i=0;i<13;i++){
+    const y=-62+i*11.5, w=112-i*3.6, ax=24-i*.8;
+    s+=`<path d="M${-w} ${y} Q${-w-8} ${y+6} ${-w-4} ${y+10} L${-ax} ${y+10} M${w} ${y} Q${w+8} ${y+6} ${w+4} ${y+10} L${ax} ${y+10}" fill="none" stroke="${INK}" stroke-width="1.5"/>`;
+    s+=`<path d="M${-ax} ${y} Q0 ${y+6} ${ax} ${y} L${ax} ${y+10} Q0 ${y+16} ${-ax} ${y+10}Z" fill="rgba(0,0,0,.2)" stroke="${INK}" stroke-width="1.2"/>`;
+    s+=`<path d="M${-w} ${y} L${-ax} ${y} M${w} ${y} L${ax} ${y}" stroke="${INK}" stroke-width="1"/>`;
+  }
+  s+=`<path d="M-66 88 Q-70 150 0 156 Q70 150 66 88Z" fill="rgba(40,40,44,.25)" stroke="${INK}" stroke-width="2"/>`;
+  s+=`<path d="M-14 88 L-10 140 M14 88 L10 140 M-40 104 Q0 112 40 104 M-44 122 Q0 130 44 122" stroke="${INK}" fill="none" stroke-width="1.1"/>`;
+  return s+`</g>`;
+}
+function archaeopteryx(){
+  let s=`<g fill="none" stroke="${INK}" stroke-linecap="round" stroke-linejoin="round">`;
+  // feather impressions left wing
+  for(let i=0;i<14;i++){const a=-2.6+i*.09;const x1=138+i*3,y1=150+i*2;s+=`<path d="M${x1} ${y1} q${(Math.cos(a)*140).toFixed(0)} ${(Math.sin(a)*140).toFixed(0)} ${(Math.cos(a)*150-10).toFixed(0)} ${(Math.sin(a)*150+6).toFixed(0)}" stroke-width=".9" opacity=".55"/>`;}
+  for(let i=0;i<14;i++){const a=-.6+i*.08;const x1=252-i*2,y1=160+i*2;s+=`<path d="M${x1} ${y1} q${(Math.cos(a)*120).toFixed(0)} ${(Math.sin(a)*120).toFixed(0)} ${(Math.cos(a)*128+4).toFixed(0)} ${(Math.sin(a)*128+8).toFixed(0)}" stroke-width=".9" opacity=".55"/>`;}
+  // tail feathers along bony tail
+  let tail='M210 250';const tp=[];for(let i=0;i<=20;i++){const x=210+i*3.2+Math.sin(i*.25)*8,y=250+i*6.4;tp.push([x,y]);tail+=`L${x.toFixed(1)} ${y.toFixed(1)}`;}
+  tp.forEach(([x,y],i)=>{if(i>2){s+=`<path d="M${x} ${y} l-26 ${6+i*.3} M${x} ${y} l26 ${4+i*.3}" stroke-width=".8" opacity=".5"/>`;}});
+  s+=`<path d="${tail}" stroke-width="3.2" class="draw" style="--len:200"/>`;
+  tp.forEach(([x,y],i)=>{if(i%1===0)s+=`<path d="M${x-3} ${y} h6" stroke-width="1.4"/>`;});
+  // neck arched back (death pose) + skull
+  s+=`<path d="M200 170 C180 130 150 110 130 118 C112 126 110 150 124 160" stroke-width="3" class="draw" style="--len:260"/>`;
+  s+=`<path d="M124 160 q-26 6 -42 -2 q12 -14 34 -18 q14 4 8 20Z" fill="rgba(0,0,0,.22)" stroke-width="1.8"/>`;
+  s+=`<circle cx="112" cy="150" r="5" stroke-width="1.4"/>`;
+  // spine & ribs
+  s+=`<path d="M200 170 C206 196 208 222 210 250" stroke-width="3.4"/>`;
+  for(let i=0;i<7;i++){const y=182+i*9;s+=`<path d="M${205} ${y} q-18 6 -22 18 M${207} ${y} q18 6 20 18" stroke-width="1.2" opacity=".8"/>`;}
+  // wings bones
+  s+=`<path d="M196 176 L150 164 L108 188 M108 188 l-24 -12 M108 188 l-28 4 M108 188 l-20 16" stroke-width="2.4"/>`;
+  s+=`<path d="M214 178 L264 172 L300 200 M300 200 l24 -10 M300 200 l26 8 M300 200 l14 22" stroke-width="2.4"/>`;
+  // legs
+  s+=`<path d="M208 238 L180 272 L196 318 M196 318 l-16 10 M196 318 l2 16 M196 318 l14 8" stroke-width="2.4"/>`;
+  s+=`<path d="M212 240 L244 268 L236 314 M236 314 l-12 12 M236 314 l6 14 M236 314 l16 6" stroke-width="2.4"/>`;
+  s+=`<ellipse cx="208" cy="238" rx="12" ry="8" stroke-width="1.6"/>`;
+  return s+`</g>`;
+}
+function trex(){
+  return `<g transform="translate(14 60)" stroke="${INK}" stroke-linejoin="round" stroke-linecap="round">
+  <path class="draw" style="--len:1400" d="M20 150 C18 110 40 70 90 52 C150 30 230 22 300 32 C330 36 350 50 356 76 C364 110 350 150 330 176 C318 190 300 196 280 196 L250 200 L236 236 L214 246 L200 206 L120 196 C80 192 40 184 20 170 Z" fill="rgba(226,211,179,.35)" stroke-width="2.6"/>
+  <path d="M26 166 C60 186 110 196 180 206 L206 212 L212 238 M40 176 C70 200 130 214 196 220" fill="none" stroke-width="2"/>
+  <path d="M108 78 C130 62 170 60 190 74 C200 100 186 124 160 126 C130 128 106 110 108 78Z" fill="rgba(0,0,0,.45)" stroke-width="1.8"/>
+  <path d="M206 64 C226 52 250 54 262 70 C270 90 262 112 244 116 C222 118 204 100 206 64Z" fill="rgba(0,0,0,.5)" stroke-width="1.8"/>
+  <circle cx="236" cy="84" r="12" fill="rgba(0,0,0,.3)" stroke-width="1"/>
+  <path d="M276 72 C296 64 322 70 332 92 C338 118 324 146 302 150 C282 148 270 120 276 72Z" fill="rgba(0,0,0,.5)" stroke-width="1.8"/>
+  <path d="M40 116 C50 102 64 96 76 98 C82 108 78 120 64 124 C52 126 42 124 40 116Z" fill="rgba(0,0,0,.5)" stroke-width="1.5"/>
+  <path d="M230 164 C250 158 280 160 300 170 C290 184 260 188 236 184Z" fill="rgba(0,0,0,.35)" stroke-width="1.4"/>
+  <g fill="#efe6cf" stroke-width="1.1">
+    ${[34,52,70,88,106,124,142,160,178].map((x,i)=>`<path d="M${x} ${150+i*3} l6 ${20-i*.6} l6 ${-20+i*.6}Z"/>`).join('')}
+    ${[40,60,80,100,120,140,160].map((x,i)=>`<path d="M${x} ${184+i*3} l6 -18 l6 18Z"/>`).join('')}
+  </g>
+  <path d="M60 60 C120 36 200 28 290 34" fill="none" stroke-width="1" opacity=".5"/>
+  <path d="M150 140 C180 146 214 152 250 152" fill="none" stroke-width="1" opacity=".5"/>
+  </g>`;
+}
+function megalodon(){
+  let serr='';for(let i=0;i<=40;i++){const t=i/40;const x=110+t*90,y=330-t*270;serr+=`M${x.toFixed(1)} ${y.toFixed(1)} l-3 2`;}
+  for(let i=0;i<=40;i++){const t=i/40;const x=290-t*90,y=330-t*270;serr+=`M${x.toFixed(1)} ${y.toFixed(1)} l3 2`;}
+  return `<g stroke="${INK}" stroke-linejoin="round">
+  <path d="M86 330 C120 344 280 344 314 330 C322 356 300 376 250 372 C220 386 180 386 150 372 C100 376 78 356 86 330Z" fill="rgba(90,70,50,.45)" stroke-width="2"/>
+  <path class="draw" style="--len:900" d="M104 334 L198 58 Q200 52 202 58 L296 334 C250 346 150 346 104 334Z" fill="rgba(60,64,70,.55)" stroke-width="2.6"/>
+  <path d="${serr}" stroke-width="1.1"/>
+  <path d="M130 322 C160 300 240 300 270 322" fill="none" stroke-width="1.6" opacity=".7"/>
+  <path d="M200 80 L200 300" stroke-width=".8" opacity=".4"/>
+  <path d="M170 150 C190 220 190 270 186 300 M230 150 C212 220 212 270 214 300" fill="none" stroke-width=".8" opacity=".4"/>
+  </g>`;
+}
+function crinoid(){
+  let s=`<g stroke="${INK}" fill="none" stroke-linecap="round">`;
+  let stem='';for(let i=0;i<28;i++){const y=380-i*8.2,x=180+Math.sin(i*.18)*12;stem+=`<rect x="${(x-7).toFixed(1)}" y="${y.toFixed(1)}" width="14" height="7.4" rx="2" fill="rgba(0,0,0,.18)" stroke-width="1.1"/>`;}
+  s+=stem;
+  s+=`<path d="M170 150 Q200 140 210 150 L214 170 Q192 178 172 172Z" fill="rgba(0,0,0,.25)" stroke-width="1.6"/>`;
+  for(let k=0;k<10;k++){
+    const base=196+(k-4.5)*3.4;const ang=(-1.9+k*.14);
+    let d=`M${base} 150`;let x=base,y=150;const pts=[];
+    for(let j=0;j<22;j++){const a=ang+Math.sin(j*.2)*.05+(k-4.5)*.01*j;x+=Math.cos(a)*5.6;y+=Math.sin(a)*5.6;d+=`L${x.toFixed(1)} ${y.toFixed(1)}`;pts.push([x,y,a]);}
+    s+=`<path d="${d}" stroke-width="3" class="draw" style="--len:140"/>`;
+    pts.forEach(([px,py,a],j)=>{if(j%2===0){s+=`<path d="M${px.toFixed(1)} ${py.toFixed(1)} l${(Math.cos(a+1.3)*7).toFixed(1)} ${(Math.sin(a+1.3)*7).toFixed(1)} M${px.toFixed(1)} ${py.toFixed(1)} l${(Math.cos(a-1.3)*7).toFixed(1)} ${(Math.sin(a-1.3)*7).toFixed(1)}" stroke-width=".7" opacity=".7"/>`;}});
+  }
+  return s+`</g>`;
+}
+function eurypterid(){
+  let s=`<g transform="translate(200 200)" stroke="${INK}" stroke-linejoin="round">`;
+  s+=`<path d="M-44 -150 Q0 -176 44 -150 L50 -96 Q0 -86 -50 -96Z" fill="rgba(0,0,0,.25)" stroke-width="2"/>`;
+  s+=`<ellipse cx="-24" cy="-134" rx="8" ry="11" fill="${INK}" opacity=".5"/><ellipse cx="24" cy="-134" rx="8" ry="11" fill="${INK}" opacity=".5"/>`;
+  for(let i=0;i<12;i++){const y=-94+i*18,w=i<6?58-i*1:52-(i-6)*7.4,w2=i<6?56-i:46-(i-6)*7.6;
+    s+=`<path class="${i===0?'draw':''}" d="M${-w} ${y} L${w} ${y} L${w2} ${y+17} L${-w2} ${y+17}Z" fill="rgba(0,0,0,${.12+i%2*.08})" stroke-width="1.6"/>`;}
+  s+=`<path d="M-8 122 L0 196 L8 122Z" fill="rgba(0,0,0,.3)" stroke-width="1.6"/>`;
+  // legs & paddles
+  s+=`<g fill="none" stroke-width="2.2">
+    <path d="M-44 -120 l-40 -30 l-18 -34 M44 -120 l40 -30 l18 -34"/>
+    <path d="M-48 -110 l-50 -6 l-26 -24 M48 -110 l50 -6 l26 -24"/>
+    <path d="M-50 -100 l-54 16 l-30 4 M50 -100 l54 16 l30 4"/>
+  </g>`;
+  s+=`<path d="M-50 -94 C-100 -60 -140 -40 -150 -6 C-130 6 -104 -14 -80 -46 L-52 -80Z" fill="rgba(0,0,0,.3)" stroke-width="2"/>`;
+  s+=`<path d="M50 -94 C100 -60 140 -40 150 -6 C130 6 104 -14 80 -46 L52 -80Z" fill="rgba(0,0,0,.3)" stroke-width="2"/>`;
+  return s+`</g>`;
+}
+function lepidodendron(){
+  let s=`<g stroke="${INK}" fill="rgba(0,0,0,.18)">`;
+  for(let r=0;r<16;r++){for(let c=0;c<9;c++){
+    const x=40+c*42+(r%2)*21,y=30+r*24;
+    s+=`<path d="M${x} ${y-22} Q${x+14} ${y} ${x} ${y+22} Q${x-14} ${y} ${x} ${y-22}Z" stroke-width="1.4"/>`;
+    s+=`<path d="M${x-3} ${y-2} h6 v5 h-6Z" fill="${INK}" opacity=".55" stroke="none"/>`;
+  }}
+  return s+`<path class="draw" style="--len:1600" d="M20 20 H380 V390 H20Z" fill="none" stroke-width="1" opacity=".3"/></g>`;
+}
+
+const SPECS=[
+ {id:'ammonite',acc:'PMNH 1887.042',name:'Ammonite',taxon:'Dactylioceras commune',age:181,epoch:'Early Jurassic · Toarcian',form:'Whitby Mudstone Formation',loc:'Saltwick Bay, Whitby, Yorkshire',col:'Rev. A. Pellow, 1886',mx:'#5a574f',draw:ammonite,cm:'Diameter 62 mm',
+  note:'Pyritised on one face; slight bloom treated 1974. Collected from a doggers band at low tide.',
+  essay:['Ammonites were cephalopods — relatives of squid and octopus — living in coiled, chambered shells that they could flood or empty to rise and sink like a submarine. They swarmed the seas for more than three hundred million years and vanished with the dinosaurs.','Whitby is thick with them. Local legend held they were snakes turned to stone by St Hilda, and Victorian dealers obligingly carved snake heads onto the outer whorl to sell to visitors. Pellow disapproved, and our specimen is headless and honest.']},
+ {id:'trilobite',acc:'PMNH 1903.118',name:'Trilobite',taxon:'Elrathia kingii',age:507,epoch:'Middle Cambrian · Wuliuan',form:'Wheeler Shale',loc:'House Range, Millard County, Utah',col:'Purchased from W. Grayson, 1903',mx:'#6b6a68',draw:trilobite,cm:'Length 34 mm',
+  note:'Complete moult, dorsal view. Thirteen thoracic segments. Matrix split cleanly along bedding plane.',
+  essay:['Trilobites were among the first animals to have true eyes — compound lenses made of the mineral calcite, which is why they fossilise so beautifully. Their name refers to the three lobes that run down the length of the body, not to any three-part division from head to tail.','Elrathia is the most common trilobite in collections anywhere, quarried in its thousands from the shales of western Utah. That does not make it less remarkable: this animal crawled across a seabed half a billion years ago, before there were fish with jaws, before a single plant grew on land.']},
+ {id:'archaeopteryx',acc:'PMNH 1931.007c',name:'Archaeopteryx',taxon:'Archaeopteryx lithographica',age:150,epoch:'Late Jurassic · Tithonian',form:'Solnhofen Limestone',loc:'Cast after the London specimen, Langenaltheim, Bavaria',col:'Cast gifted by the British Museum, 1931',mx:'#d8c79c',draw:archaeopteryx,cm:'Slab 500 × 420 mm (cast)',
+  note:'PLASTER CAST. Hand-tinted to match the original lithographic limestone. Do not display in direct sunlight.',
+  essay:['Discovered in 1861, two years after the publication of On the Origin of Species, Archaeopteryx arrived like an answer to a question the world had only just learned to ask. It had feathers and wings like a bird, but teeth, clawed fingers and a long bony tail like a small dinosaur.','Its neck is thrown back in what palaeontologists call the death pose, a posture common in fossil birds and dinosaurs. The fine-grained Solnhofen limestone, once quarried for lithographic printing plates, preserved the impression of every flight feather.']},
+ {id:'trex',acc:'PMNH 1998.221c',name:'Tyrannosaurus',taxon:'Tyrannosaurus rex',age:67,epoch:'Late Cretaceous · Maastrichtian',form:'Hell Creek Formation',loc:'Cast after a specimen from Garfield County, Montana',col:'Commissioned cast, 1998',mx:'#8a7a63',draw:trex,cm:'Skull length 1.4 m (cast)',
+  note:'RESIN CAST of skull, left lateral view. Too large for a drawer: displayed in Gallery IV, bay 3. Catalogue plate only.',
+  essay:['A Tyrannosaurus skull is mostly air. The great openings — fenestrae — lightened the head and anchored enormous jaw muscles, giving it one of the most powerful bites of any land animal known. The teeth, serrated and banana-sized, were built to crush bone, not simply slice flesh.','Our cast will not fit in a drawer, and Pellow would have been astonished it existed at all: the first T. rex was not described until 1905. We include its card here because the cabinet is a catalogue of ideas as well as objects.']},
+ {id:'megalodon',acc:'PMNH 1952.064',name:'Megalodon',taxon:'Otodus megalodon',age:15,epoch:'Middle Miocene',form:'Calvert Formation',loc:'Calvert Cliffs, Maryland',col:'Bequest of Mrs E. Harrow, 1952',mx:'#7c7466',draw:megalodon,cm:'Slant height 118 mm',
+  note:'Upper anterior tooth. Enamel intact; root worn. Serrations fine and regular along both edges.',
+  essay:['Sharks are cartilage, and cartilage rarely fossilises. What survives are the teeth, which sharks shed by the thousand over a lifetime. A tooth this size implies an animal perhaps fifteen metres long, the largest predatory fish that ever lived.','For centuries such teeth were called glossopetrae, tongue stones, and believed to be the petrified tongues of serpents. In 1667 the Danish anatomist Nicolas Steno dissected a shark’s head and recognised them for what they were — one of the founding moments of palaeontology.']},
+ {id:'crinoid',acc:'PMNH 1889.310',name:'Sea Lily',taxon:'Encrinus liliiformis',age:240,epoch:'Middle Triassic · Anisian',form:'Upper Muschelkalk',loc:'Crailsheim, Württemberg',col:'Rev. A. Pellow, exchange, 1889',mx:'#b7a887',draw:crinoid,cm:'Crown height 70 mm',
+  note:'Crown with ten arms, stem partially preserved. Some pinnules restored in Pellow’s hand (documented).',
+  essay:['Crinoids look like flowers and are animals — echinoderms, cousins of the starfish, anchored to the seabed by a stem of stacked discs. The arms spread into the current to catch passing food.','Loose stem discs are so common in some limestones that in northern England they were strung as rosaries and called St Cuthbert’s beads. A complete crown like this one is rare; Pellow traded two of his best ammonites for it and considered it a bargain.']},
+ {id:'eurypterid',acc:'PMNH 1911.089',name:'Sea Scorpion',taxon:'Eurypterus remipes',age:420,epoch:'Late Silurian · Přídolí',form:'Bertie Formation',loc:'Herkimer County, New York',col:'Exchange with the New York State Museum, 1911',mx:'#8f8a80',draw:eurypterid,cm:'Length 180 mm',
+  note:'Dorsal view. Paddle-shaped sixth appendages well preserved. Telson slightly displaced.',
+  essay:['Eurypterids were arthropods, closer to modern horseshoe crabs and arachnids than to scorpions proper. Some later species grew over two metres long. Eurypterus used its broad rear paddles to swim through shallow, salty lagoons.','It is the official state fossil of New York, which says something charming about New York. The Bertie waterlime preserves them so well that the thin cuticle can sometimes be peeled from the rock and examined under a microscope.']},
+ {id:'lepidodendron',acc:'PMNH 1894.012',name:'Scale Tree',taxon:'Lepidodendron aculeatum',age:310,epoch:'Late Carboniferous · Moscovian',form:'Coal Measures',loc:'Radstock colliery spoil, Somerset',col:'Rev. A. Pellow, 1894',mx:'#4a4640',draw:lepidodendron,cm:'Slab 260 × 190 mm',
+  note:'Bark impression, leaf-cushion pattern. Carbon film partially retained. From a miner’s gift.',
+  essay:['This is bark. Lepidodendron was a lycopsid, a giant relative of today’s ankle-high clubmosses, and it grew up to forty metres tall in the steaming swamp forests of the Carboniferous. The diamond pattern marks where leaves once attached.','Those forests became coal. Victorian miners regularly found these “fossil snakeskins” in the roof of a seam and brought them up as curiosities. Pellow’s notebook records that this one came wrapped in a handkerchief, from a man who wouldn’t give his name.']},
+];
+
+/* ---------------- build UI ---------------- */
+const bar=document.getElementById('bar');
+PERIODS.forEach((p,i)=>{
+  const end=i<PERIODS.length-1?PERIODS[i+1][1]:0;
+  const el=document.createElement('button');el.type='button';el.className='per';el.id='per-'+p[0].toLowerCase();
+  el.style.width=((p[1]-end)/TOTAL*100)+'%';el.style.setProperty('--c',p[2]);
+  el.setAttribute('aria-label',`${p[0]}, ${p[1]} to ${end} million years ago`);
+  el.innerHTML=`<span>${p[0]}</span>`;
+  el.addEventListener('click',()=>filterPeriod(i));
+  bar.appendChild(el);
+});
+SPECS.forEach(s=>{const d=document.createElement('i');d.className='dot';d.style.left=pos(s.age)+'%';bar.appendChild(d);});
+const pin=document.createElement('div');pin.className='pin';pin.innerHTML='<b></b>';bar.appendChild(pin);
+
+const drawers=document.getElementById('drawers');
+SPECS.forEach((s,i)=>{
+  const b=document.createElement('button');b.type='button';b.className='drawer';b.id='drawer-'+s.id;b.setAttribute('aria-pressed','false');
+  b.innerHTML=`<span class="holder"><span>${s.acc}</span></span><span class="nm">${s.name}</span><span class="knob"></span>`;
+  b.addEventListener('click',()=>open(i,true));
+  drawers.appendChild(b);
+});
+function periodOf(ma){for(let i=0;i<PERIODS.length;i++){const end=i<PERIODS.length-1?PERIODS[i+1][1]:0;if(ma<=PERIODS[i][1]&&ma>end)return i;}return 0;}
+function filterPeriod(pi){
+  bar.querySelectorAll('.per').forEach((e,i)=>e.classList.toggle('on',i===pi));
+  let first=-1;
+  SPECS.forEach((s,i)=>{const on=periodOf(s.age)===pi;document.getElementById('drawer-'+s.id).classList.toggle('dim',!on);if(on&&first<0)first=i;});
+  if(first>=0) open(first,true);
+  else document.getElementById('pinAge').textContent=`${PERIODS[pi][0]} — no drawers from this period on display`;
+}
+let current=0;
+const tray=document.getElementById('tray');
+function open(i,animate){
+  current=(i+SPECS.length)%SPECS.length;const s=SPECS[current];
+  drawers.querySelectorAll('.drawer').forEach((d,k)=>d.setAttribute('aria-pressed',k===current));
+  tray.innerHTML=`<div class="tray-grid">
+    <div><div class="plate" style="--mx:${s.mx}"><svg viewBox="0 0 400 410" role="img" aria-label="Engraved plate of ${s.taxon}">${s.draw()}</svg><div class="scale"><i></i>${s.cm}</div></div></div>
+    <div><h3>${s.name}</h3><p class="sub">${s.taxon}</p>
+      <div class="card"><div class="acc"><span>${s.acc}</span><span>Drawer ${String(current+1).padStart(2,'0')} / 48</span></div>
+      <dl><dt>Taxon</dt><dd><i>${s.taxon}</i></dd><dt>Age</dt><dd>c. ${s.age} Ma</dd><dt>Epoch</dt><dd>${s.epoch}</dd><dt>Form.</dt><dd>${s.form}</dd><dt>Locality</dt><dd>${s.loc}</dd><dt>Coll.</dt><dd>${s.col}</dd></dl>
+      <div class="notes">${s.note}</div></div>
+    </div>
+    <div class="essay">${s.essay.map(p=>`<p>${p}</p>`).join('')}</div>
+  </div>
+  <div class="nav"><button type="button" id="prevBtn">← ${SPECS[(current+SPECS.length-1)%SPECS.length].name}</button><span>${current+1} of ${SPECS.length}</span><button type="button" id="nextBtn">${SPECS[(current+1)%SPECS.length].name} →</button></div>`;
+  document.getElementById('prevBtn').onclick=()=>open(current-1,true);
+  document.getElementById('nextBtn').onclick=()=>open(current+1,true);
+  tray.classList.remove('slide'); if(animate&&!reduce){void tray.offsetWidth;tray.classList.add('slide');}
+  pin.style.left=pos(s.age)+'%';pin.querySelector('b').textContent=s.age+' Ma';
+  const flip=pos(s.age)>80; pin.querySelector('b').style.left=flip?'auto':'8px'; pin.querySelector('b').style.right=flip?'8px':'auto';
+  document.getElementById('pinAge').textContent=`${s.name}: ${PERIODS[periodOf(s.age)][0]}, c. ${s.age} million years ago`;
+}
+addEventListener('keydown',e=>{if(e.target.matches('input,textarea'))return;if(e.key==='ArrowRight'){open(current+1,true);}else if(e.key==='ArrowLeft'){open(current-1,true);}});
+open(0,false);
+})();
+</script>
+</body>
+</html>
