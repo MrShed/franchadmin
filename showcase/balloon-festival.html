@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mesa Dawn Fiesta</title>
+<meta name="description" content="A 1970s-poster landing page for a fictional high-desert hot air balloon fiesta, with balloons drifting through a parallax dawn sky, a day-by-day schedule and an interactive launch field map.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shrikhand&family=Karla:ital,wght@0,400;0,600;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --rust:#b8431f; --orange:#e8742a; --mustard:#eeb13c; --gold:#f6d27a; --brown:#4a2317;
+  --choc:#2b140d; --sand:#f7e3c0; --rose:#e3866f; --teal:#2f6f6a; --sky1:#3b2a4a; --sky2:#8a4a5a;
+  --display:"Shrikhand","Cooper Black","Georgia",serif;
+  --body:"Karla","Trebuchet MS","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--choc);color:var(--sand);font-family:var(--body);font-size:17px;line-height:1.55;overflow-x:hidden}
+a{color:inherit}
+:focus-visible{outline:3px dashed var(--mustard);outline-offset:3px}
+.back{position:fixed;top:14px;left:16px;z-index:50;font:800 13px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;background:var(--sand);color:var(--brown);padding:9px 14px;border-radius:999px;box-shadow:0 3px 0 var(--rust)}
+.back:hover{background:var(--gold)}
+/* HERO */
+.hero{position:relative;height:100vh;min-height:620px;max-height:1000px;overflow:hidden;
+  background:linear-gradient(180deg,#2c1f3f 0%,#5b2d4d 26%,#a3464a 46%,#e0703a 62%,#f2a64a 74%,#f6d27a 84%)}
+.hero svg.sky{position:absolute;inset:0;width:100%;height:100%}
+.sun{transform-origin:50% 50%}
+.hero-title{position:absolute;left:0;right:0;top:15%;text-align:center;padding:0 16px;z-index:5;pointer-events:none}
+.hero-title .kick{font:800 13px/1 var(--body);letter-spacing:.35em;text-transform:uppercase;color:var(--gold)}
+.hero-title h1{margin:.15em 0 0;font-family:var(--display);font-weight:400;font-size:clamp(56px,11vw,168px);line-height:.88;color:var(--sand);
+  text-shadow:4px 4px 0 var(--mustard),8px 8px 0 var(--orange),12px 12px 0 var(--rust),16px 16px 0 var(--brown);letter-spacing:-.01em}
+.hero-title p{margin:1.1em auto 0;max-width:34ch;font-size:clamp(16px,2vw,20px);color:#fff3dc;text-shadow:0 1px 0 rgba(0,0,0,.3),0 0 18px rgba(59,42,74,.7)}
+.hero .dates{position:absolute;right:clamp(16px,4vw,48px);bottom:clamp(20px,5vh,48px);z-index:6;text-align:right;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);font-size:14px}
+.hero .dates b{display:block;font:400 clamp(30px,4.6vw,56px)/1 var(--display);letter-spacing:0;color:var(--sand);text-transform:none;text-shadow:3px 3px 0 var(--rust)}
+.hero .hint{position:absolute;left:clamp(16px,4vw,48px);bottom:clamp(20px,5vh,48px);z-index:6;font-size:14px;color:var(--gold);max-width:22ch;font-weight:600}
+.balloon{cursor:pointer}
+.balloon:focus{outline:none}
+.balloon:focus-visible .env{stroke:#fff;stroke-width:3}
+/* stripes band */
+.band{height:42px;background:linear-gradient(180deg,var(--mustard) 0 25%,var(--orange) 25% 50%,var(--rust) 50% 75%,var(--brown) 75%)}
+section{padding:clamp(64px,9vw,120px) clamp(16px,5vw,64px)}
+.wrap{max-width:1180px;margin:0 auto}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(40px,6vw,84px);line-height:.95;margin:0 0 .4em;color:var(--mustard)}
+.eyebrow{font-weight:800;font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:var(--rose);margin-bottom:14px}
+/* intro */
+.intro{background:var(--sand);color:var(--brown)}
+.intro h2{color:var(--rust)}
+.intro-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:clamp(28px,5vw,72px);align-items:start}
+.intro-grid p{margin:0 0 1em;font-size:19px}
+.intro-grid p:first-child::first-letter{font-family:var(--display);float:left;font-size:84px;line-height:.8;margin:6px 10px 0 0;color:var(--orange)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:4px solid var(--brown)}
+.stat{padding:22px 4px 20px;border-bottom:2px solid rgba(74,35,23,.25)}
+.stat:nth-child(odd){border-right:2px solid rgba(74,35,23,.25);padding-right:16px}
+.stat:nth-child(even){padding-left:18px}
+.stat b{display:block;font:400 clamp(40px,5vw,62px)/1 var(--display);color:var(--rust)}
+.stat span{font-weight:600;font-size:15px}
+/* schedule */
+.schedule{background:var(--choc);position:relative}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 34px}
+.tab{appearance:none;border:0;cursor:pointer;font:800 14px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:14px 18px 12px;border-radius:999px 999px 0 0;background:#3e2016;color:var(--sand);border-bottom:4px solid transparent;min-width:84px}
+.tab small{display:block;font:400 22px/1 var(--display);letter-spacing:0;text-transform:none;margin-top:6px;color:var(--gold)}
+.tab[aria-selected="true"]{background:var(--orange);color:var(--choc);border-bottom-color:var(--mustard)}
+.tab[aria-selected="true"] small{color:var(--choc)}
+.day-title{font:400 clamp(28px,3.6vw,44px)/1.05 var(--display);color:var(--sand);margin:0 0 20px}
+.events{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.events li{display:grid;grid-template-columns:120px 1fr auto;gap:22px;align-items:baseline;padding:20px 0;border-top:2px dashed rgba(247,227,192,.2)}
+.events time{font-weight:800;font-size:22px;color:var(--mustard);font-variant-numeric:tabular-nums}
+.events h3{margin:0 0 4px;font-size:21px;color:var(--sand)}
+.events p{margin:0;color:#d9bf9a;font-size:16px;max-width:60ch}
+.tag{font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:6px 10px;border-radius:999px;background:var(--teal);color:var(--sand);white-space:nowrap}
+.tag.glow{background:var(--rose);color:var(--choc)}
+.tag.mass{background:var(--mustard);color:var(--choc)}
+.events.swap{animation:rise .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+/* field */
+.field{background:linear-gradient(180deg,#f2a64a,#e8742a);color:var(--choc)}
+.field h2{color:var(--choc);text-shadow:3px 3px 0 var(--gold)}
+.field-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:clamp(24px,4vw,48px);align-items:start}
+.mapbox{background:var(--sand);border-radius:28px;padding:14px;box-shadow:8px 8px 0 var(--brown)}
+.mapbox svg{display:block;width:100%;height:auto}
+.spot{cursor:pointer;transition:transform .2s}
+.spot circle{transition:r .2s}
+.spot:focus{outline:none}
+.spot:focus-visible circle.ring,.spot.on circle.ring{stroke:var(--choc);stroke-width:3;r:13}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 6px 2px;font-weight:600;font-size:14px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:6px}
+.card{background:var(--choc);color:var(--sand);border-radius:28px;padding:28px 26px;box-shadow:8px 8px 0 var(--rust);min-height:360px}
+.card .num{font:400 64px/1 var(--display);color:var(--mustard)}
+.card h3{font:400 30px/1.05 var(--display);margin:6px 0 8px;color:var(--sand)}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:18px 0 0;font-size:15px}
+.card dt{font-weight:800;text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--rose);padding-top:3px}
+.card dd{margin:0}
+.card .mini{margin-top:18px;display:flex;gap:10px;align-items:center}
+.card .mini svg{width:70px;height:84px}
+.fieldnote{font-size:15px;margin-top:16px;font-weight:600}
+/* shapes */
+.shapes{background:var(--sand);color:var(--brown)}
+.shapes h2{color:var(--teal)}
+.shape-row{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:24px}
+.shape{border:3px solid var(--brown);border-radius:120px 120px 22px 22px;padding:22px 18px 22px;text-align:center;background:#fbeed6;transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.shape:hover{transform:translateY(-8px) rotate(-1.5deg)}
+.shape svg{width:120px;height:130px;display:block;margin:0 auto 8px}
+.shape h3{font:400 24px/1.05 var(--display);margin:0 0 6px;color:var(--rust)}
+.shape p{margin:0;font-size:15px}
+/* tickets */
+.tickets{background:var(--teal);color:var(--sand)}
+.tickets h2{color:var(--gold)}
+.tix{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.tix article{background:var(--sand);color:var(--brown);border-radius:22px;padding:26px;position:relative;overflow:hidden}
+.tix article::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,var(--mustard) 0 40%,var(--orange) 40% 55%,var(--rust) 55% 70%,transparent 70%)}
+.tix h3{font:400 28px/1 var(--display);margin:0 0 6px;color:var(--rust);position:relative;z-index:1;max-width:10ch}
+.tix .price{font:800 40px/1 var(--body);margin:14px 0 10px}
+.tix .price small{font-size:15px;font-weight:600}
+.tix ul{padding-left:18px;margin:0;font-size:15px}
+.tix button{margin-top:18px;appearance:none;border:0;border-radius:999px;background:var(--brown);color:var(--sand);font:800 14px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;padding:14px 20px;cursor:pointer}
+.tix button:hover{background:var(--rust)}
+.tix button[aria-pressed="true"]{background:var(--teal)}
+footer{background:var(--choc);padding:48px clamp(16px,5vw,64px) 60px;color:#cfae88;font-size:15px}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px;align-items:end}
+footer b{font:400 36px/1 var(--display);color:var(--orange);display:block}
+@media (max-width:900px){
+  .intro-grid,.field-grid{grid-template-columns:1fr}
+  .shape-row{grid-template-columns:1fr 1fr}
+  .tix{grid-template-columns:1fr}
+  .card{min-height:0}
+}
+@media (max-width:560px){
+  .events li{grid-template-columns:1fr;gap:6px}
+  .shape-row{grid-template-columns:1fr}
+  .hero .hint{display:none}
+  .hero .dates{left:16px;right:16px;text-align:left}
+  .tab{min-width:0;padding:12px 12px 10px;flex:1}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .events.swap{animation:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<header class="hero" id="top">
+  <svg class="sky" id="sky" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMax slice" aria-hidden="false" role="img" aria-label="Hot air balloons rising over a desert mesa at dawn">
+    <defs>
+      <radialGradient id="shade" cx="35%" cy="30%" r="75%">
+        <stop offset="0" stop-color="#fff" stop-opacity=".35"/>
+        <stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+        <stop offset="1" stop-color="#2b140d" stop-opacity=".45"/>
+      </radialGradient>
+      <linearGradient id="sunG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff0b8"/><stop offset="1" stop-color="#f6b64a"/>
+      </linearGradient>
+      <clipPath id="sunClip">
+        <rect x="0" y="0" width="1600" height="690"/>
+        <rect x="0" y="700" width="1600" height="14"/>
+        <rect x="0" y="724" width="1600" height="11"/>
+        <rect x="0" y="745" width="1600" height="8"/>
+        <rect x="0" y="763" width="1600" height="5"/>
+      </clipPath>
+    </defs>
+    <g id="layer-far"></g>
+    <g class="sun" clip-path="url(#sunClip)"><circle cx="800" cy="770" r="210" fill="url(#sunG)"/></g>
+    <g id="layer-mid"></g>
+    <path d="M0 800 L180 800 L210 760 L420 760 L440 790 L560 790 L590 740 L760 740 L790 800 L1000 800 L1030 770 L1240 770 L1270 730 L1420 730 L1450 800 L1600 800 L1600 1000 L0 1000Z" fill="#a3462c"/>
+    <path d="M0 850 L260 850 L300 820 L520 820 L540 860 L900 860 L930 830 L1100 830 L1130 860 L1600 860 L1600 1000 L0 1000Z" fill="#6e2f1e"/>
+    <path d="M0 910 Q400 880 800 905 T1600 895 L1600 1000 L0 1000Z" fill="#3a1a10"/>
+    <g id="layer-near"></g>
+  </svg>
+  <div class="hero-title">
+    <div class="kick">The 31st annual high desert</div>
+    <h1>Mesa Dawn<br>Fiesta</h1>
+    <p>Six hundred balloons. One field. Nine mornings of the sky filling up like a jar of marbles.</p>
+  </div>
+  <div class="hint">Tip: tap any balloon to give it a burner blast.</div>
+  <div class="dates">Sept 30 — Oct 8, 2027<b>Caliche Flats, N.M.</b></div>
+</header>
+<div class="band" aria-hidden="true"></div>
+
+<section class="intro" id="about">
+  <div class="wrap intro-grid">
+    <div>
+      <div class="eyebrow">Since 1996 · Caliche Flats</div>
+      <h2>Wake up early. It's worth it.</h2>
+      <p>At 5:40 in the morning the Dawn Patrol goes up alone — eleven balloons lit from inside, glowing like paper lanterns against the last of the stars. By seven, the field is a riot: pilots shouting, crews hauling envelopes out of trailers, the roar of burners stacking on top of each other until you feel it in your ribs.</p>
+      <p>The Fiesta happens because of the "Caliche Box," a quirk of our valley's winds. Low air flows south, upper air flows north, so a pilot can drift out, climb, and ride back to land within sight of where they started. That little loop of weather built a whole town's worth of tradition.</p>
+      <p>Bring a jacket, a thermos, and somebody you like. We'll handle the sunrise.</p>
+    </div>
+    <div class="stats" aria-label="Fiesta by the numbers">
+      <div class="stat"><b>612</b><span>registered balloons from 41 countries</span></div>
+      <div class="stat"><b>9</b><span>mornings of mass ascensions</span></div>
+      <div class="stat"><b>38</b><span>special-shape balloons, including a 90-ft armadillo</span></div>
+      <div class="stat"><b>5:40</b><span>Dawn Patrol lift-off, every single day</span></div>
+      <div class="stat"><b>2</b><span>evening Glowdeos, balloons lit on the ground</span></div>
+      <div class="stat"><b>∞</b><span>green chile breakfast burritos</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="schedule" id="schedule">
+  <div class="wrap">
+    <div class="eyebrow">Programme</div>
+    <h2>Nine mornings, day by day</h2>
+    <div class="tabs" role="tablist" id="dayTabs" aria-label="Festival days"></div>
+    <div role="tabpanel" id="dayPanel" aria-live="polite">
+      <h3 class="day-title" id="dayTitle"></h3>
+      <ul class="events" id="eventList"></ul>
+    </div>
+  </div>
+</section>
+
+<section class="field" id="field">
+  <div class="wrap">
+    <div class="eyebrow" style="color:var(--choc)">Launch Field · 78 acres</div>
+    <h2>Find your pilot on the field</h2>
+    <div class="field-grid">
+      <div class="mapbox">
+        <svg id="fieldMap" viewBox="0 0 700 460" role="group" aria-label="Launch field map. Each dot is a launch spot; select one for pilot details."></svg>
+        <div class="legend" id="legend"></div>
+      </div>
+      <aside class="card" id="spotCard" aria-live="polite"></aside>
+    </div>
+    <p class="fieldnote">Spots are assigned nightly by the Launch Directors. Look for the zebras — our officials in striped shirts — they flag each balloon for take-off.</p>
+  </div>
+</section>
+
+<section class="shapes" id="shapes">
+  <div class="wrap">
+    <div class="eyebrow" style="color:var(--rust)">Special Shapes Rodeo · Oct 4–5</div>
+    <h2>The oddballs of the sky</h2>
+    <div class="shape-row" id="shapeRow"></div>
+  </div>
+</section>
+
+<section class="tickets" id="tickets">
+  <div class="wrap">
+    <div class="eyebrow" style="color:var(--gold)">Getting in</div>
+    <h2>Passes &amp; parking</h2>
+    <div class="tix">
+      <article><h3>Sunrise Session</h3><div class="price">$18 <small>/ person / morning</small></div>
+        <ul><li>Field access 4:30–11:00 am</li><li>Dawn Patrol &amp; Mass Ascension</li><li>Kids 12 &amp; under free</li></ul>
+        <button id="tix-sunrise" aria-pressed="false">Add to plan</button></article>
+      <article><h3>Glowdeo Evening</h3><div class="price">$14 <small>/ person / night</small></div>
+        <ul><li>Field access 4:00–10:00 pm</li><li>Balloon Glow + fireworks at 8:30</li><li>Food court &amp; the Chile Roast tent</li></ul>
+        <button id="tix-glow" aria-pressed="false">Add to plan</button></article>
+      <article><h3>Chase Crew Pass</h3><div class="price">$95 <small>/ full festival</small></div>
+        <ul><li>Every session, all nine days</li><li>Crew briefing at 5:00 am with a pilot team</li><li>Commemorative pin &amp; crew bandana</li></ul>
+        <button id="tix-crew" aria-pressed="false">Add to plan</button></article>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div><b>Mesa Dawn Fiesta</b>Caliche Flats Balloon Park · Exit 233 off the Interstate · Park &amp; Ride from Old Town</div>
+    <div>Winds permitting. Always winds permitting.<br><a href="#top">Back to the sunrise ↑</a></div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent){ var e=document.createElementNS(NS,tag); for(var k in attrs) e.setAttribute(k, attrs[k]); if(parent) parent.appendChild(e); return e; }
+  var palettes = [
+    ['#eeb13c','#e8742a','#b8431f','#eeb13c','#e8742a','#b8431f'],
+    ['#f7e3c0','#2f6f6a','#f7e3c0','#2f6f6a','#f7e3c0','#2f6f6a'],
+    ['#e3866f','#f6d27a','#e3866f','#f6d27a','#e3866f','#f6d27a'],
+    ['#4a2317','#eeb13c','#e8742a','#eeb13c','#4a2317','#e8742a'],
+    ['#2f6f6a','#eeb13c','#b8431f','#f7e3c0','#b8431f','#eeb13c','#2f6f6a'],
+    ['#b8431f','#f7e3c0','#b8431f','#f7e3c0','#b8431f'],
+    ['#8a4a5a','#e3866f','#f6d27a','#e3866f','#8a4a5a']
+  ];
+  var ENV = 'M50 0 C85 0 100 25 100 48 C100 72 72 90 62 104 L38 104 C28 90 0 72 0 48 C0 25 15 0 50 0Z';
+  var defs = document.querySelector('#sky defs');
+  var gid = 0;
+  function stripeGrad(colors, target){
+    var id='st'+(gid++); var g=el('linearGradient',{id:id,x1:'0',x2:'1',y1:'0',y2:'0'},target||defs);
+    var n=colors.length; colors.forEach(function(c,i){ el('stop',{offset:(i/n),'stop-color':c},g); el('stop',{offset:((i+1)/n),'stop-color':c},g); });
+    return id;
+  }
+  function balloon(parent, colors, opts){
+    var g = el('g',{class:'balloon'},parent);
+    var inner = el('g',{},g);
+    var id = stripeGrad(colors, opts && opts.defs);
+    el('path',{class:'env',d:ENV,fill:'url(#'+id+')'},inner);
+    // belly band
+    el('path',{d:'M8 70 Q50 84 92 70 L86 80 Q50 93 14 80Z',fill:colors[0],opacity:.9},inner);
+    el('path',{d:ENV,fill:'url(#shade)'},inner);
+    el('line',{x1:38,y1:104,x2:43,y2:113,stroke:'#2b140d','stroke-width':1.2},inner);
+    el('line',{x1:62,y1:104,x2:57,y2:113,stroke:'#2b140d','stroke-width':1.2},inner);
+    el('rect',{x:42,y:113,width:16,height:11,rx:2,fill:'#6e3b1f'},inner);
+    return {g:g, inner:inner};
+  }
+  // Hero balloons in 3 parallax layers
+  var layers = [
+    {el:document.getElementById('layer-far'), n:9, s:[.28,.45], depth:.2, speed:.12, op:.75},
+    {el:document.getElementById('layer-mid'), n:6, s:[.6,.95], depth:.5, speed:.22, op:1},
+    {el:document.getElementById('layer-near'), n:3, s:[1.5,2.2], depth:1, speed:.38, op:1}
+  ];
+  var balloons = [];
+  function rand(a,b){return a+Math.random()*(b-a);}
+  layers.forEach(function(L, li){
+    for(var i=0;i<L.n;i++){
+      var b = balloon(L.el, palettes[(i*3+li)%palettes.length]);
+      b.g.setAttribute('tabindex','0'); b.g.setAttribute('role','button');
+      b.g.setAttribute('aria-label','Balloon, press to fire the burner');
+      b.g.style.opacity = L.op;
+      var o = {g:b.g, L:L, s:rand(L.s[0],L.s[1]), x:(i+Math.random()*.8)/L.n*1600, y:rand(li===2?420:80, li===2?760:640),
+               phase:Math.random()*6.28, boost:0, vy:-L.speed*rand(.6,1.2)};
+      if(li===2){ o.x = [120, 1330, 1480][i]; o.y = [560, 380, 700][i]; }
+      balloons.push(o);
+      (function(o){
+        function burn(){ o.boost = 1; }
+        o.g.addEventListener('click', burn);
+        o.g.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); burn(); }});
+      })(o);
+    }
+  });
+  var px=0, py=0, tx=0, ty=0, scrollY=0;
+  window.addEventListener('pointermove', function(e){ tx=(e.clientX/window.innerWidth-.5); ty=(e.clientY/window.innerHeight-.5); }, {passive:true});
+  window.addEventListener('scroll', function(){ scrollY = window.scrollY; }, {passive:true});
+  var sun = document.querySelector('.sun');
+  var last = performance.now();
+  function frame(now){
+    var dt = Math.min(50, now-last)/16.67; last = now;
+    px += (tx-px)*.05; py += (ty-py)*.05;
+    balloons.forEach(function(o){
+      if(!reduce){
+        o.y += (o.vy - o.boost*2.2)*dt;
+        o.x += Math.sin(now/3000+o.phase)*.15*dt*o.L.depth + .05*dt;
+        o.boost *= .97;
+        if(o.y < -160*o.s){ o.y = 900; o.x = rand(0,1600); }
+        if(o.x > 1700) o.x = -100;
+      }
+      var sway = reduce?0:Math.sin(now/1400+o.phase)*2;
+      var X = o.x - px*80*o.L.depth, Y = o.y - py*40*o.L.depth + scrollY*o.L.depth*.6;
+      o.g.setAttribute('transform','translate('+X.toFixed(1)+','+Y.toFixed(1)+') scale('+o.s.toFixed(3)+') rotate('+sway.toFixed(2)+' 50 60)');
+    });
+    sun.setAttribute('transform','translate(0,'+(scrollY*.35 - (reduce?0:Math.sin(now/5000)*3)).toFixed(1)+')');
+    if(!reduce || needsDraw){ needsDraw=false; }
+    requestAnimationFrame(frame);
+  }
+  var needsDraw = true;
+  requestAnimationFrame(frame);
+
+  // SCHEDULE
+  var days = [
+    {d:'Thu',n:'30',t:'Opening Morning',ev:[
+      ['5:40 am','Dawn Patrol Show','Eleven balloons launch in darkness, burners lit, to scout the winds for everyone else.','glow'],
+      ['7:00 am','Opening Mass Ascension','All 612 balloons launch in two waves. Stand in the Blue Zone for the best take-off view.','mass'],
+      ['9:30 am','Anthem & Flag Balloon','A 110-ft stars-and-stripes envelope inflates to the high school marching band.','field'],
+      ['6:15 pm','Twilight Tether Rides','Five-minute tethered hops, 60 ft up. $30, first come first served at the South Gate.','field']]},
+    {d:'Fri',n:'01',t:'Friends & Neighbors',ev:[
+      ['5:40 am','Dawn Patrol','Same as always — go early and bring cocoa.','glow'],
+      ['7:00 am','Mass Ascension','Second full launch. Winds tend to box beautifully on Friday mornings.','mass'],
+      ['10:00 am','Pilot Meet & Greet','Pilots sign crew cards in the Ascension Tent. Kids get a burner-shaped whistle.','field'],
+      ['6:00 pm','Glowdeo I','Three hundred balloons fire burners in synchrony with a live mariachi set.','glow']]},
+    {d:'Sat',n:'02',t:'The Big Saturday',ev:[
+      ['5:40 am','Dawn Patrol','Our largest patrol: eighteen balloons in formation.','glow'],
+      ['7:00 am','Mass Ascension','Busiest morning of the year. Park & Ride strongly recommended.','mass'],
+      ['11:00 am','Chile Roast & Pie Contest','Local growers roast twenty tons of green chile in rotating drums.','field'],
+      ['8:30 pm','Fireworks over the Mesa','Twenty minutes of shells synced to a radio simulcast on 88.7 FM.','glow']]},
+    {d:'Sun',n:'03',t:'Key Grab Sunday',ev:[
+      ['5:40 am','Dawn Patrol','Quiet Sunday send-off.','glow'],
+      ['7:15 am','Key Grab Competition','Pilots fly in from 3 miles out and try to snatch car keys off a 40-ft pole. The prize: a pickup truck.','field'],
+      ['9:00 am','Mass Ascension','Late launch after the competition clears.','mass'],
+      ['5:30 pm','Gospel & Glow','Sunday choir under a hundred glowing envelopes.','glow']]},
+    {d:'Mon',n:'04',t:'Special Shapes Rodeo I',ev:[
+      ['5:40 am','Dawn Patrol','','glow'],
+      ['7:00 am','Special Shapes Rodeo','Thirty-eight special-shape balloons — the armadillo, the coffee pot, the teacup pig — all at once.','mass'],
+      ['10:30 am','Shape Walk','Walk among the deflating giants and meet the crews who sew them.','field']]},
+    {d:'Tue',n:'05',t:'Special Shapes Rodeo II',ev:[
+      ['5:40 am','Dawn Patrol','','glow'],
+      ['7:00 am','Special Shapes Rodeo','Round two, plus the debut of Big Chile, a 96-ft red pepper from Hatch.','mass'],
+      ['6:00 pm','Special Shapes Glowdeo','Glowing shapes after dark. The armadillo has eyes that light up.','glow']]},
+    {d:'Wed',n:'06',t:'Gas Balloon Day',ev:[
+      ['5:40 am','Dawn Patrol','','glow'],
+      ['7:00 am','America\'s Challenge Launch','Hydrogen gas balloons depart on a distance race that can last four days and cross into Canada.','field'],
+      ['8:00 am','Mass Ascension','Hot air follows the gas fleet into the sky.','mass']]},
+    {d:'Thu',n:'07',t:'Night Magic',ev:[
+      ['5:40 am','Dawn Patrol','','glow'],
+      ['7:00 am','Mass Ascension','','mass'],
+      ['7:00 pm','Night Magic Glow','All-field glow, no fireworks — just six hundred lanterns and the stars.','glow']]},
+    {d:'Fri',n:'08',t:'Farewell Morning',ev:[
+      ['5:40 am','Final Dawn Patrol','Every patrol pilot of the week flies together.','glow'],
+      ['7:00 am','Farewell Mass Ascension','Last launch. Tradition says you wave until the final basket is out of sight.','mass'],
+      ['11:00 am','Crew Awards','Best Chase, Best Crash (gently), Most Burritos Consumed.','field']]}
+  ];
+  var tabs = document.getElementById('dayTabs'), list=document.getElementById('eventList'), title=document.getElementById('dayTitle');
+  function tagName(k){ return k==='mass'?'Ascension':k==='glow'?'Glow':'On field'; }
+  function show(i, focus){
+    Array.prototype.forEach.call(tabs.children, function(b,j){ b.setAttribute('aria-selected', j===i?'true':'false'); b.tabIndex = j===i?0:-1; });
+    if(focus) tabs.children[i].focus();
+    var D = days[i];
+    title.textContent = D.d+' '+(i===0?'Sept ':'Oct ')+D.n+' — '+D.t;
+    list.innerHTML = D.ev.map(function(e){
+      return '<li><time>'+e[0]+'</time><div><h3>'+e[1]+'</h3>'+(e[2]?'<p>'+e[2]+'</p>':'<p>Launch at first light; check the field flags.</p>')+'</div><span class="tag '+e[3]+'">'+tagName(e[3])+'</span></li>';
+    }).join('');
+    list.classList.remove('swap'); void list.offsetWidth; list.classList.add('swap');
+  }
+  days.forEach(function(D,i){
+    var b=document.createElement('button'); b.className='tab'; b.id='day-'+i; b.setAttribute('role','tab'); b.setAttribute('aria-controls','dayPanel');
+    b.innerHTML = D.d+'<small>'+D.n+'</small>';
+    b.addEventListener('click', function(){ show(i); });
+    b.addEventListener('keydown', function(e){
+      if(e.key==='ArrowRight'){ e.preventDefault(); show((i+1)%days.length,true); }
+      if(e.key==='ArrowLeft'){ e.preventDefault(); show((i-1+days.length)%days.length,true); }
+    });
+    tabs.appendChild(b);
+  });
+  show(2);
+
+  // FIELD MAP
+  var map = document.getElementById('fieldMap');
+  var zones = [{n:'Blue Zone',c:'#2f6f6a'},{n:'Gold Zone',c:'#eeb13c'},{n:'Rust Zone',c:'#b8431f'},{n:'Shapes Row',c:'#8a4a5a'}];
+  var mdefs = el('defs',{},map);
+  el('rect',{x:0,y:0,width:700,height:460,rx:18,fill:'#f7e3c0'},map);
+  // paths & features
+  el('path',{d:'M0 420 C160 400 240 440 380 420 S600 400 700 430',fill:'none',stroke:'#d8b98a','stroke-width':22},map);
+  el('text',{x:24,y:450,'font-family':'Karla, sans-serif','font-size':13,'font-weight':800,fill:'#6e3b1f','letter-spacing':'2'},map).textContent='MAIN STREET · VENDORS';
+  el('rect',{x:600,y:24,width:80,height:80,rx:40,fill:'#e3866f'},map);
+  el('text',{x:640,y:70,'text-anchor':'middle','font-family':'Karla, sans-serif','font-size':12,'font-weight':800,fill:'#2b140d'},map).textContent='TENT';
+  var zoneRects=[[20,20,280,180],[310,20,280,180],[20,210,280,170],[310,210,370,170]];
+  zoneRects.forEach(function(r,i){
+    el('rect',{x:r[0],y:r[1],width:r[2],height:r[3],rx:16,fill:zones[i].c,opacity:.14,stroke:zones[i].c,'stroke-width':2,'stroke-dasharray':'6 6'},map);
+    el('text',{x:r[0]+12,y:r[1]+22,'font-family':'Shrikhand, Georgia, serif','font-size':17,fill:zones[i].c},map).textContent=zones[i].n;
+  });
+  var pilots = ['Rosa Etcitty','Hank Pruett','Ines Carvalho','Tomás Varela','Mae Okafor','Dieter Lang','June Begay','Kenji Aso','Pru Whitlock','Omar Haddad','Lotte Brink','Ray "Burner" Salas','Ana Lucero','Bo Kristiansen','Wren Tallis','Carmen Ruiz'];
+  var names = ['Sunflower Sally','High Plains Drifter','Maria Bonita','Rust Belt','Chile Relleno','Albatross II','Painted Pony','Sky Tortilla','Blue Mesa','Morning Glory','Dust Devil','Turquoise Trail','Loco Motion','Sopaipilla','Coyote Moon','Fandango'];
+  var cities = ['Gallup, NM','Amarillo, TX','Porto, Portugal','Taos, NM','Lagos, Nigeria','Bavaria, Germany','Window Rock, AZ','Saga, Japan','Durango, CO','Amman, Jordan','Utrecht, NL','Las Cruces, NM','Española, NM','Bergen, Norway','Moab, UT','Sevilla, Spain'];
+  var spots = [];
+  var k=0;
+  zoneRects.forEach(function(r,zi){
+    var cols = zi===3?6:4, rows=3;
+    for(var y=0;y<rows;y++) for(var x=0;x<cols;x++){
+      var cx = r[0]+ 34 + x*((r[2]-60)/(cols-1)) , cy = r[1]+52+y*((r[3]-70)/(rows-1));
+      spots.push({zi:zi, x:cx, y:cy, i:k++});
+    }
+  });
+  var mini = document.createElementNS(NS,'svg');
+  spots.forEach(function(s){
+    s.pilot = pilots[s.i%pilots.length]; s.name = names[(s.i*7)%names.length]; s.city = cities[(s.i*5)%cities.length];
+    s.pal = palettes[s.i%palettes.length]; s.wave = s.i%2?'Second wave · 7:25 am':'First wave · 7:00 am';
+    s.code = String.fromCharCode(65+s.zi)+'-'+String(s.i+1).padStart(2,'0');
+    var g = el('g',{class:'spot',tabindex:0,role:'button','aria-label':'Spot '+s.code+', '+s.name},map);
+    el('circle',{class:'ring',cx:s.x,cy:s.y,r:10,fill:'#fbeed6',stroke:zones[s.zi].c,'stroke-width':2},g);
+    el('circle',{cx:s.x,cy:s.y,r:5,fill:s.pal[0]},g);
+    s.g = g;
+    g.addEventListener('click',function(){ pick(s); });
+    g.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pick(s);} });
+  });
+  document.getElementById('legend').innerHTML = zones.map(function(z){ return '<span><i style="background:'+z.c+'"></i>'+z.n+'</span>'; }).join('');
+  var card = document.getElementById('spotCard');
+  var current;
+  function pick(s){
+    if(current) current.g.classList.remove('on');
+    current = s; s.g.classList.add('on');
+    card.innerHTML = '<div class="num">'+s.code+'</div><h3>'+s.name+'</h3><div>'+zones[s.zi].n+'</div>'+
+      '<dl><dt>Pilot</dt><dd>'+s.pilot+'</dd><dt>From</dt><dd>'+s.city+'</dd><dt>Launch</dt><dd>'+s.wave+'</dd><dt>Envelope</dt><dd>'+(77+ (s.i*13)%40)+',000 cu ft</dd></dl>'+
+      '<div class="mini"><svg viewBox="-4 -4 108 132" id="miniB" aria-hidden="true"></svg><span>Crew welcome: look for the '+s.pal.length+'-stripe envelope and ask for a hand on the crown line.</span></div>';
+    var m = document.getElementById('miniB');
+    var md = el('defs',{},m);
+    var sh = el('radialGradient',{id:'mshade',cx:'35%',cy:'30%',r:'75%'},md);
+    el('stop',{offset:0,'stop-color':'#fff','stop-opacity':.35},sh); el('stop',{offset:1,'stop-color':'#2b140d','stop-opacity':.4},sh);
+    var b = balloon(m, s.pal, {defs:md});
+    b.inner.querySelectorAll('path')[2].setAttribute('fill','url(#mshade)');
+  }
+  pick(spots[5]);
+
+  // SHAPES
+  var shapes = [
+    {n:'Armando the Armadillo',p:'90 ft of banded shell. Pilot Hank Pruett, Amarillo.',svg:'<ellipse cx="60" cy="60" rx="52" ry="40" fill="#b8431f"/><path d="M20 60 Q60 10 100 60" stroke="#eeb13c" stroke-width="5" fill="none"/><path d="M28 72 Q60 26 92 72" stroke="#eeb13c" stroke-width="5" fill="none"/><circle cx="104" cy="70" r="12" fill="#b8431f"/><circle cx="108" cy="66" r="3" fill="#2b140d"/><rect x="52" y="112" width="16" height="12" fill="#6e3b1f"/>'},
+    {n:'Big Chile',p:'A 96-ft Hatch pepper. Debuts Tuesday.',svg:'<path d="M60 20 C100 30 96 90 64 112 C54 118 46 110 50 98 C64 70 40 40 60 20Z" fill="#b8431f"/><path d="M60 22 C58 10 68 6 74 8" stroke="#2f6f6a" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M68 40 C80 50 78 70 70 84" stroke="#e3866f" stroke-width="4" fill="none"/><rect x="52" y="114" width="16" height="12" fill="#6e3b1f"/>'},
+    {n:'Cafecito',p:'A steaming coffee pot, naturally, for the 5 am crowd.',svg:'<path d="M30 40 H86 L92 104 H24Z" fill="#2f6f6a"/><path d="M86 52 Q112 60 94 88" stroke="#2f6f6a" stroke-width="8" fill="none"/><rect x="40" y="30" width="36" height="12" rx="5" fill="#eeb13c"/><path d="M50 22 Q46 12 54 6 M62 22 Q58 12 66 6" stroke="#f7e3c0" stroke-width="3" fill="none"/><rect x="32" y="64" width="52" height="8" fill="#eeb13c"/><rect x="50" y="112" width="16" height="12" fill="#6e3b1f"/>'},
+    {n:'Petunia the Pig',p:'Teacup pig in a teacup. Beloved by toddlers.',svg:'<circle cx="60" cy="54" r="40" fill="#e3866f"/><ellipse cx="60" cy="64" rx="14" ry="10" fill="#f6d27a"/><circle cx="55" cy="64" r="2.5" fill="#4a2317"/><circle cx="65" cy="64" r="2.5" fill="#4a2317"/><circle cx="46" cy="44" r="4" fill="#2b140d"/><circle cx="74" cy="44" r="4" fill="#2b140d"/><path d="M28 24 L36 6 L46 20Z M92 24 L84 6 L74 20Z" fill="#e3866f"/><path d="M30 94 H90 L84 110 H36Z" fill="#f7e3c0" stroke="#4a2317" stroke-width="2"/><rect x="52" y="112" width="16" height="12" fill="#6e3b1f"/>'}
+  ];
+  document.getElementById('shapeRow').innerHTML = shapes.map(function(s){ return '<div class="shape"><svg viewBox="0 0 120 130" aria-hidden="true">'+s.svg+'</svg><h3>'+s.n+'</h3><p>'+s.p+'</p></div>'; }).join('');
+
+  document.querySelectorAll('.tix button').forEach(function(b){
+    b.addEventListener('click', function(){ var on = b.getAttribute('aria-pressed')!=='true'; b.setAttribute('aria-pressed', on); b.textContent = on?'In your plan ✓':'Add to plan'; });
+  });
+})();
+</script>
+</body>
+</html>

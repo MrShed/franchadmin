@@ -185,7 +185,7 @@ function threeRenderer(){
   let points=null, geo=null;
   const mat=new THREE.ShaderMaterial({
     depthWrite:false, transparent:true, blending:THREE.AdditiveBlending, vertexColors:true,
-    uniforms:{uTime:{value:0},uSize:{value:30*renderer.getPixelRatio()},uSpeed:{value:P.speed}},
+    uniforms:{uTime:{value:0},uSize:{value:48*renderer.getPixelRatio()},uSpeed:{value:P.speed}},
     vertexShader:`
       uniform float uTime; uniform float uSize;
       attribute float aScale; attribute vec3 aRand;
@@ -207,7 +207,7 @@ function threeRenderer(){
       varying vec3 vColor;
       void main(){
         float s = distance(gl_PointCoord, vec2(.5));
-        float a = pow(1.0 - clamp(s*2.0,0.0,1.0), 6.0);
+        float a = pow(1.0 - clamp(s*2.0,0.0,1.0), 3.0);
         gl_FragColor = vec4(vColor*a, a);
       }`
   });
@@ -232,7 +232,7 @@ function threeRenderer(){
   let simT=0;
   return {
     build,
-    resize(w,h){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();mat.uniforms.uSize.value=30*renderer.getPixelRatio()*(Math.min(w,h)<600?.8:1);},
+    resize(w,h){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();mat.uniforms.uSize.value=48*renderer.getPixelRatio()*(Math.min(w,h)<600?.8:1);},
     frame(dt){
       if(!paused) simT+=dt*P.speed;
       mat.uniforms.uTime.value=simT;

@@ -54,6 +54,8 @@ h1 em{color:var(--sun)}
 .label dt{text-transform:uppercase;letter-spacing:.12em}
 .label dd{margin:0;color:#b9c0cc}
 .label p{font-size:10.5px;line-height:1.75;color:#8f96a3;margin:10px 0 0;max-width:40ch}
+.label.sunlab{left:calc(50% + 236px);width:min(330px,calc(50vw - 260px))}
+@media (max-width:900px){.label.sunlab{left:16px;width:min(420px,calc(100vw - 32px));transform:translateY(calc(-100% - 230px))}.label.sunlab .ln{display:none}}
 .moonlab{position:absolute;left:calc(50% + 14px);font-size:9px;color:var(--dim);transform:translateY(-50%);white-space:nowrap}
 .void-note{position:absolute;left:max(16px,8vw);width:min(34ch,calc(50vw - 40px));font-size:11px;line-height:1.85;color:#6d7482;transform:translateY(-50%)}
 .void-note b{display:block;font-family:var(--serif);font-style:italic;font-weight:400;font-size:22px;color:#c9ced8;margin-bottom:6px;line-height:1.1}
@@ -102,13 +104,18 @@ button[aria-pressed="true"]{color:#000;background:var(--accent);border-color:var
   .label .nm{font-size:24px}
   .label .ln{width:12px}
   .label p{display:none}
-  .label dl{grid-template-columns:1fr;gap:0}
-  .label dt{display:none}
+  .label dl{gap:0 6px;font-size:8.5px;letter-spacing:0}
+  .label dt{letter-spacing:0}
   .void-note{width:calc(50vw - 30px);font-size:10px}
   .void-note b{font-size:17px}
-  .jump{max-width:190px}
-  .ctl{right:30px}
+  .jump{max-width:none}
+  .ctl{right:30px;left:16px;bottom:auto;top:38px;align-items:flex-end}
+  .map{top:30vh;height:50vh}
+  .label.sunlab{left:16px;width:calc(100vw - 32px);top:auto}
+  .hud .row{gap:4px 14px}
   .hud .row div{min-width:0}
+  .hud .lbl{letter-spacing:.08em}
+  .moonlab{white-space:normal;width:calc(50vw - 24px)}
   .hud .next{display:none}
 }
 @media (prefers-reduced-motion:reduce){.hint span{animation:none}}
@@ -158,7 +165,7 @@ button[aria-pressed="true"]{color:#000;background:var(--accent);border-color:var
 const PX = 3474.8;              // km per pixel
 const AU = 149597870.7;         // km
 const C  = 299792.458;          // km/s
-const S0 = 260;                 // px: Sun centre offset inside #space
+const S0 = 640;                 // px: Sun centre offset inside #space
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const bodies = [
@@ -197,18 +204,18 @@ const bodies = [
 const notes = [
   [0.05,'Leaving the corona','The Sun\'s outer atmosphere, the corona, reaches millions of kilometres out and is hotter than the surface — over a million kelvin.'],
   [0.2,'Still nothing','You have crossed 30 million km. Most of the solar system is exactly this: empty.'],
-  [0.55,'Rough-guess check','If the Sun were a front door, Earth would be a peppercorn 26 m down the road.'],
+  [0.55,'Pocket model','Shrink the Sun to a 20 cm ball and Earth becomes a 1.8 mm peppercorn, 21.5 metres away.'],
   [0.85,'Nearly home','The Parker Solar Probe swings closer to the Sun than Mercury ever does — 6.2 million km at perihelion, at 192 km/s.'],
   [1.25,'Between worlds','Earth to Mars ranges from 55 to 401 million km depending on where both planets are in their orbits.'],
   [2.05,'Asteroid belt ahead','Popular images show a crowded field. In reality, the average gap between belt asteroids is around a million kilometres.'],
-  [3.6,'The long gap','Mars to Jupiter is about 550 million km. You could line up every planet side by side in this gap — several hundred times over.'],
+  [3.6,'The long gap','Mars to Jupiter is about 550 million km. Every planet laid side by side spans about 400,000 km — this gap could hold that line more than a thousand times.'],
   [4.4,'Keep scrolling','At this scale, one full laptop screen of scrolling covers roughly 3 million km. Jupiter is still hundreds of screens away.'],
-  [7,'Half an hour of light','Sunlight left the Sun about 55 minutes ago and has only just reached this far.'],
-  [12,'The quiet middle','Voyager 2 took 8.5 years to get from Earth to Uranus, travelling at about 15 km/s the whole way.'],
+  [7,'An hour of light','Light leaving the Sun needs about 58 minutes to get this far. You are still short of Saturn.'],
+  [12,'The quiet middle','Voyager 2 launched in August 1977 and reached Uranus in January 1986 — eight and a half years, with slingshots from Jupiter and Saturn.'],
   [16,'Your thumb is tired','Good. That\'s the lesson. The distance between planets is vastly bigger than the planets themselves.'],
   [24,'Ice giants','Uranus and Neptune are called ice giants: mostly water, methane and ammonia “ices” around a rocky core.'],
   [33,'The Kuiper Belt','From about 30 to 50 AU, a disc of icy bodies — Pluto, Haumea, Makemake, Arrokoth — circles in the dark.'],
-  [36.5,'Four hours of light','Signals from New Horizons, now beyond 60 AU, take more than eight hours to reach Earth.']
+  [36.5,'Five hours of light','Signals from New Horizons, now beyond 60 AU, take more than eight hours to reach Earth.']
 ];
 
 const space = document.getElementById('space');
@@ -249,7 +256,8 @@ function place(b){
 
   const lab = document.createElement('div');
   lab.className='label'; lab.style.top = y+'px';
-  if (size > 60) lab.style.left = `calc(50% + ${Math.min(size/2,160)+30}px)`;
+  if (size > 200){ lab.classList.add('sunlab'); }
+  else if (size > 30) lab.style.left = `calc(50% + ${size/2+24}px)`;
   const au = b.a/AU, lt = b.a/C;
   const rows = b.a ? [['Distance', `${(b.a/1e6).toLocaleString('en-GB',{maximumFractionDigits:1})} M km`],['AU', au.toFixed(3)],['Light', ltStr(lt)]] : [];
   lab.innerHTML = `<span class="ln"></span><div class="nm">${b.name}</div>

@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Last Keepers</title>
+<meta name="description" content="A long-form magazine feature on the end of the manned lighthouse, read by the sweep of a rotating beam across a storm sea at night.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;0,6..96,900;1,6..96,400;1,6..96,700&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;1,6..72,300;1,6..72,400&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#060a12;
+  --deep:#0b1422;
+  --ink:#9aa7bb;
+  --ink-dim:#6b788d;
+  --paper:#dfe6ee;
+  --lamp:#ffe2a4;
+  --lamp-hot:#fff4d6;
+  --red:#d2493a;
+  --rule:rgba(154,167,187,.22);
+  --serif:"Newsreader", "Iowan Old Style", Georgia, serif;
+  --display:"Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --cond:"Barlow Condensed", "Arial Narrow", sans-serif;
+}
+*{box-sizing:border-box}
+html{background:var(--night)}
+body{
+  margin:0;background:var(--night);color:var(--ink);
+  font-family:var(--serif);font-size:clamp(17px,1.05vw + 11px,21px);line-height:1.62;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+#sea{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+#beam{
+  position:fixed;inset:0;z-index:5;pointer-events:none;mix-blend-mode:screen;
+  --a:0deg;--x:84%;--y:34%;--k:1;
+  background:
+    radial-gradient(circle at var(--x) var(--y), rgba(255,236,190,calc(.55*var(--k))) 0, rgba(255,220,150,calc(.18*var(--k))) 38px, transparent 140px),
+    conic-gradient(from var(--a) at var(--x) var(--y),
+      rgba(255,226,164,calc(.34*var(--k))) 0deg, rgba(255,226,164,calc(.12*var(--k))) 6deg, transparent 13deg,
+      transparent 167deg,
+      rgba(255,226,164,calc(.12*var(--k))) 174deg, rgba(255,226,164,calc(.34*var(--k))) 180deg, rgba(255,226,164,calc(.12*var(--k))) 186deg, transparent 193deg,
+      transparent 347deg, rgba(255,226,164,calc(.12*var(--k))) 354deg, rgba(255,226,164,calc(.34*var(--k))) 360deg);
+}
+#tower{position:fixed;right:max(2vw,8px);bottom:0;height:min(70vh,640px);z-index:2;pointer-events:none;opacity:.95}
+.back{
+  position:fixed;top:14px;left:16px;z-index:20;font-family:var(--cond);letter-spacing:.2em;text-transform:uppercase;
+  font-size:13px;color:var(--ink);text-decoration:none;padding:6px 10px;border:1px solid var(--rule);background:rgba(6,10,18,.6);backdrop-filter:blur(4px)
+}
+.back:hover,.back:focus-visible{color:var(--lamp);border-color:var(--lamp)}
+:focus-visible{outline:2px solid var(--lamp);outline-offset:3px}
+main{position:relative;z-index:3}
+
+/* HERO */
+.hero{min-height:100vh;min-height:100svh;display:grid;align-content:end;padding:12vh 16px 10vh;max-width:1280px;margin:0 auto}
+.hero .kicker{font-family:var(--cond);text-transform:uppercase;letter-spacing:.32em;font-size:14px;color:var(--lamp);margin:0 0 3vh}
+.hero h1{
+  font-family:var(--display);font-weight:400;font-size:clamp(56px,11.5vw,188px);line-height:.86;margin:0;color:var(--paper);
+  letter-spacing:-.02em;max-width:11ch
+}
+.hero h1 em{font-style:italic;font-weight:400;display:block;padding-left:.6em}
+.hero h1 b{font-weight:900}
+.dek{max-width:34ch;font-size:clamp(19px,1.6vw + 8px,27px);font-style:italic;font-weight:300;color:var(--paper);margin:5vh 0 3vh;line-height:1.35}
+.byline{font-family:var(--cond);letter-spacing:.14em;text-transform:uppercase;font-size:14px;color:var(--ink-dim);display:flex;gap:18px;flex-wrap:wrap}
+.byline span+span::before{content:"◆";margin-right:18px;font-size:8px;vertical-align:2px;color:var(--red)}
+.scrollcue{margin-top:6vh;font-family:var(--cond);letter-spacing:.3em;font-size:12px;text-transform:uppercase;color:var(--ink-dim);display:flex;align-items:center;gap:12px}
+.scrollcue i{display:block;width:1px;height:48px;background:linear-gradient(var(--lamp),transparent);animation:cue 2.4s ease-in-out infinite}
+@keyframes cue{0%,100%{transform:scaleY(.4);transform-origin:top}50%{transform:scaleY(1)}}
+
+/* ARTICLE */
+article{max-width:1180px;margin:0 auto;padding:0 16px 20vh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,34em) minmax(0,1.6fr);column-gap:40px}
+article > *{grid-column:2}
+article p{margin:0 0 1.1em;hyphens:auto}
+article p.first::first-letter{
+  font-family:var(--display);font-weight:900;float:left;font-size:5.4em;line-height:.78;margin:.06em .1em 0 -.02em;color:var(--lamp)
+}
+h2.sec{
+  grid-column:1 / 4;font-family:var(--display);font-weight:400;font-style:italic;color:var(--paper);
+  font-size:clamp(40px,6vw,92px);line-height:.95;margin:18vh 0 7vh;max-width:14ch;letter-spacing:-.01em
+}
+h2.sec small{display:block;font-family:var(--cond);font-style:normal;font-size:14px;letter-spacing:.34em;text-transform:uppercase;color:var(--red);margin-bottom:18px}
+blockquote.pull{
+  grid-column:1 / 3;margin:2.2em 0 2.4em;padding:0;font-family:var(--display);font-size:clamp(28px,3.4vw,48px);line-height:1.08;
+  color:var(--paper);font-style:italic;border:0;position:relative
+}
+blockquote.pull::before{content:"";display:block;width:64px;height:3px;background:var(--red);margin-bottom:22px}
+blockquote.pull.right{grid-column:2 / 4;text-align:right}
+blockquote.pull.right::before{margin-left:auto}
+aside.note{
+  grid-column:3;grid-row:span 3;align-self:start;font-family:var(--cond);font-size:16px;line-height:1.45;letter-spacing:.02em;
+  border-top:1px solid var(--lamp);padding-top:12px;color:var(--ink);max-width:22em;margin-top:.4em
+}
+aside.note b{display:block;color:var(--lamp);text-transform:uppercase;letter-spacing:.2em;font-weight:600;margin-bottom:6px;font-size:13px}
+.fleuron{text-align:center;color:var(--red);letter-spacing:1em;margin:2em 0;font-size:14px}
+
+/* timeline */
+.ledger{grid-column:1 / 4;margin:12vh 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:6vh 0}
+.ledger h3{font-family:var(--cond);letter-spacing:.3em;text-transform:uppercase;font-size:14px;color:var(--lamp);margin:0 0 4vh;font-weight:600}
+.ledger ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:34px 40px}
+.ledger li{border-left:1px solid var(--rule);padding-left:16px}
+.ledger .yr{font-family:var(--display);font-size:clamp(40px,4.4vw,64px);color:var(--paper);line-height:1;display:block;font-weight:400}
+.ledger li p{font-size:16px;margin:.6em 0 0;color:var(--ink)}
+
+/* characteristics widget */
+.chars{grid-column:1 / 4;margin:14vh 0 8vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:48px;align-items:center}
+.chars h3{font-family:var(--display);font-weight:400;font-size:clamp(34px,4vw,60px);color:var(--paper);margin:0 0 .3em;line-height:1}
+.chars h3 em{color:var(--lamp)}
+.chars p.lede{font-size:17px;max-width:36em}
+.lights{list-style:none;padding:0;margin:24px 0 0;border-top:1px solid var(--rule)}
+.lights li{border-bottom:1px solid var(--rule)}
+.lights button{
+  all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:12px;width:100%;padding:12px 6px;align-items:baseline
+}
+.lights button .n{font-family:var(--display);font-size:22px;color:var(--paper)}
+.lights button .c{font-family:var(--cond);letter-spacing:.14em;font-size:15px;color:var(--ink-dim)}
+.lights button[aria-pressed="true"] .n{color:var(--lamp);font-style:italic}
+.lights button[aria-pressed="true"] .c{color:var(--lamp)}
+.lights button:focus-visible{outline:2px solid var(--lamp)}
+.lamp-stage{position:relative;aspect-ratio:1;max-width:420px;width:100%;justify-self:center}
+.lamp-stage svg{width:100%;height:100%;display:block}
+.lamp-read{font-family:var(--cond);letter-spacing:.2em;text-transform:uppercase;font-size:14px;text-align:center;color:var(--ink);margin-top:10px;min-height:1.4em}
+.lamp-read b{color:var(--lamp);font-weight:600}
+.tape{display:flex;gap:2px;height:14px;margin-top:10px}
+.tape i{flex:1;background:rgba(154,167,187,.12)}
+.tape i.on{background:var(--lamp)}
+.tape i.red{background:var(--red)}
+
+.coda{grid-column:1 / 4;text-align:left;margin:18vh 0 0;font-family:var(--display);font-style:italic;color:var(--paper);font-size:clamp(30px,4.6vw,70px);line-height:1.02;max-width:16ch}
+.credits{grid-column:1 / 4;font-family:var(--cond);letter-spacing:.14em;text-transform:uppercase;font-size:13px;color:var(--ink-dim);margin-top:8vh;border-top:1px solid var(--rule);padding-top:18px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+@media (max-width:980px){
+  article{grid-template-columns:minmax(0,1fr);column-gap:0}
+  article > *, h2.sec, blockquote.pull, blockquote.pull.right, aside.note, .ledger, .chars, .coda, .credits{grid-column:1}
+  aside.note{grid-row:auto;margin:1em 0 2em}
+  blockquote.pull.right{text-align:left}
+  blockquote.pull.right::before{margin-left:0}
+  .chars{grid-template-columns:minmax(0,1fr)}
+  #tower{opacity:.5;height:52vh}
+}
+@media (prefers-reduced-motion:reduce){
+  .scrollcue i{animation:none}
+}
+</style>
+</head>
+<body>
+<canvas id="sea" aria-hidden="true"></canvas>
+<svg id="tower" viewBox="0 0 200 640" aria-hidden="true" preserveAspectRatio="xMaxYMax meet">
+  <defs>
+    <linearGradient id="tw" x1="0" x2="1">
+      <stop offset="0" stop-color="#0d1523"/><stop offset=".55" stop-color="#1a2536"/><stop offset="1" stop-color="#070c15"/>
+    </linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#fff4d6"/><stop offset=".4" stop-color="#ffd98a" stop-opacity=".8"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <!-- rock -->
+  <path d="M0 640 L10 590 Q40 560 70 572 Q100 548 140 566 Q175 552 200 580 L200 640Z" fill="#04070d"/>
+  <!-- tower body -->
+  <path d="M72 580 L84 150 L136 150 L148 580Z" fill="url(#tw)"/>
+  <path d="M77 430 L143 430 L144 470 L76 470Z M80 300 L140 300 L141 334 L79 334Z" fill="#8a2a22" opacity=".55"/>
+  <!-- gallery -->
+  <rect x="70" y="138" width="80" height="12" fill="#0a111c"/>
+  <path d="M68 138 h84" stroke="#2a3548" stroke-width="2"/>
+  <g stroke="#1f2a3b" stroke-width="1.5"><path d="M72 126v12M82 126v12M92 126v12M102 126v12M112 126v12M122 126v12M132 126v12M142 126v12M148 126v12"/><path d="M70 126h80"/></g>
+  <!-- lantern -->
+  <rect x="88" y="96" width="44" height="42" fill="#1a1406"/>
+  <rect x="90" y="98" width="40" height="38" fill="url(#glow)" id="lanternGlass"/>
+  <g stroke="#0a0d12" stroke-width="2"><path d="M101 96v42M110 96v42M119 96v42"/></g>
+  <path d="M84 96 L110 70 L136 96Z" fill="#0a111c"/>
+  <path d="M110 70 v-12" stroke="#1f2a3b" stroke-width="2"/><circle cx="110" cy="56" r="3" fill="#1f2a3b"/>
+  <!-- windows -->
+  <g fill="#ffcf7a" opacity=".55"><rect x="106" y="220" width="6" height="12"/><rect x="104" y="380" width="7" height="13"/><rect x="108" y="510" width="7" height="14"/></g>
+  <rect x="0" y="0" width="200" height="640" fill="none"/>
+</svg>
+<div id="beam" aria-hidden="true"></div>
+<a class="back" href="index.html">← Showcase</a>
+
+<main>
+  <header class="hero">
+    <p class="kicker">Tidewrack Quarterly &nbsp;·&nbsp; Coast &amp; Sea &nbsp;·&nbsp; Long Read</p>
+    <h1><b>The Last</b> <em>Lighthouse</em> Keepers</h1>
+    <p class="dek">For three centuries, someone climbed the stairs at dusk. Then, one November afternoon in Kent, nobody needed to. On the quiet end of a very old job.</p>
+    <div class="byline"><span>Words by Morwenna Achterberg</span><span>Nineteen minutes</span><span>Issue 41</span></div>
+    <div class="scrollcue"><i></i>Read by the light</div>
+  </header>
+
+  <article id="story">
+    <p class="first">On the twenty-sixth of November 1998, the keepers of North Foreland lighthouse lowered their flag, handed over the station, and went home. The light did not go out. That was rather the point. It went on flashing five times every twenty seconds over the approaches to the Thames, exactly as it had the night before, except that now the hands that kept it were in an office in Harwich, reading a screen. North Foreland was the last lighthouse in the care of Trinity House to be automated, and with its handover a job that had existed on English coasts since the seventeenth century quietly ceased to exist.</p>
+    <aside class="note"><b>The Service</b>Trinity House, chartered by Henry VIII in 1514, is the lighthouse authority for England, Wales and the Channel Islands. Scotland and the Isle of Man are served by the Northern Lighthouse Board; the whole of Ireland by the Commissioners of Irish Lights.</aside>
+    <p>There was a small ceremony. There were speeches, a plaque, a photograph of men in navy jerseys standing in a row against white paint. It is easy, looking at such pictures, to reach for the word <em>romance</em>, and the keepers themselves were usually the first to wince at it. The work was not romantic. It was clerical, mechanical, domestic, and above all repetitive: a life organised around a lamp that could never be allowed to fail, in a building that was frequently trying to be washed off a rock.</p>
+    <p>And yet something was lost that November, and it was not only employment. It was a particular kind of attention — the attention of a person who looks at the same stretch of sea every night for years and knows, without instruments, when something on it is wrong.</p>
+
+    <h2 class="sec"><small>I. The Watch</small>Four hours on, and the lamp never out</h2>
+    <p>A rock station — a lighthouse on an offshore reef, with no land to speak of — was typically manned by three keepers at a time, drawn from a complement of four so that one was always ashore. In the later decades of the service a keeper might spend two months on the rock and one month off, though the relief boat kept to no timetable but the weather's. Reliefs could be delayed for weeks. Keepers learned to ration tobacco and patience in roughly equal measure.</p>
+    <p>The day was built from watches. Through the night, one man was always awake in the lantern or the service room below it, and the log recorded his hours. Before electrification the light came from paraffin burners whose wicks had to be trimmed, which is why American keepers were called <em>wickies</em>; later, from pressurised vapour burners that hissed like a kettle and could flare dangerously if neglected. The great lenses, some weighing several tonnes, floated on baths of mercury so a clockwork mechanism could turn them, and the clockwork had to be wound by hand, a heavy weight hauled up the tower every half hour or so, like a grandfather clock the size of a house.</p>
+    <aside class="note"><b>Character</b>Every light has a signature — its <em>character</em> — printed on charts so a navigator can tell one from another. North Foreland: five flashes, white and red sectors, every twenty seconds. Scroll down to see a few of them kept.</aside>
+    <p>In the morning came the cleaning. Brass was polished and glass was polished, and the lens was polished so often that keepers wore linen aprons to avoid scratching it with their buttons. Curtains were drawn round the lantern in daylight, not for privacy but because a lens that can throw a flame twenty miles to sea will just as happily focus the midday sun onto its own burner and start a fire.</p>
+    <blockquote class="pull">A lens that can throw a flame twenty miles to sea will just as happily focus the midday sun on its own burner.</blockquote>
+    <p>Between these duties was an astonishing amount of time and an astonishingly small place in which to spend it. Keepers built ships in bottles, made rugs, carved, painted, studied for exams by correspondence, kept weather records for the Met Office, and cooked. The cooking, by most accounts, was taken seriously. On a tower where the kitchen was a curved room eleven feet across, a man who could make a decent suet pudding was a man whose company you could bear for eight weeks.</p>
+
+    <h2 class="sec"><small>II. The Rock</small>What the sea does to a building</h2>
+    <p>People who have never stood in a rock lighthouse in a gale tend to imagine it as a sturdy thing, and it is — but sturdy the way a tuning fork is sturdy. Keepers describe the whole tower shuddering when a big sea struck; cups walking across tables; spray, in the worst weather, lashing the lantern glass a hundred feet above the rock. The first Eddystone light, a fanciful timber tower built by Henry Winstanley off Plymouth, was swept away in the Great Storm of 1703 with its builder inside it. Its successor, Rudyerd's tower, burned in 1755; its eldest keeper, Henry Hall, was ninety-four, and he claimed that molten lead from the roof had run into his open mouth as he looked up at the fire. The doctors did not believe him. He died twelve days later, and when they opened him they found a flat oval of lead in his stomach.</p>
+    <p>That is the grim end of lighthouse history, and there is a lot of it. In December 1900 the relief boat reached the Flannan Isles, west of Lewis, and found the station empty. The three keepers — James Ducat, Thomas Marshall and Donald MacArthur — were never found. The clocks had stopped; the lamp was trimmed and ready; one set of oilskins still hung by the door. The most likely explanation is the most ordinary one, a huge sea on the west landing, but the empty table and the stopped clocks have powered poems, films and a century of speculation.</p>
+    <blockquote class="pull right">The lamp was trimmed and ready. One set of oilskins still hung by the door.</blockquote>
+    <p>The heroic end is no less real. In September 1838 the paddle steamer <em>Forfarshire</em> struck the Big Harcar rock off the Farne Islands. From the Longstone light, the keeper William Darling and his twenty-two-year-old daughter Grace rowed a coble through heavy seas to reach the survivors, making two trips to bring nine people back. Grace Darling became, briefly and much against her own inclinations, the most famous woman in Britain. She died of tuberculosis four years later.</p>
+
+    <section class="chars" aria-labelledby="charsTitle">
+      <div>
+        <h3 id="charsTitle">A few <em>characters</em>, kept</h3>
+        <p class="lede">Choose a light. The lantern here keeps its published character, and the great beam behind this page takes it up as well — for as long as you care to stand watch.</p>
+        <ul class="lights" id="lights"></ul>
+      </div>
+      <div>
+        <div class="lamp-stage">
+          <svg viewBox="0 0 200 200" role="img" aria-label="A lantern showing the selected light character">
+            <defs>
+              <radialGradient id="lg"><stop offset="0" stop-color="#fff8e6"/><stop offset=".35" stop-color="#ffe2a4" stop-opacity=".9"/><stop offset="1" stop-color="#ffe2a4" stop-opacity="0"/></radialGradient>
+              <radialGradient id="lr"><stop offset="0" stop-color="#ffe0da"/><stop offset=".35" stop-color="#e2574a" stop-opacity=".9"/><stop offset="1" stop-color="#d2493a" stop-opacity="0"/></radialGradient>
+            </defs>
+            <circle id="halo" cx="100" cy="92" r="92" fill="url(#lg)" opacity="0"/>
+            <path d="M62 60 L100 30 L138 60Z" fill="#141c2a" stroke="#34425a"/>
+            <rect x="66" y="60" width="68" height="64" fill="#0d1320" stroke="#34425a"/>
+            <g stroke="#34425a"><path d="M83 60v64M100 60v64M117 60v64"/></g>
+            <ellipse id="core" cx="100" cy="92" rx="16" ry="22" fill="#2a2414"/>
+            <rect x="56" y="124" width="88" height="10" fill="#141c2a" stroke="#34425a"/>
+            <path d="M70 134 L64 190 H136 L130 134Z" fill="#101725" stroke="#34425a"/>
+          </svg>
+        </div>
+        <div class="lamp-read" id="lampRead" aria-live="polite"></div>
+        <div class="tape" id="tape" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <h2 class="sec"><small>III. The Switch</small>How a job is automated out of existence</h2>
+    <p>Automation did not arrive all at once. Unmanned lights with acetylene burners and sun-valves — which shut the gas off at dawn — were in use from the early twentieth century on minor stations. What changed, in the 1970s and 80s, was reliability: electric lamp-changers that could rotate a fresh bulb into place when one failed, standby generators that started themselves, and telemetry that reported faults down a telephone line or radio link. Once a light could tell a distant office that it was unwell, the case for three men living inside it grew thin, and then it was gone.</p>
+    <p>The programme was steady and, by the standards of such things, humane. Keepers were redeployed, retrained, retired. Some became attendants for the stations they had kept, visiting to check on the machinery. Others went ashore for good and discovered what it was to sleep through a whole night. In Ireland the Commissioners of Irish Lights completed their automation in March 1997 at the Baily, on Howth Head above Dublin Bay; in Scotland the Northern Lighthouse Board's last keepers left Fair Isle South in March 1998. North Foreland, that autumn, closed the book.</p>
+    <aside class="note"><b>Helicopters</b>Many rock stations acquired helipads on top of their lanterns in the 1970s and 80s. Reliefs that once waited weeks on the weather could be done in an afternoon — one of the quieter steps toward automation.</aside>
+    <p>It would be wrong to say nothing replaced the keepers. Satellite navigation replaced much of what the lights themselves were for, and a modern ship's officer may cross the Channel without ever consciously taking a bearing on one. The lights remain because systems fail and because the sea does not care about systems. Several have been reduced in range, some discontinued; many still burn, now often with LEDs, now often from solar panels bolted to galleries where men once leaned and smoked and watched the weather come in.</p>
+
+    <section class="ledger" aria-label="Automation timeline">
+      <h3>The lights go quiet &mdash; a short ledger</h3>
+      <ol>
+        <li><span class="yr">1514</span><p>Henry VIII grants a charter to the Guild of the Holy Trinity at Deptford Strond.</p></li>
+        <li><span class="yr">1703</span><p>The Great Storm carries away Winstanley's Eddystone, and Winstanley with it.</p></li>
+        <li><span class="yr">1838</span><p>Grace and William Darling row from the Longstone to the wreck of the <em>Forfarshire</em>.</p></li>
+        <li><span class="yr">1900</span><p>Three keepers vanish from the Flannan Isles. The lamp is found trimmed.</p></li>
+        <li><span class="yr">1997</span><p>The Baily, Howth: the last manned light in Ireland is automated.</p></li>
+        <li><span class="yr">1998</span><p>Fair Isle South in March; North Foreland on 26 November. The job ends.</p></li>
+      </ol>
+    </section>
+
+    <h2 class="sec"><small>IV. The Attention</small>What a lighthouse keeper actually kept</h2>
+    <p>Ask former keepers what the job was, and they rarely begin with the lamp. They talk about the log, about the weather observations sent ashore every three hours, about the fog signal — hours or days of it, the building booming like a ship's hull, sleep impossible. They talk about the boats they watched. Keepers were an unofficial coastguard, often the first to see a vessel in trouble, a flare, a capsized dinghy, a fishing boat that should have been home by now.</p>
+    <p>That watching is the thing no telemetry reproduces. A lamp-changer knows if a filament has broken. It does not know that the crabber which always passes at four has not passed. The keepers knew — not because anyone had trained them to, but because nobody can look at the same stretch of water every night for a decade without learning its habits.</p>
+    <blockquote class="pull">A lamp-changer knows if a filament has broken. It does not know the crabber that always passes at four has not passed.</blockquote>
+    <p>Most of the stations are still there. Some are holiday cottages; you can sleep in rooms where keepers slept, and hear on a bad night what they heard. Some are museums, where the old clockwork sits polished behind rope. The rock towers remain as they always were, unvisited and blinking. They do not need anyone now. That was always the ambition — a light that simply works — and it has been achieved. It is only strange, on a clear night on a headland, to watch that familiar beam come round and know that there is no one up there, and has not been for years, and that there was once a person whose job was simply to make sure you could see it.</p>
+    <div class="fleuron">◆ ◆ ◆</div>
+    <p class="coda">The light comes round. It is looking for you. No one is looking with it.</p>
+    <div class="credits"><span>Tidewrack Quarterly · Issue 41</span><span>Illustration: drawn in the browser</span><span>Flash characters after published Admiralty listings</span></div>
+  </article>
+</main>
+
+<script>
+(function(){
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* ---------- light characters ---------- */
+  // pattern: array of [ms, state] where state 0 dark, 1 white, 2 red
+  function fl(n, period, flash=500, gap=1500, colour=1){
+    const seq=[]; let t=0;
+    for(let i=0;i<n;i++){ seq.push([flash,colour]); t+=flash; if(i<n-1){ seq.push([gap,0]); t+=gap; } }
+    seq.push([period*1000 - t,0]); return seq;
+  }
+  const LIGHTS = [
+    {n:'North Foreland', c:'Fl (5) WR 20s', where:'Kent · last manned Trinity House light', seq: fl(5,20,500,1500,1), red:true},
+    {n:'Bishop Rock', c:'Fl (2) W 15s', where:'Isles of Scilly · first light from the west', seq: fl(2,15,600,1600)},
+    {n:'Eddystone', c:'Fl (2) W 10s', where:'Off Plymouth · fourth tower on the reef', seq: fl(2,10,500,1500)},
+    {n:'Fastnet', c:'Fl W 5s', where:'Co. Cork · the Teardrop of Ireland', seq: fl(1,5,500)},
+    {n:'Longstone', c:'Fl W 20s', where:'Farne Islands · the Darlings’ light', seq: fl(1,20,900)},
+    {n:'Flannan Isles', c:'Fl (2) W 30s', where:'Outer Hebrides · emptied in 1900', seq: fl(2,30,700,2300)},
+  ];
+  const ul = document.getElementById('lights');
+  LIGHTS.forEach((L,i)=>{
+    const li=document.createElement('li');
+    li.innerHTML = `<button type="button" id="light-${i}" aria-pressed="${i===0}"><span class="n">${L.n}</span><span class="c">${L.c}</span></button>`;
+    ul.appendChild(li);
+  });
+  let cur = 0, start = performance.now();
+  const halo = document.getElementById('halo'), core = document.getElementById('core');
+  const read = document.getElementById('lampRead'), tape = document.getElementById('tape');
+  function buildTape(){
+    const L=LIGHTS[cur]; const total=L.seq.reduce((a,s)=>a+s[0],0); const N=60; tape.innerHTML='';
+    for(let i=0;i<N;i++){
+      const t=(i+.5)/N*total; let acc=0, st=0;
+      for(const [d,s] of L.seq){ if(t<acc+d){st=s;break;} acc+=d; }
+      const e=document.createElement('i'); if(st) e.className = 'on'; tape.appendChild(e);
+    }
+    read.innerHTML = `<b>${L.n}</b> &nbsp;${L.c} &nbsp;·&nbsp; ${L.where}`;
+  }
+  ul.addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    cur = +b.id.split('-')[1]; start = performance.now();
+    ul.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x===b));
+    buildTape();
+  });
+  buildTape();
+  let sectorRed = false;
+  function lampState(now){
+    const L=LIGHTS[cur]; const total=L.seq.reduce((a,s)=>a+s[0],0);
+    const t=(now-start)%total; let acc=0;
+    for(const [d,s] of L.seq){ if(t<acc+d){ const p=(t-acc)/d; return s? Math.sin(Math.PI*Math.min(1,p*1.0))*0.3+0.7 : 0; } acc+=d; }
+    return 0;
+  }
+
+  /* ---------- sea canvas ---------- */
+  const cv=document.getElementById('sea'), ctx=cv.getContext('2d');
+  let W=0,H=0,dpr=1;
+  function size(){ dpr=Math.min(2,window.devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  size(); addEventListener('resize', size);
+  const drops = Array.from({length:140},()=>({x:Math.random(),y:Math.random(),l:8+Math.random()*18,s:.6+Math.random()*.8}));
+  const stars = Array.from({length:40},()=>({x:Math.random(),y:Math.random()*.35,r:Math.random()*1.1}));
+  function drawSea(t, lampK, beamA){
+    const sky=ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,'#03060c'); sky.addColorStop(.55,'#0a1422'); sky.addColorStop(1,'#050a12');
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+    // clouds - drifting murk
+    for(let i=0;i<5;i++){
+      const cx=((t*0.004*(i+1)+i*337)%(W+600))-300, cy=H*(.08+i*.07);
+      const g=ctx.createRadialGradient(cx,cy,0,cx,cy,260+i*40);
+      g.addColorStop(0,'rgba(40,54,76,.35)'); g.addColorStop(1,'rgba(40,54,76,0)');
+      ctx.fillStyle=g; ctx.fillRect(cx-320,cy-320,640,640);
+    }
+    ctx.fillStyle='rgba(200,210,230,.5)';
+    stars.forEach(s=>{ctx.globalAlpha=.25+.25*Math.sin(t*.001+s.x*40); ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r,0,7); ctx.fill();});
+    ctx.globalAlpha=1;
+    // waves
+    const horizon=H*.66;
+    const lx=W*.84;
+    for(let layer=0; layer<7; layer++){
+      const y0=horizon + layer*layer*H*.0085 + layer*6;
+      const amp=3+layer*layer*1.4, sp=.0004+layer*.00018, k=.006-layer*.0005;
+      ctx.beginPath(); ctx.moveTo(0,H);
+      for(let x=0;x<=W+10;x+=10){
+        const y=y0+Math.sin(x*k+t*sp*3+layer)*amp+Math.sin(x*k*2.3-t*sp*2+layer*2)*amp*.45;
+        ctx.lineTo(x,y);
+      }
+      ctx.lineTo(W,H); ctx.closePath();
+      const c=8+layer*3;
+      ctx.fillStyle=`rgb(${c},${c+10},${c+24})`; ctx.fill();
+      // crest glint from lamp
+      ctx.strokeStyle=`rgba(255,226,164,${(.05+.05*lampK)*(1-layer/8)})`; ctx.lineWidth=1; ctx.stroke();
+    }
+    // glitter path from lamp on the water
+    const gl=ctx.createLinearGradient(lx,horizon,lx,H);
+    gl.addColorStop(0,`rgba(255,226,164,${.25*lampK})`); gl.addColorStop(1,'rgba(255,226,164,0)');
+    ctx.fillStyle=gl;
+    for(let i=0;i<30;i++){
+      const yy=horizon+Math.pow(i/30,1.4)*(H-horizon);
+      const w=6+i*3+Math.sin(t*.003+i)*8;
+      ctx.globalAlpha=.3+.7*Math.abs(Math.sin(t*.002+i*1.7));
+      ctx.fillRect(lx-w/2+Math.sin(t*.001+i)*10,yy,w,2);
+    }
+    ctx.globalAlpha=1;
+    // rain
+    ctx.strokeStyle='rgba(170,185,210,.18)'; ctx.lineWidth=1; ctx.beginPath();
+    drops.forEach(d=>{
+      if(!reduce){ d.y+=d.s*.012; d.x-=d.s*.003; if(d.y>1){d.y=-.05;d.x=Math.random()*1.1;} if(d.x<-.05) d.x=1.05; }
+      const x=d.x*W,y=d.y*H; ctx.moveTo(x,y); ctx.lineTo(x-d.l*.3,y+d.l);
+    });
+    ctx.stroke();
+  }
+
+  /* ---------- beam ---------- */
+  const beam=document.getElementById('beam');
+  const tower=document.getElementById('tower');
+  const glass=document.getElementById('lanternGlass');
+  function lampPos(){
+    const r=tower.getBoundingClientRect();
+    // lantern is at (110,117) in 200x640 viewBox, meet + xMax yMax
+    const s=Math.min(r.width/200, r.height/640);
+    const ox=r.right-200*s, oy=r.bottom-640*s;
+    return {x:ox+110*s, y:oy+117*s};
+  }
+  let lastT=0, drift=0;
+  function frame(now){
+    const dt=Math.min(60, now-(lastT||now)); lastT=now;
+    if(!reduce) drift += dt*0.012;
+    const scroll = scrollY*0.22;
+    const a = (drift + scroll) % 360;
+    const k = lampState(now);
+    const p = lampPos();
+    beam.style.setProperty('--a', (a+90)+'deg');
+    beam.style.setProperty('--x', p.x+'px');
+    beam.style.setProperty('--y', p.y+'px');
+    const kk = .55 + .6*k;
+    beam.style.setProperty('--k', kk.toFixed(3));
+    glass.style.opacity = (.25+.75*k).toFixed(3);
+    const L=LIGHTS[cur];
+    // red sector flash for North Foreland: every other flash tinted
+    halo.setAttribute('opacity', k.toFixed(3));
+    const isRed = L.red && Math.floor(((now-start)%20000)/2000)===2;
+    halo.setAttribute('fill', isRed ? 'url(#lr)' : 'url(#lg)');
+    core.setAttribute('fill', k>0 ? (isRed?'#ffb4a8':'#fff4d6') : '#2a2414');
+    drawSea(reduce? 0 : now, kk, a);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

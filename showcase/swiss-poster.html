@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Raster Poster Werk</title>
+<meta name="description" content="An homage to the International Typographic Style — Basel, Zürich, the grid — with a kinetic grid poster generator and a switchable modular grid overlay.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f7f7f4;
+  --ink:#111111;
+  --red:#e2231a;
+  --grey:#8a8a86;
+  --rule:#111;
+  --gut:clamp(16px,3vw,40px);
+  --grot:"Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --black:"Archivo Black","Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--grot);font-size:17px;line-height:1.38;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+::selection{background:var(--red);color:#fff}
+
+.wrap{max-width:1320px;margin:0 auto;padding:0 max(var(--gut),env(safe-area-inset-left)) 0 max(var(--gut),env(safe-area-inset-right));position:relative}
+.g{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:20px}
+
+/* page grid overlay */
+#pagegrid{position:fixed;inset:0;pointer-events:none;z-index:50;display:none}
+#pagegrid .wrap{height:100%}
+#pagegrid .g{height:100%}
+#pagegrid .g span{background:rgba(226,35,26,.07);border-left:1px solid rgba(226,35,26,.35);border-right:1px solid rgba(226,35,26,.35)}
+body.show-grid #pagegrid{display:block}
+
+/* masthead */
+.mast{border-bottom:2px solid var(--ink);padding:14px 0 10px}
+.mast .g{align-items:end}
+.mast .back{grid-column:1/4;font-weight:700;font-size:13px;text-decoration:none;letter-spacing:.01em}
+.mast .back:hover{color:var(--red)}
+.mast .issue{grid-column:4/9;font-size:13px}
+.mast .gridbtn{grid-column:9/13;justify-self:end;font:700 13px var(--grot);background:none;border:0;padding:0;cursor:pointer;color:var(--ink);display:flex;gap:8px;align-items:center}
+.mast .gridbtn i{display:inline-block;width:22px;height:12px;border:2px solid var(--ink);position:relative}
+.mast .gridbtn[aria-pressed="true"] i{background:var(--red);border-color:var(--red)}
+
+/* hero */
+.hero{padding-top:40px;padding-bottom:30px;position:relative;overflow:hidden}
+.hero h1{grid-column:1/13;margin:0;font-family:var(--grot);font-weight:900;font-stretch:78%;font-size:clamp(60px,12.4vw,190px);line-height:.82;letter-spacing:-.045em}
+.hero h1 .l2{display:block;padding-left:calc((100% - 11*20px)/12*2 + 40px)}
+.hero h1 .red{color:var(--red)}
+.hero .kicker{grid-column:1/4;margin-top:28px;font-weight:700;font-size:14px;line-height:1.3;border-top:2px solid var(--ink);padding-top:8px}
+.hero .lede{grid-column:4/10;margin-top:28px;font-size:clamp(20px,2.2vw,28px);line-height:1.18;font-weight:500;letter-spacing:-.01em;border-top:2px solid var(--ink);padding-top:8px}
+.hero .meta{grid-column:10/13;margin-top:28px;font-size:14px;border-top:2px solid var(--red);padding-top:8px}
+.hero .dot{position:absolute;right:max(16px,4vw);top:30px;width:clamp(70px,12vw,170px);aspect-ratio:1;border-radius:50%;background:var(--red);animation:roll 14s linear infinite;transform-origin:50% 50%}
+@keyframes roll{0%{transform:translateX(0)}50%{transform:translateX(-40px)}100%{transform:translateX(0)}}
+
+/* sections */
+section.s{border-top:2px solid var(--ink);padding-top:26px;padding-bottom:56px}
+.s .num{grid-column:1/3;font-family:var(--black);font-size:clamp(46px,7vw,96px);line-height:.8;letter-spacing:-.04em}
+.s .num.red{color:var(--red)}
+.s h2{grid-column:3/8;margin:0;font-weight:800;font-size:clamp(28px,3.4vw,46px);line-height:.98;letter-spacing:-.03em}
+.s .intro{grid-column:8/13;margin:0;font-size:17px}
+.s p{margin:0 0 1em}
+
+/* generator */
+.gen{margin-top:34px}
+.gen .controls{grid-column:1/5;display:flex;flex-direction:column;gap:14px;font-size:14px}
+.gen .stage{grid-column:5/13;display:flex;gap:20px;align-items:flex-start}
+.poster-frame{flex:1 1 auto;max-width:560px;background:#fff;box-shadow:0 1px 0 #0002,14px 16px 0 -2px #11111112;position:relative}
+.poster-frame svg{display:block;width:100%;height:auto}
+.stage aside{flex:0 0 170px;font-size:13px;line-height:1.35;border-top:2px solid var(--ink);padding-top:8px}
+.stage aside b{display:block;font-size:12px;letter-spacing:.02em;text-transform:uppercase;margin-top:12px}
+.field label{display:block;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.field input,.field textarea,.field select{width:100%;font:500 16px/1.2 var(--grot);border:0;border-bottom:2px solid var(--ink);background:transparent;padding:6px 0;color:var(--ink);border-radius:0}
+.field textarea{resize:vertical;min-height:62px}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-bottom-color:var(--red)}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches button{width:40px;height:40px;border:2px solid var(--ink);padding:0;cursor:pointer;position:relative;display:grid;grid-template-columns:1fr 1fr}
+.swatches button span{display:block}
+.swatches button[aria-pressed="true"]::after{content:"";position:absolute;inset:-7px;border:2px solid var(--red)}
+.comps{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.comps button,.btn{font:700 14px var(--grot);text-align:left;border:2px solid var(--ink);background:transparent;padding:8px 10px;cursor:pointer;color:var(--ink);border-radius:0}
+.comps button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn.primary:hover{background:var(--ink);border-color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer;user-select:none}
+.toggle input{appearance:none;width:34px;height:18px;border:2px solid var(--ink);margin:0;position:relative;cursor:pointer;border-radius:0}
+.toggle input::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;background:var(--ink);transition:left .2s}
+.toggle input:checked{background:var(--red);border-color:var(--red)}
+.toggle input:checked::after{left:18px;background:#fff}
+.seed{font-variant-numeric:tabular-nums;color:var(--grey);font-size:12px}
+
+/* figures */
+.people{margin-top:34px;row-gap:0}
+.person{grid-column:span 4;border-top:1px solid var(--ink);padding:12px 0 26px;display:grid;grid-template-columns:70px 1fr;gap:12px}
+.person .yr{font-weight:800;font-size:13px;font-variant-numeric:tabular-nums}
+.person h3{margin:0 0 4px;font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.person p{margin:0;font-size:15px}
+.person svg{width:54px;height:54px;display:block;margin-top:10px}
+
+/* principles */
+.rules{margin-top:34px}
+.rule{grid-column:span 3;border-left:2px solid var(--ink);padding:0 14px 18px 12px;margin-bottom:26px}
+.rule .n{font-family:var(--black);font-size:48px;line-height:1;color:var(--red)}
+.rule h3{margin:8px 0 6px;font-size:19px;letter-spacing:-.01em;line-height:1.1}
+.rule p{font-size:15px;margin:0}
+
+/* timeline */
+.tl{margin-top:30px;position:relative}
+.tl ol{grid-column:3/13;list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:90px 1fr;gap:20px;border-top:1px solid var(--ink);padding:10px 0}
+.tl li b{font-weight:800;font-variant-numeric:tabular-nums}
+.tl li:hover{background:linear-gradient(90deg,var(--red) 0 6px,transparent 6px)}
+.tl li:hover b{padding-left:14px;transition:padding .2s}
+
+footer{border-top:8px solid var(--ink);padding:18px 0 40px;font-size:13px}
+footer .g>*{grid-column:span 4}
+footer .big{font-weight:900;font-size:22px;letter-spacing:-.02em}
+
+@media (max-width:980px){
+  .gen .controls{grid-column:1/13;display:grid;grid-template-columns:1fr 1fr;gap:14px 20px}
+  .gen .controls .span2{grid-column:1/3}
+  .gen .stage{grid-column:1/13;margin-top:24px}
+  .person{grid-column:span 6}
+  .rule{grid-column:span 6}
+  .s h2{grid-column:3/13}
+  .s .intro{grid-column:3/13;margin-top:14px}
+  .tl ol{grid-column:1/13}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  .g{column-gap:10px}
+  .mast .back{grid-column:1/6}
+  .mast .issue{display:none}
+  .mast .gridbtn{grid-column:6/13}
+  .hero h1{font-size:clamp(40px,14.5vw,120px)}
+  .hero h1 .l2{padding-left:8%}
+  .hero .kicker,.hero .lede,.hero .meta{grid-column:1/13}
+  .hero .kicker{order:2}
+  .s .num{grid-column:1/13;margin-bottom:10px}
+  .s h2,.s .intro{grid-column:1/13}
+  .gen .controls{grid-template-columns:1fr}
+  .gen .controls .span2{grid-column:auto}
+  .gen .stage{flex-direction:column}
+  .poster-frame{width:100%}
+  .stage aside{flex:none;width:100%}
+  .person,.rule{grid-column:1/13}
+  .tl li{grid-template-columns:62px 1fr;gap:10px}
+  footer .g>*{grid-column:1/13;margin-bottom:10px}
+}
+@media (prefers-reduced-motion:reduce){
+  .hero .dot{animation:none}
+  *{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}
+</style>
+</head>
+<body>
+<div id="pagegrid" aria-hidden="true"><div class="wrap"><div class="g"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div></div>
+
+<header class="mast">
+  <div class="wrap g">
+    <a class="back" href="index.html" id="back">← Showcase</a>
+    <div class="issue">Raster — Zeitschrift für Gestaltung · Heft 12 · Basel/Zürich</div>
+    <button class="gridbtn" id="pageGridBtn" aria-pressed="false" type="button"><i></i>Rastersystem (G)</button>
+  </div>
+</header>
+
+<main>
+<div class="hero wrap">
+  <div class="dot" aria-hidden="true"></div>
+  <div class="g">
+    <h1>Objektiv<span class="red">.</span><span class="l2">Raster<span class="red">/</span>Form</span></h1>
+    <div class="kicker">The International Typographic Style<br>Switzerland, 1950 — 1970<br>and everywhere since</div>
+    <p class="lede">A design language that believed information could be made clear, neutral and beautiful by the same act — a grid, a grotesk, flush left, ragged right, and nothing that does not work.</p>
+    <div class="meta">Set in a grotesk. Built on a twelve-column module. Press <b>G</b> anywhere to reveal the scaffolding this page stands on.</div>
+  </div>
+</div>
+
+<section class="s wrap" id="werk">
+  <div class="g">
+    <div class="num red">01</div>
+    <h2>Plakatwerk: a kinetic grid poster press</h2>
+    <p class="intro">Type an event. Choose a composition after the masters — concentric arcs, a diagonal of bars, a field of circles, a stepped staircase. Every element snaps to a 6 × 8 module. Shuffle to let the system propose a new arrangement, and switch on the grid to see why it works.</p>
+  </div>
+  <div class="g gen">
+    <div class="controls">
+      <div class="field span2"><label for="fHead">Headline</label><textarea id="fHead" rows="2">musica
+viva</textarea></div>
+      <div class="field"><label for="fSub">Subline</label><input id="fSub" value="Neue Musik im Grossen Saal"></div>
+      <div class="field"><label for="fInfo">Date / Venue</label><input id="fInfo" value="Donnerstag 14. März 1957 · 20.15 Uhr · Tonhalle Zürich"></div>
+      <div class="field span2"><label id="compLbl">Composition</label>
+        <div class="comps" role="group" aria-labelledby="compLbl">
+          <button type="button" id="c-arcs" data-c="arcs" aria-pressed="true">Konzert-Bögen</button>
+          <button type="button" id="c-bars" data-c="bars" aria-pressed="false">Diagonale</button>
+          <button type="button" id="c-dots" data-c="dots" aria-pressed="false">Kreisfeld</button>
+          <button type="button" id="c-steps" data-c="steps" aria-pressed="false">Treppe</button>
+        </div>
+      </div>
+      <div class="field span2"><label id="palLbl">Colour</label>
+        <div class="swatches" role="group" aria-labelledby="palLbl" id="swatches"></div>
+      </div>
+      <div class="span2 row">
+        <label class="toggle" for="tGrid"><input type="checkbox" id="tGrid"> Show grid</label>
+        <label class="toggle" for="tKin"><input type="checkbox" id="tKin" checked> Kinetic</label>
+      </div>
+      <div class="span2 row">
+        <button type="button" class="btn primary" id="shuffle">Shuffle layout (S)</button>
+        <button type="button" class="btn" id="rotate">Rotate type</button>
+      </div>
+      <div class="seed" id="seedOut">Seed 0000</div>
+    </div>
+    <div class="stage">
+      <div class="poster-frame"><svg id="poster" viewBox="0 0 600 848" role="img" aria-label="Generated poster"></svg></div>
+      <aside>
+        <b>Format</b>Weltformat F4 · 895 × 1280 mm, scaled
+        <b>Raster</b>6 columns × 8 rows, 12 unit gutters, 30 unit margins
+        <b>Schrift</b>Grotesk, one weight family, no italics
+        <b>Satz</b>Flush left, ragged right. Headline set as large as the column span allows.
+        <b>Tip</b>Press S to shuffle. The composition keeps its idea; only the positions move.
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="s wrap" id="geschichte">
+  <div class="g">
+    <div class="num">02</div>
+    <h2>A short history of the neutral voice</h2>
+    <div class="intro">
+      <p>The style grew out of the Kunstgewerbeschulen of Basel and Zürich in the years after the Second World War. Its roots run back through Jan Tschichold's <i>Die neue Typographie</i> (1928) and the Bauhaus, but Swiss designers turned that avant-garde manifesto into a calm, repeatable method.</p>
+      <p>A neutral country, three official languages, and a booming export economy made a legible, language-light visual system not only an ideal but a necessity. By the 1960s the corporate world — airlines, chemical giants, transit systems — had adopted it wholesale.</p>
+    </div>
+  </div>
+  <div class="g tl">
+    <ol>
+      <li><b>1928</b><span>Jan Tschichold publishes <i>Die neue Typographie</i>, arguing for asymmetric layouts and sans-serif type.</span></li>
+      <li><b>1947</b><span>Armin Hofmann begins teaching at the Allgemeine Gewerbeschule Basel; Emil Ruder joins him the following year.</span></li>
+      <li><b>1955</b><span>Josef Müller-Brockmann's <i>Musica Viva</i> posters for the Tonhalle Zürich bring abstract geometry to concert publicity.</span></li>
+      <li><b>1957</b><span>Max Miedinger and Eduard Hoffmann release Neue Haas Grotesk — later renamed Helvetica. Adrian Frutiger's Univers appears the same year.</span></li>
+      <li><b>1958</b><span><i>Neue Grafik</i> magazine launches, edited by Müller-Brockmann, Lohse, Neuburg and Vivarelli — the movement's house journal.</span></li>
+      <li><b>1961</b><span>Karl Gerstner's <i>Designing Programmes</i> proposes design as a system of rules, decades before generative design.</span></li>
+      <li><b>1967</b><span>Emil Ruder publishes <i>Typographie</i>; Massimo Vignelli designs the New York subway signage in the Swiss manner.</span></li>
+      <li><b>1981</b><span>Müller-Brockmann's <i>Grid Systems in Graphic Design</i> is published. Meanwhile Wolfgang Weingart, in Basel, is already breaking it apart.</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="s wrap" id="personen">
+  <div class="g">
+    <div class="num red">03</div>
+    <h2>Personen</h2>
+    <p class="intro">Teachers more than stars. Most of the style's influence spread through classrooms in Basel and Zürich and the students who carried it to Yale, Ulm and New York.</p>
+  </div>
+  <div class="g people" id="people"></div>
+</section>
+
+<section class="s wrap" id="prinzipien">
+  <div class="g">
+    <div class="num">04</div>
+    <h2>Eight working principles</h2>
+    <p class="intro">Not rules for their own sake — each one removes a decision the reader would otherwise have to make.</p>
+  </div>
+  <div class="g rules">
+    <div class="rule"><div class="n">1</div><h3>The grid is the argument</h3><p>A modular grid decides sizes, margins and positions before any content arrives. Order becomes visible and consistent across a whole series.</p></div>
+    <div class="rule"><div class="n">2</div><h3>Asymmetry, not centring</h3><p>Centred axes are static. Asymmetric balance creates tension and leads the eye through the page.</p></div>
+    <div class="rule"><div class="n">3</div><h3>Sans serif grotesk</h3><p>Akzidenz-Grotesk, then Helvetica and Univers: faces without historical costume, "objective" letterforms for an objective message.</p></div>
+    <div class="rule"><div class="n">4</div><h3>Flush left, ragged right</h3><p>Even word spacing matters more than a straight right edge. Justified text is abandoned.</p></div>
+    <div class="rule"><div class="n">5</div><h3>Photography over illustration</h3><p>The camera is trusted as a neutral witness; drawings are reserved for pure geometry.</p></div>
+    <div class="rule"><div class="n">6</div><h3>Negative space works</h3><p>White is not left over. It is a structural material, as deliberate as any line of type.</p></div>
+    <div class="rule"><div class="n">7</div><h3>Scale contrast</h3><p>One very large element, many small ones. Hierarchy is built with size and weight, never ornament.</p></div>
+    <div class="rule"><div class="n">8</div><h3>Content first</h3><p>"The designer's job is to make the message clear" — the rest is discipline.</p></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap g">
+    <div class="big">Raster Poster Werk</div>
+    <div>An homage to the International Typographic Style. All posters on this page are generated in your browser; no image files are used.</div>
+    <div><a href="index.html">← Back to the Showcase</a></div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var NS = "http://www.w3.org/2000/svg";
+
+  /* ---------- page grid toggle ---------- */
+  var pg = document.getElementById('pageGridBtn');
+  function setPageGrid(on){document.body.classList.toggle('show-grid',on);pg.setAttribute('aria-pressed',on?'true':'false');}
+  pg.addEventListener('click',function(){setPageGrid(!document.body.classList.contains('show-grid'));});
+
+  /* ---------- people ---------- */
+  var people=[
+    ["1914–1996","Josef Müller-Brockmann","Zürich. The Tonhalle posters, the book on grids, and a lifelong insistence on objectivity.","arcs"],
+    ["1920–2020","Armin Hofmann","Basel. Taught for four decades; his Graphic Design Manual made form contrast a discipline.","dot"],
+    ["1914–1970","Emil Ruder","Basel. Typographer and teacher; championed Univers and the rhythm of white space.","lines"],
+    ["1908–1994","Max Bill","Bauhaus-trained architect, painter and designer; co-founded the Ulm School of Design.","tri"],
+    ["1930–2017","Karl Gerstner","Treated design as programme — a set of rules that generates solutions.","grid"],
+    ["1941–2021","Wolfgang Weingart","Basel's rebel. Learned the rules so well he could dismantle them: the start of New Wave.","break"],
+    ["1910–1980","Max Miedinger","Typeface designer at Haas; drew Neue Haas Grotesk, the face the world knows as Helvetica.","type"],
+    ["1928–2015","Adrian Frutiger","Designed Univers — twenty-one weights in a numbered system — and later the Frutiger family.","num"],
+    ["1931–2014","Massimo Vignelli","Carried the style to New York: the subway map, American Airlines, the Unigrid.","sub"]
+  ];
+  function mark(k){
+    var r='<svg viewBox="0 0 54 54" aria-hidden="true">';
+    if(k==="arcs")r+='<path d="M4 50 A46 46 0 0 1 50 4" fill="none" stroke="#111" stroke-width="5"/><path d="M4 50 A30 30 0 0 1 34 20" fill="none" stroke="#e2231a" stroke-width="5"/><path d="M4 50 A14 14 0 0 1 18 36" fill="none" stroke="#111" stroke-width="5"/>';
+    else if(k==="dot")r+='<circle cx="20" cy="30" r="18" fill="#111"/><circle cx="40" cy="14" r="8" fill="#e2231a"/>';
+    else if(k==="lines")for(var i=0;i<7;i++)r+='<rect x="2" y="'+(4+i*7)+'" width="'+(50-i*6)+'" height="3" fill="#111"/>';
+    else if(k==="tri")r+='<path d="M4 50 L50 50 L27 6Z" fill="none" stroke="#111" stroke-width="4"/><circle cx="27" cy="36" r="7" fill="#e2231a"/>';
+    else if(k==="grid"){for(var x=0;x<4;x++)for(var y=0;y<4;y++)r+='<rect x="'+(3+x*13)+'" y="'+(3+y*13)+'" width="'+(2+((x*y+x)%4)*2.5)+'" height="'+(2+((x*y+x)%4)*2.5)+'" fill="'+((x+y)%5===0?'#e2231a':'#111')+'"/>';}
+    else if(k==="break")r+='<rect x="3" y="8" width="30" height="12" fill="#111" transform="rotate(-8 18 14)"/><rect x="18" y="26" width="32" height="10" fill="#e2231a" transform="rotate(12 34 31)"/><rect x="6" y="40" width="22" height="8" fill="#111"/>';
+    else if(k==="type")r+='<text x="2" y="44" font-family="Archivo Black,Arial" font-size="44" fill="#111">a</text><rect x="36" y="10" width="14" height="34" fill="#e2231a"/>';
+    else if(k==="num")r+='<text x="0" y="36" font-family="Archivo Black,Arial" font-size="30" fill="#111">55</text><rect x="2" y="44" width="48" height="5" fill="#e2231a"/>';
+    else r+='<circle cx="12" cy="12" r="9" fill="#e2231a"/><rect x="26" y="4" width="4" height="46" fill="#111"/><rect x="4" y="30" width="46" height="4" fill="#111"/>';
+    return r+'</svg>';
+  }
+  var ph=document.getElementById('people');
+  people.forEach(function(p){
+    var d=document.createElement('article');d.className='person';
+    d.innerHTML='<div><div class="yr">'+p[0]+'</div>'+mark(p[3])+'</div><div><h3>'+p[1]+'</h3><p>'+p[2]+'</p></div>';
+    ph.appendChild(d);
+  });
+
+  /* ---------- poster generator ---------- */
+  var W=600,H=848,M=30,COLS=6,ROWS=8,GUT=12;
+  var CW=(W-2*M-(COLS-1)*GUT)/COLS, RH=(H-2*M-(ROWS-1)*GUT)/ROWS;
+  function cx(c){return M+c*(CW+GUT);}           // left x of column c
+  function ry(r){return M+r*(RH+GUT);}           // top y of row r
+  function span(n){return n*CW+(n-1)*GUT;}
+  function spanH(n){return n*RH+(n-1)*GUT;}
+
+  var palettes=[
+    {id:"p-bw",bg:"#f2f0ea",ink:"#111111",acc:"#e2231a",soft:"#111111"},
+    {id:"p-red",bg:"#e2231a",ink:"#ffffff",acc:"#111111",soft:"#ffffff"},
+    {id:"p-blue",bg:"#1d3fbb",ink:"#ffffff",acc:"#f4d000",soft:"#8fa6ff"},
+    {id:"p-yel",bg:"#f4d000",ink:"#111111",acc:"#ffffff",soft:"#111111"},
+    {id:"p-dark",bg:"#141414",ink:"#f2f0ea",acc:"#e2231a",soft:"#6b6b6b"}
+  ];
+  var state={comp:"arcs",pal:0,seed:1957,rot:false,grid:false,kin:!reduce};
+  try{var saved=JSON.parse(localStorage.getItem('raster-poster')||'null');if(saved&&typeof saved==='object'){if(saved.comp)state.comp=saved.comp;if(typeof saved.pal==='number'&&palettes[saved.pal])state.pal=saved.pal;if(saved.seed)state.seed=saved.seed;}}catch(e){}
+
+  function rng(seed){var s=seed>>>0;return function(){s=(s+0x6D2B79F5)>>>0;var t=s;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+  function pick(r,a){return a[Math.floor(r()*a.length)];}
+  function el(tag,attrs,parent){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+
+  var svg=document.getElementById('poster');
+  var sw=document.getElementById('swatches');
+  palettes.forEach(function(p,i){
+    var b=document.createElement('button');b.type='button';b.id=p.id;b.setAttribute('aria-label','Colour scheme '+(i+1));
+    b.innerHTML='<span style="background:'+p.bg+'"></span><span style="background:'+p.acc+'"></span>';
+    b.addEventListener('click',function(){state.pal=i;render();});
+    sw.appendChild(b);
+  });
+
+  function comp(g,r,P){
+    var shapes=[];
+    if(state.comp==="arcs"){
+      // concentric quarter arcs from a grid corner (Musica Viva / Beethoven)
+      var corner=pick(r,[[0,0],[1,0],[0,1],[1,1]]);
+      var ox=corner[0]?W-M:M, oy=corner[1]?H-M:M;
+      var n=6+Math.floor(r()*5), step=spanH(1)*0.62;
+      var sx=corner[0]?-1:1, sy=corner[1]?-1:1;
+      var grp=el('g',{class:'kin kin-rot','style':'transform-origin:'+ox+'px '+oy+'px'},g);
+      for(var i=0;i<n;i++){
+        var rad=step*(i+1.3), thick=(i%3===0?16:i%3===1?7:3);
+        var d='M'+(ox+sx*rad)+' '+oy+' A'+rad+' '+rad+' 0 0 '+(sx*sy>0?1:0)+' '+ox+' '+(oy+sy*rad);
+        el('path',{d:d,fill:'none',stroke:i%4===2?P.acc:P.soft,'stroke-width':thick,'stroke-linecap':'butt',style:'--i:'+i},grp);
+      }
+      shapes.push(corner);
+      return {avoidTop:corner[1]===0,avoidRight:corner[0]===1};
+    }
+    if(state.comp==="bars"){
+      var ang=pick(r,[-30,-22.5,-45,30]);
+      var grp2=el('g',{class:'kin kin-slide',transform:'rotate('+ang+' '+W/2+' '+H/2+')'},g);
+      var y=-200, k=0;
+      while(y<H+200){
+        var h=pick(r,[RH*.5,RH*.25,RH*.9,12,GUT]);
+        var len=span(pick(r,[3,4,5,6]))+200;
+        var x=pick(r,[-100,cx(1)-100,cx(2)-100]);
+        el('rect',{x:x,y:y,width:len,height:h,fill:(k%5===3)?P.acc:P.soft,style:'--i:'+k},grp2);
+        y+=h+pick(r,[GUT,GUT*2,RH*.5]);k++;
+      }
+      return {avoidTop:false,avoidRight:false,faint:true};
+    }
+    if(state.comp==="dots"){
+      var grp3=el('g',{class:'kin kin-pulse'},g);
+      var big=Math.floor(r()*COLS*ROWS);
+      for(var c=0;c<COLS;c++)for(var rr=0;rr<ROWS;rr++){
+        var idx=c*ROWS+rr, v=r();
+        if(v<0.35)continue;
+        var rad2=(v>0.93?1:v>0.7?0.35:0.18)*CW/2;
+        if(idx===big)rad2=CW*1.35;
+        el('circle',{cx:cx(c)+CW/2,cy:ry(rr)+RH/2,r:rad2,fill:idx===big||v>0.965?P.acc:P.soft,style:'--i:'+idx+';transform-origin:'+(cx(c)+CW/2)+'px '+(ry(rr)+RH/2)+'px'},grp3);
+      }
+      return {avoidTop:false,avoidRight:false,faint:true};
+    }
+    // steps
+    var grp4=el('g',{class:'kin kin-step'},g);
+    var dir=r()<.5?1:-1, startC=dir>0?0:COLS-1, rows0=Math.floor(r()*2);
+    for(var s=0;s<COLS;s++){
+      var col=startC+dir*s, top=ry(rows0+s);
+      if(top>H-M-RH*1)break;
+      el('rect',{x:cx(col),y:top,width:CW,height:(H-M)-top,fill:s===2?P.acc:P.soft,opacity:s===2?1:(0.25+s*0.12),style:'--i:'+s},grp4);
+    }
+    return {avoidTop:false,avoidRight:dir<0,faint:true};
+  }
+
+  function render(){
+    var P=palettes[state.pal], r=rng(state.seed);
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var style=el('style',{},svg);
+    style.textContent=
+      '.kin-rot{animation:rot 18s ease-in-out infinite alternate}@keyframes rot{from{transform:rotate(-4deg)}to{transform:rotate(6deg)}}'+
+      '.kin-slide rect{animation:sl 7s ease-in-out infinite alternate;animation-delay:calc(var(--i)*-.6s)}@keyframes sl{from{transform:translateX(-26px)}to{transform:translateX(26px)}}'+
+      '.kin-pulse circle{animation:pu 3.2s ease-in-out infinite alternate;animation-delay:calc(var(--i)*-.13s)}@keyframes pu{from{transform:scale(.55)}to{transform:scale(1.05)}}'+
+      '.kin-step rect{animation:st 5s ease-in-out infinite alternate;animation-delay:calc(var(--i)*-.4s)}@keyframes st{from{transform:translateY(24px)}to{transform:translateY(-6px)}}'+
+      (state.kin?'':'.kin,.kin *{animation:none!important}');
+    el('rect',{x:0,y:0,width:W,height:H,fill:P.bg},svg);
+    var g=el('g',{},svg);
+    var info=comp(g,r,P);
+
+    // type block
+    var lines=(document.getElementById('fHead').value||' ').split(/\n/).map(function(s){return s.trim();}).filter(Boolean);
+    if(!lines.length)lines=[' '];
+    var colStart=pick(r,[0,0,1]), cols=COLS-colStart-(r()<.4?1:0);
+    var tg=el('g',{},svg);
+    var fs=120, lh=0.86;
+    var tl=[];
+    lines.forEach(function(t,i){
+      var tx=el('text',{x:cx(colStart),y:0,fill:i%2&&state.comp!=="bars"?P.ink:P.ink,'font-family':'Archivo, Helvetica Neue, Arial, sans-serif','font-weight':'800','font-size':fs,'letter-spacing':'-0.04em'},tg);
+      tx.textContent=t;tl.push(tx);
+    });
+    var maxw=0;tl.forEach(function(t){try{maxw=Math.max(maxw,t.getComputedTextLength());}catch(e){maxw=Math.max(maxw,t.textContent.length*fs*.55);}});
+    var avail=state.rot?spanH(ROWS)-20:span(cols);
+    var nfs=Math.max(28,Math.min(210,fs*avail/Math.max(1,maxw)));
+    var blockH=nfs*lh*lines.length;
+    var place=info.avoidTop?'bottom':pick(r,['top','bottom','bottom']);
+    var baseY;
+    if(place==='top'){baseY=ry(0)+nfs*.74;}
+    else{baseY=(H-M)-blockH+nfs*.74-(state.comp==="steps"?0:RH*.0);}
+    tl.forEach(function(t,i){t.setAttribute('font-size',nfs.toFixed(1));t.setAttribute('y',(baseY+i*nfs*lh).toFixed(1));});
+    if(state.rot){
+      // rotate block 90deg counter-clockwise along the left margin
+      tg.setAttribute('transform','rotate(-90 '+(cx(colStart))+' '+(H-M)+') translate(0 '+(-(baseY-(H-M))-blockH+nfs*.26+0)+')');
+      tl.forEach(function(t,i){t.setAttribute('y',(H-M+nfs*.74+i*nfs*lh).toFixed(1));});
+      tg.setAttribute('transform','rotate(-90 '+cx(colStart)+' '+(H-M)+')');
+    }
+    // subline + info in columns, opposite end
+    var smallY=place==='top'||state.rot?ry(ROWS-1)+RH-40:ry(0)+14;
+    var sCol=state.rot?Math.min(COLS-3,colStart+Math.ceil(blockH/(CW+GUT))):colStart;
+    var sub=el('text',{x:cx(sCol),y:smallY,fill:P.ink,'font-family':'Archivo, Helvetica Neue, Arial, sans-serif','font-weight':'700','font-size':17},svg);
+    sub.textContent=document.getElementById('fSub').value;
+    var infoTxt=document.getElementById('fInfo').value.split('·').map(function(s){return s.trim();});
+    var ic=Math.min(COLS-2,sCol+(state.rot?0:3));
+    var infoCol=state.rot?sCol:ic;
+    infoTxt.forEach(function(t,i){
+      var tt=el('text',{x:cx(infoCol),y:smallY+22+i*15,fill:P.ink,'font-family':'Archivo, Helvetica Neue, Arial, sans-serif','font-weight':'400','font-size':12.5},svg);
+      tt.textContent=t;
+    });
+    if(!state.rot&&infoCol!==sCol){
+      infoTxt.forEach(function(){});
+    }
+    // red rule + tiny imprint
+    el('rect',{x:cx(0),y:H-M+10,width:span(1),height:4,fill:P.acc},svg);
+    var imp=el('text',{x:W-M,y:H-12,'text-anchor':'end',fill:P.ink,'font-family':'Archivo, Arial, sans-serif','font-size':8.5,opacity:.8},svg);
+    imp.textContent='Raster Poster Werk · Weltformat · Seed '+state.seed;
+
+    // grid overlay
+    if(state.grid){
+      var gg=el('g',{'pointer-events':'none'},svg);
+      for(var c=0;c<COLS;c++)for(var rr=0;rr<ROWS;rr++)el('rect',{x:cx(c),y:ry(rr),width:CW,height:RH,fill:'rgba(0,170,255,.08)',stroke:'#00a6ff','stroke-width':.8},gg);
+      el('rect',{x:M,y:M,width:W-2*M,height:H-2*M,fill:'none',stroke:'#ff2fa0','stroke-width':1,'stroke-dasharray':'4 3'},gg);
+    }
+
+    // UI sync
+    document.querySelectorAll('.comps button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.c===state.comp?'true':'false');});
+    Array.prototype.forEach.call(sw.children,function(b,i){b.setAttribute('aria-pressed',i===state.pal?'true':'false');});
+    document.getElementById('seedOut').textContent='Seed '+String(state.seed).padStart(4,'0')+' · '+state.comp+' · '+(state.rot?'rotated':'horizontal');
+    svg.setAttribute('aria-label','Generated poster: '+lines.join(' ')+'. '+document.getElementById('fSub').value);
+    try{localStorage.setItem('raster-poster',JSON.stringify({comp:state.comp,pal:state.pal,seed:state.seed}));}catch(e){}
+  }
+
+  document.querySelectorAll('.comps button').forEach(function(b){b.addEventListener('click',function(){state.comp=b.dataset.c;render();});});
+  ['fHead','fSub','fInfo'].forEach(function(id){document.getElementById(id).addEventListener('input',render);});
+  document.getElementById('tGrid').addEventListener('change',function(e){state.grid=e.target.checked;render();});
+  var kin=document.getElementById('tKin');kin.checked=state.kin;
+  kin.addEventListener('change',function(e){state.kin=e.target.checked;render();});
+  function shuffle(){state.seed=Math.floor(Math.random()*9000)+1000;render();}
+  document.getElementById('shuffle').addEventListener('click',shuffle);
+  document.getElementById('rotate').addEventListener('click',function(){state.rot=!state.rot;render();});
+  document.addEventListener('keydown',function(e){
+    var t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||e.metaKey||e.ctrlKey||e.altKey)return;
+    if(e.key==='g'||e.key==='G')setPageGrid(!document.body.classList.contains('show-grid'));
+    if(e.key==='s'||e.key==='S')shuffle();
+  });
+  render();
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>
