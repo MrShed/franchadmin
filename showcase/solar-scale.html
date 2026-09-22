@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>One Moon Per Pixel</title>
+<meta name="description" content="Fall through the solar system at true scale — one pixel equals the Moon's 3,474.8 km diameter — with a live distance counter, light-travel time and facts at every world.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Martian+Mono:wght@200;300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#000;
+  --ink:#d9dde6;
+  --dim:#5c6270;
+  --faint:#23262d;
+  --sun:#ffcf7a;
+  --tick:#8a93a6;
+  --accent:#9fd3ff;
+  --mono:"Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --serif:"Instrument Serif", "Iowan Old Style", "Times New Roman", serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--ink)}
+body{font-family:var(--mono);font-weight:300;font-size:11px;letter-spacing:.02em;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
+#stars{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* ---------- intro ---------- */
+header.intro{position:relative;z-index:2;min-height:92vh;display:grid;align-content:end;padding:0 max(16px,6vw) 8vh}
+.back{position:fixed;top:14px;left:max(16px,env(safe-area-inset-left));z-index:20;font-size:10px;text-decoration:none;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+.back:hover{color:var(--ink)}
+.kicker{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin:0 0 22px}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(54px,11vw,170px);line-height:.86;margin:0;letter-spacing:-.02em}
+h1 em{color:var(--sun)}
+.lede{max-width:52ch;font-size:12px;line-height:1.9;color:#aab0bc;margin:34px 0 0}
+.lede b{color:var(--ink);font-weight:400}
+.scalebar{display:flex;align-items:center;gap:12px;margin-top:30px;color:var(--dim);font-size:10px}
+.scalebar i{display:inline-block;width:1px;height:1px;background:#fff;box-shadow:0 0 0 6px rgba(255,255,255,.04)}
+.hint{margin-top:44px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim)}
+.hint span{display:inline-block;animation:drop 2.4s ease-in-out infinite}
+@keyframes drop{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(6px);opacity:1}}
+
+/* ---------- the void ---------- */
+#space{position:relative;z-index:1;overflow:hidden}
+.axis{position:absolute;left:50%;top:0;bottom:0;width:1px;background:linear-gradient(var(--faint),var(--faint)) ;opacity:.55}
+.body{position:absolute;left:50%;transform:translate(-50%,-50%)}
+.disc{border-radius:50%;position:relative}
+.label{position:absolute;left:calc(50% + 34px);transform:translateY(-50%);width:min(330px,calc(50vw - 50px));pointer-events:none}
+.label .nm{font-family:var(--serif);font-size:34px;line-height:1;color:var(--ink);font-style:italic;letter-spacing:-.01em}
+.label .ln{position:absolute;right:100%;top:50%;width:26px;height:1px;background:var(--tick);opacity:.5;margin-right:6px}
+.label dl{margin:10px 0 0;display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:10px;color:var(--dim)}
+.label dt{text-transform:uppercase;letter-spacing:.12em}
+.label dd{margin:0;color:#b9c0cc}
+.label p{font-size:10.5px;line-height:1.75;color:#8f96a3;margin:10px 0 0;max-width:40ch}
+.moonlab{position:absolute;left:calc(50% + 14px);font-size:9px;color:var(--dim);transform:translateY(-50%);white-space:nowrap}
+.void-note{position:absolute;left:max(16px,8vw);width:min(34ch,calc(50vw - 40px));font-size:11px;line-height:1.85;color:#6d7482;transform:translateY(-50%)}
+.void-note b{display:block;font-family:var(--serif);font-style:italic;font-weight:400;font-size:22px;color:#c9ced8;margin-bottom:6px;line-height:1.1}
+.rock{position:absolute;width:1px;height:1px;background:#8c8479;border-radius:50%}
+.belt-label{position:absolute;right:max(16px,8vw);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);transform:translateY(-50%);text-align:right}
+.belt-label::before{content:"";display:block;width:60px;height:1px;background:var(--dim);opacity:.4;margin:0 0 6px auto}
+.end{position:absolute;left:0;right:0;padding:0 max(16px,8vw);text-align:center}
+.end h2{font-family:var(--serif);font-weight:400;font-style:italic;font-size:clamp(40px,7vw,90px);margin:0 0 20px;line-height:1}
+.end p{max-width:56ch;margin:0 auto 14px;line-height:1.9;color:#8f96a3}
+.end button{margin-top:18px}
+
+/* ---------- HUD ---------- */
+.hud{position:fixed;z-index:10;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));pointer-events:none;
+  font-size:10px;line-height:1.55;color:var(--dim);transition:opacity .6s}
+.hud .big{font-size:clamp(18px,2.6vw,30px);color:var(--ink);font-weight:200;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hud .row{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px}
+.hud .row div{min-width:108px}
+.hud .row span{display:block;color:#c3c9d4;font-variant-numeric:tabular-nums;font-size:11px}
+.hud .lbl{text-transform:uppercase;letter-spacing:.18em;font-size:9px}
+.hud .next{margin-top:8px;color:#8f96a3}
+.hud.hidden{opacity:0}
+.cross{position:fixed;left:0;right:0;top:50%;height:0;z-index:3;pointer-events:none;transition:opacity .6s}
+.cross::before,.cross::after{content:"";position:absolute;top:0;width:14px;height:1px;background:var(--accent);opacity:.7}
+.cross::before{left:max(8px,env(safe-area-inset-left))}
+.cross::after{right:30px}
+.cross.hidden{opacity:0}
+
+/* minimap */
+.map{position:fixed;z-index:10;right:12px;top:14vh;height:66vh;width:14px;transition:opacity .6s}
+.map .rail{position:absolute;left:6px;top:0;bottom:0;width:1px;background:var(--faint)}
+.map .tk{position:absolute;left:0;width:13px;height:1px;background:var(--dim);cursor:pointer}
+.map .tk:hover{background:var(--ink)}
+.map .you{position:absolute;left:-3px;width:19px;height:1px;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.map.hidden{opacity:0}
+
+/* controls */
+.ctl{position:fixed;z-index:11;right:max(34px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.jump{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;max-width:280px}
+button{font:inherit;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#aeb4bf;background:rgba(0,0,0,.6);border:1px solid #2a2e36;padding:6px 8px;cursor:pointer;border-radius:0}
+button:hover{color:#fff;border-color:#4a505c}
+button[aria-pressed="true"]{color:#000;background:var(--accent);border-color:var(--accent)}
+.warp{display:flex;gap:2px;align-items:center}
+.warp .t{font-size:9px;color:var(--dim);margin-right:6px;letter-spacing:.14em;text-transform:uppercase}
+@media (max-width:640px){
+  .label{left:calc(50% + 18px);width:calc(50vw - 34px)}
+  .label .nm{font-size:24px}
+  .label .ln{width:12px}
+  .label p{display:none}
+  .label dl{grid-template-columns:1fr;gap:0}
+  .label dt{display:none}
+  .void-note{width:calc(50vw - 30px);font-size:10px}
+  .void-note b{font-size:17px}
+  .jump{max-width:190px}
+  .ctl{right:30px}
+  .hud .row div{min-width:0}
+  .hud .next{display:none}
+}
+@media (prefers-reduced-motion:reduce){.hint span{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<a class="back" href="index.html">← Showcase</a>
+
+<header class="intro">
+  <p class="kicker">A true-scale descent · Sun → Pluto</p>
+  <h1>One <em>Moon</em><br>per pixel.</h1>
+  <p class="lede">Every pixel on this page is <b>3,474.8 km</b> — the diameter of our Moon. At that scale the Sun is about 400 px wide, Earth is under 4 px, and Pluto is <b>1.7 million pixels</b> down. Scroll. Or switch on the light-speed autopilot and experience how slow the fastest thing in the universe really is.</p>
+  <div class="scalebar"><i></i> = 3,474.8 km &nbsp;·&nbsp; 1 AU ≈ 43,052 px &nbsp;·&nbsp; light ≈ 86.3 px/s</div>
+  <p class="hint"><span>↓</span> &nbsp;scroll to leave the Sun</p>
+</header>
+
+<main id="space" aria-label="Solar system at scale"></main>
+
+<div class="cross hidden" id="cross" aria-hidden="true"></div>
+<div class="hud hidden" id="hud" aria-live="off">
+  <div class="lbl">Distance from the Sun's centre</div>
+  <div class="big" id="dkm">0 km</div>
+  <div class="row">
+    <div><span class="lbl">Astronomical units</span><span id="dau">0.000 AU</span></div>
+    <div><span class="lbl">Light travel time</span><span id="dlt">0 s</span></div>
+    <div><span class="lbl">Pixels</span><span id="dpx">0</span></div>
+  </div>
+  <div class="next" id="dnext"></div>
+</div>
+<nav class="map hidden" id="map" aria-label="Minimap"><div class="rail"></div><div class="you" id="you"></div></nav>
+
+<div class="ctl">
+  <div class="warp" role="group" aria-label="Light-speed autopilot">
+    <span class="t">Autopilot</span>
+    <button id="w1" data-m="1" aria-pressed="false" title="Travel at the speed of light">1c</button>
+    <button id="w10" data-m="10" aria-pressed="false">10c</button>
+    <button id="w100" data-m="100" aria-pressed="false">100c</button>
+    <button id="w1000" data-m="1000" aria-pressed="false">1000c</button>
+  </div>
+  <div class="jump" id="jump" role="group" aria-label="Jump to"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const PX = 3474.8;              // km per pixel
+const AU = 149597870.7;         // km
+const C  = 299792.458;          // km/s
+const S0 = 260;                 // px: Sun centre offset inside #space
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const bodies = [
+  {id:'sun',name:'The Sun',a:0,d:1392700,bg:'radial-gradient(circle at 50% 50%,#fff6dc 0%,#ffd98a 38%,#ff9f3a 72%,#e2561c 100%)',glow:'0 0 120px 30px rgba(255,160,60,.25),0 0 30px rgba(255,210,140,.5)',
+    facts:[['Diameter','1,392,700 km'],['Share of mass','99.86 %'],['Surface','5,772 K'],['Core','≈15 million K']],
+    note:'109 Earths would fit across its face. Its light takes 8 min 20 s to reach Earth, so every sunrise is a replay.'},
+  {id:'mercury',name:'Mercury',a:57.909e6,d:4879,bg:'radial-gradient(circle at 35% 35%,#c9c3ba,#6f6a64)',
+    facts:[['Diameter','4,879 km'],['Year','88 days'],['Solar day','176 days'],['Moons','0'],['Gravity','3.7 m/s²']],
+    note:'A day here lasts two of its years. Surface swings from 430 °C in sunlight to −180 °C at night.'},
+  {id:'venus',name:'Venus',a:108.21e6,d:12104,bg:'radial-gradient(circle at 35% 35%,#fff0c7,#d6a95b)',
+    facts:[['Diameter','12,104 km'],['Year','224.7 days'],['Rotation','243 d, retrograde'],['Moons','0'],['Surface','464 °C']],
+    note:'Hotter than Mercury despite being twice as far out: a CO₂ atmosphere 92 times thicker than ours traps the heat.'},
+  {id:'earth',name:'Earth',a:149.598e6,d:12756,bg:'radial-gradient(circle at 35% 35%,#bfe3ff,#2e74c9 55%,#1b4a7a)',
+    facts:[['Diameter','12,756 km'],['Year','365.256 days'],['Day','23 h 56 m sidereal'],['Moons','1'],['Light from Sun','8 min 19 s']],
+    note:'Every human who has ever lived was born on those 3.7 pixels. The Moon, one pixel wide, orbits 110 px away.'},
+  {id:'mars',name:'Mars',a:227.94e6,d:6792,bg:'radial-gradient(circle at 35% 35%,#f2a37a,#b0472a)',
+    facts:[['Diameter','6,792 km'],['Year','687 days'],['Sol','24 h 39 m 35 s'],['Moons','2'],['Mean temp','−65 °C']],
+    note:'Home to Olympus Mons, 21.9 km high — about 2.5 times Everest measured from sea level.'},
+  {id:'jupiter',name:'Jupiter',a:778.48e6,d:142984,bg:'repeating-linear-gradient(180deg,#e9d3b3 0 12%,#b98a5f 12% 19%,#efe1c8 19% 30%,#a8764f 30% 36%,#e6cfae 36% 50%)',
+    facts:[['Diameter','142,984 km'],['Year','11.86 years'],['Day','9 h 56 m'],['Moons','95+'],['Mass','318 Earths']],
+    note:'More than twice the mass of every other planet combined. Its Great Red Spot is a storm wider than Earth.'},
+  {id:'saturn',name:'Saturn',a:1432.0e6,d:120536,bg:'repeating-linear-gradient(180deg,#f1dfb3 0 14%,#d8bd85 14% 22%,#efe0bb 22% 40%)',ring:136775,
+    facts:[['Diameter','120,536 km'],['Year','29.46 years'],['Day','10 h 33 m'],['Moons','274'],['Density','0.69 g/cm³']],
+    note:'Less dense than water. Its main rings span 280,000 km yet are mostly only about 10 m thick.'},
+  {id:'uranus',name:'Uranus',a:2867.0e6,d:51118,bg:'radial-gradient(circle at 35% 35%,#dcf6f7,#86cfd9)',
+    facts:[['Diameter','51,118 km'],['Year','84 years'],['Day','17 h 14 m'],['Moons','29'],['Axial tilt','97.8°']],
+    note:'It rolls around the Sun on its side, so each pole gets about 42 years of continuous daylight.'},
+  {id:'neptune',name:'Neptune',a:4515.0e6,d:49528,bg:'radial-gradient(circle at 35% 35%,#8fb0ff,#2f4bc8)',
+    facts:[['Diameter','49,528 km'],['Year','164.8 years'],['Day','16 h 6 m'],['Moons','16'],['Winds','≈2,100 km/h']],
+    note:'Found with mathematics before a telescope: Le Verrier predicted its position and Galle saw it on 23 Sept 1846.'},
+  {id:'pluto',name:'Pluto',a:5906.4e6,d:2376,bg:'radial-gradient(circle at 35% 35%,#f0dcc4,#a0826a)',
+    facts:[['Diameter','2,376 km'],['Year','248 years'],['Day','6.39 days'],['Moons','5'],['Surface','≈ −230 °C']],
+    note:'Smaller than our Moon — under one pixel here. New Horizons took 9.5 years to reach it and flew past in 2015.'}
+];
+
+const notes = [
+  [0.05,'Leaving the corona','The Sun\'s outer atmosphere, the corona, reaches millions of kilometres out and is hotter than the surface — over a million kelvin.'],
+  [0.2,'Still nothing','You have crossed 30 million km. Most of the solar system is exactly this: empty.'],
+  [0.55,'Rough-guess check','If the Sun were a front door, Earth would be a peppercorn 26 m down the road.'],
+  [0.85,'Nearly home','The Parker Solar Probe swings closer to the Sun than Mercury ever does — 6.2 million km at perihelion, at 192 km/s.'],
+  [1.25,'Between worlds','Earth to Mars ranges from 55 to 401 million km depending on where both planets are in their orbits.'],
+  [2.05,'Asteroid belt ahead','Popular images show a crowded field. In reality, the average gap between belt asteroids is around a million kilometres.'],
+  [3.6,'The long gap','Mars to Jupiter is about 550 million km. You could line up every planet side by side in this gap — several hundred times over.'],
+  [4.4,'Keep scrolling','At this scale, one full laptop screen of scrolling covers roughly 3 million km. Jupiter is still hundreds of screens away.'],
+  [7,'Half an hour of light','Sunlight left the Sun about 55 minutes ago and has only just reached this far.'],
+  [12,'The quiet middle','Voyager 2 took 8.5 years to get from Earth to Uranus, travelling at about 15 km/s the whole way.'],
+  [16,'Your thumb is tired','Good. That\'s the lesson. The distance between planets is vastly bigger than the planets themselves.'],
+  [24,'Ice giants','Uranus and Neptune are called ice giants: mostly water, methane and ammonia “ices” around a rocky core.'],
+  [33,'The Kuiper Belt','From about 30 to 50 AU, a disc of icy bodies — Pluto, Haumea, Makemake, Arrokoth — circles in the dark.'],
+  [36.5,'Four hours of light','Signals from New Horizons, now beyond 60 AU, take more than eight hours to reach Earth.']
+];
+
+const space = document.getElementById('space');
+const last = bodies[bodies.length-1];
+const H = Math.round(S0 + last.a/PX + 1400);
+space.style.height = H + 'px';
+
+const axis = document.createElement('div'); axis.className='axis'; space.appendChild(axis);
+const fmt = n => Math.round(n).toLocaleString('en-GB');
+
+function place(b){
+  const y = S0 + b.a/PX;
+  b.y = y;
+  const size = b.d/PX;
+  const el = document.createElement('div');
+  el.className='body'; el.id='b-'+b.id; el.style.top = y+'px';
+  const disc = document.createElement('div');
+  disc.className='disc';
+  const s = Math.max(size,1);
+  disc.style.width = disc.style.height = s+'px';
+  disc.style.background = b.bg;
+  if (size < 1) disc.style.opacity = Math.max(.35,size);
+  if (b.glow) disc.style.boxShadow = b.glow;
+  el.appendChild(disc);
+  if (b.ring){
+    const r = b.ring/PX;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('width', r*2+4); svg.setAttribute('height', r*2+4);
+    svg.style.cssText = `position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-18deg);overflow:visible;pointer-events:none`;
+    svg.innerHTML = `<ellipse cx="${r+2}" cy="${r+2}" rx="${r}" ry="${r*0.24}" fill="none" stroke="#d9c79a" stroke-width="3.2" opacity=".75"/>
+      <ellipse cx="${r+2}" cy="${r+2}" rx="${r*0.8}" ry="${r*0.19}" fill="none" stroke="#bda878" stroke-width="1.4" opacity=".6"/>`;
+    // redraw disc over the back half of ring
+    el.appendChild(svg);
+    const front = disc.cloneNode(); front.style.position='absolute'; front.style.left='0'; front.style.top='0';
+    front.style.clipPath='inset(0 0 50% 0)'; el.appendChild(front);
+  }
+  space.appendChild(el);
+
+  const lab = document.createElement('div');
+  lab.className='label'; lab.style.top = y+'px';
+  if (size > 60) lab.style.left = `calc(50% + ${Math.min(size/2,160)+30}px)`;
+  const au = b.a/AU, lt = b.a/C;
+  const rows = b.a ? [['Distance', `${(b.a/1e6).toLocaleString('en-GB',{maximumFractionDigits:1})} M km`],['AU', au.toFixed(3)],['Light', ltStr(lt)]] : [];
+  lab.innerHTML = `<span class="ln"></span><div class="nm">${b.name}</div>
+    <dl>${rows.concat(b.facts).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}<dt>At this scale</dt><dd>${size>=1? size.toFixed(1)+' px wide' : size.toFixed(2)+' of a pixel'}</dd></dl>
+    <p>${b.note}</p>`;
+  space.appendChild(lab);
+}
+function ltStr(s){
+  if (s < 60) return s.toFixed(1)+' s';
+  const h = Math.floor(s/3600), m = Math.floor(s%3600/60), sec = Math.floor(s%60);
+  return h ? `${h} h ${String(m).padStart(2,'0')} m` : `${m} min ${String(sec).padStart(2,'0')} s`;
+}
+bodies.forEach(place);
+
+// the Moon
+(function(){
+  const e = bodies.find(b=>b.id==='earth');
+  const y = e.y + 384400/PX;
+  const m = document.createElement('div');
+  m.className='body'; m.style.top=y+'px';
+  m.innerHTML='<div class="disc" style="width:1px;height:1px;background:#e9e9e9"></div>';
+  space.appendChild(m);
+  const l = document.createElement('div'); l.className='moonlab'; l.style.top=y+'px';
+  l.textContent='← the Moon · 1 px · 384,400 km from Earth';
+  space.appendChild(l);
+})();
+
+// asteroid belt (2.2–3.2 AU) and Kuiper belt (30–50 AU; drawn to Pluto+)
+function rng(seed){return ()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646}}
+const R = rng(20260922);
+function belt(a0,a1,n,color,label){
+  const frag=document.createDocumentFragment();
+  const y0=S0+a0*AU/PX, y1=Math.min(S0+a1*AU/PX,H-200);
+  for(let i=0;i<n;i++){
+    const r=document.createElement('div'); r.className='rock';
+    r.style.top=(y0+R()*(y1-y0))+'px';
+    r.style.left=(3+R()*94)+'%';
+    r.style.background=color; r.style.opacity=(.25+R()*.6).toFixed(2);
+    frag.appendChild(r);
+  }
+  space.appendChild(frag);
+  const l=document.createElement('div'); l.className='belt-label'; l.style.top=(y0+60)+'px'; l.innerHTML=label; space.appendChild(l);
+}
+belt(2.2,3.2,420,'#9c9387','Main asteroid belt<br>2.2 – 3.2 AU');
+belt(30,41,380,'#8fa3b8','Kuiper belt<br>≈30 – 50 AU');
+// Ceres
+(function(){
+  const y=S0+413.7e6/PX;
+  const c=document.createElement('div'); c.className='moonlab'; c.style.top=y+'px';
+  c.innerHTML='· Ceres — 939 km, a quarter of a pixel. The belt\'s largest body holds ~40% of its mass.';
+  c.style.left='calc(50% - 3px)';
+  space.appendChild(c);
+})();
+
+notes.forEach(([au,t,body],i)=>{
+  const n=document.createElement('div'); n.className='void-note';
+  n.style.top=(S0+au*AU/PX)+'px';
+  if(i%2) {n.style.left='auto'; n.style.right='max(40px,8vw)'; n.style.textAlign='right'}
+  n.innerHTML=`<b>${t}</b>${body}`;
+  space.appendChild(n);
+});
+
+const end=document.createElement('div'); end.className='end'; end.style.top=(S0+last.a/PX+380)+'px';
+end.innerHTML=`<h2>And that's only the neighbourhood.</h2>
+<p>At this scale Voyager 1 — the most distant human-made object, about 170 AU out in 2026 — would be 7.3 million pixels below you. The nearest star, Proxima Centauri, would sit 11.6 billion pixels down: roughly 3,000 km of scrolling.</p>
+<p>Distances: NASA planetary fact sheet semi-major axes. Sizes: equatorial diameters.</p>
+<button id="toTop" type="button">↑ Return to the Sun</button>`;
+space.appendChild(end);
+document.getElementById('toTop').addEventListener('click',()=>{stopWarp(); window.scrollTo(0,0)});
+
+// ---------- HUD ----------
+const hud=document.getElementById('hud'), cross=document.getElementById('cross'), map=document.getElementById('map');
+const dkm=document.getElementById('dkm'), dau=document.getElementById('dau'), dlt=document.getElementById('dlt'), dpx=document.getElementById('dpx'), dnext=document.getElementById('dnext'), you=document.getElementById('you');
+function spaceTop(){return space.getBoundingClientRect().top + window.scrollY}
+bodies.forEach(b=>{
+  const t=document.createElement('div'); t.className='tk'; t.style.top=((b.y)/H*100)+'%'; t.title=b.name;
+  t.addEventListener('click',()=>jumpTo(b)); map.appendChild(t);
+});
+let top0=spaceTop();
+function update(){
+  const y = window.scrollY + innerHeight/2 - top0 - S0; // px from Sun centre
+  const on = window.scrollY + innerHeight/2 > top0 + 40;
+  hud.classList.toggle('hidden',!on); cross.classList.toggle('hidden',!on); map.classList.toggle('hidden',!on);
+  const km = Math.max(0,y*PX);
+  dkm.textContent = fmt(km)+' km';
+  dau.textContent = (km/AU).toFixed(4)+' AU';
+  dlt.textContent = ltStr(km/C);
+  dpx.textContent = fmt(Math.max(0,y));
+  const nx = bodies.find(b=>b.a>km+PX*2);
+  if(nx){ const rem=nx.a-km; dnext.textContent = `${nx.name} in ${fmt(rem)} km · ${fmt(rem/PX)} px · light needs ${ltStr(rem/C)}`; }
+  else dnext.textContent='Beyond Pluto. The Sun is now just the brightest star.';
+  you.style.top = Math.min(100,Math.max(0,(y+S0)/H*100))+'%';
+}
+addEventListener('scroll',update,{passive:true});
+addEventListener('resize',()=>{top0=spaceTop();sizeStars();update()});
+
+// jump buttons
+const jump=document.getElementById('jump');
+bodies.forEach(b=>{
+  const btn=document.createElement('button'); btn.type='button'; btn.id='jump-'+b.id;
+  btn.textContent = b.id==='sun'?'Sun':b.name; btn.addEventListener('click',()=>jumpTo(b)); jump.appendChild(btn);
+});
+function jumpTo(b){ stopWarp(); window.scrollTo({top: top0 + b.y - innerHeight/2, behavior:'auto'}); }
+
+// ---------- autopilot ----------
+let warp=0, raf=0, acc=0, lastT=0;
+const wbtns=[...document.querySelectorAll('.warp button')];
+wbtns.forEach(b=>b.addEventListener('click',()=>{
+  const m=+b.dataset.m;
+  if(warp===m){stopWarp();return}
+  warp=m; wbtns.forEach(x=>x.setAttribute('aria-pressed',x===b)); acc=window.scrollY; lastT=performance.now();
+  cancelAnimationFrame(raf); raf=requestAnimationFrame(tick);
+}));
+function tick(t){
+  const dt=Math.min(.1,(t-lastT)/1000); lastT=t;
+  acc += (C/PX)*warp*dt;
+  window.scrollTo(0,acc);
+  if(window.scrollY+innerHeight>=document.documentElement.scrollHeight-2){stopWarp();return}
+  raf=requestAnimationFrame(tick);
+}
+function stopWarp(){warp=0;cancelAnimationFrame(raf);wbtns.forEach(x=>x.setAttribute('aria-pressed','false'))}
+['wheel','touchstart','keydown'].forEach(ev=>addEventListener(ev,e=>{ if(warp && !(e.target.closest&&e.target.closest('.warp'))) stopWarp(); },{passive:true}));
+
+// ---------- stars ----------
+const cv=document.getElementById('stars'), cx=cv.getContext('2d');
+let stars=[];
+function sizeStars(){
+  const d=Math.min(2,devicePixelRatio||1);
+  cv.width=innerWidth*d; cv.height=innerHeight*d; cx.setTransform(d,0,0,d,0,0);
+  const r=rng(7); stars=[];
+  const n=Math.round(innerWidth*innerHeight/5200);
+  for(let i=0;i<n;i++) stars.push([r()*innerWidth,r()*innerHeight,r()*.9+.1,r()]);
+  drawStars();
+}
+function drawStars(){
+  cx.clearRect(0,0,innerWidth,innerHeight);
+  const p = window.scrollY*0.00002;
+  for(const [x,y,a,z] of stars){
+    cx.fillStyle=`rgba(${200+z*55|0},${210+z*30|0},255,${a*0.35})`;
+    const yy=((y - p*z*innerHeight*20)%innerHeight+innerHeight)%innerHeight;
+    cx.fillRect(x,yy,z>.93?1.4:.8,z>.93?1.4:.8);
+  }
+}
+if(!reduce) addEventListener('scroll',()=>requestAnimationFrame(drawStars),{passive:true});
+sizeStars(); update();
+})();
+</script>
+</body>
+</html>

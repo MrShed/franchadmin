@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Koivu Snake II</title>
+<meta name="description" content="A playable Snake II on a pixel-accurate 84×48 monochrome LCD inside a chunky 2000-era handset, with a working keypad, DTMF key tones and a user's-guide page beside it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;700&family=Silkscreen&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#dfe3e6;
+  --paper2:#cfd5da;
+  --ink:#1b2530;
+  --ink-soft:#4f5d6b;
+  --rule:#9aa6b1;
+  --navy:#1e2c4a;
+  --navy-hi:#3a4f7c;
+  --navy-lo:#111a2e;
+  --silver:#b9c0c8;
+  --lcd:#9fbf8a;
+  --lcd-hi:#b7d4a0;
+  --pix:#27331f;
+  --accent:#d24a2a;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:
+    radial-gradient(1200px 600px at 80% 10%, rgba(255,255,255,.55), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgba(27,37,48,.045) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgba(27,37,48,.045) 23px 24px),
+    var(--paper);
+  color:var(--ink);
+  font-family:"Chakra Petch", "Trebuchet MS", "Segoe UI", sans-serif;
+  min-height:100vh;
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left));
+}
+a.back{
+  position:fixed; top:12px; left:12px; z-index:10;
+  font-family:"Silkscreen", monospace; font-size:11px; letter-spacing:.06em;
+  color:var(--ink); text-decoration:none; background:var(--paper);
+  border:1px solid var(--ink); padding:5px 8px 4px;
+}
+a.back:hover{background:var(--ink);color:var(--paper)}
+:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+.page{
+  max-width:1120px; margin:36px auto 0;
+  display:grid; grid-template-columns: minmax(0,1fr) 340px; gap:56px; align-items:start;
+}
+.guide{padding-top:10px}
+.runner{
+  display:flex; justify-content:space-between; border-bottom:2px solid var(--ink);
+  font-family:"Silkscreen", monospace; font-size:11px; letter-spacing:.08em; padding-bottom:6px; color:var(--ink-soft)
+}
+.chapter{display:flex; gap:18px; align-items:baseline; margin:28px 0 8px}
+.chapter .num{font-size:88px; line-height:.8; font-weight:700; color:var(--navy); letter-spacing:-.04em}
+.chapter h1{font-size:clamp(30px,4.2vw,48px); margin:0; line-height:.95; font-weight:700; letter-spacing:-.01em}
+.chapter h1 small{display:block; font-size:14px; font-weight:500; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); margin-bottom:8px}
+.lede{font-size:18px; line-height:1.5; max-width:56ch; color:var(--ink)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:28px; margin-top:26px}
+h2{font-size:13px; letter-spacing:.2em; text-transform:uppercase; margin:0 0 10px; border-top:1px solid var(--rule); padding-top:10px; display:flex; gap:8px}
+h2 b{color:var(--accent)}
+p{line-height:1.55; margin:0 0 12px; color:var(--ink-soft)}
+table.keys{border-collapse:collapse; width:100%; font-size:14px}
+table.keys td{padding:6px 0; border-bottom:1px dotted var(--rule); vertical-align:top}
+table.keys td:first-child{width:92px}
+kbd{
+  display:inline-block; min-width:24px; text-align:center; font-family:"Silkscreen", monospace; font-size:11px;
+  background:linear-gradient(#e9edf1,#c3cbd3); border:1px solid #7d8894; border-bottom-width:3px; border-radius:9px/7px;
+  padding:2px 6px 1px; color:var(--ink); margin-right:2px
+}
+.stats{display:grid; grid-template-columns:repeat(3,1fr); border:2px solid var(--ink); margin-top:28px}
+.stats div{padding:12px 14px; border-right:1px solid var(--ink)}
+.stats div:last-child{border-right:0}
+.stats span{display:block; font-family:"Silkscreen",monospace; font-size:10px; letter-spacing:.1em; color:var(--ink-soft)}
+.stats strong{font-size:30px; font-weight:700; font-variant-numeric:tabular-nums}
+.profile{
+  margin-top:18px; display:flex; align-items:center; gap:14px; flex-wrap:wrap
+}
+#sound-toggle{
+  font:inherit; font-weight:700; font-size:14px; letter-spacing:.06em; cursor:pointer;
+  background:var(--navy); color:#e7ecf5; border:0; padding:10px 16px 9px; border-radius:18px 4px 18px 4px;
+  box-shadow:0 3px 0 var(--navy-lo);
+}
+#sound-toggle[aria-pressed="true"]{background:#6b7480; box-shadow:0 3px 0 #3d434b}
+#sound-toggle:active{transform:translateY(2px); box-shadow:0 1px 0 var(--navy-lo)}
+.footnote{font-size:12px; color:var(--ink-soft); margin-top:24px; border-top:1px solid var(--rule); padding-top:10px}
+
+/* ---------- handset ---------- */
+.stage{position:sticky; top:24px; display:flex; justify-content:center}
+.phone{
+  width:318px; position:relative; padding:26px 22px 30px;
+  background:
+    radial-gradient(140% 60% at 30% 0%, rgba(255,255,255,.22), transparent 45%),
+    linear-gradient(100deg, var(--navy-hi) 0%, var(--navy) 22%, var(--navy) 70%, var(--navy-lo) 100%);
+  border-radius:150px 150px 118px 118px / 64px 64px 150px 150px;
+  box-shadow:
+    inset 0 2px 1px rgba(255,255,255,.25),
+    inset 0 -6px 14px rgba(0,0,0,.5),
+    0 30px 50px -20px rgba(17,26,46,.65),
+    0 8px 14px rgba(17,26,46,.25);
+  user-select:none; -webkit-user-select:none; touch-action:manipulation;
+}
+.earpiece{width:64px; height:7px; margin:2px auto 12px; border-radius:6px;
+  background:repeating-linear-gradient(90deg,#0b1222 0 4px, transparent 4px 7px); opacity:.9}
+.face{
+  background:linear-gradient(180deg,#c9d0d7,#9aa3ad);
+  border-radius:40px 40px 26px 26px / 26px 26px 38px 38px;
+  padding:14px 16px 16px;
+  box-shadow:inset 0 2px 2px rgba(255,255,255,.7), inset 0 -3px 6px rgba(0,0,0,.25);
+}
+.brand{font-weight:700; letter-spacing:.42em; font-size:12px; color:#2c3a58; text-align:center; margin-bottom:9px}
+.lcd{
+  position:relative; border-radius:6px; padding:8px 7px;
+  background:linear-gradient(160deg,var(--lcd-hi),var(--lcd) 60%,#8aab77);
+  box-shadow:inset 0 0 0 3px #5f6a60, inset 0 4px 10px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.6);
+}
+.lcd::after{ /* glass sheen */
+  content:""; position:absolute; inset:0; border-radius:6px; pointer-events:none;
+  background:linear-gradient(115deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,0) 38%);
+}
+#lcd{display:block; width:100%; aspect-ratio:84/48; image-rendering:pixelated; touch-action:none}
+.nav{display:grid; grid-template-columns:54px 1fr 54px; align-items:center; gap:8px; margin:14px 2px 4px}
+.nav button, .keypad button{
+  font-family:"Chakra Petch", sans-serif; cursor:pointer; border:0; color:#172033;
+  -webkit-tap-highlight-color:transparent;
+}
+#key-c{
+  height:40px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%; font-weight:700; font-size:16px;
+  background:linear-gradient(#e7ebef,#aeb7c1); box-shadow:0 3px 0 #616b77, inset 0 1px 0 #fff;
+}
+#key-navi{
+  height:46px; border-radius:50%/60%; font-weight:700; font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+  background:radial-gradient(120% 90% at 50% 20%, #7b95c9, #3d568b 70%); color:#eef2fb;
+  box-shadow:0 4px 0 #1b2748, inset 0 1px 0 rgba(255,255,255,.5);
+}
+.rocker{display:flex; flex-direction:column; border-radius:20px; overflow:hidden; box-shadow:0 3px 0 #616b77}
+.rocker button{height:21px; background:linear-gradient(#e7ebef,#b6bfc8); font-size:10px}
+.rocker button + button{border-top:1px solid #8a949f}
+.keypad{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:10px 12px; margin-top:22px; padding:0 6px;
+}
+.keypad button{
+  height:40px; background:linear-gradient(#aeb9c9,#7f8ca1); color:#101829;
+  border-radius:48% 48% 44% 44% / 60% 60% 40% 40%;
+  box-shadow:0 3px 0 #0d1426, inset 0 1px 0 rgba(255,255,255,.55);
+  display:flex; align-items:baseline; justify-content:center; gap:5px; font-size:18px; font-weight:700;
+}
+.keypad button:nth-child(3n+1){transform:rotate(-7deg) translateY(-2px)}
+.keypad button:nth-child(3n){transform:rotate(7deg) translateY(-2px)}
+.keypad button small{font-size:9px; font-weight:500; letter-spacing:.08em; opacity:.75}
+.keypad button.dir{background:linear-gradient(#d7dfe9,#9eabbd)}
+button.pressed, .nav button:active, .keypad button:active{filter:brightness(.85); box-shadow:0 1px 0 #0d1426, inset 0 1px 0 rgba(255,255,255,.3)}
+.keypad button.pressed{translate:0 2px}
+.mic{width:30px; height:4px; border-radius:3px; background:#0b1222; margin:20px auto 0; opacity:.7}
+.hint{font-family:"Silkscreen",monospace; font-size:10px; text-align:center; color:var(--ink-soft); margin-top:14px; letter-spacing:.06em}
+
+@media (max-width:860px){
+  .page{grid-template-columns:1fr; gap:28px; margin-top:44px}
+  .stage{position:relative; top:0; order:-1}
+  .cols{grid-template-columns:1fr}
+}
+@media (max-width:380px){ .phone{width:100%} }
+@media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important} }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<main class="page">
+  <section class="guide" aria-labelledby="t">
+    <div class="runner"><span>KOIVU 3310 · USER'S GUIDE</span><span>ISSUE 2 · P. 42</span></div>
+    <div class="chapter">
+      <div class="num" aria-hidden="true">12</div>
+      <h1 id="t"><small>Menu 12 · Games</small>Snake II</h1>
+    </div>
+    <p class="lede">Guide the snake to the food. Every bite makes it longer and every level makes it hungrier. Do not bite your own tail: the snake is the only obstacle, because the field wraps at every edge.</p>
+
+    <div class="stats" aria-live="polite">
+      <div><span>SCORE</span><strong id="stat-score">0</strong></div>
+      <div><span>TOP SCORE</span><strong id="stat-top">0</strong></div>
+      <div><span>LEVEL</span><strong id="stat-level">5</strong></div>
+    </div>
+    <div class="profile">
+      <button id="sound-toggle" aria-pressed="false">Profile: General</button>
+      <span style="font-size:13px;color:var(--ink-soft)">Key tones are DTMF, like the real thing. Press <kbd>M</kbd> or <kbd>#</kbd> for Silent.</span>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h2><b>12.1</b> Controls</h2>
+        <table class="keys">
+          <tr><td><kbd>2</kbd><kbd>8</kbd></td><td>Up / down. On the menu, change the level.</td></tr>
+          <tr><td><kbd>4</kbd><kbd>6</kbd></td><td>Left / right</td></tr>
+          <tr><td><kbd>5</kbd> <kbd>Menu</kbd></td><td>Start, pause and continue</td></tr>
+          <tr><td><kbd>C</kbd></td><td>Leave the game and return to the menu</td></tr>
+          <tr><td><kbd>←↑→↓</kbd></td><td>Arrows or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> on a computer keyboard. <kbd>Space</kbd> starts.</td></tr>
+        </table>
+        <p style="margin-top:12px">On a touch screen, tap the keypad or swipe across the display.</p>
+      </div>
+      <div>
+        <h2><b>12.2</b> Scoring</h2>
+        <p>Each bite scores the current level number, so level 9 pays nine times more than level 1. After every fifth bite a critter appears in the field. Catch it before the counter in the top-right corner reaches zero and you keep whatever is left on the counter.</p>
+        <p>Your best result is kept in the phone's memory as <em>Top score</em>, even after you switch the phone off.</p>
+        <h2><b>12.3</b> Tip</h2>
+        <p>Choose level 5 or higher for serious scores. The display has a slow response, so fast snakes leave a faint trail. That is normal and does not mean the phone is faulty.</p>
+      </div>
+    </div>
+    <p class="footnote">Koivu is a fictional handset. The display is emulated at its native 84 × 48 pixels and scaled up. Nothing is stored except your top score.</p>
+  </section>
+
+  <aside class="stage" aria-label="Handset">
+    <div>
+      <div class="phone" id="phone">
+        <div class="earpiece" aria-hidden="true"></div>
+        <div class="face">
+          <div class="brand" aria-hidden="true">KOIVU</div>
+          <div class="lcd"><canvas id="lcd" width="84" height="48" role="img" aria-label="Snake game display"></canvas></div>
+        </div>
+        <div class="nav">
+          <button id="key-c" data-k="c" aria-label="Clear, back to menu">C</button>
+          <button id="key-navi" data-k="navi" aria-label="Menu, start or pause">Menu</button>
+          <div class="rocker">
+            <button id="key-up" data-k="up" aria-label="Scroll up">▲</button>
+            <button id="key-down" data-k="down" aria-label="Scroll down">▼</button>
+          </div>
+        </div>
+        <div class="keypad" id="keypad">
+          <button id="key-1" data-k="1">1<small>o_o</small></button>
+          <button id="key-2" data-k="2" class="dir" aria-label="2, up">2<small>abc</small></button>
+          <button id="key-3" data-k="3">3<small>def</small></button>
+          <button id="key-4" data-k="4" class="dir" aria-label="4, left">4<small>ghi</small></button>
+          <button id="key-5" data-k="5" class="dir" aria-label="5, start or pause">5<small>jkl</small></button>
+          <button id="key-6" data-k="6" class="dir" aria-label="6, right">6<small>mno</small></button>
+          <button id="key-7" data-k="7">7<small>pqrs</small></button>
+          <button id="key-8" data-k="8" class="dir" aria-label="8, down">8<small>tuv</small></button>
+          <button id="key-9" data-k="9">9<small>wxyz</small></button>
+          <button id="key-star" data-k="*">*<small>+</small></button>
+          <button id="key-0" data-k="0">0<small>␣</small></button>
+          <button id="key-hash" data-k="#" aria-label="Hash, toggle silent">#<small>⇧</small></button>
+        </div>
+        <div class="mic" aria-hidden="true"></div>
+      </div>
+      <div class="hint">SWIPE THE SCREEN OR USE 2 4 6 8</div>
+    </div>
+  </aside>
+</main>
+
+<script>
+(() => {
+  // ---------------- storage ----------------
+  const store = {
+    get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+    set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+  };
+
+  // ---------------- audio ----------------
+  let ac = null, muted = store.get('koivu.silent', false);
+  function audio(){
+    if (muted) return null;
+    if (!ac){ try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return null; } }
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function beep(freq, dur, when=0, type='square', vol=.08){
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + when;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t); g.gain.setValueAtTime(vol, t + dur*0.85); g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  const DTMF = {'1':[697,1209],'2':[697,1336],'3':[697,1477],'4':[770,1209],'5':[770,1336],'6':[770,1477],
+    '7':[852,1209],'8':[852,1336],'9':[852,1477],'*':[941,1209],'0':[941,1336],'#':[941,1477]};
+  function keyTone(k){
+    if (DTMF[k]){ beep(DTMF[k][0], .09, 0, 'sine', .07); beep(DTMF[k][1], .09, 0, 'sine', .07); }
+    else beep(1760, .03, 0, 'square', .04);
+  }
+  const sfx = {
+    eat(){ beep(1568, .035); },
+    bonus(){ [1046,1318,1568,2093].forEach((f,i)=>beep(f,.05,i*.05)); },
+    critter(){ beep(2093,.03); beep(2637,.03,.05); },
+    die(){ [880,740,622,523,392].forEach((f,i)=>beep(f,.09,i*.09,'square',.09)); },
+    start(){ [523,659,784].forEach((f,i)=>beep(f,.06,i*.07)); }
+  };
+  const soundBtn = document.getElementById('sound-toggle');
+  function paintSound(){ soundBtn.textContent = muted ? 'Profile: Silent' : 'Profile: General'; soundBtn.setAttribute('aria-pressed', String(muted)); }
+  function toggleMute(){ muted = !muted; store.set('koivu.silent', muted); paintSound(); if (!muted) beep(1760,.05); }
+  soundBtn.addEventListener('click', toggleMute);
+  paintSound();
+
+  // ---------------- tiny pixel font 3x5 ----------------
+  const F = {
+    A:'111101111101101',B:'110101110101110',C:'111100100100111',D:'110101101101110',E:'111100110100111',
+    F:'111100110100100',G:'111100101101111',H:'101101111101101',I:'111010010010111',J:'001001001101111',
+    K:'101101110101101',L:'100100100100111',M:'101111111101101',N:'110101101101101',O:'111101101101111',
+    P:'111101111100100',Q:'111101101111001',R:'110101110101101',S:'111100111001111',T:'111010010010010',
+    U:'101101101101111',V:'101101101101010',W:'101101111111101',X:'101101010101101',Y:'101101010010010',
+    Z:'111001010100111','0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111',
+    '4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111',
+    '9':'111101111001111',':':'000010000010000','-':'000000111000000','.':'000000000000010','!':'010010010000010',
+    '>':'100010001010100','<':'001010100010001',' ':'000000000000000'
+  };
+
+  // ---------------- framebuffer ----------------
+  const W = 84, H = 48;
+  const buf = new Uint8Array(W*H);
+  const ghost = new Float32Array(W*H);
+  const cvs = document.getElementById('lcd');
+  const ctx = cvs.getContext('2d');
+  let scale = 3;
+  function clear(){ buf.fill(0); }
+  function px(x,y,v=1){ if (x>=0 && y>=0 && x<W && y<H) buf[y*W+x] = v; }
+  function rect(x,y,w,h){ for(let i=0;i<w;i++){ px(x+i,y); px(x+i,y+h-1); } for(let j=0;j<h;j++){ px(x,y+j); px(x+w-1,y+j); } }
+  function fill(x,y,w,h,v=1){ for(let j=0;j<h;j++) for(let i=0;i<w;i++) px(x+i,y+j,v); }
+  function text(s,x,y){
+    s = String(s).toUpperCase();
+    for (const ch of s){ const g = F[ch] || F[' ']; for (let r=0;r<5;r++) for (let c=0;c<3;c++) if (g[r*3+c]==='1') px(x+c,y+r); x += 4; }
+  }
+  function textC(s,y){ text(s, Math.round((W - (String(s).length*4-1))/2), y); }
+  function bigText(s,x,y){ // 2x scaled
+    s = String(s).toUpperCase();
+    for (const ch of s){ const g = F[ch] || F[' ']; for (let r=0;r<5;r++) for (let c=0;c<3;c++) if (g[r*3+c]==='1') fill(x+c*2,y+r*2,2,2); x += 8; }
+  }
+
+  function resize(){
+    const r = cvs.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    cvs.width = Math.max(84, Math.round(r.width * dpr));
+    cvs.height = Math.round(cvs.width * 48/84);
+    scale = cvs.width / W;
+  }
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function present(){
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    const s = scale, gap = Math.max(1, s*0.12), sz = s - gap;
+    for (let y=0;y<H;y++){
+      for (let x=0;x<W;x++){
+        const i = y*W+x;
+        if (buf[i]) ghost[i] = 1; else ghost[i] *= reduced ? 0 : 0.55;
+        // unlit cells: faint grid
+        let a = 0.06 + ghost[i] * 0.86;
+        if (buf[i]) a = 0.92;
+        ctx.fillStyle = `rgba(35,48,27,${a.toFixed(3)})`;
+        ctx.fillRect(x*s + gap/2, y*s + gap/2, sz, sz);
+      }
+    }
+  }
+
+  // ---------------- game ----------------
+  const COLS = 27, ROWS = 12, OX = 2, OY = 11, CELL = 3;
+  let state = 'menu', level = store.get('koivu.level', 5), top = store.get('koivu.top', 0);
+  let snake, dir, queue, food, score, bites, critter, growBy, deathFlash, tickTimer = 0, lastT = 0, menuBlink = 0;
+  const elScore = document.getElementById('stat-score'), elTop = document.getElementById('stat-top'), elLevel = document.getElementById('stat-level');
+  function syncStats(){ elScore.textContent = score || 0; elTop.textContent = top; elLevel.textContent = level; }
+
+  function newGame(){
+    const cy = 6;
+    snake = [{x:9,y:cy},{x:8,y:cy},{x:7,y:cy},{x:6,y:cy},{x:5,y:cy}];
+    dir = {x:1,y:0}; queue = []; score = 0; bites = 0; critter = null; growBy = 0; deathFlash = 0;
+    placeFood(); state = 'play'; sfx.start(); syncStats();
+  }
+  function occupied(x,y){ return snake.some(s => s.x===x && s.y===y) || (critter && y===critter.y && (x===critter.x || x===critter.x+1)); }
+  function placeFood(){
+    let x,y, n=0;
+    do { x = Math.floor(Math.random()*COLS); y = Math.floor(Math.random()*ROWS); n++; } while ((occupied(x,y)) && n<999);
+    food = {x,y};
+  }
+  function placeCritter(){
+    let x,y,n=0;
+    do { x = Math.floor(Math.random()*(COLS-1)); y = Math.floor(Math.random()*ROWS); n++; }
+    while ((occupied(x,y) || occupied(x+1,y) || (food.x===x&&food.y===y) || (food.x===x+1&&food.y===y)) && n<999);
+    critter = {x,y,t:20, kind: Math.floor(Math.random()*3)};
+    sfx.critter();
+  }
+  function tickMs(){ return 250 - level*21; }
+
+  function step(){
+    if (queue.length){ const d = queue.shift(); if (!(d.x === -dir.x && d.y === -dir.y)) dir = d; }
+    const h = snake[0];
+    const nx = (h.x + dir.x + COLS) % COLS, ny = (h.y + dir.y + ROWS) % ROWS;
+    // self collision (tail moves away unless growing)
+    const body = growBy > 0 ? snake : snake.slice(0,-1);
+    if (body.some(s => s.x===nx && s.y===ny)){ die(); return; }
+    snake.unshift({x:nx,y:ny});
+    if (nx===food.x && ny===food.y){
+      score += level; bites++; growBy += 1; sfx.eat(); placeFood();
+      if (bites % 5 === 0 && !critter) placeCritter();
+    }
+    if (critter && ny===critter.y && (nx===critter.x || nx===critter.x+1)){
+      score += critter.t * level; growBy += 2; critter = null; sfx.bonus();
+    }
+    if (growBy > 0) growBy--; else snake.pop();
+    if (critter){ critter.t--; if (critter.t <= 0) critter = null; }
+    syncStats();
+  }
+  function die(){
+    state = 'dying'; deathFlash = 0; sfx.die();
+    try { navigator.vibrate && navigator.vibrate([60,40,60]); } catch(e){}
+    if (score > top){ top = score; store.set('koivu.top', top); }
+    syncStats();
+  }
+
+  // --- drawing primitives for game ---
+  function cellPx(c){ return {x: OX + c.x*CELL, y: OY + c.y*CELL}; }
+  const CRITTERS = [ // 6x3 sprites
+    ['101101','011110','110011'],
+    ['010010','111111','101101'],
+    ['110011','011110','100001']
+  ];
+  function drawGame(hideSnake){
+    clear();
+    // status bar
+    const sc = String(score).padStart(4,'0');
+    text(sc, 1, 1);
+    if (critter){
+      const spr = CRITTERS[critter.kind];
+      for (let r=0;r<3;r++) for (let c=0;c<6;c++) if (spr[r][c]==='1') px(62+c, 2+r);
+      text(String(critter.t).padStart(2,'0'), 75, 1);
+    }
+    fill(0,8,84,1); // separator
+    rect(1,10,83,38);
+    // food: plus
+    const f = cellPx(food);
+    px(f.x+1,f.y); px(f.x,f.y+1); px(f.x+2,f.y+1); px(f.x+1,f.y+2);
+    if (critter){
+      const p = cellPx(critter), spr = CRITTERS[critter.kind];
+      for (let r=0;r<3;r++) for (let c=0;c<6;c++) if (spr[r][c]==='1') px(p.x+c, p.y+r);
+    }
+    if (hideSnake) return;
+    snake.forEach((s,i) => {
+      const p = cellPx(s);
+      if (i===0){
+        fill(p.x,p.y,3,3);
+        // eye: knock out a pixel towards the side of travel
+        const ex = dir.x===1?2:dir.x===-1?0:1, ey = dir.y===1?2:dir.y===-1?0:1;
+        if (dir.x) px(p.x+ex, p.y, 0); else px(p.x, p.y+ey, 0);
+      } else {
+        // connected body: fill 2x2 plus bridge to previous segment
+        fill(p.x,p.y,2,2);
+        const prev = snake[i-1];
+        let dx = prev.x - s.x, dy = prev.y - s.y;
+        if (Math.abs(dx) > 1) dx = -Math.sign(dx); if (Math.abs(dy) > 1) dy = -Math.sign(dy);
+        if (dx===1) fill(p.x+2,p.y,1,2); else if (dx===-1) px(p.x-1,p.y,1), px(p.x-1,p.y+1,1);
+        if (dy===1) fill(p.x,p.y+2,2,1); else if (dy===-1) px(p.x,p.y-1,1), px(p.x+1,p.y-1,1);
+      }
+    });
+  }
+  function drawMenu(){
+    clear();
+    // little snake logo
+    const logo = ['0111110000000','1100000000000','0111110000110','0000011000111','1111110011111'];
+    bigText('SNAKE', 3, 3);
+    text('II', 45, 3); fill(45,9,7,1);
+    for (let r=0;r<5;r++) for (let c=0;c<13;c++) if (logo[r][c]==='1'){ px(60+c*2,4+r*2); px(61+c*2,4+r*2); }
+    fill(0,17,84,1);
+    text('LEVEL', 4, 21);
+    for (let i=1;i<=9;i++){ if (i<=level) fill(28+i*5, 21, 4, 5); else rect(28+i*5, 21, 4, 5); }
+    text('TOP', 4, 29); text(String(top).padStart(4,'0'), 60, 29);
+    if (menuBlink % 2 === 0) textC('PRESS 5 TO PLAY', 40);
+  }
+  function drawOver(){
+    clear();
+    rect(0,0,84,48);
+    textC('GAME OVER!', 6);
+    textC('YOUR SCORE:', 16);
+    bigText(String(score).padStart(4,'0'), 26, 23);
+    if (score >= top && score > 0) textC('NEW TOP SCORE', 36);
+    else textC('TOP ' + String(top).padStart(4,'0'), 36);
+  }
+  function drawPause(){
+    drawGame(false);
+    fill(18,20,48,13,0); rect(18,20,48,13); textC('PAUSED', 24);
+  }
+
+  let overTimer = 0;
+  function frame(t){
+    const dt = Math.min(100, t - lastT || 16); lastT = t;
+    if (state === 'play'){
+      tickTimer += dt;
+      while (tickTimer >= tickMs() && state === 'play'){ tickTimer -= tickMs(); step(); }
+      if (state === 'play') drawGame(false);
+    } else if (state === 'dying'){
+      deathFlash += dt;
+      const blink = Math.floor(deathFlash/180);
+      drawGame(blink % 2 === 1);
+      if (blink >= 7){ state = 'over'; overTimer = 0; }
+    } else if (state === 'over'){
+      overTimer += dt; drawOver();
+    } else if (state === 'pause'){
+      drawPause();
+    } else {
+      menuBlink = Math.floor(t/500); drawMenu();
+    }
+    present();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------------- input ----------------
+  function turn(x,y){
+    if (state !== 'play') return;
+    const last = queue.length ? queue[queue.length-1] : dir;
+    if ((x === last.x && y === last.y) || (x === -last.x && y === -last.y)) return;
+    if (queue.length < 3) queue.push({x,y});
+  }
+  function action(k){
+    switch(k){
+      case '2': case 'up':
+        if (state==='menu'){ if (k==='up' || k==='2'){ level = Math.min(9, level+1); store.set('koivu.level', level); syncStats(); } }
+        else turn(0,-1); break;
+      case '8': case 'down':
+        if (state==='menu'){ level = Math.max(1, level-1); store.set('koivu.level', level); syncStats(); }
+        else turn(0,1); break;
+      case '4': turn(-1,0); break;
+      case '6': turn(1,0); break;
+      case '5': case 'navi':
+        if (state==='menu') newGame();
+        else if (state==='play') state='pause';
+        else if (state==='pause'){ state='play'; tickTimer=0; }
+        else if (state==='over'){ if (overTimer > 500) state='menu'; }
+        break;
+      case 'c':
+        if (state==='play' || state==='pause' || state==='over'){ if (state!=='over' && score>top){ top=score; store.set('koivu.top', top);} state='menu'; syncStats(); }
+        break;
+      case '#': toggleMute(); break;
+    }
+  }
+  function press(k, el){
+    keyTone(k);
+    action(k);
+    if (el){ el.classList.add('pressed'); setTimeout(()=>el.classList.remove('pressed'), 110); }
+  }
+  document.querySelectorAll('[data-k]').forEach(b => {
+    b.addEventListener('pointerdown', e => { e.preventDefault(); press(b.dataset.k, b); });
+    b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.stopPropagation(); press(b.dataset.k, b); } });
+  });
+  const keyMap = {
+    ArrowUp:'up', w:'up', W:'up', ArrowDown:'down', s:'down', S:'down', ArrowLeft:'4', a:'4', A:'4', ArrowRight:'6', d:'6', D:'6',
+    ' ':'5', Enter:'5', Escape:'c', Backspace:'c', p:'5', P:'5',
+    '1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','0':'0','*':'*','#':'#', m:'#', M:'#'
+  };
+  window.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('button') && (e.key===' '||e.key==='Enter')) return;
+    let k = keyMap[e.key]; if (!k) return;
+    e.preventDefault();
+    // arrow up/down steer in game
+    if (state !== 'menu' && k === 'up') k = '2';
+    if (state !== 'menu' && k === 'down') k = '8';
+    const elId = {'up':'key-up','down':'key-down','c':'key-c','*':'key-star','#':'key-hash'}[k] || ('key-'+k);
+    const el = document.getElementById(elId);
+    if (e.repeat && (k==='5')) return;
+    press(k, el);
+  });
+  // swipe on the display
+  let sw = null;
+  cvs.addEventListener('pointerdown', e => { sw = {x:e.clientX, y:e.clientY}; cvs.setPointerCapture && cvs.setPointerCapture(e.pointerId); });
+  cvs.addEventListener('pointerup', e => {
+    if (!sw) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y; sw = null;
+    if (Math.hypot(dx,dy) < 14){ press('5', document.getElementById('key-5')); return; }
+    if (Math.abs(dx) > Math.abs(dy)) action(dx>0?'6':'4'); else action(dy>0?'8':'2');
+  });
+
+  window.addEventListener('resize', resize);
+  resize(); syncStats();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
