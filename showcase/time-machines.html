@@ -205,7 +205,7 @@ footer{padding:40px 0 60px;font:400 10.5px var(--mono);letter-spacing:.06em;colo
   <section>
     <div class="def">
       <div class="num">9,192,631,770</div>
-      <p>Since 1967 the second has been defined as exactly this many cycles of the radiation from the hyperfine transition of the caesium-133 atom. Optical clocks now tick about a hundred thousand times faster and beat caesium by more than a hundredfold in stability — so metrologists are preparing to redefine the second again, with the 2030 General Conference on Weights and Measures the target date.</p>
+      <p>Since 1967 the second has been defined as exactly this many cycles of the radiation from the hyperfine transition of the caesium-133 atom. Optical clocks now tick about fifty thousand times faster and beat caesium by more than a hundredfold in stability — so metrologists are preparing to redefine the second again, with the 2030 General Conference on Weights and Measures the target date.</p>
     </div>
   </section>
 
@@ -231,7 +231,7 @@ const M = [
   {id:'shortt',yr:1921,date:'1921',name:'Shortt free pendulum',where:'W. H. Shortt, Synchronome Co.',spd:1/365.25,
    txt:'A master pendulum swings in a vacuum tank, doing no work; a slave clock does the counting. Around one second a year — good enough to detect wobbles in Earth’s rotation.',g:'shortt'},
   {id:'quartz',yr:1969,date:'1969',name:'Quartz wristwatch',where:'Seiko Astron, Tokyo',spd:5/30.44,
-   txt:'A tuning-fork crystal vibrates 32,768 times a second when driven by a battery. Less precise than the best pendulums, but it put ±5 seconds a month on everyone’s wrist.',g:'quartz'},
+   txt:'A tuning-fork quartz crystal, driven by a battery, vibrates 8,192 times a second (today’s watches use 32,768). Less precise than the best pendulums, but it put ±5 seconds a month on everyone’s wrist.',g:'quartz'},
   {id:'caesium',yr:1955,date:'1955',name:'Caesium beam clock',where:'Essen & Parry, NPL Teddington',spd:1/(300*365.25),
    txt:'The first practical atomic clock locks a microwave oscillator to a transition in caesium atoms. About one second in 300 years.',g:'atom'},
   {id:'f1',yr:1999,date:'1999',name:'Caesium fountain NIST-F1',where:'Boulder, Colorado',spd:1/(20e6*365.25),
@@ -271,8 +271,8 @@ const ordered=[...M]; // chronological
 function xs(m,i){
   if(axisMode==='ord') return L+ (i+.5)/ordered.length*(W-L-R);
   const ago=2030-m.yr; // years before 2030
-  const lo=Math.log10(3500), hi=Math.log10(5);
-  return L+(Math.log10(lo>0?ago:ago)-lo)/(hi-lo)*(W-L-R);
+  const lo=Math.log10(3600), hi=Math.log10(5);
+  return L+(Math.log10(ago)-lo)/(hi-lo)*(W-L-R);
 }
 const NS='http://www.w3.org/2000/svg';
 function draw(){
@@ -287,7 +287,7 @@ function draw(){
   s+=`</g>`;
   if(axisMode==='log'){
     [3000,1000,300,100,30,10].forEach(a=>{
-      const x=L+(Math.log10(a)-Math.log10(3500))/(Math.log10(5)-Math.log10(3500))*(W-L-R);
+      const x=L+(Math.log10(a)-Math.log10(3600))/(Math.log10(5)-Math.log10(3600))*(W-L-R);
       s+=`<g class="axis"><line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" stroke="rgba(233,241,255,.08)"/><text x="${x}" y="${H-B+34}" text-anchor="middle">${a.toLocaleString('en-GB')} yrs ago</text></g>`;
     });
   }

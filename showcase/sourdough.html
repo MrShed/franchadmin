@@ -104,7 +104,7 @@ table.formula tr.sum td{border-bottom:0;border-top:1px solid var(--flour);font-w
 .tl-controls label{display:block;font-size:13px;color:var(--flour-dim);margin-bottom:6px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase}
 .tl-controls input{background:transparent;border:1px solid var(--line);color:var(--flour);font-family:var(--mono);font-size:17px;padding:8px 10px;color-scheme:dark}
 .timeline{position:relative;list-style:none;margin:0;padding:0}
-.timeline::before{content:"";position:absolute;left:112px;top:10px;bottom:10px;width:2px;background:repeating-linear-gradient(var(--flour-dim) 0 6px,transparent 6px 12px);opacity:.5}
+.timeline::before{content:"";position:absolute;left:126px;top:10px;bottom:10px;width:2px;background:repeating-linear-gradient(var(--flour-dim) 0 6px,transparent 6px 12px);opacity:.5}
 .timeline li{display:grid;grid-template-columns:100px 24px minmax(0,1fr);gap:0 14px;padding:14px 0;align-items:start}
 .timeline time{font-family:var(--mono);font-size:15px;text-align:right;color:var(--levain);padding-top:3px}
 .timeline time small{display:block;color:var(--flour-dim);font-size:11px;letter-spacing:.1em}
@@ -125,7 +125,7 @@ footer{padding:60px 0 80px;margin-top:60px;border-top:1px solid var(--line);disp
   .quick{grid-template-columns:repeat(2,minmax(0,1fr))}
   .quick div:nth-child(2){border-right:0}
   .quick div:nth-child(-n+2){border-bottom:1px solid var(--line)}
-  .timeline::before{left:78px}
+  .timeline::before{left:86px}
   .timeline li{grid-template-columns:66px 24px minmax(0,1fr);gap:0 8px}
   .timeline time{font-size:13px}
 }
@@ -326,11 +326,11 @@ footer{padding:60px 0 80px;margin-top:60px;border-top:1px solid var(--line);disp
       {o:60, d:120, n:'Four sets of stretch & folds', p:'Every 30 minutes, lift each side of the dough and fold it over itself. After the fourth set, leave it alone.'},
       {o:bulk, d:30, n:'Pre-shape', p:'Tip the dough out, divide, and round each piece loosely. Rest uncovered on the bench.', key:true},
       {o:bulk+30, d:15, n:'Final shape', p:'Shape into a tight boule or batard and set seam-side up in a floured banneton.'},
-      {o:bulk+45, d:14*60, n:'Cold retard', p:'Cover and refrigerate overnight. The flavour builds here, quietly.'},
-      {o:bulk+45+14*60-60, d:60, n:'Preheat the oven', p:'250°C with a cast-iron pot inside, for a full hour. The pot must be scorching.'},
-      {o:bulk+45+14*60, d:20, n:'Bake, lid on', p:'Turn out, score once, and bake covered for 20 minutes to trap the steam.', key:true},
-      {o:bulk+65+14*60, d:25, n:'Bake, lid off', p:'Lower to 230°C and bake another 20–25 minutes, until deeply burnished and hollow when tapped.'},
-      {o:bulk+90+14*60, d:60, n:'Cool', p:'At least an hour on a rack. We know. Wait anyway.', key:true},
+      {o:bulk+45, d:16*60, n:'Cold retard', p:'Cover and refrigerate overnight. The flavour builds here, quietly.'},
+      {o:bulk+45+16*60-60, d:60, n:'Preheat the oven', p:'250°C with a cast-iron pot inside, for a full hour. The pot must be scorching.'},
+      {o:bulk+45+16*60, d:20, n:'Bake, lid on', p:'Turn out, score once, and bake covered for 20 minutes to trap the steam.', key:true},
+      {o:bulk+65+16*60, d:25, n:'Bake, lid off', p:'Lower to 230°C and bake another 20–25 minutes, until deeply burnished and hollow when tapped.'},
+      {o:bulk+90+16*60, d:60, n:'Cool', p:'At least an hour on a rack. We know. Wait anyway.', key:true},
     ];
     const days=['Day 1','Day 2','Day 3','Day 4'];
     $('timeline').innerHTML=steps.map(s=>{const f=fmt(mix+s.o); const dayIdx=Math.floor((mix+s.o)/1440)+1;
