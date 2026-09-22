@@ -45,7 +45,9 @@ a{color:inherit}
 .sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin:56px 0 12px;flex-wrap:wrap}
 .sec-h h2{font-family:var(--fr);font-weight:700;font-variation-settings:"opsz" 72,"SOFT" 50;font-size:clamp(34px,4.4vw,58px);margin:0;letter-spacing:-.02em;line-height:1}
 .sec-h span{font-variation-settings:"MONO" 1;font-size:12px;color:var(--mute)}
-.stage{position:relative;padding:20px 0 30px;user-select:none}
+.stage{position:relative;user-select:none;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.inner{position:relative;display:inline-block;min-width:100%;padding:20px 0 30px;vertical-align:top}
+.inner.narrow{padding-left:4px;padding-right:12px}
 #word{font-family:var(--fr);font-weight:400;font-variation-settings:"opsz" 144,"SOFT" 0,"WONK" 0;white-space:nowrap;line-height:1;display:inline-block;position:relative;z-index:2;color:var(--ink)}
 #word span{display:inline-block;transition:color .25s}
 #word span.hot{color:var(--pink)}
@@ -113,10 +115,10 @@ footer{margin-top:50px;font-size:12px;color:var(--mute);line-height:1.7;font-var
   </div>
 
   <div class="sec-h"><h2>Anatomy</h2><span id="fontState">Fraunces · opsz 144 · wght 400</span></div>
-  <div class="stage" id="stage">
+  <div class="stage" id="stage"><div class="inner" id="inner">
     <div id="word" aria-label="Hamburgefonstiv"></div>
     <svg id="overlay" aria-hidden="true"></svg>
-  </div>
+  </div></div>
   <div class="gloss" id="gloss" role="group" aria-label="Parts of a letter"></div>
 
   <div class="sec-h"><h2>Playground</h2><span>Click the sample to edit it</span></div>
@@ -173,7 +175,7 @@ const TERMS=[
 // build word
 const word=$('word');
 word.innerHTML=[...WORD].map((c,i)=>`<span data-i="${i}">${c}</span>`).join('');
-const stage=$('stage'), svg=$('overlay');
+const stage=$('stage'), inner=$('inner'), svg=$('overlay');
 let active=5; // Bowl
 
 // ---------- metrics: measure ink with a canvas at the element's size ----------
@@ -188,19 +190,21 @@ function metrics(){
   const b=pr.top-wr.top;
   return {base:b, xh:b-mx.actualBoundingBoxAscent, cap:b-mH.actualBoundingBoxAscent, asc:b-mb.actualBoundingBoxAscent, desc:b+mp.actualBoundingBoxDescent, fs};
 }
+let narrow=false;
 function fit(){
   const avail=stage.clientWidth;
+  narrow=avail<640; inner.classList.toggle('narrow',narrow);
   word.style.fontSize='100px';
   const w=word.getBoundingClientRect().width;
-  const fs=Math.max(28,Math.min(230,100*avail/w*0.98));
+  const fs=narrow?130:Math.max(28,Math.min(230,100*avail/w*0.98));
   word.style.fontSize=fs+'px';
-  stage.style.paddingTop=Math.max(34,fs*0.28)+'px';
-  stage.style.paddingBottom=Math.max(40,fs*0.36)+'px';
+  inner.style.paddingTop=Math.max(34,fs*0.3)+'px';
+  inner.style.paddingBottom=Math.max(40,fs*0.4)+'px';
 }
 function draw(){
   fit();
   const m=metrics();
-  const sr=stage.getBoundingClientRect(), wr=word.getBoundingClientRect();
+  const sr=inner.getBoundingClientRect(), wr=word.getBoundingClientRect();
   const ox=wr.left-sr.left, oy=wr.top-sr.top;
   const W=sr.width, Hh=sr.height;
   svg.setAttribute('viewBox',`0 0 ${W} ${Hh}`);
@@ -232,6 +236,7 @@ function draw(){
     }
   });
   svg.innerHTML=s;
+  if(narrow && TERMS[active][2]!==null){ const b=box(TERMS[active][2]); stage.scrollTo({left:Math.max(0,b.x+b.w/2-stage.clientWidth/2),behavior:reduce?'auto':'smooth'}); }
   spans.forEach((sp,i)=>sp.classList.toggle('hot',TERMS[active][2]===i));
   $('fontState').textContent=`Fraunces · opsz 144 · wght 400 · ${Math.round(m.fs)} px`;
 }
