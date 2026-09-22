@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aldwych World Receiver</title>
+<meta name="description" content="A walnut valve radio you can tune: drag the glowing dial across long, medium and shortwave, hear synthesised static give way to sixteen fictional stations, and watch the magic eye close as you lock on.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Limelight&family=Poiret+One&family=Cutive+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --room:#1b1512; --wood:#5a3016; --wood-d:#2e160a; --wood-l:#8a4f25; --brass:#c9a15a; --brass-d:#7d5f2c; --glow:#ffc36b; --glow-d:#b9772a; --glass:#1a120b; --ivory:#efe6cf;
+  --deco:"Limelight","Didot","Bodoni MT",Georgia,serif; --dial:"Poiret One","Futura","Century Gothic",sans-serif; --mono:"Cutive Mono","Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--room); color:var(--ivory); font-family:var(--mono); min-height:100vh; overflow-x:hidden;
+  background-image:radial-gradient(900px 500px at 50% 30%, rgba(255,170,80,.12), transparent 70%), repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 2px, transparent 2px 120px), linear-gradient(#241b16, #140f0c)}
+:focus-visible{outline:2px solid var(--glow); outline-offset:3px}
+.wrap{max-width:1060px; margin:0 auto; padding:22px max(16px,3vw) 50px}
+.top{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:26px}
+.top p{margin:0; font-size:13px; color:#b8a78c; letter-spacing:.06em}
+.back{color:var(--brass); text-decoration:none; font-family:var(--deco); font-size:15px; letter-spacing:.08em; border-bottom:1px solid var(--brass-d)}
+.back:hover{color:var(--glow)}
+
+/* cabinet */
+.cabinet{position:relative; border-radius:44px 44px 18px 18px; padding:34px 34px 30px;
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(255,220,170,.18), transparent 50%),
+    repeating-linear-gradient(92deg, rgba(0,0,0,.14) 0 3px, transparent 3px 9px, rgba(255,200,140,.05) 9px 11px, transparent 11px 23px),
+    repeating-linear-gradient(88deg, rgba(40,15,0,.22) 0 1px, transparent 1px 37px),
+    linear-gradient(100deg, var(--wood-d), var(--wood) 18%, var(--wood-l) 40%, var(--wood) 62%, var(--wood-l) 80%, var(--wood-d));
+  box-shadow:inset 0 2px 0 rgba(255,210,160,.25), inset 0 -8px 20px rgba(0,0,0,.45), 0 50px 80px -30px rgba(0,0,0,.9), 0 0 0 2px #1a0c05}
+.cabinet::before{content:""; position:absolute; inset:12px; border-radius:36px 36px 12px 12px; border:2px solid rgba(201,161,90,.35); pointer-events:none}
+.brandplate{display:flex; justify-content:center; margin-bottom:18px}
+.brandplate span{font-family:var(--deco); font-size:clamp(20px,3vw,30px); letter-spacing:.24em; color:var(--brass); text-shadow:0 1px 0 rgba(0,0,0,.6), 0 -1px 0 rgba(255,230,180,.3); padding:4px 26px; border-top:1px solid var(--brass-d); border-bottom:1px solid var(--brass-d)}
+
+.dialbox{position:relative; border-radius:16px; padding:12px; background:linear-gradient(#b48a45,#6d4f22 50%,#b48a45); box-shadow:0 6px 16px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,240,200,.5)}
+.dial{position:relative; border-radius:9px; overflow:hidden; background:var(--glass); touch-action:none; cursor:ew-resize; user-select:none; -webkit-user-select:none}
+.dial::after{content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(170deg, rgba(255,255,255,.1) 0%, rgba(255,255,255,.02) 35%, transparent 36%), radial-gradient(ellipse at 50% 120%, rgba(255,160,60,.25), transparent 60%)}
+#dialSvg{display:block; width:100%; height:auto}
+.dial.off #dialSvg{filter:brightness(.25) saturate(.3); transition:filter .5s}
+.dial.warm #dialSvg{animation:warm 1.8s ease-out}
+@keyframes warm{0%{filter:brightness(.2)} 20%{filter:brightness(.6)} 25%{filter:brightness(.35)} 60%{filter:brightness(.9)} 100%{filter:brightness(1)}}
+
+.face{display:grid; grid-template-columns:200px minmax(0,1fr) 200px; gap:28px; align-items:center; margin-top:28px}
+.knobwrap{display:flex; flex-direction:column; align-items:center; gap:10px}
+.knobwrap label,.knobwrap .lab{font-family:var(--deco); font-size:13px; letter-spacing:.2em; color:var(--brass)}
+.knob{width:150px; height:150px; border-radius:50%; position:relative; cursor:grab; touch-action:none;
+  background:radial-gradient(circle at 50% 50%, transparent 58%, rgba(0,0,0,.4) 60%, transparent 62%), conic-gradient(from 0deg, #1d100a, #3a2216, #1d100a, #3a2216, #1d100a, #3a2216, #1d100a, #3a2216, #1d100a);
+  box-shadow:0 10px 18px rgba(0,0,0,.6), inset 0 2px 2px rgba(255,220,180,.25), inset 0 -6px 12px rgba(0,0,0,.6)}
+.knob.small{width:104px; height:104px}
+.knob .cap{position:absolute; inset:22%; border-radius:50%; background:radial-gradient(circle at 38% 30%, #6a452d, #2a160c 70%); box-shadow:inset 0 2px 3px rgba(255,220,180,.25), 0 2px 4px rgba(0,0,0,.6)}
+.knob .mark{position:absolute; left:50%; top:6%; width:4px; height:18%; margin-left:-2px; border-radius:2px; background:var(--ivory); box-shadow:0 0 4px rgba(255,230,190,.5)}
+.knob .rot{position:absolute; inset:0; border-radius:50%}
+.knob:active{cursor:grabbing}
+
+.center{display:flex; flex-direction:column; align-items:center; gap:16px}
+.eye{width:92px; height:92px; border-radius:50%; background:radial-gradient(circle, #0b1a0f 0 22%, #07120a 23%); padding:6px; box-shadow:0 0 0 5px #7d5f2c, 0 0 0 7px #2a1a0c, 0 6px 14px rgba(0,0,0,.6)}
+#eye{width:100%; height:100%; display:block}
+.grille{width:100%; height:140px; border-radius:70px 70px 12px 12px; position:relative; overflow:hidden;
+  background:repeating-linear-gradient(90deg, #4a3622 0 2px, #6b5236 2px 3px, #3e2d1c 3px 5px), #4a3622; box-shadow:inset 0 6px 14px rgba(0,0,0,.7)}
+.grille svg{position:absolute; inset:0; width:100%; height:100%}
+.grille .pulse{position:absolute; inset:0; background:radial-gradient(ellipse at 50% 60%, rgba(255,190,110,.18), transparent 60%); opacity:0; transition:opacity .08s}
+
+.keys{display:flex; justify-content:center; gap:4px; margin-top:26px; padding:10px 12px 0; border-radius:10px; background:linear-gradient(#1e0f07,#2e180b); box-shadow:inset 0 4px 10px rgba(0,0,0,.8)}
+.pkey{width:clamp(44px,10vw,86px); height:58px; border:0; border-radius:3px 3px 8px 8px; cursor:pointer; position:relative; font:14px var(--deco); letter-spacing:.1em; color:#3a2c1a;
+  background:linear-gradient(#fbf6e8, var(--ivory) 60%, #d6c8a6); box-shadow:0 7px 0 #a8976f, 0 9px 8px rgba(0,0,0,.6); transition:transform .08s, box-shadow .08s; transform:translateY(-6px)}
+.pkey small{display:block; font:10px var(--mono); letter-spacing:0; color:#7d6a4a; margin-top:2px}
+.pkey[aria-pressed="true"]{transform:translateY(0); box-shadow:0 1px 0 #a8976f, 0 2px 3px rgba(0,0,0,.6); background:linear-gradient(#e9dfc4, #d6c8a6)}
+.pkey.off{background:linear-gradient(#5a2b1a,#3d1a0e); color:#e9c9a8; box-shadow:0 7px 0 #1e0b04, 0 9px 8px rgba(0,0,0,.6)}
+.pkey.off small{color:#c8a283}
+.pkey.off[aria-pressed="true"]{box-shadow:0 1px 0 #1e0b04}
+
+/* station card */
+.lower{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:20px; margin-top:28px}
+.card{background:linear-gradient(#f3ead2,#e6d9b8); color:#2b2014; border-radius:4px; padding:18px 20px; box-shadow:0 20px 30px -18px rgba(0,0,0,.8); position:relative}
+.card::before{content:""; position:absolute; inset:6px; border:1px solid rgba(90,60,20,.3); pointer-events:none}
+.card h2{margin:0 0 10px; font:400 14px var(--deco); letter-spacing:.2em; color:#7a4d1a}
+.st-name{font:400 clamp(22px,3vw,30px)/1.1 var(--deco); min-height:1.1em}
+.st-meta{font-size:14px; margin-top:8px; line-height:1.6; color:#4c3a22; min-height:3.2em}
+.bars{display:flex; gap:4px; align-items:flex-end; height:22px; margin-top:10px}
+.bars i{width:8px; background:rgba(90,60,20,.2); border-radius:1px}
+.bars i.on{background:#7a4d1a}
+.log{list-style:none; margin:0; padding:0; font-size:13.5px; max-height:236px; overflow:auto}
+.log li{display:grid; grid-template-columns:18px 1fr auto; gap:8px; padding:5px 0; border-bottom:1px dotted rgba(90,60,20,.35)}
+.log li.got{color:#2b2014} .log li:not(.got){color:rgba(43,32,20,.45)}
+.log li b{font-weight:400}
+.hint{font-size:12.5px; color:#b8a78c; margin-top:18px; line-height:1.7; text-align:center}
+.hint kbd{font-family:var(--mono); border:1px solid #6d5a44; padding:0 5px; border-radius:3px; color:var(--ivory)}
+@media (max-width:860px){
+  .face{grid-template-columns:1fr 1fr; grid-template-areas:"c c" "t v"} .center{grid-area:c} .kt{grid-area:t} .kv{grid-area:v}
+  .lower{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:520px){
+  .top p{display:none}
+  .cabinet{padding:22px 14px 20px; border-radius:30px 30px 14px 14px}
+  .cabinet::before{inset:7px; border-radius:24px 24px 10px 10px}
+  .dialbox{padding:7px}
+  .knob{width:118px; height:118px} .knob.small{width:88px; height:88px}
+  .face{gap:16px}
+  .grille{height:100px}
+  .keys{gap:3px; padding:8px 6px 0}
+  .pkey{height:52px; font-size:12px; letter-spacing:.02em}
+  .pkey small{font-size:9px}
+}
+@media (prefers-reduced-motion:reduce){ .dial.warm #dialSvg{animation:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" id="backLink" href="index.html">← Showcase</a><p>Model 7-S · five wavebands · 1938 pattern</p></div>
+
+  <section class="cabinet" aria-label="Radio">
+    <div class="brandplate"><span>ALDWYCH</span></div>
+    <div class="dialbox">
+      <div class="dial warm" id="dial" role="slider" tabindex="0" aria-label="Tuning dial" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="500">
+        <svg id="dialSvg" viewBox="0 0 1000 330" aria-hidden="true"></svg>
+      </div>
+    </div>
+
+    <div class="face">
+      <div class="knobwrap kt"><div class="knob" id="tuneKnob" role="slider" tabindex="0" aria-label="Tuning knob, fine" aria-valuemin="0" aria-valuemax="1000"><div class="rot" id="tuneRot"><div class="mark"></div></div><div class="cap"></div></div><span class="lab">TUNING</span></div>
+      <div class="center">
+        <div class="eye" title="Magic eye tuning indicator"><svg id="eye" viewBox="-50 -50 100 100" aria-hidden="true">
+          <defs><radialGradient id="eg" r="60%"><stop offset="0" stop-color="#c6ff9a"/><stop offset=".6" stop-color="#4fe36b"/><stop offset="1" stop-color="#1b7a33"/></radialGradient>
+          <filter id="eb"><feGaussianBlur stdDeviation="1.2"/></filter></defs>
+          <circle r="44" fill="url(#eg)" filter="url(#eb)" id="eyeGlow"/>
+          <path id="eyeShadow" fill="#07120a"/>
+          <circle r="12" fill="#0b0b08"/><circle r="12" fill="none" stroke="#2d3a26" stroke-width="2"/>
+        </svg></div>
+        <div class="grille" aria-hidden="true"><div class="pulse" id="pulse"></div>
+          <svg viewBox="0 0 400 140" preserveAspectRatio="none"><g fill="none" stroke="#c9a15a" stroke-width="3" opacity=".85">
+            <path d="M200 140 V20"/><path d="M160 140 C160 70 180 40 200 20 C220 40 240 70 240 140"/><path d="M110 140 C110 60 150 30 200 10 C250 30 290 60 290 140"/><path d="M60 140 C60 60 120 18 200 4 C280 18 340 60 340 140"/></g></svg></div>
+      </div>
+      <div class="knobwrap kv"><div class="knob small" id="volKnob" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div class="rot" id="volRot"><div class="mark"></div></div><div class="cap"></div></div><span class="lab">VOLUME</span></div>
+    </div>
+
+    <div class="keys" role="group" aria-label="Waveband">
+      <button class="pkey off" id="kOff" aria-pressed="false">OFF<small>power</small></button>
+      <button class="pkey" id="kLW" aria-pressed="false">LW<small>150–285k</small></button>
+      <button class="pkey" id="kMW" aria-pressed="false">MW<small>520–1610k</small></button>
+      <button class="pkey" id="kSW1" aria-pressed="false">SW1<small>49 m</small></button>
+      <button class="pkey" id="kSW2" aria-pressed="true">SW2<small>31 m</small></button>
+      <button class="pkey" id="kSW3" aria-pressed="false">SW3<small>19 m</small></button>
+    </div>
+  </section>
+
+  <section class="lower">
+    <div class="card" aria-live="polite">
+      <h2 id="stHead">NOW TUNED · 31 METRE BAND</h2>
+      <div class="st-name" id="stName">—</div>
+      <div class="st-meta" id="stMeta">Drag the dial, turn the tuning knob or use the arrow keys.</div>
+      <div class="bars" id="bars" aria-hidden="true"><i style="height:20%"></i><i style="height:35%"></i><i style="height:50%"></i><i style="height:65%"></i><i style="height:80%"></i><i style="height:100%"></i></div>
+    </div>
+    <div class="card">
+      <h2 id="logHead">LISTENER'S LOG · 0 / 16</h2>
+      <ul class="log" id="log"></ul>
+    </div>
+  </section>
+  <p class="hint"><kbd>←</kbd> <kbd>→</kbd> fine tune · <kbd>Shift</kbd> + arrows coarse · <kbd>1</kbd>–<kbd>5</kbd> wavebands · <kbd>0</kbd> power. Sound starts when you first touch the set.</p>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store = { get(k){ try{ return JSON.parse(localStorage.getItem('aldwych-'+k)); }catch(_){ return null; } }, set(k,v){ try{ localStorage.setItem('aldwych-'+k, JSON.stringify(v)); }catch(_){} } };
+
+/* ---------- bands & stations ---------- */
+const BANDS = [
+  {id:'LW', name:'LONG WAVE', lo:150, hi:285, unit:'kHz', fmt:v=>Math.round(v), deco:['Kalundborg','Motala','Allouis','Oranienburg','Brasov','Warsaw','Luxembourg','Droitwich'], noise:.5},
+  {id:'MW', name:'MEDIUM WAVE', lo:520, hi:1610, unit:'kHz', fmt:v=>Math.round(v), deco:['Beromünster','Athlone','Budapest','Sottens','Hilversum','Brno','Stockholm','Lyon','Bari','Monte Carlo','Riga'], noise:.4},
+  {id:'SW1', name:'49 METRE BAND', lo:5850, hi:6250, unit:'MHz', fmt:v=>(v/1000).toFixed(3), deco:['Daventry','Bogotá','Havana','Tangier','Melbourne','Caracas'], noise:.62},
+  {id:'SW2', name:'31 METRE BAND', lo:9400, hi:9950, unit:'MHz', fmt:v=>(v/1000).toFixed(3), deco:['Moscow','Delhi','Sydney','Rome','Madrid','Tokyo','Nairobi'], noise:.7},
+  {id:'SW3', name:'19 METRE BAND', lo:15100, hi:15800, unit:'MHz', fmt:v=>(v/1000).toFixed(3), deco:['Schenectady','Lima','Manila','Singapore','Cape Town','Jeddah'], noise:.78},
+];
+const ST = [
+  {b:'LW', f:171, city:'Tromsø', name:'Radio Nordlys', style:'hymn', tz:2, prog:'Evening hymn from the Arctic Cathedral'},
+  {b:'LW', f:207, city:'Rabat', name:'Radio Atlas', style:'maqam', tz:1, prog:'Andalusian nuba, with oud and frame drum'},
+  {b:'LW', f:252, city:'Malin Head', name:'Longwave Lighthouse', style:'talk', tz:1, prog:'The shipping forecast: Malin, Hebrides, Bailey…'},
+  {b:'MW', f:666, city:'Lisbon', name:'Rádio Alfama', style:'waltz', tz:1, prog:'Guitarra waltzes after midnight'},
+  {b:'MW', f:819, city:'Cairo', name:'Cairo Evening Programme', style:'maqam', tz:3, prog:'Taqsim on the qanun'},
+  {b:'MW', f:1152, city:'Glasgow', name:'Clydeside Sports Desk', style:'talk', tz:1, prog:'Full-time scores and a phone-in'},
+  {b:'MW', f:1440, city:'Hilversum', name:'Hilversum Draaiorgel', style:'organ', tz:2, prog:'A street organ at the Albert Cuyp market'},
+  {b:'SW1', f:5935, city:'Scheveningen', name:'Coast Station PCH', style:'morse', tz:2, prog:'Morse traffic lists for ships at sea'},
+  {b:'SW1', f:6050, city:'Quito', name:'La Voz de los Andes', style:'interval', tz:-5, prog:'Interval signal before the Spanish service'},
+  {b:'SW1', f:6160, city:'Harbin', name:'Harbin Evening Service', style:'musicbox', tz:8, prog:'Pentatonic dulcimer, then the news'},
+  {b:'SW2', f:9580, city:'Wellington', name:'Radio Aotearoa Overseas', style:'talk', tz:12, prog:'Morning bulletin for the Pacific'},
+  {b:'SW2', f:9710, city:'Reykjavík', name:'Veðurstofa Weather Service', style:'interval', tz:0, prog:'Weather for fishermen, north and east'},
+  {b:'SW2', f:9845, city:'Dakar', name:'Radio Teranga', style:'kora', tz:0, prog:'Kora music from the Casamance'},
+  {b:'SW3', f:15345, city:'Buenos Aires', name:'Radio Arrabal', style:'tango', tz:-3, prog:'An orquesta típica, live from San Telmo'},
+  {b:'SW3', f:15520, city:'Novosibirsk', name:'Time Signal RTZ-7', style:'pips', tz:7, prog:'Standard time and frequency'},
+  {b:'SW3', f:15700, city:'Honolulu', name:'Kona Nights', style:'waltz', tz:-10, prog:'Slack-key guitar under the stars'},
+];
+ST.forEach((s,i) => { s.id = i; const b = BANDS.find(x => x.id === s.b); s.pos = (s.f - b.lo)/(b.hi - b.lo); s.power = .75 + ((i*37)%25)/100; });
+const WIDTH = .022;
+
+/* ---------- state ---------- */
+const saved = store.get('st') || {};
+const S = { band: saved.band ?? 3, pos: saved.pos || [.18,.32,.5,.33,.5], vol: .6, on: true, audio: false, logged: new Set(saved.logged || []), lockT: 0, lastPos: 0, sweep: 0 };
+
+/* ---------- dial drawing ---------- */
+const svg = $('#dialSvg');
+function compact(){ return innerWidth < 600; }
+function drawDial(){
+  const c = compact(); const W = 1000, H = c ? 360 : 330; svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let o = `<defs><linearGradient id="glassg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#2a1a0c"/><stop offset=".5" stop-color="#3a220d"/><stop offset="1" stop-color="#1c1108"/></linearGradient>
+    <filter id="gl" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <rect width="${W}" height="${H}" fill="url(#glassg)"/>`;
+  const x0 = 40, x1 = W - 40;
+  const rows = c ? [S.band] : [0,1,2,3,4];
+  rows.forEach((bi, r) => { const b = BANDS[bi]; const active = bi === S.band; const y = c ? 190 : 40 + r*58;
+    const col = active ? '#ffcf80' : '#8a6a3e'; const op = active ? 1 : .55; const fs = c ? 30 : 15;
+    o += `<g opacity="${op}" ${active ? 'filter="url(#gl)"' : ''}>`;
+    o += `<text x="${x0-28}" y="${y+5}" font-family="Limelight,serif" font-size="${c?22:13}" fill="${col}" text-anchor="start" transform="rotate(-90 ${x0-24} ${y})">${b.id}</text>`;
+    o += `<line x1="${x0}" x2="${x1}" y1="${y}" y2="${y}" stroke="${col}" stroke-width="${active?1.6:1}"/>`;
+    const nT = 40; for (let k=0;k<=nT;k++){ const x = x0 + (x1-x0)*k/nT; const big = k%5===0; o += `<line x1="${x}" x2="${x}" y1="${y}" y2="${y - (big ? (c?18:10) : (c?9:5))}" stroke="${col}" stroke-width="${big?1.4:.8}"/>`;
+      if (big && (!c || k%10===0)){ const v = b.lo + (b.hi-b.lo)*k/nT; o += `<text x="${x}" y="${y + (c?34:16)}" font-family="Cutive Mono,monospace" font-size="${c?20:10.5}" fill="${col}" text-anchor="middle">${b.unit==='MHz' ? (v/1000).toFixed(2) : Math.round(v)}</text>`; } }
+    // decorative cities
+    b.deco.forEach((name, k) => { if (c && k%2) return; const f = (k+.5)/b.deco.length; const x = x0 + (x1-x0)*f; o += `<text x="${x}" y="${y - (c?64:22)}" font-family="Poiret One,sans-serif" font-size="${c?20:11}" fill="${col}" opacity=".55" text-anchor="middle">${name}</text>`; });
+    // stations
+    ST.filter(s => s.b === b.id).forEach(s => { const x = x0 + (x1-x0)*s.pos; const heard = S.logged.has(s.id);
+      o += `<circle cx="${x}" cy="${y}" r="${c?5:3}" fill="${heard ? '#ffe7b5' : col}"/><text x="${x}" y="${y - (c?30:12)}" font-family="Poiret One,sans-serif" font-weight="700" font-size="${fs}" fill="${active ? '#fff0cf' : col}" text-anchor="middle" letter-spacing="1">${s.city}</text>`; });
+    o += `</g>`; });
+  if (c){ o += `<text x="${W/2}" y="${H-30}" font-family="Limelight,serif" font-size="24" fill="#8a6a3e" text-anchor="middle" letter-spacing="6">${BANDS[S.band].name}</text>`; }
+  else o += `<text x="${W/2}" y="${H-8}" font-family="Limelight,serif" font-size="12" fill="#8a6a3e" text-anchor="middle" letter-spacing="6">ALDWYCH · WORLD RECEIVER · ${BANDS[S.band].name}</text>`;
+  o += `<g id="needle"><rect x="-2" y="6" width="4" height="${H-18}" fill="#e2412b" opacity=".95"/><rect x="-7" y="6" width="14" height="${H-18}" fill="#ff6a3d" opacity=".12"/></g>`;
+  svg.innerHTML = o; placeNeedle();
+}
+function placeNeedle(){ const x = 40 + (920)*S.pos[S.band]; const n = $('#needle'); if (n) n.setAttribute('transform', `translate(${x.toFixed(1)} 0)`);
+  $('#dial').setAttribute('aria-valuenow', Math.round(S.pos[S.band]*1000)); const b = BANDS[S.band]; $('#dial').setAttribute('aria-valuetext', `${b.fmt(b.lo + (b.hi-b.lo)*S.pos[S.band])} ${b.unit}`);
+  $('#tuneRot').style.transform = `rotate(${S.pos[S.band]*360*8}deg)`; }
+
+/* ---------- audio ---------- */
+let ac, master, volG, radioIn, staticG, staticF, crackleG, whistle, whistleG, noiseBuf, analyser;
+const active = new Map();
+function initAudio(){
+  if (ac){ if (ac.state === 'suspended') ac.resume(); return; }
+  const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+  ac = new A(); S.audio = true;
+  volG = ac.createGain(); volG.gain.value = S.on ? S.vol : 0;
+  const comp = ac.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3;
+  analyser = ac.createAnalyser(); analyser.fftSize = 256;
+  volG.connect(comp); comp.connect(analyser); analyser.connect(ac.destination);
+  // radio voicing for stations: band-limit + gentle saturation
+  radioIn = ac.createGain(); const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 260; const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+  const ws = ac.createWaveShaper(); const curve = new Float32Array(1024); for (let i=0;i<1024;i++){ const x = i/512 - 1; curve[i] = Math.tanh(x*1.8)/Math.tanh(1.8); } ws.curve = curve;
+  radioIn.connect(hp); hp.connect(lp); lp.connect(ws); ws.connect(volG);
+  // static
+  noiseBuf = ac.createBuffer(1, ac.sampleRate*3, ac.sampleRate); const d = noiseBuf.getChannelData(0); let br = 0;
+  for (let i=0;i<d.length;i++){ const w = Math.random()*2-1; br = br*.97 + w*.03; d[i] = w*.6 + br*3; }
+  const ns = ac.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true; staticF = ac.createBiquadFilter(); staticF.type = 'bandpass'; staticF.frequency.value = 1400; staticF.Q.value = .6;
+  staticG = ac.createGain(); staticG.gain.value = 0; ns.connect(staticF); staticF.connect(staticG); staticG.connect(volG); ns.start();
+  // crackle
+  const cb = ac.createBuffer(1, ac.sampleRate*4, ac.sampleRate); const cd = cb.getChannelData(0); for (let i=0;i<cd.length;i++) cd[i] = Math.random() < .0009 ? (Math.random()*2-1) : 0;
+  const cs = ac.createBufferSource(); cs.buffer = cb; cs.loop = true; crackleG = ac.createGain(); crackleG.gain.value = 0; cs.connect(crackleG); crackleG.connect(volG); cs.start();
+  // heterodyne whistle
+  whistle = ac.createOscillator(); whistle.type = 'sine'; whistle.frequency.value = 900; whistleG = ac.createGain(); whistleG.gain.value = 0; whistle.connect(whistleG); whistleG.connect(volG); whistle.start();
+  setInterval(pump, 50);
+}
+const mtof = m => 440*Math.pow(2,(m-69)/12);
+function tone(dest, t, f, dur, type, g, a=.01, r=.12){ const o = ac.createOscillator(); o.type = type; o.frequency.value = f; const e = ac.createGain(); e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(g,t+a); e.gain.setTargetAtTime(0, t+dur, r/3); o.connect(e); e.connect(dest); o.start(t); o.stop(t+dur+r*2+.05); }
+function pluck(dest, t, f, g, decay=.7, type='triangle'){ const o = ac.createOscillator(); o.type = type; o.frequency.value = f; const e = ac.createGain(); e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(.0008, t+decay); o.connect(e); e.connect(dest); o.start(t); o.stop(t+decay+.05); }
+function thump(dest, t, f, g, dur=.18){ const o = ac.createOscillator(); o.frequency.setValueAtTime(f*1.6,t); o.frequency.exponentialRampToValueAtTime(f,t+.05); const e = ac.createGain(); e.gain.setValueAtTime(g,t); e.gain.exponentialRampToValueAtTime(.001,t+dur); o.connect(e); e.connect(dest); o.start(t); o.stop(t+dur+.02); }
+function tick(dest, t, g, f=3000){ const s = ac.createBufferSource(); s.buffer = noiseBuf; const fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = f; fl.Q.value = 2; const e = ac.createGain(); e.gain.setValueAtTime(g,t); e.gain.exponentialRampToValueAtTime(.001,t+.06); s.connect(fl); fl.connect(e); e.connect(dest); s.start(t, Math.random()*2); s.stop(t+.08); }
+const MORSE = {A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..','0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.'};
+const morseSeq = (() => { const txt = 'CQ CQ DE PCH PCH QTC 4 K'; const seq = []; for (const ch of txt){ if (ch === ' '){ seq.push([0,4]); continue; } for (const s of MORSE[ch]) { seq.push([1, s === '.' ? 1 : 3]); seq.push([0,1]); } seq.push([0,2]); } seq.push([0,10]); return seq; })();
+/* each program schedules into st.out; st.next is the next event time */
+function program(st, until){
+  const g = st.out; const sty = st.style;
+  while (st.next < until){
+    const t = st.next, n = st.n++;
+    if (sty === 'musicbox' || sty === 'organ' || sty === 'kora'){
+      const bpm = sty==='organ' ? 132 : sty==='kora' ? 124 : 96; const step = 60/bpm/2; const root = sty==='organ' ? 67 : sty==='kora' ? 64 : 69;
+      const pent = [0,2,4,7,9,12,14,16]; const pat = sty==='organ' ? [0,2,4,5,4,2,1,0, 3,4,5,7,5,4,2,1] : sty==='kora' ? [0,2,4,2,5,4,2,0, 1,3,5,3,6,5,3,1] : [0,2,4,7,4,2,5,4, 2,0,3,2,1,0,2,0];
+      const deg = pat[n % 16]; const scale = sty==='organ' ? [0,2,4,5,7,9,11,12,14] : pent; const f = mtof(root + scale[deg % scale.length]);
+      if (sty==='organ'){ tone(g, t, f, step*.8, 'square', .05, .005, .05); tone(g, t, f*2, step*.8, 'sine', .04, .005, .05); if (n%2===0) tone(g, t, mtof(root-24 + [0,5,7,0][Math.floor(n/4)%4]), step*.9, 'triangle', .12, .005, .05); if (n%2===1) tone(g, t, mtof(root-12 + [4,9,11,4][Math.floor(n/4)%4]), step*.5, 'square', .03); }
+      else if (sty==='kora'){ pluck(g, t, f, .22, .9); if (n%4===0) pluck(g, t, f/2, .18, 1.2); if (n%8===5) pluck(g, t+step/2, mtof(root+7), .12, .7); }
+      else { pluck(g, t, f, .2, 1.1, 'sine'); pluck(g, t, f*2.01, .05, .5, 'sine'); }
+      st.next += step;
+    } else if (sty === 'hymn'){
+      const chords = [[0,4,7,12],[5,9,12,17],[7,11,14,19],[0,4,7,12],[9,12,16,21],[5,9,12,17],[7,11,14,17],[0,4,7,12]]; const ch = chords[n % 8]; const dur = 3.2;
+      ch.forEach((iv, k) => tone(g, t, mtof(55 + iv), dur, k===3 ? 'triangle' : 'sine', k===3 ? .07 : .09, .6, .8));
+      st.next += dur;
+    } else if (sty === 'waltz'){
+      const bpm = sty && st.city === 'Honolulu' ? 138 : 162; const beat = 60/bpm; const bar = Math.floor(n/3), b = n % 3; const prog = [[0,4,7],[5,9,12],[7,11,14],[0,4,7],[2,5,9],[7,11,14],[0,4,7],[0,4,7]]; const ch = prog[bar % 8]; const root = st.city === 'Honolulu' ? 55 : 57;
+      if (b === 0) pluck(g, t, mtof(root - 12 + ch[0]), .28, .9, 'triangle'); else ch.forEach(iv => pluck(g, t, mtof(root + iv), .07, .35, 'sawtooth'));
+      const mel = [12,11,9,7, 9,11,12,14, 16,14,12,11, 12,9,7,0]; if (b === 0) pluck(g, t, mtof(root + 12 + mel[bar % 16]), .16, beat*2.5, 'triangle');
+      if (b === 2 && bar % 2) pluck(g, t + beat*.5, mtof(root + 12 + mel[(bar+1) % 16] + 2), .1, beat, 'triangle');
+      st.next += beat;
+    } else if (sty === 'tango'){
+      const beat = 60/118/2; const bar = Math.floor(n/8), s = n % 8; const prog = [[0,3,7],[5,8,12],[-5,-1,2],[0,3,7]]; const ch = prog[bar % 4]; const root = 57;
+      if (s===0 || s===3 || s===6) { ch.forEach(iv => tone(g, t, mtof(root + iv), beat*.7, 'sawtooth', .045, .004, .04)); thump(g, t, mtof(root - 24 + ch[0]), .35); }
+      if (s===4) thump(g, t, mtof(root - 24 + ch[2]), .3);
+      const mel = [7,8,7,5, 3,5,7,12, 11,8,7,5, 3,2,0,-1]; if (s % 2 === 0) tone(g, t, mtof(root + 12 + mel[(bar*4 + s/2) % 16]), beat*1.7, 'square', .035, .02, .08);
+      st.next += beat;
+    } else if (sty === 'maqam'){
+      const beat = 60/100/2; const hijaz = [0,1,4,5,7,8,10,12]; st.deg = st.deg ?? 4; st.deg = Math.max(0, Math.min(7, st.deg + [-1,1,0,-1,1,2,-2][Math.floor(Math.random()*7)]));
+      const root = st.city === 'Cairo' ? 62 : 60; if (n % 8 !== 7) pluck(g, t, mtof(root + hijaz[st.deg]), .2, .45, 'sawtooth'); if (n % 8 === 0) pluck(g, t, mtof(root - 12), .15, 1.4, 'triangle');
+      if ([0,3,4].includes(n % 8)) thump(g, t, 70, .5, .25); if ([2,6].includes(n % 8)) tick(g, t, .25, 2500);
+      st.next += beat;
+    } else if (sty === 'morse'){
+      const dit = .065; const [on, len] = morseSeq[n % morseSeq.length]; if (on) tone(g, t, 690, len*dit, 'sine', .22, .004, .01); st.next += len*dit;
+    } else if (sty === 'pips'){
+      const long = Math.ceil(t) % 10 === 0; tone(g, Math.ceil(t), 1000, long ? .45 : .1, 'sine', .22, .003, .01); st.next = Math.ceil(t) + 1;
+    } else if (sty === 'interval'){
+      const motif = st.city === 'Quito' ? [72,76,79,84,79] : [67,74,72,79,74,67]; const step = .42;
+      motif.forEach((m, k) => pluck(g, t + k*step, mtof(m), .22, 1.4, 'sine')); motif.forEach((m, k) => pluck(g, t + k*step, mtof(m)*3.01, .03, .4, 'sine'));
+      tone(g, t, mtof(motif[0]-24), motif.length*step + 1.6, 'triangle', .05, .3, .5);
+      st.next += motif.length*step + 2.2;
+    } else if (sty === 'talk'){
+      // formant-filtered noise "voice": syllables with pauses between phrases
+      if (!st.voice){ const src = ac.createBufferSource(); src.buffer = noiseBuf; src.loop = true; const f1 = ac.createBiquadFilter(), f2 = ac.createBiquadFilter(); f1.type = f2.type = 'bandpass'; f1.Q.value = 7; f2.Q.value = 9;
+        const buzz = ac.createOscillator(); buzz.type = 'sawtooth'; buzz.frequency.value = st.city === 'Glasgow' ? 118 : 140; const bg = ac.createGain(); bg.gain.value = .35;
+        const env = ac.createGain(); env.gain.value = 0; src.connect(f1); src.connect(f2); buzz.connect(bg); bg.connect(f1); bg.connect(f2); f1.connect(env); f2.connect(env); env.connect(g); src.start(); buzz.start(); st.voice = {src, buzz, f1, f2, env}; }
+      const v = st.voice; const V = [[730,1090],[270,2290],[300,870],[530,1840],[570,840],[440,1020],[660,1720],[490,1350]];
+      const phraseLen = 7 + (n*13)%6; const inPhrase = n % (phraseLen + 2); const syl = .11 + ((n*7)%5)*.035;
+      if (inPhrase < phraseLen){ const [a,b] = V[(n*5 + st.id) % V.length]; v.f1.frequency.setTargetAtTime(a, t, .02); v.f2.frequency.setTargetAtTime(b, t, .02); v.buzz.frequency.setTargetAtTime((st.city==='Glasgow'?110:135) * (1 + ((n*3)%7)/30 - (inPhrase/phraseLen)*.12), t, .03);
+        v.env.gain.setTargetAtTime(.9, t, .015); v.env.gain.setTargetAtTime(.05, t + syl*.7, .02); st.next += syl; }
+      else { v.env.gain.setTargetAtTime(0, t, .03); st.next += .35; }
+    } else st.next += 1;
+  }
+}
+function startStation(st){ const g = ac.createGain(); g.gain.value = 0; const fade = ac.createGain(); fade.gain.value = 1; g.connect(fade); fade.connect(radioIn);
+  const a = {st, out:g, fade, next: ac.currentTime + .05, n: 0, style: st.style, city: st.city, id: st.id}; active.set(st.id, a); return a; }
+function stopStation(a){ const t = ac.currentTime; a.fade.gain.setTargetAtTime(0, t, .05); if (a.voice){ const v = a.voice; setTimeout(() => { try{ v.src.stop(); v.buzz.stop(); }catch(_){} }, 400); }
+  setTimeout(() => { try{ a.fade.disconnect(); }catch(_){} }, 500); active.delete(a.id); }
+let bestStrength = 0, bestStation = null, bestOffset = 1;
+function pump(){
+  if (!ac) return; const now = ac.currentTime; const p = S.pos[S.band]; const band = BANDS[S.band];
+  bestStrength = 0; bestStation = null; bestOffset = 1;
+  ST.forEach(st => { const inBand = st.b === band.id; const off = inBand ? (p - st.pos)/WIDTH : 99; const near = Math.abs(off) < 3.2 && S.on;
+    let a = active.get(st.id);
+    if (near && !a) a = startStation(st); if (!near && a){ stopStation(a); return; } if (!a) return;
+    // strength: gaussian around carrier, with slow fading (QSB) on shortwave
+    const qsb = band.id.startsWith('SW') ? .78 + .22*Math.sin(now*.37 + st.id*2) * Math.sin(now*.11 + st.id) : 1;
+    const s = Math.exp(-off*off/1.1) * st.power * qsb;
+    a.out.gain.setTargetAtTime(s * .9, now, .05);
+    if (s > bestStrength){ bestStrength = s; bestStation = st; bestOffset = off; }
+    program(a, now + .25);
+  });
+  const sweep = Math.min(1, S.sweep*40); S.sweep *= .7;
+  const stat = S.on ? band.noise * (1 - Math.min(1, bestStrength*1.15)*.88) * (1 + sweep*.6) : 0;
+  staticG.gain.setTargetAtTime(stat*.28, now, .04); crackleG.gain.setTargetAtTime(S.on ? (band.id.startsWith('SW') ? .5 : .25)*(1 - bestStrength*.5) : 0, now, .1);
+  staticF.frequency.setTargetAtTime(900 + sweep*2200 + Math.sin(now*3)*200, now, .05);
+  const wo = Math.abs(bestOffset); const wg = S.on && bestStation && wo > .25 && wo < 2.4 ? Math.min(1,(wo-.25))*.05*(1 - (wo-.25)/2.2) : 0;
+  whistleG.gain.setTargetAtTime(wg, now, .03); whistle.frequency.setTargetAtTime(200 + wo*1100, now, .02);
+}
+
+/* ---------- UI updates ---------- */
+const eyeR = 44;
+function sector(a0, a1){ const p = a => [Math.sin(a)*eyeR, -Math.cos(a)*eyeR]; const [x0,y0] = p(a0), [x1,y1] = p(a1); return `M0 0 L${x0} ${y0} A${eyeR} ${eyeR} 0 ${a1-a0 > Math.PI ? 1 : 0} 1 ${x1} ${y1}Z`; }
+let eyeS = 0, lastHeard = null, bar0 = 0;
+function ui(){
+  // estimate strength visually even without audio
+  let best = 0, bst = null, boff = 9; const p = S.pos[S.band];
+  ST.forEach(st => { if (st.b !== BANDS[S.band].id) return; const off = (p - st.pos)/WIDTH; const s = Math.exp(-off*off/1.1)*st.power; if (s > best){ best = s; bst = st; boff = off; } });
+  if (ac) best = Math.max(best*.85, bestStrength);
+  if (!S.on) best = 0;
+  eyeS += (best - eyeS)*.15;
+  // magic eye: shadow wedge narrows as signal grows (two wedges top and bottom)
+  const w = (1 - Math.min(1, eyeS*1.1))*Math.PI*.42 + .05;
+  $('#eyeShadow').setAttribute('d', sector(-w, w) + sector(Math.PI - w, Math.PI + w));
+  $('#eyeGlow').setAttribute('opacity', S.on ? .55 + eyeS*.45 : .08);
+  const bars = Math.round(Math.min(1, best*1.1)*6); document.querySelectorAll('#bars i').forEach((b,i) => b.classList.toggle('on', i < bars));
+  const band = BANDS[S.band]; const f = band.lo + (band.hi-band.lo)*p;
+  $('#stHead').textContent = `${S.on ? 'NOW TUNED' : 'SET SWITCHED OFF'} · ${band.name} · ${band.fmt(f)} ${band.unit}`;
+  if (bst && best > .35 && S.on){ const d = new Date(); const lt = new Date(d.getTime() + (d.getTimezoneOffset() + bst.tz*60)*60000);
+    $('#stName').textContent = bst.name; $('#stMeta').innerHTML = `${bst.city} · ${band.fmt(bst.f)} ${band.unit} · local time ${String(lt.getHours()).padStart(2,'0')}:${String(lt.getMinutes()).padStart(2,'0')}<br>${bst.prog}${Math.abs(boff) > .45 ? ' <i>(slightly off tune)</i>' : ''}`;
+    if (Math.abs(boff) < .5 && S.audio){ if (lastHeard === bst){ S.lockT += 1/30; if (S.lockT > 1.2 && !S.logged.has(bst.id)){ S.logged.add(bst.id); renderLog(); drawDial(); save(); } } else { lastHeard = bst; S.lockT = 0; } } }
+  else { $('#stName').textContent = S.on ? (best > .12 ? 'A faint carrier…' : 'Static') : '—'; $('#stMeta').textContent = S.on ? 'Keep turning. Stations appear as dots on the glass, and the magic eye closes when you are right on one.' : 'Press any waveband key to switch the set back on.'; lastHeard = null; }
+  if (analyser && S.on){ const a = new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(a); let m = 0; for (let i=0;i<a.length;i+=4) m = Math.max(m, Math.abs(a[i]-128)); $('#pulse').style.opacity = Math.min(1, m/60); }
+  requestAnimationFrame(ui);
+}
+function renderLog(){ const ul = $('#log'); ul.innerHTML = ST.map(s => { const got = S.logged.has(s.id); const b = BANDS.find(x => x.id === s.b); return `<li class="${got?'got':''}"><span>${got ? '✓' : '·'}</span><b>${got ? s.name : '? ? ?'} <span style="opacity:.7">· ${s.city}</span></b><span>${b.fmt(s.f)}</span></li>`; }).join('');
+  $('#logHead').textContent = `LISTENER'S LOG · ${S.logged.size} / ${ST.length}`; }
+function save(){ store.set('st', {band:S.band, pos:S.pos, logged:[...S.logged]}); }
+
+/* ---------- interactions ---------- */
+function setPos(v){ v = Math.max(0, Math.min(1, v)); S.sweep += Math.abs(v - S.pos[S.band]); S.pos[S.band] = v; placeNeedle(); }
+const dial = $('#dial'); let dDrag = null;
+dial.addEventListener('pointerdown', e => { initAudio(); dial.setPointerCapture(e.pointerId); dDrag = true; fromX(e); });
+dial.addEventListener('pointermove', e => { if (dDrag) fromX(e); });
+dial.addEventListener('pointerup', () => { dDrag = null; save(); }); dial.addEventListener('pointercancel', () => dDrag = null);
+function fromX(e){ const r = dial.getBoundingClientRect(); const x = (e.clientX - r.left)/r.width*1000; setPos((x - 40)/920); }
+dial.addEventListener('wheel', e => { e.preventDefault(); initAudio(); setPos(S.pos[S.band] + Math.sign(e.deltaY)*.003); }, {passive:false});
+function knob(el, onDelta){ let last = null; const ang = e => { const r = el.getBoundingClientRect(); return Math.atan2(e.clientX - (r.left + r.width/2), -(e.clientY - (r.top + r.height/2))); };
+  el.addEventListener('pointerdown', e => { initAudio(); el.setPointerCapture(e.pointerId); last = ang(e); });
+  el.addEventListener('pointermove', e => { if (last === null) return; const a = ang(e); let d = a - last; if (d > Math.PI) d -= Math.PI*2; if (d < -Math.PI) d += Math.PI*2; last = a; onDelta(d/(Math.PI*2)); });
+  el.addEventListener('pointerup', () => { last = null; save(); }); el.addEventListener('pointercancel', () => last = null); }
+knob($('#tuneKnob'), d => setPos(S.pos[S.band] + d/8));
+knob($('#volKnob'), d => setVol(S.vol + d*.8));
+function setVol(v){ S.vol = Math.max(0, Math.min(1, v)); $('#volRot').style.transform = `rotate(${-135 + S.vol*270}deg)`; $('#volKnob').setAttribute('aria-valuenow', Math.round(S.vol*100)); if (volG) volG.gain.setTargetAtTime(S.on ? S.vol : 0, ac.currentTime, .05); }
+$('#volKnob').addEventListener('keydown', e => { const k = {ArrowUp:.05,ArrowRight:.05,ArrowDown:-.05,ArrowLeft:-.05}[e.key]; if (k){ e.preventDefault(); initAudio(); setVol(S.vol + k); } });
+[$('#dial'), $('#tuneKnob')].forEach(el => el.addEventListener('keydown', e => { const k = {ArrowRight:1,ArrowUp:1,ArrowLeft:-1,ArrowDown:-1}[e.key]; if (k){ e.preventDefault(); e.stopPropagation(); initAudio(); setPos(S.pos[S.band] + k*(e.shiftKey ? .03 : .002)); save(); } }));
+const KEYS = ['kLW','kMW','kSW1','kSW2','kSW3'];
+function setBand(i){ initAudio(); const wasOff = !S.on; S.band = i; S.on = true; KEYS.forEach((k,j) => $('#'+k).setAttribute('aria-pressed', j===i)); $('#kOff').setAttribute('aria-pressed', false);
+  dial.classList.remove('off'); if (wasOff && !reduce){ dial.classList.remove('warm'); void dial.offsetWidth; dial.classList.add('warm'); }
+  if (volG) volG.gain.setTargetAtTime(S.vol, ac.currentTime, wasOff ? .6 : .05); drawDial(); keyClunk(); save(); }
+KEYS.forEach((k,i) => $('#'+k).addEventListener('click', () => setBand(i)));
+$('#kOff').addEventListener('click', () => { initAudio(); S.on = !S.on; if (!S.on){ $('#kOff').setAttribute('aria-pressed', true); KEYS.forEach(k => $('#'+k).setAttribute('aria-pressed', false)); dial.classList.add('off'); if (volG) volG.gain.setTargetAtTime(0, ac.currentTime, .15); keyClunk(); } else setBand(S.band); });
+function keyClunk(){ if (!ac) return; const t = ac.currentTime; thump(ac.destination, t, 90, .25, .12); tick(ac.destination, t, .2, 1800); }
+addEventListener('keydown', e => { if (e.target.closest && e.target.closest('input')) return;
+  if (['1','2','3','4','5'].includes(e.key)) setBand(+e.key - 1); else if (e.key === '0') $('#kOff').click();
+  else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !e.target.closest('[role=slider]')){ e.preventDefault(); initAudio(); setPos(S.pos[S.band] + (e.key==='ArrowRight'?1:-1)*(e.shiftKey ? .03 : .002)); } });
+document.addEventListener('pointerdown', () => initAudio(), {once:true});
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(drawDial, 120); });
+
+KEYS.forEach((k,j) => $('#'+k).setAttribute('aria-pressed', j===S.band));
+drawDial(); renderLog(); setVol(.6); requestAnimationFrame(ui);
+})();
+</script>
+</body>
+</html>

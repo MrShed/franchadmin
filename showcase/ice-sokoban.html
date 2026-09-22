@@ -218,9 +218,9 @@ aside h2{font-family:"Pixelify Sans",monospace; font-size:18px; margin:0 0 10px;
     px(c,X+3,Y+5,'#ffffff',3,1); px(c,X+9,Y+9,'#ffffff',4,1);
   }
   function drawRune(c,X,Y,t,lit){
-    const a = lit ? 1 : .55 + .45*Math.sin(t*3);
+    const a = lit ? 1 : .75 + .25*Math.sin(t*3);
     c.globalAlpha=a;
-    const col = lit ? '#ffd166' : '#3cf0b4';
+    const col = lit ? '#ffd166' : '#0f9f7a';
     px(c,X+5,Y+3,col,6,1); px(c,X+5,Y+12,col,6,1); px(c,X+3,Y+5,col,1,6); px(c,X+12,Y+5,col,1,6);
     px(c,X+4,Y+4,col); px(c,X+11,Y+4,col); px(c,X+4,Y+11,col); px(c,X+11,Y+11,col);
     px(c,X+7,Y+6,col,2,4); px(c,X+6,Y+7,col,4,2);
