@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ten Thousand Metres Down</title>
+<meta name="description" content="A continuous, to-scale descent from the sea surface to the bottom of the Challenger Deep at 10,935 metres, with a live depth gauge, pressure, temperature and fading light, and the animals and machines that live or have been at each depth.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Fragment+Mono:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#e8f4f8;
+  --mute:rgba(232,244,248,.6);
+  --faint:rgba(232,244,248,.18);
+  --lum:#7ff6e1;
+  --warm:#ffb38a;
+  --disp:"Syne","Futura","Trebuchet MS",sans-serif;
+  --mono:"Fragment Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#020409}
+body{color:var(--ink);font-family:var(--mono);font-size:12px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+:focus-visible{outline:1px solid var(--lum);outline-offset:3px}
+#water{position:fixed;inset:0;z-index:0;background:#2b9fd0;transition:background-color .2s linear}
+#snow{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.back{position:fixed;top:14px;left:max(16px,env(safe-area-inset-left));z-index:20;font-family:var(--mono);font-size:11px;color:var(--ink);text-decoration:none;opacity:.8;mix-blend-mode:difference}
+.back:hover{opacity:1}
+
+/* sky / surface */
+.sky{position:relative;z-index:2;height:78vh;min-height:520px;background:linear-gradient(#f6c9a4 0%,#f3a98a 30%,#86b6d8 70%,#5fb2dc 100%);display:grid;align-content:end;padding:0 max(16px,6vw) 70px;overflow:hidden}
+.sun{position:absolute;right:14vw;top:18vh;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#fff6de 0 40%,rgba(255,236,200,.0) 70%)}
+.sky h1{font-family:var(--disp);font-weight:800;font-size:clamp(52px,10vw,150px);line-height:.85;margin:0;color:#0c2b45;letter-spacing:-.03em;position:relative}
+.sky p{max-width:34em;font-size:14px;line-height:1.7;color:#123a57;margin:18px 0 0;position:relative}
+.wave{position:absolute;left:0;right:0;bottom:-1px;height:60px;display:block;width:100%}
+
+/* the column */
+#column{position:relative;z-index:2}
+.ruler{position:absolute;left:0;top:0;bottom:0;width:64px;border-right:1px solid var(--faint)}
+.tick{position:absolute;left:0;height:1px;background:var(--faint)}
+.tick.m{width:18px;background:var(--mute)}
+.tick.s{width:8px}
+.tick span{position:absolute;left:22px;top:-7px;font-size:10px;color:var(--mute);white-space:nowrap}
+.zone{position:absolute;right:0;left:64px;border-top:1px dashed var(--faint);pointer-events:none}
+.zone h2{position:sticky;top:18px;margin:0;padding:10px max(16px,4vw) 0 0;text-align:right;font-family:var(--disp);font-weight:800;font-size:clamp(22px,4vw,54px);letter-spacing:-.02em;line-height:.9;opacity:.9}
+.zone h2 small{display:block;font-family:var(--mono);font-weight:400;font-size:11px;letter-spacing:.08em;opacity:.7;margin-top:6px}
+.zone p{position:sticky;top:110px;margin:6px max(16px,4vw) 0 auto;max-width:30ch;text-align:right;font-size:11px;line-height:1.6;color:var(--mute)}
+.thing{z-index:4;position:absolute;display:flex;align-items:center;gap:12px;transform:translateY(-50%)}
+.thing svg{flex:none;overflow:visible;display:block}
+.thing .t{max-width:min(250px,42vw)}
+.thing .t b{display:block;font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em}
+.thing .t span{display:block;color:var(--mute);font-size:10.5px;line-height:1.5;margin-top:2px}
+.thing .t i{font-style:normal;color:var(--lum)}
+.thing.right{flex-direction:row-reverse;text-align:right}
+.band{position:absolute;left:64px;right:0;pointer-events:none}
+.floor{position:absolute;left:0;right:0;bottom:0;height:640px;background:linear-gradient(#07080a,#0b0c0e);z-index:3;border-top:2px solid #2a2622}
+.bottom{position:absolute;left:0;right:0;bottom:120px;text-align:center;padding:0 max(16px,6vw);z-index:4}
+.bottom h2{font-family:var(--disp);font-weight:800;font-size:clamp(34px,6vw,76px);margin:0;line-height:.9;letter-spacing:-.03em}
+.bottom p{max-width:52ch;margin:14px auto 0;line-height:1.7;color:var(--mute)}
+.bottom button{margin-top:14px}
+
+/* HUD */
+.hud{position:fixed;z-index:15;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));width:236px;padding:14px 16px;border:1px solid rgba(232,244,248,.25);background:rgba(2,8,16,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.hud .d{font-family:var(--disp);font-weight:800;font-size:44px;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.hud .d small{font-size:16px;font-weight:500;margin-left:3px}
+.hud .z{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--lum);margin:6px 0 10px}
+.hud dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0;font-size:11px}
+.hud dt{color:var(--mute)}
+.hud dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.lightbar{height:4px;background:rgba(232,244,248,.12);margin-top:8px;position:relative}
+.lightbar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#fff3c2,#8fd3ff)}
+.ctl{display:flex;gap:4px;margin-top:12px;flex-wrap:wrap}
+.ctl button,.bottom button{font:inherit;font-size:10.5px;color:var(--ink);background:transparent;border:1px solid var(--faint);padding:6px 8px;cursor:pointer;letter-spacing:.04em}
+.ctl button:hover,.bottom button:hover{border-color:var(--ink)}
+.ctl button[aria-pressed="true"]{background:var(--lum);color:#021;border-color:var(--lum)}
+.gauge{position:fixed;z-index:14;right:max(16px,env(safe-area-inset-right));top:18vh;height:40vh;width:6px;border:1px solid var(--faint)}
+.gauge i{position:absolute;left:-5px;width:14px;height:2px;background:var(--lum);box-shadow:0 0 8px var(--lum)}
+@media (max-width:640px){
+  .hud{left:16px;right:16px;width:auto;display:grid;grid-template-columns:auto 1fr;gap:0 14px;padding:10px 12px}
+  .hud .d{font-size:34px}
+  .hud .z{margin:4px 0 0}
+  .hud dl{grid-row:1/3;grid-column:2;font-size:10px}
+  .hud .ctl{grid-column:1/-1;margin-top:8px}
+  .hud .lightbar{grid-column:1/-1}
+  .gauge{display:none}
+  .thing .t{max-width:46vw}
+  .zone p{display:none}
+  .zone h2{font-size:18px;opacity:.55}
+  .zone h2 small{display:none}
+}
+@media (prefers-reduced-motion:reduce){#water{transition:none}}
+</style>
+</head>
+<body>
+<div id="water" aria-hidden="true"></div>
+<canvas id="snow" aria-hidden="true"></canvas>
+<a class="back" href="index.html">← Showcase</a>
+
+<header class="sky">
+  <div class="sun" aria-hidden="true"></div>
+  <h1>Ten thousand<br>metres down</h1>
+  <p>The Mariana Trench, western Pacific. Below you: 10,935 metres of water to the deepest known point on Earth, the Challenger Deep. This page is to scale — two pixels for every metre — so the descent takes a while. That is the point.</p>
+  <svg class="wave" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 Q75 10 150 30 T300 30 T450 30 T600 30 T750 30 T900 30 T1050 30 T1200 30 V60 H0Z" fill="#2b9fd0"/></svg>
+</header>
+
+<main id="column" aria-label="Ocean depth column"></main>
+
+<aside class="hud" aria-live="off">
+  <div><div class="d" id="depth">0<small>m</small></div><div class="z" id="zone">Sunlight zone</div></div>
+  <dl>
+    <dt>Pressure</dt><dd id="press">1.0 bar</dd>
+    <dt>…on a thumbnail</dt><dd id="thumb">1 kg</dd>
+    <dt>Temperature</dt><dd id="temp">26 °C</dd>
+    <dt>Sunlight</dt><dd id="light">100 %</dd>
+  </dl>
+  <div class="lightbar"><i id="lightbar" style="width:100%"></i></div>
+  <div class="ctl" role="group" aria-label="Descent">
+    <button id="desc1" data-v="63" aria-pressed="false" title="100 times the speed of the bathyscaphe Trieste in 1960">Sink ×100 Trieste</button>
+    <button id="desc2" data-v="630" aria-pressed="false">×1000</button>
+    <button id="toTop" type="button">Surface</button>
+  </div>
+</aside>
+<div class="gauge" aria-hidden="true"><i id="gaugeI" style="top:0"></i></div>
+
+<script>
+(function(){
+"use strict";
+const PXM=2, MAX=10935;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const col=document.getElementById('column');
+const H=MAX*PXM+620; col.style.height=H+'px';
+const y=d=>d*PXM;
+
+// ruler
+let r='<div class="ruler">';
+for(let d=0; d<=MAX; d+=50){ const m=d%500===0, h=d%100===0; r+=`<div class="tick ${m?'m':'s'}" style="top:${y(d)}px">${m?`<span>${d.toLocaleString('en-GB')} m</span>`:h?`<span style="opacity:.55;left:12px">${d.toLocaleString('en-GB')}</span>`:''}</div>`; }
+r+='</div>'; col.insertAdjacentHTML('beforeend',r);
+
+// zones
+const Z=[
+ [0,200,'Sunlight zone','Epipelagic · 0–200 m','Enough light for photosynthesis. Almost all ocean life ultimately feeds on what grows here.'],
+ [200,1000,'Twilight zone','Mesopelagic · 200–1,000 m','A dim blue glow, too faint for plants. Every night, trillions of animals migrate up to feed and sink again by dawn — the largest migration on Earth.'],
+ [1000,4000,'Midnight zone','Bathypelagic · 1,000–4,000 m','No sunlight at all. The only light is made by animals: about three-quarters of creatures here are bioluminescent.'],
+ [4000,6000,'The abyss','Abyssopelagic · 4,000–6,000 m','Near-freezing, crushing and dark. The abyssal plains alone cover about half of Earth’s surface.'],
+ [6000,MAX,'The trenches','Hadopelagic · 6,000–10,935 m','Named for Hades. Found only in deep ocean trenches, it holds a tiny fraction of the sea — and life, even at the very bottom.']
+];
+Z.forEach(([a,b,n,s,p])=>col.insertAdjacentHTML('beforeend',`<section class="zone" style="top:${y(a)}px;height:${y(b-a)}px"><h2>${n}<small>${s}</small></h2><p>${p}</p></section>`));
+
+// ---------- drawings (viewBox-based) ----------
+const glow='filter="url(#gl)"';
+const DEFS=`<defs><filter id="gl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+const ART={
+ diver:(c)=>`<svg width="70" height="40" viewBox="0 0 70 40"><g fill="${c}"><ellipse cx="30" cy="20" rx="20" ry="5"/><circle cx="54" cy="18" r="5"/><path d="M10 18 L0 12 L2 20 L0 28 L10 22Z"/><rect x="24" y="12" width="14" height="5" rx="2"/></g></svg>`,
+ penguin:(c)=>`<svg width="56" height="28" viewBox="0 0 56 28"><path d="M4 14 Q14 4 36 8 Q50 10 54 14 Q50 18 36 20 Q14 24 4 14Z" fill="${c}"/><path d="M24 16 L16 24 L28 18Z" fill="${c}"/><circle cx="46" cy="12" r="1.3" fill="#fff"/></svg>`,
+ turtle:(c)=>`<svg width="80" height="46" viewBox="0 0 80 46"><g fill="${c}"><ellipse cx="38" cy="23" rx="24" ry="13"/><ellipse cx="67" cy="22" rx="8" ry="6"/><path d="M30 12 L10 0 L20 14Z M30 34 L10 46 L20 32Z M52 14 L60 4 L58 16Z M52 32 L60 42 L58 30Z"/></g><path d="M20 23 H58 M30 13 V33 M44 11 V35" stroke="rgba(0,0,0,.25)"/></svg>`,
+ whale:(c)=>`<svg width="190" height="60" viewBox="0 0 190 60"><path d="M4 30 Q4 12 40 10 L130 12 Q160 14 170 24 L188 14 L182 30 L188 46 L170 36 Q150 48 120 48 L40 48 Q4 48 4 30Z" fill="${c}"/><path d="M10 40 Q40 44 70 42" stroke="rgba(0,0,0,.25)" fill="none"/><circle cx="26" cy="30" r="1.8" fill="#000"/></svg>`,
+ beaked:(c)=>`<svg width="130" height="40" viewBox="0 0 130 40"><path d="M2 22 L14 18 Q30 8 70 10 Q100 12 112 18 L128 10 L122 22 L128 32 L112 26 Q96 34 60 32 Q24 32 14 26Z" fill="${c}"/><circle cx="24" cy="19" r="1.4" fill="#000"/></svg>`,
+ squid:(c)=>`<svg width="160" height="46" viewBox="0 0 160 46"><path d="M156 23 L120 8 Q84 10 70 23 Q84 36 120 38Z" fill="${c}"/><path d="M70 20 C40 16 20 6 2 10 M70 22 C40 20 20 18 4 22 M70 24 C40 26 20 28 4 30 M70 26 C40 30 20 40 2 36" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="78" cy="21" r="4" fill="#dff" opacity=".8"/></svg>`,
+ vampire:(c)=>`<svg width="70" height="70" viewBox="0 0 70 70">${DEFS}<path d="M35 6 Q50 10 48 30 L62 58 Q48 52 35 64 Q22 52 8 58 L22 30 Q20 10 35 6Z" fill="${c}"/><circle cx="29" cy="26" r="3" fill="#6ff" ${glow}/><circle cx="41" cy="26" r="3" fill="#6ff" ${glow}/><path d="M22 10 L14 2 M48 10 L56 2" stroke="${c}" stroke-width="2"/></svg>`,
+ lantern:(c)=>`<svg width="54" height="22" viewBox="0 0 54 22">${DEFS}<path d="M2 11 Q14 2 34 5 Q44 7 46 11 Q44 15 34 17 Q14 20 2 11Z" fill="${c}"/><path d="M46 11 L54 4 L52 11 L54 18Z" fill="${c}"/>${[10,16,22,28,34].map(x=>`<circle cx="${x}" cy="15" r="1.2" fill="#7ff6e1" ${glow}/>`).join('')}<circle cx="8" cy="9" r="1.6" fill="#7ff6e1" ${glow}/></svg>`,
+ hatchet:(c)=>`<svg width="40" height="40" viewBox="0 0 40 40">${DEFS}<path d="M6 12 L28 8 L34 18 L28 32 L10 22Z" fill="${c}"/><path d="M34 18 L40 14 L40 22Z" fill="${c}"/><circle cx="12" cy="14" r="3.5" fill="#cfe" opacity=".85"/>${[12,16,20,24].map(x=>`<circle cx="${x}" cy="${23+ (x-12)/4}" r="1" fill="#7ff6e1" ${glow}/>`).join('')}</svg>`,
+ barreleye:(c)=>`<svg width="70" height="36" viewBox="0 0 70 36">${DEFS}<path d="M4 18 Q16 4 44 8 Q56 10 58 18 Q56 26 44 28 Q16 32 4 18Z" fill="${c}"/><path d="M58 18 L70 10 L68 18 L70 26Z" fill="${c}"/><path d="M8 10 Q18 -2 32 8" fill="rgba(160,255,230,.25)" stroke="#9fe" stroke-width=".8"/><circle cx="18" cy="8" r="2.5" fill="#7ff6e1" ${glow}/><circle cx="24" cy="8" r="2.5" fill="#7ff6e1" ${glow}/></svg>`,
+ angler:(c)=>`<svg width="90" height="70" viewBox="0 0 90 70">${DEFS}<path d="M14 40 Q14 16 44 16 Q66 16 72 34 L88 24 L84 40 L88 56 L72 46 Q64 62 40 60 Q14 60 14 40Z" fill="${c}"/><path d="M16 42 L30 44 L16 50" fill="#000"/><path d="M18 42 l3 6 l3 -6 l3 6 l3 -6" stroke="#dde" fill="none" stroke-width="1"/><path d="M34 18 Q30 2 12 6" stroke="${c}" stroke-width="1.6" fill="none"/><circle cx="12" cy="7" r="4" fill="#bfffea" ${glow}/><circle cx="32" cy="30" r="2" fill="#dfe"/></svg>`,
+ gulper:(c)=>`<svg width="170" height="50" viewBox="0 0 170 50">${DEFS}<path d="M2 10 L40 22 L2 40 Q20 25 2 10Z" fill="${c}"/><path d="M36 20 Q80 16 120 26 Q150 34 166 30" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="166" cy="30" r="3" fill="#ff8aa0" ${glow}/></svg>`,
+ jelly:(c)=>`<svg width="50" height="70" viewBox="0 0 50 70">${DEFS}<path d="M4 26 Q4 4 25 4 Q46 4 46 26 Q36 22 25 26 Q14 22 4 26Z" fill="${c}" opacity=".85" ${glow}/><path d="M10 26 q-3 16 2 40 M20 26 q3 18 -2 42 M30 26 q-3 16 2 38 M40 26 q3 16 -2 40" stroke="${c}" fill="none" opacity=".7"/></svg>`,
+ sperm:(c)=>`<svg width="220" height="70" viewBox="0 0 220 70"><path d="M4 12 L80 10 Q110 10 150 26 Q180 36 196 34 L218 22 L212 36 L218 50 L196 42 Q170 56 120 56 L20 56 Q4 56 4 40Z" fill="${c}"/><circle cx="60" cy="40" r="2" fill="#000"/><path d="M8 50 L50 50" stroke="rgba(0,0,0,.3)"/></svg>`,
+ titanic:(c)=>`<svg width="220" height="70" viewBox="0 0 220 70"><path d="M2 48 L20 40 L200 40 L216 30 L206 58 L14 60Z" fill="${c}"/><rect x="60" y="22" width="10" height="18" fill="${c}"/><rect x="90" y="18" width="10" height="22" fill="${c}" transform="rotate(8 95 30)"/><path d="M40 40 L40 28 L150 28 L150 40" fill="none" stroke="${c}"/><path d="M130 40 L150 60 M170 40 L160 60" stroke="#000" opacity=".5"/></svg>`,
+ vent:(c)=>`<svg width="90" height="110" viewBox="0 0 90 110">${DEFS}<path d="M30 110 L36 50 L32 40 L50 40 L46 52 L56 110Z" fill="${c}"/><path d="M40 40 Q30 20 44 10 Q56 0 46 -10" stroke="#444" stroke-width="16" fill="none" opacity=".5" stroke-linecap="round"/><circle cx="44" cy="44" r="4" fill="#ff8a4a" ${glow}/>${[0,1,2,3,4].map(i=>`<path d="M${58+i*5} 110 L${60+i*5} ${80-i*4}" stroke="#e9e9e9" stroke-width="2"/><path d="M${59+i*5} ${80-i*4} l2 -4" stroke="#e33" stroke-width="3"/>`).join('')}</svg>`,
+ tripod:(c)=>`<svg width="110" height="70" viewBox="0 0 110 70"><path d="M10 20 Q30 10 60 16 Q76 18 80 22 Q76 26 60 28 Q30 30 10 20Z" fill="${c}"/><path d="M40 26 L30 68 M52 26 L56 68 M80 22 L100 66" stroke="${c}" stroke-width="1.4"/><path d="M14 18 L2 4 M16 18 L6 2" stroke="${c}" stroke-width="1"/></svg>`,
+ dumbo:(c)=>`<svg width="70" height="64" viewBox="0 0 70 64"><path d="M35 4 Q54 4 54 26 Q54 38 35 40 Q16 38 16 26 Q16 4 35 4Z" fill="${c}"/><ellipse cx="12" cy="18" rx="10" ry="6" fill="${c}" transform="rotate(-30 12 18)"/><ellipse cx="58" cy="18" rx="10" ry="6" fill="${c}" transform="rotate(30 58 18)"/><path d="M20 38 Q14 52 22 60 Q30 50 35 40 Q40 50 48 60 Q56 52 50 38" fill="${c}" opacity=".8"/><circle cx="29" cy="24" r="2" fill="#000"/><circle cx="41" cy="24" r="2" fill="#000"/></svg>`,
+ seapig:(c)=>`<svg width="80" height="40" viewBox="0 0 80 40"><path d="M6 26 Q6 10 40 10 Q72 10 74 24 Q72 32 40 32 Q6 32 6 26Z" fill="${c}"/><path d="M20 12 L16 2 M28 11 L28 0 M36 10 L40 1" stroke="${c}" stroke-width="3" stroke-linecap="round"/>${[14,24,34,44,54,64].map(x=>`<path d="M${x} 31 l0 7" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`).join('')}</svg>`,
+ wreck:(c)=>`<svg width="150" height="50" viewBox="0 0 150 50"><path d="M4 36 L14 26 L136 26 L146 18 L140 44 L10 46Z" fill="${c}"/><rect x="60" y="12" width="8" height="14" fill="${c}"/><path d="M90 26 L94 8" stroke="${c}" stroke-width="2"/></svg>`,
+ snail:(c)=>`<svg width="90" height="36" viewBox="0 0 90 36"><path d="M4 18 Q6 4 26 6 Q44 8 66 14 Q84 18 88 22 Q80 24 66 24 Q44 30 24 30 Q4 30 4 18Z" fill="${c}" opacity=".9"/><circle cx="16" cy="14" r="2" fill="#223"/><path d="M40 8 Q60 4 80 18" stroke="${c}" fill="none" opacity=".6"/></svg>`,
+ amphipod:(c)=>`<svg width="60" height="36" viewBox="0 0 60 36"><path d="M8 22 Q10 6 30 6 Q50 6 54 18 Q48 22 40 22 Z" fill="${c}"/>${[16,24,32,40].map(x=>`<path d="M${x} 20 l-3 12" stroke="${c}" stroke-width="1.4"/>`).join('')}<path d="M10 14 L0 4 M12 12 L4 0" stroke="${c}"/><path d="M14 10 Q30 18 50 10" stroke="rgba(0,0,0,.2)" fill="none"/></svg>`,
+ xeno:(c)=>`<svg width="44" height="36" viewBox="0 0 44 36"><path d="M6 30 Q2 12 14 8 Q22 0 32 8 Q44 14 38 30Z" fill="${c}"/><path d="M10 26 Q16 14 22 20 Q28 12 34 24" stroke="rgba(0,0,0,.3)" fill="none"/></svg>`,
+ trieste:(c)=>`<svg width="120" height="80" viewBox="0 0 120 80"><rect x="10" y="10" width="100" height="36" rx="18" fill="${c}"/><rect x="50" y="2" width="20" height="10" fill="${c}"/><circle cx="60" cy="60" r="14" fill="${c}"/><circle cx="54" cy="58" r="3" fill="#ffd89a"/><path d="M60 46 V48" stroke="${c}" stroke-width="6"/></svg>`,
+ everest:(c)=>`<svg width="160" height="40" viewBox="0 0 160 40"><path d="M0 40 L50 12 L66 18 L84 0 L110 20 L126 14 L160 40Z" fill="none" stroke="${c}" stroke-width="1.2" stroke-dasharray="3 3"/><path d="M78 6 L84 0 L92 8 L86 6Z" fill="${c}"/></svg>`
+};
+
+// [depth m, art, colour, name, text, side(0 left/1 right), x%]
+const T=[
+ [30,'diver','#0d3552','Recreational divers','Most scuba courses stop at <i>18–40 m</i>.',0,14],
+ [214,'diver','#0f2d45','Free-diving record','Herbert Nitsch, 2007: <i>214 m</i> on a single breath.',1,52],
+ [332,'diver','#0f2a40','Scuba depth record','Ahmed Gabr, 2014: <i>332 m</i> — and nearly 14 hours to come back up.',0,16],
+ [120,'turtle','#1b4d44','Green turtle','Grazes seagrass near the surface; most dives are shallower than <i>40 m</i>.',1,48],
+ [564,'penguin','#101c28','Emperor penguin','Deepest recorded bird dive: <i>564 m</i>, holding its breath for up to half an hour.',0,24],
+ [1280,'turtle','#20303a','Leatherback turtle','The deepest-diving reptile, recorded to about <i>1,280 m</i>.',1,54],
+ [500,'lantern','#2a3d4a','Lanternfish','Perhaps the most numerous vertebrates on Earth; they rise to the surface each night.',1,40],
+ [420,'hatchet','#4c6272','Hatchetfish','Mirrored flanks and belly lights erase its silhouette from below.',0,40],
+ [700,'barreleye','#1f3440','Barreleye','Tubular eyes look up through a transparent, fluid-filled head (600–800 m).',1,36],
+ [800,'vampire','#4a1b24','Vampire squid','Lives in the oxygen-minimum zone, drifting on as little oxygen as 3% of surface levels.',0,30],
+ [900,'squid','#6a2a24','Giant squid','Up to 12–13 m long, with the largest eyes in the animal kingdom. First photographed alive in the wild in 2004.',1,20],
+ [1500,'angler','#141a1f','Humpback anglerfish','Its lure glows with symbiotic bacteria; males fuse to females for life.',0,34],
+ [1850,'gulper','#0e1418','Gulper eel','A mouth larger than its body, and a pink light on the tip of its tail.',1,30],
+ [2000,'jelly','#ff6b8a','Atolla jellyfish','When attacked it flashes in rings of blue — a “burglar alarm” that summons bigger predators.',0,54],
+ [2250,'sperm','#1a1f24','Sperm whale','Hunts squid in total darkness at more than <i>2,000 m</i>, navigating by sonar clicks.',1,20],
+ [2500,'vent','#262a2e','Black smoker','Hydrothermal vents spew water at 350–400 °C; tube worms thrive on chemistry, not sunlight.',0,34],
+ [2992,'beaked','#1b2126','Cuvier’s beaked whale','Deepest mammal dive ever recorded: <i>2,992 m</i>, and a dive lasting 222 minutes.',1,36],
+ [3500,'tripod','#b9c6cc','Tripod fish','Perches on three long fin rays and waits, facing the current.',0,38],
+ [3800,'titanic','#2e2a28','RMS Titanic','Lies at about <i>3,800 m</i>, broken in two, 600 m apart.',1,18],
+ [4000,'dumbo','#e8a38a','Dumbo octopus','Flaps ear-like fins. Recorded as deep as <i>6,957 m</i>.',0,30],
+ [5000,'seapig','#e9c9d3','Sea pig','A sea cucumber that walks the abyssal ooze on water-filled legs, in herds.',1,38],
+ [6865,'wreck','#2c2c2c','USS Samuel B. Roberts','Deepest shipwreck ever found, located in 2022 off the Philippines.',0,20],
+ [8336,'snail','#f3e3ea','Snailfish','Filmed at <i>8,336 m</i> in the Izu–Ogasawara Trench in 2022 — the deepest fish ever recorded.',1,34],
+ [8849,'everest','#e8f4f8','Height of Everest','Stand Everest on the trench floor and its summit would still be <i>2 km</i> under water.',0,24],
+ [10641,'xeno','#d8cdb4','Xenophyophores','Single cells the size of a fist, found at 10,641 m in the Sirena Deep.',1,40],
+ [10840,'amphipod','#f0efe8','Hirondellea gigas','Shrimp-like amphipods that digest sunken wood, living at the very bottom.',0,34],
+ [10916,'trieste','#b8c0c4','Trieste, 1960','Jacques Piccard and Don Walsh reach the bottom on 23 January 1960 after a descent of 4 h 47 min.',1,28]
+];
+T.forEach(([d,art,c,n,tx,side,x])=>{
+  const el=document.createElement('div'); el.className='thing'+(side?' right':'');
+  el.style.top=y(d)+'px';
+  if(side){ el.style.right=`max(16px, ${Math.max(4,x-20)}%)`; } else el.style.left=`calc(72px + ${Math.max(2,x-10)}%)`;
+  el.innerHTML=ART[art](c)+`<div class="t"><b>${n}</b><span>${d.toLocaleString('en-GB')} m · ${tx}</span></div>`;
+  col.appendChild(el);
+});
+// bottom
+col.insertAdjacentHTML('beforeend',`<div class="floor"></div><div class="bottom"><h2>10,935 m.<br>The Challenger Deep.</h2><p>Pressure here is about 1,086 bar — like balancing a family car on your thumbnail. For half a century only three people had been here — fewer than had walked on the Moon. Since 2019, more than twenty have made the dive.</p><button id="up" type="button">↑ Back to the surface</button></div>`);
+
+// ---------- HUD ----------
+const $=id=>document.getElementById(id);
+const water=$('water');
+function colTop(){return col.getBoundingClientRect().top+scrollY}
+let top0=colTop();
+function lerp(a,b,t){return a+(b-a)*t}
+const STOPS=[[0,[43,159,208]],[60,[20,110,170]],[200,[8,52,104]],[500,[4,24,56]],[1000,[2,8,20]],[4000,[2,4,9]],[11000,[1,2,5]]];
+function waterColor(d){
+  for(let i=1;i<STOPS.length;i++){ if(d<=STOPS[i][0]){ const [d0,c0]=STOPS[i-1],[d1,c1]=STOPS[i]; const t=(d-d0)/(d1-d0); return `rgb(${c0.map((v,k)=>Math.round(lerp(v,c1[k],t))).join(',')})`; } }
+  return 'rgb(1,2,5)';
+}
+function zoneName(d){return d<200?'Sunlight zone · epipelagic':d<1000?'Twilight zone · mesopelagic':d<4000?'Midnight zone · bathypelagic':d<6000?'Abyssal zone · abyssopelagic':'Hadal zone · hadopelagic'}
+let depth=0;
+function update(){
+  const d=Math.max(0,Math.min(MAX,(scrollY+innerHeight*0.5-top0)/PXM));
+  depth=d;
+  $('depth').innerHTML=Math.round(d).toLocaleString('en-GB')+'<small>m</small>';
+  $('zone').textContent=zoneName(d);
+  const bar=1.013+d*0.09922;
+  $('press').textContent=(bar<10?bar.toFixed(2):Math.round(bar).toLocaleString('en-GB'))+' bar';
+  // force on 1 cm² thumbnail: bar*1e5 Pa * 1e-4 m² = bar*10 N -> kg-force ≈ bar*1.02
+  const kg=bar*1.0197;
+  $('thumb').textContent=kg<1000? kg.toFixed(kg<10?1:0)+' kg' : (kg/1000).toFixed(2)+' t';
+  $('temp').textContent=(d<1?26:(1.6+24.4*Math.exp(-d/260))).toFixed(1)+' °C';
+  const light=100*Math.exp(-d/43.4);
+  const sup=n=>String(n).replace(/[-0-9]/g,c=>'⁻⁰¹²³⁴⁵⁶⁷⁸⁹'['-0123456789'.indexOf(c)]);
+  $('light').textContent= light>=0.01? (light>=1?light.toFixed(light>=10?0:1):light.toFixed(2))+' %' : d<1000? (()=>{const e=Math.floor(Math.log10(light));return `${(light/Math.pow(10,e)).toFixed(0)}×10${sup(e)} %`})() : 'none';
+  $('lightbar').style.width=Math.max(0,Math.min(100,(Math.log10(Math.max(light,1e-10))+10)/12*100))+'%';
+  water.style.backgroundColor=waterColor(d);
+  $('gaugeI').style.top=(d/MAX*100)+'%';
+}
+addEventListener('scroll',update,{passive:true});
+addEventListener('resize',()=>{top0=colTop();size();update()});
+
+// ---------- descent ----------
+let v=0, raf=0, acc=0, last=0;
+const btns=[$('desc1'),$('desc2')];
+btns.forEach(b=>b.addEventListener('click',()=>{
+  const nv=+b.dataset.v; if(v===nv){stop();return}
+  v=nv; btns.forEach(x=>x.setAttribute('aria-pressed',x===b)); acc=scrollY; last=performance.now(); cancelAnimationFrame(raf); raf=requestAnimationFrame(step);
+}));
+function step(t){const dt=Math.min(.1,(t-last)/1000); last=t; acc+=v*PXM*dt; scrollTo(0,acc); if(depth>=MAX-1||scrollY+innerHeight>=document.documentElement.scrollHeight-2){stop();return} raf=requestAnimationFrame(step)}
+function stop(){v=0;cancelAnimationFrame(raf);btns.forEach(x=>x.setAttribute('aria-pressed','false'))}
+['wheel','touchstart'].forEach(e=>addEventListener(e,()=>{if(v)stop()},{passive:true}));
+const surface=()=>{stop();scrollTo(0,0)};
+$('toTop').addEventListener('click',surface); $('up').addEventListener('click',surface);
+
+// ---------- marine snow + bioluminescence ----------
+const cv=$('snow'), cx=cv.getContext('2d'); let W=0,Hh=0, parts=[], flashes=[];
+function size(){const dpr=Math.min(2,devicePixelRatio||1); W=innerWidth; Hh=innerHeight; cv.width=W*dpr; cv.height=Hh*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
+  parts=[...Array(Math.round(W*Hh/9000))].map(()=>({x:Math.random()*W,y:Math.random()*Hh,r:Math.random()*1.4+.3,s:Math.random()*.25+.05,p:Math.random()*6}));}
+size();
+let lastY=scrollY;
+function frame(t){
+  cx.clearRect(0,0,W,Hh);
+  const dy=scrollY-lastY; lastY=scrollY;
+  const dens=Math.min(1,depth/400);
+  if(depth>30){
+    cx.fillStyle=`rgba(220,235,240,${0.25+0.35*dens})`;
+    for(const p of parts){ p.y+=p.s-dy*0.15; p.x+=Math.sin(t/2000+p.p)*0.1; if(p.y>Hh)p.y-=Hh; if(p.y<0)p.y+=Hh; if(Math.random()<dens*1.2) {cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.283);cx.fill();} }
+  }
+  if(depth>600 && Math.random()<0.04*Math.min(1,(depth-600)/1500)) flashes.push({x:Math.random()*W,y:Math.random()*Hh,a:1,c:Math.random()<.8?'127,246,225':'140,170,255'});
+  flashes=flashes.filter(f=>(f.a-=0.012)>0);
+  for(const f of flashes){const g=cx.createRadialGradient(f.x,f.y,0,f.x,f.y,14); g.addColorStop(0,`rgba(${f.c},${f.a})`); g.addColorStop(1,`rgba(${f.c},0)`); cx.fillStyle=g; cx.fillRect(f.x-14,f.y-14,28,28);}
+  raf2=requestAnimationFrame(frame);
+}
+let raf2=0; if(!reduce) raf2=requestAnimationFrame(frame);
+update();
+})();
+</script>
+</body>
+</html>

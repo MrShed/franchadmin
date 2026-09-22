@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Falkenhorn Bahn</title>
+<meta name="description" content="A precise red-and-white site for a fictional Swiss mountain railway, with a train climbing a zig-zag mountain track, a live station clock with the stop-to-go second hand, a departures board and route profile.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#eb0000; --red2:#c60018; --black:#141414; --grey:#6e6e6e; --line:#dcdcdc; --soft:#f2f2f2; --white:#ffffff; --snow:#f7f9fb; --rock:#9aa3ab; --rock2:#78828b; --sky:#e8eef3;
+  --sans:"Instrument Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --mono:"DM Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--white);color:var(--black);font-family:var(--sans);font-size:17px;line-height:1.5;overflow-x:hidden}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.mono{font-family:var(--mono)}
+.back{position:fixed;top:0;left:16px;z-index:40;background:var(--red);color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:10px 14px 9px;letter-spacing:.02em}
+.back:hover{background:var(--black)}
+/* top bar */
+.bar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:0 clamp(16px,4vw,48px);height:64px;border-bottom:1px solid var(--line);background:#fff;position:relative;z-index:5}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;margin-left:120px}
+.logo svg{width:34px;height:22px}
+.bar nav{display:flex;gap:26px;font-weight:500;font-size:15px}
+.bar nav a{text-decoration:none}
+.bar nav a:hover{color:var(--red)}
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(300px,420px) 1fr;min-height:calc(100vh - 64px);border-bottom:1px solid var(--line)}
+.hero .side{padding:clamp(28px,4vw,56px) clamp(16px,4vw,48px);display:flex;flex-direction:column;justify-content:space-between;gap:30px;border-right:1px solid var(--line);background:#fff}
+.hero h1{font-size:clamp(46px,5vw,76px);line-height:.95;letter-spacing:-.03em;font-weight:700;margin:12px 0 18px}
+.hero h1 span{color:var(--red)}
+.hero p{margin:0;color:#3a3a3a;max-width:34ch}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)}
+.alt{display:grid;grid-template-columns:1fr 1fr;border-top:2px solid var(--black)}
+.alt div{padding:12px 0 10px;border-bottom:1px solid var(--line)}
+.alt b{display:block;font-size:30px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.alt span{font-size:13px;color:var(--grey)}
+.scene{position:relative;background:linear-gradient(180deg,#dfe8ef 0%,#f4f7f9 70%);overflow:hidden;min-height:520px}
+.scene svg{position:absolute;inset:0;width:100%;height:100%}
+.station{cursor:pointer}
+.station:focus{outline:none}
+.station:focus-visible circle{stroke:var(--black);stroke-width:4}
+.scene .legend{position:absolute;left:16px;bottom:16px;background:rgba(255,255,255,.94);padding:10px 14px;font-size:14px;border-left:4px solid var(--red);max-width:calc(100% - 32px)}
+.scene .legend b{display:block}
+.clockbox{position:absolute;left:clamp(16px,3vw,36px);top:clamp(16px,3vw,36px);width:clamp(120px,14vw,190px);filter:drop-shadow(0 6px 14px rgba(0,0,0,.18))}
+.clockbox svg{position:static;width:100%;height:auto}
+/* sections */
+section{padding:clamp(60px,8vw,110px) clamp(16px,4vw,48px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1200px;margin:0 auto}
+h2{font-size:clamp(34px,4vw,56px);letter-spacing:-.03em;line-height:1;margin:10px 0 28px;font-weight:700}
+.sec-head{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap}
+/* board */
+.board{border-top:3px solid var(--black)}
+.brow{display:grid;grid-template-columns:90px 1fr 140px 110px 120px;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.brow.head{font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--grey);padding:10px 0}
+.brow .time{font-size:26px;font-weight:600;letter-spacing:-.02em}
+.brow .dest b{display:block;font-size:19px;font-weight:600}
+.brow .dest span{font-size:14px;color:var(--grey)}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;padding:3px 8px;border:1.5px solid var(--black);font-weight:500}
+.pill.pan{background:var(--black);color:#fff}
+.brow .in{font-family:var(--mono);font-size:15px;text-align:right}
+.brow .in.soon{color:var(--red);font-weight:500}
+.brow .gl{font-family:var(--mono);font-size:22px;font-weight:500;text-align:center;width:44px;height:44px;line-height:44px;background:var(--soft)}
+.brow.first{background:linear-gradient(90deg,rgba(235,0,0,.06),transparent 60%)}
+.board-note{font-size:14px;color:var(--grey);margin-top:14px}
+.dirs{display:flex;border:1.5px solid var(--black)}
+.dirs button{background:#fff;border:0;padding:10px 16px;font:600 15px var(--sans);cursor:pointer}
+.dirs button + button{border-left:1.5px solid var(--black)}
+.dirs button[aria-pressed="true"]{background:var(--black);color:#fff}
+/* route */
+.route-grid{display:grid;grid-template-columns:320px 1fr;gap:clamp(24px,4vw,60px);align-items:start}
+.stops{list-style:none;margin:0;padding:0;position:relative}
+.stops::before{content:"";position:absolute;left:11px;top:14px;bottom:14px;width:4px;background:var(--red)}
+.stops li{position:relative;padding:0 0 22px 40px}
+.stops li::before{content:"";position:absolute;left:3px;top:6px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--red)}
+.stops li.major::before{width:20px;height:20px;left:0;top:3px;background:var(--red)}
+.stops b{display:block;font-size:18px}
+.stops span{font-family:var(--mono);font-size:13px;color:var(--grey)}
+#profile{width:100%;height:auto;display:block;border-top:3px solid var(--black)}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:28px;border-top:1px solid var(--line)}
+.facts div{padding:16px 16px 16px 0;border-right:1px solid var(--line);margin-right:16px}
+.facts div:last-child{border-right:0}
+.facts b{display:block;font-size:34px;font-weight:600;letter-spacing:-.02em}
+.facts span{font-size:14px;color:var(--grey)}
+/* tickets */
+.tix{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tk{border:1.5px solid var(--black);padding:22px;display:flex;flex-direction:column;gap:10px;background:#fff}
+.tk h3{margin:0;font-size:22px;letter-spacing:-.01em}
+.tk p{margin:0;color:#3a3a3a;font-size:15px;flex:1}
+.tk .price{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding-top:12px}
+.tk .price b{font-size:32px;font-weight:600;letter-spacing:-.02em}
+.tk .price span{font-family:var(--mono);font-size:13px;color:var(--grey)}
+.tk.hl{background:var(--red);color:#fff;border-color:var(--red)}
+.tk.hl p,.tk.hl .price span{color:#ffe0e0}
+.tk.hl .price{border-top-color:rgba(255,255,255,.4)}
+.halftax{display:flex;align-items:center;gap:10px;margin:0 0 20px;font-weight:600}
+.halftax input{width:20px;height:20px;accent-color:var(--red)}
+footer{padding:28px clamp(16px,4vw,48px) 44px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:14px;color:var(--grey)}
+footer b{color:var(--black)}
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr}
+  .hero .side{border-right:0;border-bottom:1px solid var(--line)}
+  .scene{min-height:0;aspect-ratio:1/1}
+  .route-grid{grid-template-columns:1fr}
+  .tix{grid-template-columns:1fr}
+  .bar nav{display:none}
+}
+@media (max-width:640px){
+  .brow{grid-template-columns:64px 1fr auto;gap:10px}
+  .brow .pl,.brow .ty{display:none}
+  .brow .time{font-size:21px}
+  .facts{grid-template-columns:1fr}
+  .facts div{border-right:0}
+  .logo{margin-left:126px;font-size:15px}
+  .scene{aspect-ratio:4/5}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="bar">
+  <div class="logo"><svg viewBox="0 0 34 22" aria-hidden="true"><rect width="34" height="22" fill="#eb0000"/><path d="M6 11h22M17 4v14M10 7l-4 4 4 4M24 7l4 4-4 4" stroke="#fff" stroke-width="2.4" fill="none"/></svg>Falkenhorn Bahn</div>
+  <nav aria-label="Main"><a href="#board">Timetable</a><a href="#route">Route</a><a href="#tickets">Tickets</a></nav>
+</div>
+
+<header class="hero">
+  <div class="side">
+    <div>
+      <div class="kicker">Zahnradbahn · Rack railway since 1898</div>
+      <h1>Up to the <span>Falkenhorn</span>.</h1>
+      <p>Seven switchbacks, three tunnels and a 48 % gradient: our rack railway climbs 1,826 metres from the village of Grund to the summit station in 52 minutes — on time, every time.</p>
+    </div>
+    <div class="alt">
+      <div><b id="altNow">1,386 m</b><span>Train altitude now</span></div>
+      <div><b>3,212 m</b><span>Summit station</span></div>
+      <div><b>9.4 km</b><span>Track length</span></div>
+      <div><b>52 min</b><span>Journey time</span></div>
+    </div>
+  </div>
+  <div class="scene">
+    <svg id="mount" viewBox="0 0 1000 900" preserveAspectRatio="xMidYMax slice" role="group" aria-label="Mountain with a zig-zag railway. Select a station to send the train there."></svg>
+    <div class="clockbox"><svg id="clock" viewBox="0 0 200 200" role="img" aria-label="Swiss station clock showing the current time"></svg></div>
+    <div class="legend" aria-live="polite"><b id="legName">Train FB 14 · climbing</b><span id="legSub">Next stop: Alp Steinmatt</span></div>
+  </div>
+</header>
+
+<section id="board">
+  <div class="wrap">
+    <div class="sec-head"><div><div class="kicker">Abfahrt · Départ · Departures</div><h2 id="boardTitle">Grund Talstation</h2></div>
+      <div class="dirs" role="group" aria-label="Direction"><button id="dir-up" aria-pressed="true">From Grund ↑</button><button id="dir-down" aria-pressed="false">From Gipfel ↓</button></div></div>
+    <div class="board" id="boardRows" aria-live="polite"></div>
+    <p class="board-note">Trains every 20 minutes, 07:00 – 18:40. Panorama cars on the hour. Live times shown for your local clock.</p>
+  </div>
+</section>
+
+<section id="route">
+  <div class="wrap">
+    <div class="kicker">Strecke · Route</div>
+    <h2>Grund – Falkenhorn Gipfel</h2>
+    <div class="route-grid">
+      <ol class="stops" id="stops"></ol>
+      <div>
+        <svg id="profile" viewBox="0 0 720 320" role="img" aria-label="Elevation profile of the route"></svg>
+        <div class="facts">
+          <div><b>48 %</b><span>Maximum gradient, Steinmatt ramp</span></div>
+          <div><b>Strub</b><span>Rack system, 1898 original pinion</span></div>
+          <div><b>1,000 mm</b><span>Metre gauge, electrified 1,500 V DC</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tickets">
+  <div class="wrap">
+    <div class="kicker">Billette · Tickets</div>
+    <h2>Fares from Grund</h2>
+    <label class="halftax"><input type="checkbox" id="halbtax"> I have a Halbtax / half-fare card</label>
+    <div class="tix" id="tix"></div>
+  </div>
+</section>
+
+<footer><span><b>Falkenhorn Bahn AG</b> · Bahnhofstrasse 1, 3818 Grund</span><span class="mono">Pünktlichkeit 2025: 99.2 %</span></footer>
+
+<script>
+(function(){
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var NS='http://www.w3.org/2000/svg';
+  function el(t,a,p){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+  /* ---------------- mountain ---------------- */
+  var M=document.getElementById('mount');
+  M.innerHTML='<defs><linearGradient id="rockA" x1="0" x2="1"><stop offset="0" stop-color="#8e979f"/><stop offset=".5" stop-color="#a9b1b8"/><stop offset="1" stop-color="#737c85"/></linearGradient>'+
+    '<linearGradient id="meadow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fb58a"/><stop offset="1" stop-color="#6f8c5f"/></linearGradient></defs>'+
+    // far peaks
+    '<path d="M-20 560 L120 380 L200 450 L330 260 L420 360 L520 300 L640 420 L760 330 L900 470 L1020 400 L1020 900 L-20 900Z" fill="#c9d3dc"/>'+
+    '<path d="M300 300 L330 260 L360 300 L345 296 L330 310Z M740 350 L760 330 L785 352Z" fill="#fff"/>'+
+    // main mountain
+    '<path d="M-20 900 L-20 760 L140 700 L300 560 L420 470 L560 330 L660 220 L740 120 L800 90 L860 150 L940 250 L1020 330 L1020 900Z" fill="url(#rockA)"/>'+
+    '<path d="M660 220 L740 120 L800 90 L860 150 L900 200 L870 196 L840 230 L810 200 L780 240 L750 210 L720 250 L690 236Z" fill="#f7f9fb"/>'+
+    '<path d="M800 90 L860 150 L940 250 L1020 330 L1020 420 L940 330 L880 260 Z" fill="#6c757e" opacity=".5"/>'+
+    // meadow
+    '<path d="M-20 900 L-20 740 L150 690 L300 640 L480 610 L620 640 L760 620 L1020 660 L1020 900Z" fill="url(#meadow)"/>'+
+    // trees
+    (function(){ var s=''; for(var i=0;i<40;i++){ var x=(i*97)%1040-20, y=700+((i*53)%160), h=18+(i*7)%16; s+='<path d="M'+x+' '+y+' l'+(h*.35)+' '+h+' l'+(-h*.7)+' 0Z" fill="#3e5a3a"/>'; } return s; })()+
+    // village
+    '<g transform="translate(90,760)"><rect x="0" y="0" width="34" height="22" fill="#fff" stroke="#141414"/><path d="M-4 0 L17 -14 L38 0Z" fill="#8a4a2a"/><rect x="48" y="4" width="26" height="18" fill="#fff" stroke="#141414"/><path d="M45 4 L61 -8 L77 4Z" fill="#8a4a2a"/><rect x="88" y="-16" width="10" height="38" fill="#fff" stroke="#141414"/><path d="M86 -16 L93 -30 L100 -16Z" fill="#141414"/></g>';
+  // track: zig-zag
+  var pts=[[150,800],[560,700],[300,600],[640,520],[430,440],[700,360],[560,290],[760,200],[800,110]];
+  var d='M'+pts.map(function(p){return p.join(' ');}).join(' L');
+  el('path',{d:d,fill:'none',stroke:'#141414','stroke-width':9,'stroke-linejoin':'round','stroke-linecap':'round',opacity:.9},M);
+  el('path',{d:d,fill:'none',stroke:'#fff','stroke-width':3,'stroke-dasharray':'2 7','stroke-linejoin':'round'},M);
+  var track=el('path',{d:d,fill:'none',stroke:'none'},M);
+  // tunnels
+  [[0.30,0.345],[0.62,0.66],[0.93,0.975]].forEach(function(r){ var L=track.getTotalLength(), a=track.getPointAtLength(L*r[0]), b=track.getPointAtLength(L*r[1]);
+    el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#78828b','stroke-width':16,'stroke-linecap':'round'},M);
+    el('circle',{cx:a.x,cy:a.y,r:10,fill:'#141414'},M); el('circle',{cx:b.x,cy:b.y,r:10,fill:'#141414'},M); });
+  // summit station
+  el('rect',{x:776,y:84,width:62,height:30,fill:'#fff',stroke:'#141414','stroke-width':2},M);
+  el('rect',{x:776,y:78,width:62,height:8,fill:'#eb0000'},M);
+  // stations
+  var L=track.getTotalLength();
+  var ST=[{n:'Grund Talstation',alt:1386,f:0,km:'0.0',t:0},{n:'Alp Steinmatt',alt:1920,f:.24,km:'2.3',t:14},{n:'Riedboden',alt:2310,f:.47,km:'4.4',t:26},{n:'Eisfluh (tunnel window)',alt:2745,f:.71,km:'6.7',t:38},{n:'Falkenhorn Gipfel',alt:3212,f:1,km:'9.4',t:52}];
+  var stEls=ST.map(function(s,i){ var p=track.getPointAtLength(L*s.f); var g=el('g',{class:'station',tabindex:0,role:'button','aria-label':'Send train to '+s.n},M);
+    el('circle',{cx:p.x,cy:p.y,r:11,fill:'#fff',stroke:'#eb0000','stroke-width':4},g);
+    var right=p.x<600; var tx=el('text',{x:p.x+(right?18:-18),y:p.y+5,'text-anchor':right?'start':'end','font-family':'Instrument Sans, Helvetica, Arial, sans-serif','font-weight':600,'font-size':20,fill:'#141414',stroke:'#fff','stroke-width':5,'paint-order':'stroke'},g); tx.textContent=s.n.replace(' (tunnel window)','');
+    g.addEventListener('click',function(){ sendTo(i); }); g.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault(); sendTo(i);} });
+    return g; });
+  // train: two cars
+  function car(color){ var g=el('g',{},M); el('rect',{x:-22,y:-11,width:44,height:22,rx:3,fill:color,stroke:'#141414','stroke-width':2},g); el('rect',{x:-16,y:-6,width:10,height:8,fill:'#dff1ff'},g); el('rect',{x:-3,y:-6,width:10,height:8,fill:'#dff1ff'},g); el('rect',{x:10,y:-6,width:6,height:8,fill:'#dff1ff'},g); el('rect',{x:-22,y:6,width:44,height:3,fill:'#fff'},g); return g; }
+  var car1=car('#eb0000'), car2=car('#eb0000');
+  var pos=.18, target=null, dir=1, dwell=0, last=performance.now();
+  var altNow=document.getElementById('altNow'), legName=document.getElementById('legName'), legSub=document.getElementById('legSub');
+  function place(g,f){ f=Math.max(0,Math.min(1,f)); var p=track.getPointAtLength(L*f), q=track.getPointAtLength(Math.min(L,L*f+2)), q0=track.getPointAtLength(Math.max(0,L*f-2));
+    var a=Math.atan2(q.y-q0.y,q.x-q0.x)*180/Math.PI; if(a>90) a-=180; if(a<-90) a+=180;
+    g.setAttribute('transform','translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+') rotate('+a.toFixed(1)+') translate(0,-9)'); }
+  function altAt(f){ for(var i=0;i<ST.length-1;i++){ if(f<=ST[i+1].f){ var t=(f-ST[i].f)/(ST[i+1].f-ST[i].f); return ST[i].alt+(ST[i+1].alt-ST[i].alt)*t; } } return ST[ST.length-1].alt; }
+  function nextStop(){ for(var i=0;i<ST.length;i++){ if(dir>0? ST[i].f>pos+.001 : false) return ST[i]; } if(dir<0){ for(var j=ST.length-1;j>=0;j--) if(ST[j].f<pos-.001) return ST[j]; } return null; }
+  function sendTo(i){ target=ST[i].f; dir= target>pos?1:-1; dwell=0; legName.textContent='Train FB 14 · sent to '+ST[i].n; if(reduce){ pos=target; target=null; draw(); } }
+  function draw(){
+    place(car1,pos+ .012*1); place(car2,pos- .012*1);
+    altNow.textContent=Math.round(altAt(pos)).toLocaleString('en-US')+' m';
+    var ns=nextStop();
+    legSub.textContent= dwell>0 ? 'Stopped at station · doors open' : ns ? 'Next stop: '+ns.n+' · '+Math.round(altAt(pos)).toLocaleString('en-US')+' m' : 'Arrived';
+  }
+  function step(now){
+    var dt=Math.min(64,now-last)/1000; last=now;
+    if(dwell>0){ dwell-=dt; }
+    else {
+      var v=.022*dt*(dir>0?1:1.4);
+      var np=pos+v*dir;
+      // stop at stations on the way
+      var hit=null; ST.forEach(function(s){ if((dir>0&&s.f>pos&&s.f<=np)||(dir<0&&s.f<pos&&s.f>=np)) hit=s; });
+      if(hit){ np=hit.f; dwell=1.6; }
+      pos=np;
+      if(target!==null && ((dir>0&&pos>=target)||(dir<0&&pos<=target))){ pos=target; target=null; dwell=2.6; legName.textContent='Train FB 14 · '+(dir>0?'climbing':'descending'); }
+      if(pos>=1){ pos=1; dir=-1; dwell=3; legName.textContent='Train FB 14 · descending'; }
+      if(pos<=0){ pos=0; dir=1; dwell=3; legName.textContent='Train FB 14 · climbing'; }
+    }
+    draw(); requestAnimationFrame(step);
+  }
+  draw(); if(!reduce) requestAnimationFrame(step);
+
+  /* ---------------- Swiss station clock ---------------- */
+  var C=document.getElementById('clock');
+  var cs='<circle cx="100" cy="100" r="98" fill="#fff" stroke="#9aa3ab" stroke-width="3"/><circle cx="100" cy="100" r="94" fill="#fff"/>';
+  for(var i=0;i<60;i++){ var big=i%5===0; cs+='<rect x="'+(big?97:98.9)+'" y="'+(big?8:8)+'" width="'+(big?6:2.2)+'" height="'+(big?24:7)+'" fill="#141414" transform="rotate('+(i*6)+' 100 100)"/>'; }
+  cs+='<g id="hH"><rect x="95" y="46" width="10" height="66" fill="#141414"/></g>'+
+      '<g id="mH"><rect x="96.5" y="16" width="7" height="98" fill="#141414"/></g>'+
+      '<g id="sH"><rect x="98.9" y="30" width="2.2" height="92" fill="#eb0000"/><circle cx="100" cy="34" r="8.5" fill="#eb0000"/></g><circle cx="100" cy="100" r="2.2" fill="#eb0000"/>';
+  C.innerHTML=cs;
+  var hH=document.getElementById('hH'), mH=document.getElementById('mH'), sH=document.getElementById('sH');
+  var lastMin=-1, jumpT=0;
+  function clock(){
+    var n=new Date(), s=n.getSeconds()+n.getMilliseconds()/1000, m=n.getMinutes(), h=n.getHours();
+    var sa=reduce? Math.floor(s)*6 : Math.min(360, s/58.5*360);
+    sH.setAttribute('transform','rotate('+sa.toFixed(2)+' 100 100)');
+    if(m!==lastMin){ lastMin=m; jumpT=performance.now(); }
+    var bounce= reduce?0: Math.max(0,1-(performance.now()-jumpT)/180)*1.2;
+    mH.setAttribute('transform','rotate('+(m*6+bounce).toFixed(2)+' 100 100)');
+    hH.setAttribute('transform','rotate('+(((h%12)+m/60)*30).toFixed(2)+' 100 100)');
+    requestAnimationFrame(clock);
+  }
+  clock();
+
+  /* ---------------- departures board ---------------- */
+  var up=true, rows=document.getElementById('boardRows');
+  function pad(n){return (n<10?'0':'')+n;}
+  function board(){
+    var now=new Date(), mins=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
+    var list=[], first=7*60+(up?0:10), lastDep=18*60+40+(up?0:10);
+    for(var t=first;t<=lastDep;t+=20) if(t>=mins-0.5) list.push(t);
+    var tomorrow=false;
+    if(list.length<6){ tomorrow=list.length===0; for(var t2=first;list.length<6;t2+=20) list.push(t2+1440); }
+    list=list.slice(0,6);
+    var h='<div class="brow head"><span>Time</span><span>Destination</span><span class="ty">Train</span><span class="in">Departs</span><span class="pl" style="text-align:center">Track</span></div>';
+    list.forEach(function(t,i){
+      var tt=t%1440, diff=Math.round(t-mins), pan=(tt%60)===(up?0:10);
+      var dest= up ? 'Falkenhorn Gipfel' : 'Grund Talstation';
+      var via= up ? 'Alp Steinmatt · Riedboden · Eisfluh' : 'Eisfluh · Riedboden · Alp Steinmatt';
+      var inTxt = t>=1440 ? 'tomorrow' : diff<=0 ? 'now' : diff<60 ? 'in '+diff+' min' : 'in '+Math.floor(diff/60)+' h '+pad(diff%60);
+      h+='<div class="brow'+(i===0?' first':'')+'"><span class="time">'+pad(Math.floor(tt/60))+':'+pad(tt%60)+'</span><span class="dest"><b>'+dest+'</b><span>'+via+'</span></span><span class="ty"><span class="pill'+(pan?' pan':'')+'">'+(pan?'FB Panorama':'FB '+(10+((tt/20)|0)%30))+'</span></span><span class="in'+(diff<=10&&t<1440?' soon':'')+'">'+inTxt+'</span><span class="pl"><span class="gl">'+(pan?'1':'2')+'</span></span></div>';
+    });
+    rows.innerHTML=h;
+    document.getElementById('boardTitle').textContent= up?'Grund Talstation':'Falkenhorn Gipfel';
+  }
+  document.querySelector('.dirs').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; up=b.id==='dir-up';
+    this.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed',x===b); }); board(); });
+  board(); setInterval(board,15000);
+
+  /* ---------------- route ---------------- */
+  document.getElementById('stops').innerHTML=ST.map(function(s,i){ return '<li class="'+(i===0||i===ST.length-1?'major':'')+'"><b>'+s.n+'</b><span>'+s.alt.toLocaleString('en-US')+' m · km '+s.km+' · +'+s.t+' min</span></li>'; }).join('');
+  var P=document.getElementById('profile');
+  var X=function(km){return 50+km/9.4*640;}, Y=function(a){return 290-(a-1200)/2100*250;};
+  var ph='';
+  [1500,2000,2500,3000].forEach(function(a){ ph+='<line x1="50" x2="690" y1="'+Y(a)+'" y2="'+Y(a)+'" stroke="#dcdcdc"/><text x="44" y="'+(Y(a)+4)+'" text-anchor="end" font-family="DM Mono, monospace" font-size="11" fill="#6e6e6e">'+a+'</text>'; });
+  var prof=[[0,1386],[1.1,1540],[2.3,1920],[3.2,2060],[4.4,2310],[5.1,2420],[6.0,2610],[6.7,2745],[7.6,2860],[8.5,3050],[9.4,3212]];
+  var area='M'+X(0)+' 290 '+prof.map(function(p){return 'L'+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1);}).join(' ')+' L'+X(9.4)+' 290Z';
+  ph+='<path d="'+area+'" fill="#f2f2f2"/>';
+  ph+='<path d="'+prof.map(function(p,i){return (i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1);}).join(' ')+'" fill="none" stroke="#eb0000" stroke-width="3.5" stroke-linejoin="round"/>';
+  // steepest segment highlight
+  ph+='<path d="M'+X(1.1)+' '+Y(1540)+' L'+X(2.3)+' '+Y(1920)+'" stroke="#141414" stroke-width="7" stroke-linecap="round"/>';
+  ph+='<text x="'+(X(1.7)+8)+'" y="'+(Y(1730)+22)+'" font-family="Instrument Sans, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#141414">48 %</text>';
+  ST.forEach(function(s){ var x=X(+s.km), y=Y(s.alt); ph+='<circle cx="'+x+'" cy="'+y+'" r="6" fill="#fff" stroke="#eb0000" stroke-width="3"/><line x1="'+x+'" x2="'+x+'" y1="'+(y+6)+'" y2="290" stroke="#141414" stroke-dasharray="2 3"/><text x="'+x+'" y="308" text-anchor="middle" font-family="DM Mono, monospace" font-size="11" fill="#141414">km '+s.km+'</text>'; });
+  P.innerHTML=ph;
+
+  /* ---------------- tickets ---------------- */
+  var T=[{n:'Einfach · Single',d:'Grund to Falkenhorn Gipfel, valid on the day of issue.',p:62},{n:'Retour · Return',d:'Up and back down, with free stopovers at every station. Our most popular ticket.',p:108,hl:1},{n:'Sunrise Special',d:'First train at 06:20 on summer Saturdays, breakfast at the summit restaurant included.',p:139}];
+  var hx=document.getElementById('halbtax');
+  function tix(){ var half=hx.checked; document.getElementById('tix').innerHTML=T.map(function(t){ var p=half?Math.round(t.p/2):t.p; return '<div class="tk'+(t.hl?' hl':'')+'"><h3>'+t.n+'</h3><p>'+t.d+'</p><div class="price"><b>CHF '+p+'.–</b><span>'+(half?'½ fare':'adult, 2nd class')+'</span></div></div>'; }).join(''); }
+  hx.addEventListener('change',tix); tix();
+})();
+</script>
+</body>
+</html>

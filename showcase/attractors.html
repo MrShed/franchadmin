@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Of Strange Attractors</title>
+<meta name="description" content="Lorenz, Aizawa, Thomas, Halvorsen and Rössler attractors drawn as rotating clouds of particle ink on a dark nineteenth-century mathematics plate, with live parameters and orbit controls.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,400;1,6..96,500&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#16140f;
+  --paper-2:#1e1b15;
+  --ink:#e9e0cc;
+  --ink-dim:rgba(233,224,204,.62);
+  --ink-faint:rgba(233,224,204,.2);
+  --accent:#d6a64f;
+  --display:"Bodoni Moda","Didot","Bodoni 72",Georgia,serif;
+  --text:"Old Standard TT","Baskerville","Libre Baskerville",Georgia,serif;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{
+  margin:0;min-height:100vh;color:var(--ink);font-family:var(--text);font-size:17px;
+  background:
+    radial-gradient(90% 70% at 50% 35%,var(--paper-2),var(--paper) 75%),
+    var(--paper);
+  padding:max(18px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left));
+}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .9 0 0 0 0 .85 0 0 0 0 .75 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
+.plate{position:relative;max-width:1180px;margin:0 auto;border:1px solid var(--ink-faint);outline:1px solid var(--ink-faint);outline-offset:5px;padding:clamp(18px,3vw,38px)}
+.head{display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;gap:10px;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px solid var(--ink-faint);padding-bottom:10px}
+.head a{color:var(--ink-dim);text-decoration:none;letter-spacing:.12em;text-transform:none;font-style:italic;font-size:15px}
+.head a:hover{color:var(--ink)}
+.head .c{text-align:center}.head .r{text-align:right}
+h1{font-family:var(--display);font-weight:400;font-style:italic;text-align:center;font-size:clamp(40px,6vw,82px);line-height:1;margin:26px 0 6px;letter-spacing:-.01em}
+.dek{text-align:center;margin:0 auto 22px;max-width:60ch;color:var(--ink-dim);font-style:italic;line-height:1.45}
+.fleuron{text-align:center;color:var(--accent);letter-spacing:1em;margin:0 0 20px;font-size:13px}
+.body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:clamp(18px,3vw,40px)}
+figure{margin:0}
+.fig{position:relative;aspect-ratio:1.2;border:1px solid var(--ink-faint);background:radial-gradient(70% 70% at 50% 45%,rgba(233,224,204,.035),transparent 70%)}
+.fig canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+.fig canvas:active{cursor:grabbing}
+.corner{position:absolute;font-size:12px;color:var(--ink-dim);font-style:italic;pointer-events:none}
+.corner.tl{top:10px;left:12px}.corner.br{bottom:10px;right:12px;font-style:normal;letter-spacing:.1em;font-size:11px}
+.axes{position:absolute;left:14px;bottom:12px;width:62px;height:62px;pointer-events:none}
+figcaption{margin-top:12px;text-align:center;font-size:15px;line-height:1.5}
+figcaption .sc{font-variant:small-caps;letter-spacing:.06em}
+aside h2{font-family:var(--display);font-weight:500;font-size:20px;margin:0 0 8px;font-style:italic}
+.list{list-style:none;padding:0;margin:0 0 20px;border-top:1px solid var(--ink-faint)}
+.list button{
+  all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:28px 1fr;gap:6px;width:100%;padding:8px 2px;border-bottom:1px solid var(--ink-faint);
+}
+.list button:focus-visible{outline:1px solid var(--accent)}
+.list .n{font-family:var(--display);font-style:italic;color:var(--ink-dim)}
+.list .t{font-size:16px}
+.list .t small{display:block;font-size:12.5px;color:var(--ink-dim);font-style:italic}
+.list button[aria-pressed="true"] .t{color:var(--accent)}
+.list button[aria-pressed="true"] .n{color:var(--accent)}
+.eq{font-family:var(--display);font-size:17px;line-height:1.7;padding:10px 12px;border-left:2px solid var(--accent);background:rgba(233,224,204,.03);margin-bottom:16px}
+.eq i{font-style:italic}
+.params .p{display:grid;grid-template-columns:32px 1fr 56px;gap:8px;align-items:center;margin:6px 0}
+.params label{font-family:var(--display);font-style:italic;font-size:18px}
+.params output{font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.inks{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 16px}
+.ink{all:unset;cursor:pointer;font-size:13px;font-style:italic;display:flex;align-items:center;gap:6px;padding:3px 6px;border:1px solid transparent}
+.ink i{width:16px;height:16px;border-radius:50%;display:block}
+.ink[aria-pressed="true"]{border-color:var(--ink-faint)}
+.ink:focus-visible{outline:1px solid var(--accent)}
+.row{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center;margin:8px 0;font-size:14px;color:var(--ink-dim)}
+.row input[type=text]{background:transparent;border:0;border-bottom:1px solid var(--ink-faint);color:var(--ink);font:16px var(--text);padding:2px 0;width:100%}
+.btns{display:flex;gap:8px;margin-top:14px}
+.btns button{flex:1;background:transparent;border:1px solid var(--ink-dim);color:var(--ink);font:italic 15px var(--text);padding:8px;cursor:pointer}
+.btns button:hover{border-color:var(--ink)}
+.btns button.solid{background:var(--ink);color:var(--paper)}
+.note{font-size:14px;line-height:1.55;color:var(--ink-dim);margin:16px 0 0}
+.foot{margin-top:24px;border-top:1px solid var(--ink-faint);padding-top:10px;display:flex;justify-content:space-between;gap:10px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);flex-wrap:wrap}
+.nogl{position:absolute;inset:0;display:none;place-items:center;font-style:italic;color:var(--ink-dim);text-align:center;padding:20px}
+@media (max-width:880px){
+  .body{grid-template-columns:1fr}
+  .head{grid-template-columns:1fr 1fr}.head .c{display:none}
+  .fig{aspect-ratio:.95}
+}
+</style>
+</head>
+<body>
+<div class="plate">
+  <div class="head"><a href="index.html">← Showcase</a><span class="c">Treatise on Flows · Tab. XXIII</span><span class="r">Plate XXIII</span></div>
+  <h1>Of Strange Attractors</h1>
+  <p class="dek">wherein a single point, obeying three innocent equations, is followed for a hundred thousand steps and found never to repeat, yet never to leave.</p>
+  <div class="fleuron" aria-hidden="true">❦ ❦ ❦</div>
+  <div class="body">
+    <figure>
+      <div class="fig">
+        <canvas id="gl" aria-label="Rotating 3D attractor. Drag to orbit, scroll or pinch to zoom."></canvas>
+        <span class="corner tl" id="figLabel">Fig. 1.</span>
+        <span class="corner br" id="countOut">120,000 PTS</span>
+        <svg class="axes" viewBox="-32 -32 64 64" aria-hidden="true" id="axes"></svg>
+        <div class="nogl" id="nogl">This plate is engraved with WebGL, which the present browser declines to provide.</div>
+      </div>
+      <figcaption id="caption"></figcaption>
+    </figure>
+    <aside>
+      <h2>Index of Figures</h2>
+      <ul class="list" id="list"></ul>
+      <div class="eq" id="eq"></div>
+      <div class="params" id="params" role="group" aria-label="Parameters"></div>
+      <h2 style="margin-top:18px">Inks</h2>
+      <div class="inks" id="inks" role="group" aria-label="Ink palette"></div>
+      <div class="row"><label for="seed">Seed</label><input id="seed" type="text" inputmode="numeric" value="1963" autocomplete="off"></div>
+      <div class="btns"><button id="pauseBtn">Hold</button><button id="resetBtn">Reset view</button><button id="redrawBtn" class="solid">Redraw</button></div>
+      <p class="note">Drag to turn the figure; wheel to draw nearer. Pale strokes are slow passages of the flow, bright ones fast. The gilt comets are twelve dozen fresh trajectories, loosed from the seed.</p>
+    </aside>
+  </div>
+  <div class="foot"><span>Engraved after the equations of Lorenz, Aizawa, Thomas, Halvorsen &amp; Rössler</span><span id="stamp">Printed from the seed 1963</span></div>
+</div>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const SYS = [
+  { id:'lorenz', name:'Lorenz', who:'E. N. Lorenz, 1963', note:'the butterfly of weather',
+    params:{ s:[10,4,16,.1,'σ'], r:[28,15,50,.1,'ρ'], b:[8/3,1,4,.01,'β'] }, dt:.005, init:[.1,0,0], zup:true,
+    f:(x,y,z,p) => [p.s*(y-x), x*(p.r-z)-y, x*y-p.b*z],
+    eq:'<i>ẋ</i> = σ(<i>y</i> − <i>x</i>)<br><i>ẏ</i> = <i>x</i>(ρ − <i>z</i>) − <i>y</i><br><i>ż</i> = <i>xy</i> − β<i>z</i>' },
+  { id:'aizawa', name:'Aizawa', who:'Y. Aizawa, 1982', note:'an apple cored by a spiral',
+    params:{ a:[.95,.5,1.2,.01,'a'], b:[.7,.4,1,.01,'b'], c:[.6,.3,.9,.01,'c'], d:[3.5,2,5,.05,'d'], e:[.25,0,.6,.01,'e'], f:[.1,0,.3,.005,'f'] }, dt:.01, init:[.1,0,0], zup:true,
+    f:(x,y,z,p) => [(z-p.b)*x-p.d*y, p.d*x+(z-p.b)*y, p.c+p.a*z-z*z*z/3-(x*x+y*y)*(1+p.e*z)+p.f*z*x*x*x],
+    eq:'<i>ẋ</i> = (<i>z</i> − b)<i>x</i> − d<i>y</i><br><i>ẏ</i> = d<i>x</i> + (<i>z</i> − b)<i>y</i><br><i>ż</i> = c + a<i>z</i> − <i>z</i>³⁄3 − (<i>x</i>² + <i>y</i>²)(1 + e<i>z</i>) + f<i>zx</i>³' },
+  { id:'thomas', name:'Thomas', who:'R. Thomas, 1999', note:'cyclically symmetric labyrinth',
+    params:{ b:[.208186,.1,.33,.001,'b'] }, dt:.06, init:[.1,0,-.1],
+    f:(x,y,z,p) => [Math.sin(y)-p.b*x, Math.sin(z)-p.b*y, Math.sin(x)-p.b*z],
+    eq:'<i>ẋ</i> = sin <i>y</i> − b<i>x</i><br><i>ẏ</i> = sin <i>z</i> − b<i>y</i><br><i>ż</i> = sin <i>x</i> − b<i>z</i>' },
+  { id:'halvorsen', name:'Halvorsen', who:'A. Halvorsen', note:'three-lobed propeller',
+    params:{ a:[1.89,1.2,2.6,.01,'a'] }, dt:.004, init:[-1.48,-1.51,2.04],
+    f:(x,y,z,p) => [-p.a*x-4*y-4*z-y*y, -p.a*y-4*z-4*x-z*z, -p.a*z-4*x-4*y-x*x],
+    eq:'<i>ẋ</i> = −a<i>x</i> − 4<i>y</i> − 4<i>z</i> − <i>y</i>²<br><i>ẏ</i> = −a<i>y</i> − 4<i>z</i> − 4<i>x</i> − <i>z</i>²<br><i>ż</i> = −a<i>z</i> − 4<i>x</i> − 4<i>y</i> − <i>x</i>²' },
+  { id:'rossler', name:'Rössler', who:'O. E. Rössler, 1976', note:'a band folded once',
+    params:{ a:[.2,.05,.4,.005,'a'], b:[.2,.05,1,.01,'b'], c:[5.7,3,12,.1,'c'] }, dt:.02, init:[.1,0,0], zup:true,
+    f:(x,y,z,p) => [-y-z, x+p.a*y, p.b+z*(x-p.c)],
+    eq:'<i>ẋ</i> = −<i>y</i> − <i>z</i><br><i>ẏ</i> = <i>x</i> + a<i>y</i><br><i>ż</i> = b + <i>z</i>(<i>x</i> − c)' }
+];
+const INKS = [
+  { id:'silver', name:'Silverpoint', slow:[.55,.55,.58], fast:[.95,.93,.88], comet:[1,.78,.38], css:'#e9e6de' },
+  { id:'sepia', name:'Sepia & gilt', slow:[.45,.3,.18], fast:[.95,.78,.52], comet:[1,.9,.6], css:'#d6a064' },
+  { id:'prussian', name:'Prussian', slow:[.15,.3,.55], fast:[.62,.8,1], comet:[1,.85,.5], css:'#7fa8e8' },
+  { id:'vermilion', name:'Vermilion', slow:[.45,.12,.08], fast:[1,.5,.32], comet:[1,.92,.7], css:'#ff7a52' }
+];
+const canvas = $('gl');
+const gl = canvas.getContext('webgl', { antialias:true, alpha:true, premultipliedAlpha:true });
+if (!gl) { $('nogl').style.display = 'grid'; return; }
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+const NPTS = innerWidth < 700 ? 70000 : 130000, COMETS = 144, TRAIL = 28;
+let sys = SYS[0], ink = INKS[0], seed = 1963, params = {}, running = true;
+let yaw = .6, pitch = -.35, zoom = 1, vyaw = 0, vpitch = 0, dragging = false, idleT = 0;
+let reveal = 0, total = 0, center = [0,0,0], scl = 1;
+
+const VS = `attribute vec4 a; uniform mat3 R; uniform vec3 C; uniform float S, asp, ps, persp;
+varying float vs; varying float vd;
+void main(){
+  vec3 p = R*((a.xyz - C)*S);
+  float w = 1./(1. + p.z*persp);
+  gl_Position = vec4(p.x*w/asp, p.y*w, 0., 1.);
+  gl_PointSize = ps*w;
+  vs = a.w; vd = clamp(.55 - p.z*.5, .15, 1.);
+}`;
+const FS = `precision mediump float; uniform vec3 c0, c1; uniform float al; varying float vs; varying float vd;
+void main(){
+  vec2 q = gl_PointCoord - .5; float d = dot(q,q);
+  if (d > .25) discard;
+  float a = al*vd*(1. - d*3.);
+  vec3 c = mix(c0, c1, vs);
+  gl_FragColor = vec4(c*a, a);
+}`;
+function sh(t, s) { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; }
+let prog; const U = {};
+try {
+  prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+  gl.bindAttribLocation(prog, 0, 'a'); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+} catch (e) { console.warn(e); $('nogl').style.display = 'grid'; return; }
+gl.useProgram(prog);
+['R','C','S','asp','ps','persp','c0','c1','al'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+const cloudBuf = gl.createBuffer(), cometBuf = gl.createBuffer();
+const cometData = new Float32Array(COMETS * TRAIL * 4);
+gl.enableVertexAttribArray(0);
+gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function rk4(s, x, y, z, p, h) {
+  const k1 = s.f(x, y, z, p);
+  const k2 = s.f(x + k1[0]*h/2, y + k1[1]*h/2, z + k1[2]*h/2, p);
+  const k3 = s.f(x + k2[0]*h/2, y + k2[1]*h/2, z + k2[2]*h/2, p);
+  const k4 = s.f(x + k3[0]*h, y + k3[1]*h, z + k3[2]*h, p);
+  return [x + h/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]), y + h/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]), z + h/6*(k1[2]+2*k2[2]+2*k3[2]+k4[2]), Math.hypot(k1[0],k1[1],k1[2])];
+}
+let comets = [];
+function compute() {
+  const r = mulberry32(seed);
+  const data = new Float32Array(NPTS * 4);
+  let [x, y, z] = sys.init.map(v => v + (r() - .5) * .02);
+  for (let i = 0; i < 2000; i++) { const o = rk4(sys, x, y, z, params, sys.dt); x = o[0]; y = o[1]; z = o[2]; }
+  let mn = [1e9,1e9,1e9], mx = [-1e9,-1e9,-1e9], smax = 0; const speeds = new Float32Array(NPTS);
+  let ok = true;
+  for (let i = 0; i < NPTS; i++) {
+    const o = rk4(sys, x, y, z, params, sys.dt); x = o[0]; y = o[1]; z = o[2];
+    if (!isFinite(x) || Math.abs(x) > 1e4) { ok = false; x = y = z = 0; }
+    data[i*4] = x; data[i*4+1] = sys.zup ? z : y; data[i*4+2] = sys.zup ? y : z; speeds[i] = o[3];
+    if (x < mn[0]) mn[0] = x; if (data[i*4+1] < mn[1]) mn[1] = data[i*4+1]; if (data[i*4+2] < mn[2]) mn[2] = data[i*4+2];
+    if (x > mx[0]) mx[0] = x; if (data[i*4+1] > mx[1]) mx[1] = data[i*4+1]; if (data[i*4+2] > mx[2]) mx[2] = data[i*4+2];
+  }
+  const sorted = Float32Array.from(speeds).sort(); const lo = sorted[(NPTS * .05) | 0], hi = sorted[(NPTS * .97) | 0] || 1;
+  for (let i = 0; i < NPTS; i++) data[i*4+3] = Math.min(1, Math.max(0, (speeds[i] - lo) / (hi - lo || 1)));
+  center = [(mn[0]+mx[0])/2, (mn[1]+mx[1])/2, (mn[2]+mx[2])/2];
+  scl = 1.7 / Math.max(mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2], 1e-6);
+  gl.bindBuffer(gl.ARRAY_BUFFER, cloudBuf); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  total = NPTS; reveal = reduce.matches ? NPTS : 0;
+  // comets start from random points on the cloud
+  comets = [];
+  for (let c = 0; c < COMETS; c++) {
+    const k = (r() * NPTS) | 0;
+    const p = sys.zup ? [data[k*4] + (r()-.5)*.01, data[k*4+2] + (r()-.5)*.01, data[k*4+1]] : [data[k*4] + (r()-.5)*.01, data[k*4+1] + (r()-.5)*.01, data[k*4+2]];
+    comets.push({ p, trail: Array.from({ length: TRAIL }, () => sys.zup ? [p[0], p[2], p[1]] : p.slice()) });
+  }
+  $('countOut').textContent = `${NPTS.toLocaleString('en-US')} PTS${ok ? '' : ' · DIVERGED'}`;
+}
+function stepComets() {
+  for (const c of comets) {
+    for (let k = 0; k < 3; k++) { const o = rk4(sys, c.p[0], c.p[1], c.p[2], params, sys.dt); c.p = [o[0], o[1], o[2]]; }
+    if (!isFinite(c.p[0])) c.p = sys.init.slice();
+    c.trail.pop(); c.trail.unshift(sys.zup ? [c.p[0], c.p[2], c.p[1]] : c.p.slice());
+  }
+}
+
+function rotMat() {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+  // column-major mat3: R = Rx(pitch) * Ry(yaw)
+  return new Float32Array([cy, sp*sy, -cp*sy, 0, cp, sp, sy, -sp*cy, cp*cy]);
+}
+let W = 1, H = 1, DPR = 1;
+function resize() {
+  const r = canvas.getBoundingClientRect(); DPR = Math.min(devicePixelRatio || 1, 2);
+  W = r.width; H = r.height; canvas.width = Math.max(2, Math.round(W * DPR)); canvas.height = Math.max(2, Math.round(H * DPR));
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+function draw() {
+  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniformMatrix3fv(U.R, false, rotMat());
+  gl.uniform3fv(U.C, center); gl.uniform1f(U.S, scl * zoom * .95); gl.uniform1f(U.asp, W / H); gl.uniform1f(U.persp, .35);
+  const density = Math.min(1, 900000 / (W * H * DPR * DPR)) ;
+  gl.uniform3fv(U.c0, ink.slow); gl.uniform3fv(U.c1, ink.fast);
+  gl.uniform1f(U.ps, 1.6 * DPR); gl.uniform1f(U.al, .22 * (.6 + density * .6) * (130000 / NPTS) ** .5);
+  gl.bindBuffer(gl.ARRAY_BUFFER, cloudBuf); gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0);
+  gl.drawArrays(gl.POINTS, 0, Math.max(1, Math.floor(reveal)));
+  // comets
+  let k = 0;
+  for (const c of comets) for (let t = 0; t < TRAIL; t++) { const p = c.trail[t]; cometData[k++] = p[0]; cometData[k++] = p[1]; cometData[k++] = p[2]; cometData[k++] = 1 - t / TRAIL; }
+  gl.bindBuffer(gl.ARRAY_BUFFER, cometBuf); gl.bufferData(gl.ARRAY_BUFFER, cometData, gl.DYNAMIC_DRAW);
+  gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0);
+  gl.uniform3fv(U.c0, ink.comet.map(v => v * .25)); gl.uniform3fv(U.c1, ink.comet);
+  gl.uniform1f(U.ps, 3 * DPR); gl.uniform1f(U.al, .5);
+  gl.drawArrays(gl.POINTS, 0, COMETS * TRAIL);
+  drawAxes();
+}
+function drawAxes() {
+  const R = rotMat(); const ax = [[1,0,0,'x'],[0,1,0,'y'],[0,0,1,'z']];
+  $('axes').innerHTML = ax.map(([x, y, z, l]) => {
+    const px = R[0]*x + R[3]*y + R[6]*z, py = R[1]*x + R[4]*y + R[7]*z;
+    return `<line x1="0" y1="0" x2="${(px*22).toFixed(1)}" y2="${(-py*22).toFixed(1)}" stroke="rgba(233,224,204,.55)" stroke-width="1"/><text x="${(px*28).toFixed(1)}" y="${(-py*28+3).toFixed(1)}" font-size="9" font-style="italic" fill="rgba(233,224,204,.7)" text-anchor="middle" font-family="Bodoni Moda,serif">${l}</text>`;
+  }).join('');
+}
+
+// loop
+let raf = 0, last = 0;
+function frame(t) {
+  raf = 0; if (document.hidden) return;
+  const dt = last ? Math.min(.05, (t - last) / 1000) : .016; last = t;
+  if (reveal < total) reveal = Math.min(total, reveal + total * dt / 3.2);
+  if (!dragging) {
+    yaw += vyaw; pitch += vpitch; vyaw *= .94; vpitch *= .94;
+    idleT += dt;
+    if (running && idleT > 1.2) yaw += dt * (reduce.matches ? .02 : .12);
+  }
+  pitch = Math.max(-1.5, Math.min(1.5, pitch));
+  if (running) stepComets();
+  draw();
+  raf = requestAnimationFrame(frame);
+}
+function kick() { if (!raf && !document.hidden) { last = 0; raf = requestAnimationFrame(frame); } }
+document.addEventListener('visibilitychange', kick);
+
+// orbit
+let lx = 0, ly = 0; const pts = new Map(); let pinch0 = 0, zoom0 = 1;
+canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); dragging = true; lx = e.clientX; ly = e.clientY; vyaw = vpitch = 0; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a[0]-b[0], a[1]-b[1]); zoom0 = zoom; } });
+canvas.addEventListener('pointermove', e => {
+  if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pts.size === 2) { const [a, b] = [...pts.values()]; zoom = Math.max(.4, Math.min(4, zoom0 * Math.hypot(a[0]-b[0], a[1]-b[1]) / pinch0)); return; }
+  const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY;
+  yaw += dx * .008; pitch += dy * .008; vyaw = dx * .0025; vpitch = dy * .0025; idleT = 0;
+});
+const endPtr = e => { pts.delete(e.pointerId); if (!pts.size) { dragging = false; idleT = 0; } };
+canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
+canvas.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.max(.4, Math.min(4, zoom * Math.exp(-e.deltaY * .0012))); idleT = 0; }, { passive:false });
+canvas.addEventListener('keydown', e => { const s = .1; if (e.key === 'ArrowLeft') yaw -= s; if (e.key === 'ArrowRight') yaw += s; if (e.key === 'ArrowUp') pitch -= s; if (e.key === 'ArrowDown') pitch += s; });
+canvas.tabIndex = 0;
+
+// UI
+const listEl = $('list');
+SYS.forEach((s, i) => {
+  const li = document.createElement('li'), b = document.createElement('button');
+  b.type = 'button'; b.id = 'sys-' + s.id;
+  b.innerHTML = `<span class="n">${['i','ii','iii','iv','v'][i]}.</span><span class="t">${s.name}<small>${s.who} — ${s.note}</small></span>`;
+  b.addEventListener('click', () => choose(s));
+  li.appendChild(b); listEl.appendChild(li);
+});
+const inksEl = $('inks');
+INKS.forEach(k => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'ink'; b.id = 'ink-' + k.id;
+  b.innerHTML = `<i style="background:${k.css}"></i>${k.name}`;
+  b.addEventListener('click', () => { ink = k; syncInk(); try { localStorage.setItem('attractors.ink', k.id); } catch (e) {} });
+  inksEl.appendChild(b);
+});
+function syncInk() { [...inksEl.children].forEach(b => b.setAttribute('aria-pressed', b.id === 'ink-' + ink.id)); document.documentElement.style.setProperty('--accent', `rgb(${ink.comet.map(v => v * 214 | 0).join(',')})`); }
+let pt = 0;
+function buildParams() {
+  const el = $('params'); el.innerHTML = '';
+  Object.entries(sys.params).forEach(([k, [v, lo, hi, st, sym]]) => {
+    const row = document.createElement('div'); row.className = 'p';
+    const id = 'param-' + k;
+    row.innerHTML = `<label for="${id}">${sym}</label><input id="${id}" type="range" min="${lo}" max="${hi}" step="${st}" value="${params[k]}"><output>${fmt(params[k])}</output>`;
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.addEventListener('input', () => { params[k] = +inp.value; out.textContent = fmt(params[k]); caption(); clearTimeout(pt); pt = setTimeout(compute, 120); });
+    el.appendChild(row);
+  });
+}
+function fmt(v) { return Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(3).replace(/0+$/, '').replace(/\.$/, ''); }
+function caption() {
+  const i = SYS.indexOf(sys) + 1;
+  $('figLabel').textContent = `Fig. ${i}.`;
+  const ps = Object.entries(sys.params).map(([k, a]) => `${a[4]} = ${fmt(params[k])}`).join(', ');
+  $('caption').innerHTML = `<span class="sc">Fig. ${i}.</span> The attractor of ${sys.name} <i>(${sys.who})</i>, ${ps}; integrated by the method of Runge &amp; Kutta, h = ${sys.dt}.`;
+}
+function choose(s) {
+  sys = s; params = {}; for (const k in s.params) params[k] = s.params[k][0];
+  [...listEl.querySelectorAll('button')].forEach(b => b.setAttribute('aria-pressed', b.id === 'sys-' + s.id));
+  $('eq').innerHTML = s.eq; buildParams(); caption(); compute();
+}
+$('seed').addEventListener('change', e => { seed = parseInt(String(e.target.value).replace(/\D/g, ''), 10) || 0; e.target.value = seed; $('stamp').textContent = 'Printed from the seed ' + seed; compute(); });
+$('pauseBtn').addEventListener('click', e => { running = !running; e.currentTarget.textContent = running ? 'Hold' : 'Release'; });
+$('resetBtn').addEventListener('click', () => { yaw = .6; pitch = -.35; zoom = 1; vyaw = vpitch = 0; });
+$('redrawBtn').addEventListener('click', () => { seed = (Math.random() * 9999) | 0; $('seed').value = seed; $('stamp').textContent = 'Printed from the seed ' + seed; compute(); });
+new ResizeObserver(() => { resize(); draw(); }).observe(canvas);
+
+try { const s = localStorage.getItem('attractors.ink'); const f = INKS.find(k => k.id === s); if (f) ink = f; } catch (e) {}
+syncInk(); resize(); choose(SYS[0]);
+reveal = total * .55; // begin mid-engraving so the plate reads at rest
+draw(); kick();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Red Wedge Press</title>
+<meta name="description" content="A Russian Constructivism homage in red, black and diagonals — the history, the builders, the principles — with a slogan poster maker in the manner of Lissitzky, Rodchenko and Klutsis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=PT+Sans:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#d52b1e;
+  --ink:#16120f;
+  --paper:#e7e2d6;
+  --ochre:#caa54a;
+  --grey:#8d877b;
+  --disp:"Oswald","Bebas Neue","Impact","Arial Narrow",sans-serif;
+  --body:"PT Sans","Trebuchet MS","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;overflow-x:hidden;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.05 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+a{color:inherit}
+:focus-visible{outline:4px solid var(--red);outline-offset:3px}
+.pad{padding-left:max(16px,env(safe-area-inset-left),5vw);padding-right:max(16px,env(safe-area-inset-right),5vw)}
+.back{position:fixed;left:0;top:18px;z-index:40;background:var(--red);color:var(--paper);font:600 14px var(--disp);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;padding:8px 18px 8px max(14px,env(safe-area-inset-left));clip-path:polygon(0 0,100% 0,88% 100%,0 100%)}
+.back:hover{background:var(--ink)}
+
+/* hero */
+.hero{position:relative;min-height:min(100vh,920px);overflow:hidden;background:var(--paper)}
+.hero .circle{position:absolute;right:-6vw;top:8%;width:min(62vw,720px);aspect-ratio:1;border-radius:50%;background:var(--ink)}
+.hero .circle::after{content:"";position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle,var(--paper) 1.6px,transparent 2px) 0 0/9px 9px;opacity:.55}
+.hero .wedge{position:absolute;left:-4vw;top:34%;width:min(78vw,980px);height:min(26vw,320px);background:var(--red);clip-path:polygon(0 0,100% 50%,0 100%);transform:rotate(-14deg);transform-origin:0 50%;animation:thrust 1.1s cubic-bezier(.2,.9,.2,1) both}
+@keyframes thrust{from{transform:rotate(-14deg) translateX(-60%)}}
+.hero .bar{position:absolute;left:8%;bottom:14%;width:120%;height:34px;background:var(--ink);transform:rotate(-28deg);transform-origin:left}
+.hero .bar2{position:absolute;left:30%;bottom:9%;width:80%;height:10px;background:var(--red);transform:rotate(-28deg);transform-origin:left}
+.hero h1{position:absolute;left:max(18px,4vw);top:19%;margin:0;font:700 clamp(64px,13vw,200px)/.82 var(--disp);text-transform:uppercase;letter-spacing:-.01em;transform:rotate(-8deg);transform-origin:left top;z-index:3}
+.hero h1 .ru{display:block;color:var(--red)}
+.hero h1 .en{display:block;color:var(--paper);-webkit-text-stroke:3px var(--ink);padding-left:.6em;text-shadow:8px 8px 0 var(--red)}
+.hero .stamp{position:absolute;right:max(16px,5vw);bottom:12%;z-index:4;max-width:330px;background:var(--paper);border:4px solid var(--ink);padding:14px 16px;transform:rotate(-8deg);font-size:16px;box-shadow:10px 10px 0 var(--red)}
+.hero .stamp b{display:block;font:700 22px/1 var(--disp);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.hero .vtext{position:absolute;left:max(18px,4vw);bottom:10%;font:600 14px var(--disp);letter-spacing:.4em;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg);z-index:4}
+
+/* section headers */
+section{position:relative;padding-top:90px;padding-bottom:90px}
+.shead{display:flex;align-items:flex-end;gap:20px;margin-bottom:40px;flex-wrap:wrap}
+.shead .no{font:700 clamp(70px,10vw,140px)/.8 var(--disp);color:var(--red)}
+.shead h2{margin:0;font:700 clamp(34px,5.4vw,76px)/.9 var(--disp);text-transform:uppercase;transform:rotate(-4deg);transform-origin:left bottom;background:var(--ink);color:var(--paper);padding:.08em .25em .12em}
+.shead .ru{font:600 16px var(--disp);letter-spacing:.3em;color:var(--grey);text-transform:uppercase;width:100%}
+
+/* history */
+.hist{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:50px}
+.hist .lead{font:600 clamp(22px,2.2vw,30px)/1.25 var(--disp);text-transform:uppercase;letter-spacing:.01em;border-left:14px solid var(--red);padding-left:18px}
+.hist p{margin:0 0 1em}
+.tl{position:relative;margin-top:50px;display:grid;grid-template-columns:repeat(6,1fr);gap:0;transform:skewY(-4deg)}
+.tl .ev{border-top:6px solid var(--ink);padding:14px 14px 18px 0;transform:skewY(4deg)}
+.tl .ev:nth-child(odd){border-color:var(--red)}
+.tl .y{font:700 34px/1 var(--disp)}
+.tl p{font-size:15px;margin:6px 0 0}
+
+/* builders */
+.builders{background:var(--ink);color:var(--paper);overflow:hidden}
+.builders .shead h2{background:var(--red);color:var(--paper)}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.b{padding:24px 22px 26px;border:1px solid #3b332c;position:relative;overflow:hidden;min-height:240px}
+.b .glyph{position:absolute;right:-20px;top:-20px;width:120px;height:120px;opacity:.9}
+.b h3{font:700 26px/1 var(--disp);text-transform:uppercase;margin:0 0 4px;position:relative}
+.b .role{font:600 13px var(--disp);letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin-bottom:12px;position:relative}
+.b p{margin:0;font-size:16px;color:#d9d2c3;position:relative;max-width:30em}
+.b:hover{background:#221b16}
+
+/* principles */
+.pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.p{position:relative;padding:20px 18px 24px;background:var(--paper);border:3px solid var(--ink)}
+.p:nth-child(even){transform:translateY(40px)}
+.p .k{font:700 60px/1 var(--disp);color:var(--red);margin-bottom:6px}
+.p h3{font:700 22px/1.05 var(--disp);text-transform:uppercase;margin:0 0 8px}
+.p p{margin:0;font-size:16px}
+
+/* maker */
+.maker{background:var(--red);color:var(--paper);overflow:hidden}
+.maker .shead h2{background:var(--paper);color:var(--ink)}
+.maker .shead .no{color:var(--ink)}
+.maker .shead .ru{color:#f3b7b0}
+.mk{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:40px;align-items:start}
+.panel{background:var(--ink);padding:22px;display:grid;gap:16px;box-shadow:14px 14px 0 rgba(0,0,0,.35)}
+.panel label,.lbl{display:block;font:600 13px var(--disp);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;color:#f3b7b0}
+.panel input{width:100%;font:700 20px var(--disp);text-transform:uppercase;letter-spacing:.04em;background:var(--paper);color:var(--ink);border:0;padding:10px 12px;border-radius:0}
+.panel input:focus{outline:4px solid var(--red)}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{font:600 15px var(--disp);letter-spacing:.08em;text-transform:uppercase;background:transparent;color:var(--paper);border:2px solid var(--paper);padding:7px 12px;cursor:pointer;border-radius:0}
+.opt[aria-pressed="true"]{background:var(--red);border-color:var(--red)}
+.opt:hover{background:var(--paper);color:var(--ink)}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.presets button{font:600 14px var(--disp);background:#2c241e;color:var(--paper);border:0;padding:6px 10px;cursor:pointer;letter-spacing:.05em}
+.presets button:hover{background:var(--red)}
+.go{font:700 20px var(--disp);letter-spacing:.14em;text-transform:uppercase;background:var(--paper);color:var(--ink);border:0;padding:12px 18px;cursor:pointer;clip-path:polygon(0 0,94% 0,100% 50%,94% 100%,0 100%)}
+.go:hover{background:var(--ochre)}
+.posterWrap{position:relative;transform:rotate(2deg)}
+.posterWrap svg{width:100%;height:auto;display:block;background:var(--paper);box-shadow:-16px 18px 0 var(--ink)}
+.posterWrap svg .anim{transition:transform .8s cubic-bezier(.2,.9,.2,1)}
+
+footer{background:var(--ink);color:var(--paper);padding-top:40px;padding-bottom:50px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:flex-end}
+footer .big{font:700 clamp(36px,6vw,80px)/.85 var(--disp);text-transform:uppercase;color:var(--red)}
+footer a{font:600 16px var(--disp);letter-spacing:.14em;text-transform:uppercase}
+
+@media (max-width:980px){
+  .hist,.mk{grid-template-columns:minmax(0,1fr)}
+  .tl{grid-template-columns:repeat(3,1fr);row-gap:20px}
+  .bgrid{grid-template-columns:1fr 1fr}
+  .pgrid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:560px){
+  body{font-size:17px}
+  .hero{min-height:680px}
+  .hero h1{top:12%;font-size:clamp(56px,20vw,100px)}
+  .hero .stamp{left:16px;right:16px;max-width:none;bottom:5%}
+  .hero .vtext{display:none}
+  .tl{grid-template-columns:1fr 1fr}
+  .bgrid,.pgrid{grid-template-columns:1fr}
+  .p:nth-child(even){transform:none}
+  .posterWrap{transform:none}
+  .posterWrap svg{box-shadow:-8px 10px 0 var(--ink)}
+}
+@media (prefers-reduced-motion:reduce){
+  .hero .wedge{animation:none}
+  .posterWrap svg .anim{transition:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html" id="back">← Showcase</a>
+
+<header class="hero">
+  <div class="circle" aria-hidden="true"></div>
+  <div class="wedge" aria-hidden="true"></div>
+  <div class="bar" aria-hidden="true"></div>
+  <div class="bar2" aria-hidden="true"></div>
+  <h1><span class="ru" lang="ru">Строй</span><span class="en">Build!</span></h1>
+  <div class="vtext">Moscow · Petrograd · Vitebsk · 1915–1932</div>
+  <div class="stamp"><b>Russian Constructivism</b>Art was to leave the museum and enter the factory, the street, the newspaper and the kiosk. The artist became a builder — a <i>constructor</i> — of a new world.</div>
+</header>
+
+<main>
+<section class="pad" id="history">
+  <div class="shead"><span class="no">01</span><h2>From easel to factory</h2><span class="ru" lang="ru">история · history</span></div>
+  <div class="hist">
+    <div class="lead">Down with art as a sacred object. Long live art as work, as construction, as everyday life.<span style="display:block;font:400 15px var(--body);text-transform:none;margin-top:10px;color:var(--grey)">The spirit of the First Working Group of Constructivists, Moscow, 1921 (paraphrased)</span></div>
+    <div>
+      <p>Constructivism began with Vladimir Tatlin's counter-reliefs of 1914 — assemblages of iron, glass and wood hung in the corners of rooms — and exploded after the 1917 Revolution. A new state wanted a new visual language, and a generation of artists believed that painting pictures for the bourgeoisie was over.</p>
+      <p>In 1921 the First Working Group of Constructivists, led by Aleksei Gan, Aleksandr Rodchenko and Varvara Stepanova, declared the end of "pure" art. The artist would design furniture, textiles, workers' clothing, books, advertisements, stage sets and architecture — anything useful. The poster became the frontline.</p>
+      <p>They built a graphic grammar still used everywhere: heavy sans-serif type set on diagonals, photographs cut and collaged into new meanings, a palette of red, black and paper, and compositions that feel like they are moving even on a wall. By 1932 Stalin's decree on literary and artistic organisations had pushed it all aside for Socialist Realism, but the language had already escaped to Berlin, Dessau, Paris and the rest of the century.</p>
+    </div>
+  </div>
+  <div class="tl">
+    <div class="ev"><div class="y">1914</div><p>Tatlin shows his first counter-reliefs after visiting Picasso's studio in Paris.</p></div>
+    <div class="ev"><div class="y">1919</div><p>Lissitzky's <i>Beat the Whites with the Red Wedge</i>; Tatlin designs his Monument to the Third International.</p></div>
+    <div class="ev"><div class="y">1920</div><p>VKhUTEMAS, the Higher Art and Technical Studios, open in Moscow — the Soviet counterpart to the Bauhaus.</p></div>
+    <div class="ev"><div class="y">1922</div><p>Aleksei Gan publishes <i>Konstruktivizm</i>, the movement's manifesto.</p></div>
+    <div class="ev"><div class="y">1924</div><p>Rodchenko's <i>Books</i> poster: Lilya Brik shouting a cone of letters: books in all branches of knowledge.</p></div>
+    <div class="ev"><div class="y">1932</div><p>Independent artistic groups are dissolved by decree. Socialist Realism becomes the only official style.</p></div>
+  </div>
+</section>
+
+<section class="pad builders" id="builders">
+  <div class="shead"><span class="no">02</span><h2>The constructors</h2><span class="ru" lang="ru">конструкторы · the builders</span></div>
+  <div class="bgrid" id="bgrid"></div>
+</section>
+
+<section class="pad" id="principles">
+  <div class="shead"><span class="no">03</span><h2>Principles of construction</h2><span class="ru" lang="ru">принципы · principles</span></div>
+  <div class="pgrid">
+    <div class="p"><div class="k">↗</div><h3>The diagonal</h3><p>Horizontal is rest; vertical is monument; the diagonal is motion. Everything leans into the future.</p></div>
+    <div class="p"><div class="k">■</div><h3>Faktura</h3><p>The honest texture of a material — steel, wood, paper, ink — shown rather than hidden.</p></div>
+    <div class="p"><div class="k">◐</div><h3>Photomontage</h3><p>The camera replaces the brush. Cut, paste and combine photographs to build new realities.</p></div>
+    <div class="p"><div class="k">A</div><h3>Type as image</h3><p>Letters are heavy, bold and structural — they are part of the composition, not captions to it.</p></div>
+    <div class="p"><div class="k">3</div><h3>Three colours</h3><p>Red, black, and the paper itself. Maximum contrast from the cheapest printing.</p></div>
+    <div class="p"><div class="k">⚙</div><h3>Tectonics</h3><p>Form follows the logic of construction and the needs of its use, like a machine.</p></div>
+    <div class="p"><div class="k">!</div><h3>Agitation</h3><p>Art is a tool that speaks to the masses: in kiosks, on trains, on biscuit wrappers.</p></div>
+    <div class="p"><div class="k">∞</div><h3>Art into life</h3><p>No separation between fine and applied art. The artist is an engineer of daily life.</p></div>
+  </div>
+</section>
+
+<section class="pad maker" id="maker">
+  <div class="shead"><span class="no">04</span><h2>Slogan poster maker</h2><span class="ru" lang="ru">агитплакат · agit-poster</span></div>
+  <div class="mk">
+    <div class="panel">
+      <div><label for="sl1">Slogan — first line</label><input id="sl1" value="Books" maxlength="18"></div>
+      <div><label for="sl2">Second line</label><input id="sl2" value="in every field" maxlength="24"></div>
+      <div><label for="sl3">Small print</label><input id="sl3" value="Lengiz · 1924" maxlength="30"></div>
+      <div><span class="lbl">Presets</span><div class="presets" id="presets"></div></div>
+      <div><span class="lbl" id="layLbl">Composition</span><div class="opts" role="group" aria-labelledby="layLbl" id="layouts"></div></div>
+      <div><span class="lbl" id="figLbl">Photomontage</span><div class="opts" role="group" aria-labelledby="figLbl" id="figs"></div></div>
+      <div><span class="lbl" id="colLbl">Ink</span><div class="opts" role="group" aria-labelledby="colLbl" id="inks"></div></div>
+      <div><button type="button" class="go" id="shake">Reconstruct</button></div>
+    </div>
+    <div class="posterWrap"><svg id="poster" viewBox="0 0 600 840" role="img" aria-label="Generated agit-poster"></svg></div>
+  </div>
+</section>
+</main>
+
+<footer class="pad">
+  <div class="big">Red Wedge<br>Press</div>
+  <div style="max-width:420px">An homage to Russian Constructivism, 1914–1932. All photomontage on this page is drawn in SVG; no photographs are used. <br><a href="index.html">← Back to the Showcase</a></div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var NS="http://www.w3.org/2000/svg";
+  function el(t,a,p){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+
+  /* ---------- builders ---------- */
+  var B=[
+    ["Vladimir Tatlin","1885–1953 · sculptor","Counter-reliefs, the unbuilt spiralling Tower for the Third International, and the Letatlin glider. The movement's founding engineer-poet.","tower"],
+    ["Aleksandr Rodchenko","1891–1956 · everything","Painter who declared painting over, then made posters, photographs from vertiginous angles, furniture and advertising with Mayakovsky.","eye"],
+    ["Varvara Stepanova","1894–1958 · textiles","Designed geometric fabrics for the First State Textile Printing Factory and sportswear for the new citizen.","cloth"],
+    ["El Lissitzky","1890–1941 · typography","Prouns ('projects for the affirmation of the new'), the Red Wedge, and books that were architecture for the eye.","wedge"],
+    ["Lyubov Popova","1889–1924 · stage & textile","Spatial force constructions and the sets for Meyerhold's <i>The Magnanimous Cuckold</i> (1922).","stage"],
+    ["Gustav Klutsis","1895–1938 · photomontage","Turned photomontage into political engine: giant hands, towering workers, electrification.","hand"],
+    ["Vladimir & Georgii Stenberg","1899–1982 · 1900–1933","The brothers who invented the modern film poster: impossible perspectives, projected-and-traced photographs.","film"],
+    ["Aleksei Gan","1887–1942 · theory","Wrote <i>Konstruktivizm</i> (1922) and designed its uncompromising cover.","book"],
+    ["Vladimir Mayakovsky","1893–1930 · poet","Wrote slogans, jingles and verse for Rodchenko's posters; called the partnership 'Advertising-Constructor'.","mega"]
+  ];
+  function glyph(k){
+    var s='<svg class="glyph" viewBox="0 0 120 120" aria-hidden="true">';
+    switch(k){
+      case"tower":s+='<path d="M30 118 L78 10 L96 118" fill="none" stroke="#d52b1e" stroke-width="6"/><path d="M40 100 Q70 80 90 96 M48 76 Q72 60 88 72 M58 52 Q76 40 84 50" fill="none" stroke="#e7e2d6" stroke-width="4"/>';break;
+      case"eye":s+='<circle cx="60" cy="60" r="44" fill="#d52b1e"/><circle cx="60" cy="60" r="18" fill="#16120f"/><path d="M0 120 L120 0" stroke="#e7e2d6" stroke-width="6"/>';break;
+      case"cloth":for(var i=0;i<5;i++)s+='<rect x="'+(10+i*20)+'" y="10" width="10" height="100" fill="'+(i%2?'#d52b1e':'#e7e2d6')+'" transform="rotate(20 60 60)"/>';break;
+      case"wedge":s+='<circle cx="84" cy="54" r="34" fill="#e7e2d6"/><path d="M0 80 L96 50 L0 30Z" fill="#d52b1e"/>';break;
+      case"stage":s+='<rect x="20" y="20" width="70" height="70" fill="none" stroke="#e7e2d6" stroke-width="6" transform="rotate(15 55 55)"/><path d="M10 110 L110 70" stroke="#d52b1e" stroke-width="10"/>';break;
+      case"hand":s+='<path d="M40 118 V60 Q40 52 48 52 Q56 52 56 60 V40 Q56 32 64 32 Q72 32 72 40 V46 Q72 38 80 38 Q88 38 88 46 V56 Q88 48 96 48 Q104 48 104 58 V92 Q104 118 78 118Z" fill="#d52b1e"/>';break;
+      case"film":s+='<circle cx="60" cy="60" r="46" fill="none" stroke="#e7e2d6" stroke-width="6"/><circle cx="60" cy="60" r="10" fill="#d52b1e"/>';for(var j=0;j<6;j++){var a=j/6*Math.PI*2;s+='<circle cx="'+(60+Math.cos(a)*28)+'" cy="'+(60+Math.sin(a)*28)+'" r="8" fill="#d52b1e"/>';}break;
+      case"book":s+='<rect x="20" y="16" width="80" height="96" fill="#e7e2d6"/><rect x="20" y="40" width="80" height="18" fill="#d52b1e"/><rect x="30" y="70" width="60" height="6" fill="#16120f"/>';break;
+      default:s+='<path d="M10 50 L70 20 V100 L10 70Z" fill="#d52b1e"/><path d="M78 40 L112 24 M80 60 L116 60 M78 80 L112 96" stroke="#e7e2d6" stroke-width="6"/>';
+    }
+    return s+'</svg>';
+  }
+  var bg=document.getElementById('bgrid');
+  B.forEach(function(b){var d=document.createElement('article');d.className='b';d.innerHTML=glyph(b[3])+'<div class="role">'+b[1]+'</div><h3>'+b[0]+'</h3><p>'+b[2]+'</p>';bg.appendChild(d);});
+
+  /* ---------- poster maker ---------- */
+  var LAYOUTS=[["wedge","Red wedge"],["mega","Megaphone"],["diag","Diagonal"],["orbit","Orbit"]];
+  var FIGS=[["worker","Worker"],["face","Shouting face"],["factory","Factory"],["none","None"]];
+  var INKS=[["classic","Red / black"],["ochre","Ochre"],["night","Night"]];
+  var PRESETS=[["Books","in every field","Lengiz · 1924"],["Строй","the new world","VKhUTEMAS · 1925"],["Electrify","the whole country","Goelro plan · 1920"],["Read!","and you will know everything","Mayakovsky"],["Workers","of all lands, unite","Klutsis · 1922"],["Кино","the eye of the century","Kino-Eye · 1924"]];
+  var st={layout:"mega",fig:"face",ink:"classic",seed:7};
+  try{var sv=JSON.parse(localStorage.getItem('redwedge')||'null');if(sv){['layout','fig','ink'].forEach(function(k){if(sv[k])st[k]=sv[k];});['sl1','sl2','sl3'].forEach(function(k){if(typeof sv[k]==='string')document.getElementById(k).value=sv[k];});}}catch(e){}
+  function opts(id,list,key){
+    var g=document.getElementById(id);
+    list.forEach(function(o){var b=document.createElement('button');b.type='button';b.className='opt';b.id=key+'-'+o[0];b.textContent=o[1];b.addEventListener('click',function(){st[key]=o[0];render();});g.appendChild(b);});
+  }
+  opts('layouts',LAYOUTS,'layout');opts('figs',FIGS,'fig');opts('inks',INKS,'ink');
+  var pr=document.getElementById('presets');
+  PRESETS.forEach(function(p,i){var b=document.createElement('button');b.type='button';b.id='preset-'+i;b.textContent=p[0];b.addEventListener('click',function(){document.getElementById('sl1').value=p[0];document.getElementById('sl2').value=p[1];document.getElementById('sl3').value=p[2];render();});pr.appendChild(b);});
+  var svg=document.getElementById('poster');
+  function pal(){return st.ink==="ochre"?{bg:"#e0cfa0",a:"#d52b1e",k:"#16120f",l:"#e0cfa0"}:st.ink==="night"?{bg:"#16120f",a:"#d52b1e",k:"#e7e2d6",l:"#16120f"}:{bg:"#e7e2d6",a:"#d52b1e",k:"#16120f",l:"#e7e2d6"};}
+  function fit(t,maxW,maxS){var s=maxS;t.setAttribute('font-size',s);var w=0;try{w=t.getComputedTextLength();}catch(e){w=t.textContent.length*s*.5;}if(w>maxW){s=Math.max(14,s*maxW/w);t.setAttribute('font-size',s.toFixed(1));}return s;}
+  function txt(p,str,x,y,size,fill,anchor,weight,extra){var a={x:x,y:y,'font-family':'Oswald, Bebas Neue, Impact, Arial Narrow, sans-serif','font-weight':weight||700,'font-size':size,fill:fill,'text-anchor':anchor||'start','letter-spacing':'.01em'};for(var k in extra)a[k]=extra[k];var t=el('text',a,p);t.textContent=str;return t;}
+  function halftone(defs,id,color,cx,cy,r){
+    var pat=el('pattern',{id:id,width:8,height:8,patternUnits:'userSpaceOnUse',patternTransform:'rotate(30)'},defs);el('circle',{cx:4,cy:4,r:2.6,fill:color},pat);
+    var m=el('radialGradient',{id:id+'g',cx:cx,cy:cy,r:r,gradientUnits:'userSpaceOnUse'},defs);el('stop',{offset:0,'stop-color':'#fff'},m);el('stop',{offset:1,'stop-color':'#555'},m);
+  }
+  function figure(g,defs,P){
+    if(st.fig==="none")return;
+    halftone(defs,'ht',P.k,300,500,300);
+    var f=el('g',{class:'anim'},g);
+    if(st.fig==="worker"){
+      // worker with raised arm, halftone fill
+      el('path',{d:'M250 840 L262 620 C 230 600 210 560 214 520 L 250 470 C 262 456 290 450 314 456 L 356 330 L 392 336 L 360 480 C 380 520 384 580 360 620 L 372 840Z',fill:'url(#ht)'},f);
+      el('circle',{cx:282,cy:420,r:40,fill:'url(#ht)'},f);
+      el('path',{d:'M356 330 L392 336 L398 290 L360 282Z',fill:P.a},f);
+    }else if(st.fig==="face"){
+      // shouting face in profile + hand at mouth
+      el('path',{d:'M120 840 L140 700 C 90 660 70 590 86 530 C 100 470 150 430 210 430 C 270 430 300 470 306 510 L 330 548 L 312 560 L 322 590 L 304 598 L 312 626 C 296 650 262 660 236 662 L 244 840Z',fill:'url(#ht)'},f);
+      el('path',{d:'M318 560 L360 548 L366 616 L322 604Z',fill:P.k},f);
+      el('path',{d:'M300 520 C 318 530 330 540 340 556',stroke:P.l,'stroke-width':3,fill:'none'},f);
+    }else if(st.fig==="factory"){
+      el('path',{d:'M40 840 V640 L130 700 V640 L220 700 V640 L310 700 V600 H340 V420 H372 V600 H400 V480 H428 V700 H560 V840Z',fill:'url(#ht)'},f);
+      for(var i=0;i<4;i++)el('circle',{cx:356+i*18,cy:400-i*34,r:16+i*8,fill:P.k,opacity:.18+i*.08},f);
+    }
+  }
+  function render(){
+    var P=pal(),s1=document.getElementById('sl1').value||' ',s2=document.getElementById('sl2').value||' ',s3=document.getElementById('sl3').value||' ';
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var defs=el('defs',{},svg);
+    el('rect',{width:600,height:840,fill:P.bg},svg);
+    var g=el('g',{},svg);
+    var r=st.seed;function rnd(){r=(r*9301+49297)%233280;return r/233280;}
+    if(st.layout==="wedge"){
+      el('circle',{cx:380,cy:300,r:190,fill:P.k,class:'anim'},g);
+      figure(g,defs,P);
+      el('path',{d:'M-10 470 L520 250 L-10 330Z',fill:P.a,class:'anim'},g);
+      var t1=txt(g,s1.toUpperCase(),30,150,120,P.k,'start',700,{transform:'rotate(-10 30 150)'});fit(t1,470,150);
+      var t2=txt(g,s2.toUpperCase(),40,418,44,P.l,'start',600,{transform:'rotate(-22.5 40 418)'});fit(t2,440,52);
+      el('rect',{x:0,y:760,width:600,height:80,fill:P.k},g);
+      txt(g,s3.toUpperCase(),30,810,26,P.bg,'start',600,{'letter-spacing':'.2em'});
+    }else if(st.layout==="mega"){
+      figure(g,defs,P);
+      // cone of lines from mouth
+      var ox=340,oy=580;
+      el('path',{d:'M'+ox+' '+oy+' L600 250 L600 520Z',fill:P.a,class:'anim'},g);
+      var cone=el('g',{transform:'rotate(-33 '+ox+' '+oy+')'},g);
+      var t=txt(cone,s1.toUpperCase(),ox+70,oy,80,P.l,'start',700);var fs=fit(t,210,96);t.setAttribute('y',(oy+fs*.36).toFixed(1));
+      var t2b=txt(g,s2.toUpperCase(),ox+20,oy+40,30,P.k,'start',600,{transform:'rotate(-13 '+ox+' '+oy+')'});fit(t2b,215,34);
+      el('rect',{x:30,y:40,width:18,height:300,fill:P.k},g);
+      el('rect',{x:30,y:40,width:260,height:18,fill:P.k},g);
+      el('circle',{cx:470,cy:130,r:70,fill:'none',stroke:P.k,'stroke-width':14},g);
+      var t3=txt(g,s3.toUpperCase(),70,110,26,P.k,'start',600,{'letter-spacing':'.18em'});fit(t3,210,26);
+    }else if(st.layout==="diag"){
+      el('circle',{cx:470,cy:150,r:110,fill:P.a,class:'anim'},g);
+      figure(g,defs,P);
+      var band=el('g',{transform:'rotate(-30 300 420)'},g);
+      el('rect',{x:-200,y:340,width:1000,height:150,fill:P.k,class:'anim'},band);
+      el('rect',{x:-200,y:500,width:1000,height:16,fill:P.a},band);
+      var d1=txt(band,s1.toUpperCase(),20,455,110,P.bg,'start',700);fit(d1,620,120);
+      var d2=txt(band,s2.toUpperCase(),40,548,34,P.k,'start',600);fit(d2,560,40);
+      txt(g,s3.toUpperCase(),30,70,24,P.k,'start',600,{'letter-spacing':'.2em'});
+    }else{ // orbit
+      el('circle',{cx:300,cy:360,r:250,fill:P.a,class:'anim'},g);
+      el('circle',{cx:300,cy:360,r:170,fill:P.bg},g);
+      var path=el('path',{id:'orb',d:'M300 360 m-210 0 a210 210 0 1 1 420 0 a210 210 0 1 1 -420 0',fill:'none'},defs);
+      var tp=el('text',{'font-family':'Oswald, Impact, sans-serif','font-weight':600,'font-size':30,fill:P.bg,'letter-spacing':'.3em'},g);
+      var tpp=el('textPath',{href:'#orb',startOffset:'0'},tp);var rep=(s2.toUpperCase()+' ★ ');tpp.textContent=rep.repeat(Math.max(1,Math.ceil(60/rep.length)));
+      figure(g,defs,P);
+      var o1=txt(g,s1.toUpperCase(),300,390,90,P.k,'middle',700);fit(o1,300,110);
+      el('path',{d:'M0 700 L600 610 V660 L0 750Z',fill:P.k},g);
+      txt(g,s3.toUpperCase(),40,800,26,P.k,'start',600,{'letter-spacing':'.2em'});
+    }
+    // registration marks
+    el('rect',{x:560,y:800,width:14,height:14,fill:P.a},svg);el('rect',{x:540,y:800,width:14,height:14,fill:P.k},svg);
+    // ui
+    [['layouts','layout'],['figs','fig'],['inks','ink']].forEach(function(p){Array.prototype.forEach.call(document.getElementById(p[0]).children,function(b){b.setAttribute('aria-pressed',b.id===p[1]+'-'+st[p[1]]?'true':'false');});});
+    svg.setAttribute('aria-label','Agit-poster: '+s1+' — '+s2+'. '+s3);
+    try{localStorage.setItem('redwedge',JSON.stringify({layout:st.layout,fig:st.fig,ink:st.ink,sl1:document.getElementById('sl1').value,sl2:document.getElementById('sl2').value,sl3:document.getElementById('sl3').value}));}catch(e){}
+  }
+  ['sl1','sl2','sl3'].forEach(function(id){document.getElementById(id).addEventListener('input',render);});
+  document.getElementById('shake').addEventListener('click',function(){
+    var L=LAYOUTS.map(function(x){return x[0];}),F=FIGS.map(function(x){return x[0];});
+    var nl=st.layout;while(nl===st.layout)nl=L[Math.floor(Math.random()*L.length)];
+    st.layout=nl;st.fig=F[Math.floor(Math.random()*3)];st.seed=Math.floor(Math.random()*9999);render();
+  });
+  render();
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>

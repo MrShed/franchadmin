@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Folio Reader</title>
+<meta name="description" content="An e-reader with a real page curl you can drag by the corner, reading the opening of H. G. Wells's The Time Machine, with typeface, size, spacing, theme and turn-style settings.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ui:"Instrument Sans","Helvetica Neue",Arial,system-ui,sans-serif;
+  --desk:#2b2d31;
+}
+*{box-sizing:border-box}
+html,body{margin:0; height:100%}
+body{background:var(--desk); font-family:var(--ui); color:#e8e6e1; overflow:hidden;
+  background-image:radial-gradient(1200px 700px at 30% 10%, #3a3d43, transparent 60%), repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 2px, transparent 2px 4px)}
+:focus-visible{outline:2px solid #7aa7ff; outline-offset:2px}
+.device{--paper:#eeede8; --ink:#1f1f1d; --mute:#77756f; --edge:#d9d7d0; --chrome:#eeede8; --chrome-ink:#3c3b38;
+  --ff:"Literata","Iowan Old Style",Georgia,serif; --fs:18px; --lh:1.6; --just:justify;
+  position:fixed; inset:0; margin:auto; width:min(640px, calc(100vw - 32px)); height:min(900px, calc(100vh - 40px)); height:min(900px, calc(100dvh - 40px));
+  border-radius:30px; padding:18px 18px 18px; background:linear-gradient(160deg,#3b3d42,#18191b 60%,#26282c); box-shadow:0 50px 90px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px #111;
+  display:flex; flex-direction:column}
+.device[data-theme="sepia"]{--paper:#f1e7d3; --ink:#3b2f22; --mute:#8b7a62; --edge:#ddcfb3; --chrome:#f1e7d3; --chrome-ink:#4a3c2c}
+.device[data-theme="night"]{--paper:#141517; --ink:#cfccc4; --mute:#7a7872; --edge:#232427; --chrome:#141517; --chrome-ink:#bdbab2}
+.device[data-theme="slate"]{--paper:#dfe4e6; --ink:#1b2a33; --mute:#667983; --edge:#c7d0d4; --chrome:#dfe4e6; --chrome-ink:#26363f}
+.screen{flex:1; display:flex; flex-direction:column; background:var(--chrome); border-radius:6px; overflow:hidden; position:relative; transition:background .4s}
+.bar{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; color:var(--chrome-ink); font-size:13px; transition:opacity .3s, color .4s; z-index:5; position:relative}
+.bar .title{font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; text-align:center}
+.bar .title small{font-weight:400; color:var(--mute)}
+.ib{background:none; border:1px solid transparent; color:var(--chrome-ink); font:500 13px var(--ui); padding:6px 10px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; text-decoration:none}
+.ib:hover{border-color:var(--edge)}
+.ib[aria-expanded="true"]{background:var(--edge)}
+.ib svg{width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:1.6}
+.hide-chrome .bar{opacity:0}
+.hide-chrome .bar:focus-within{opacity:1}
+
+.viewport{flex:1; position:relative; overflow:hidden; cursor:default; touch-action:none; user-select:none; -webkit-user-select:none}
+.page{position:absolute; inset:0; background:var(--paper); color:var(--ink); padding:34px 44px 40px; transition:background .4s, color .4s}
+.page .run{position:absolute; top:12px; left:44px; right:44px; display:flex; justify-content:space-between; font:italic 12px var(--ff); color:var(--mute); letter-spacing:.02em}
+.page .folio{position:absolute; bottom:14px; left:0; right:0; text-align:center; font:12px var(--ui); color:var(--mute); letter-spacing:.1em}
+.fw{width:100%; height:100%; overflow:hidden; position:relative}
+.flow{height:100%; column-fill:auto; font-family:var(--ff); font-size:var(--fs); line-height:var(--lh); text-align:var(--just); hyphens:auto; -webkit-hyphens:auto; will-change:transform}
+.flow p{margin:0; text-indent:1.4em; orphans:2; widows:2}
+.flow p.first{text-indent:0}
+.flow p.first::first-letter{float:left; font-size:3.3em; line-height:.84; padding:.06em .08em 0 0; font-weight:600}
+.flow h2{break-before:column; margin:0 0 .3em; padding-top:18%; font-weight:400; font-size:1em; text-align:center; letter-spacing:.3em; text-transform:uppercase; color:var(--mute)}
+.flow h2:first-child{break-before:auto}
+.flow h3{margin:0 0 1.6em; font-weight:400; font-style:italic; font-size:1.8em; text-align:center; line-height:1.2}
+.flow .orn{text-align:center; margin:1em 0; color:var(--mute); letter-spacing:.6em; text-indent:0}
+.flow .cover{break-after:column; text-align:center; padding-top:22%; text-indent:0}
+.flow .cover .t{font-size:2.3em; line-height:1.05; font-weight:400; margin:0 0 .4em; font-style:italic}
+.flow .cover .a{font-size:.8em; letter-spacing:.34em; text-transform:uppercase; color:var(--mute)}
+.flow .cover .n{font-size:.78em; color:var(--mute); margin-top:3em; line-height:1.6; font-style:italic; text-indent:0; padding:0 8%}
+.top-page{z-index:3}
+.under{z-index:1}
+.nshade{position:absolute; inset:0; z-index:2; pointer-events:none}
+.flapwrap{position:absolute; inset:0; z-index:4; pointer-events:none; filter:drop-shadow(-6px 4px 10px rgba(0,0,0,.28))}
+.flap{position:absolute; left:0; top:0; transform-origin:0 0; background:var(--paper); display:none}
+.flap::after{content:""; position:absolute; inset:0; background:var(--paper); opacity:.0}
+.flash{position:absolute; inset:0; z-index:6; pointer-events:none; background:#000; opacity:0}
+.hint-corner{position:absolute; right:0; bottom:0; width:40px; height:40px; z-index:5; pointer-events:none; background:linear-gradient(135deg, transparent 50%, rgba(0,0,0,.08) 50%, rgba(0,0,0,.02) 70%); opacity:.9; transition:opacity .3s}
+
+.foot{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:8px 16px 12px; color:var(--mute); font-size:12px}
+#scrub{-webkit-appearance:none; appearance:none; width:100%; height:18px; background:transparent; cursor:pointer}
+#scrub::-webkit-slider-runnable-track{height:3px; background:linear-gradient(90deg, var(--chrome-ink) var(--p,0%), var(--edge) var(--p,0%)); border-radius:2px}
+#scrub::-moz-range-track{height:3px; background:var(--edge)}
+#scrub::-moz-range-progress{height:3px; background:var(--chrome-ink)}
+#scrub::-webkit-slider-thumb{-webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--chrome-ink); margin-top:-5.5px; border:3px solid var(--chrome)}
+#scrub::-moz-range-thumb{width:10px; height:10px; border-radius:50%; background:var(--chrome-ink); border:3px solid var(--chrome)}
+
+.pop{position:absolute; top:52px; right:12px; width:300px; max-width:calc(100% - 24px); background:var(--chrome); color:var(--chrome-ink); border:1px solid var(--edge); border-radius:14px; padding:16px; z-index:20;
+  box-shadow:0 20px 40px -12px rgba(0,0,0,.35); transform-origin:top right; transition:transform .25s cubic-bezier(.2,.9,.3,1.2), opacity .2s}
+.pop[hidden]{display:block; opacity:0; transform:scale(.92); pointer-events:none; visibility:hidden}
+.pop h4{margin:0 0 8px; font:600 11px var(--ui); letter-spacing:.14em; text-transform:uppercase; color:var(--mute)}
+.pop .grp{margin-bottom:14px}
+.seg{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:6px}
+.seg button{border:1px solid var(--edge); background:none; color:var(--chrome-ink); border-radius:9px; padding:8px 4px; cursor:pointer; font:500 13px var(--ui)}
+.seg button[aria-pressed="true"]{border-color:var(--chrome-ink); box-shadow:inset 0 0 0 1px var(--chrome-ink)}
+.seg .ff1{font-family:"Literata",Georgia,serif; font-size:16px} .seg .ff2{font-family:"EB Garamond",Garamond,serif; font-size:17px} .seg .ff3{font-family:"Atkinson Hyperlegible",Verdana,sans-serif; font-size:15px}
+.sizer{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center}
+.sizer button{width:36px; height:36px; border-radius:50%; border:1px solid var(--edge); background:none; color:var(--chrome-ink); cursor:pointer; font-family:Georgia,serif}
+#fsRange{width:100%}
+.sw{width:100%; aspect-ratio:1.4; border-radius:9px; border:1px solid rgba(0,0,0,.15); cursor:pointer; font:500 11px var(--ui); display:flex; align-items:flex-end; justify-content:center; padding-bottom:4px}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--chrome), 0 0 0 4px var(--chrome-ink)}
+.toc{position:absolute; top:0; bottom:0; left:0; width:min(320px, 86%); background:var(--chrome); color:var(--chrome-ink); z-index:21; padding:22px 18px; transform:translateX(-102%); transition:transform .35s cubic-bezier(.2,.9,.2,1), visibility .35s; border-right:1px solid var(--edge); visibility:hidden}
+.toc.open{transform:none; visibility:visible; box-shadow:20px 0 40px -20px rgba(0,0,0,.3)}
+.toc h4{margin:0 0 4px; font:italic 22px var(--ff)}
+.toc p{margin:0 0 18px; color:var(--mute); font-size:12.5px; line-height:1.5}
+.toc ol{list-style:none; margin:0; padding:0}
+.toc button{width:100%; display:flex; justify-content:space-between; gap:12px; text-align:left; background:none; border:0; border-top:1px solid var(--edge); padding:12px 2px; color:var(--chrome-ink); font:15px var(--ff); cursor:pointer}
+.toc button span{color:var(--mute); font:12px var(--ui)}
+.toc button[aria-current="true"]{font-weight:600}
+.scrim{position:absolute; inset:0; z-index:19; background:rgba(0,0,0,.2); opacity:0; pointer-events:none; transition:opacity .3s}
+.scrim.on{opacity:1; pointer-events:auto}
+.measure{position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:0}
+.toast{position:absolute; left:50%; bottom:64px; transform:translateX(-50%); background:var(--chrome-ink); color:var(--chrome); font-size:12px; padding:7px 12px; border-radius:20px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:22; white-space:nowrap}
+@media (max-width:560px){
+  .device{width:100vw; height:100vh; height:100dvh; border-radius:0; padding:0; box-shadow:none; background:var(--chrome)}
+  .screen{border-radius:0; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom)}
+  .page{padding:30px 22px 36px} .page .run{left:22px; right:22px}
+  .ib .lbl{display:none}
+  .bar{padding:8px 10px}
+}
+@media (prefers-reduced-motion:reduce){ .pop,.toc,.scrim,.bar,.page{transition:none} }
+</style>
+</head>
+<body>
+<div class="device" id="device" data-theme="paper">
+  <div class="screen" id="screen">
+    <div class="bar" id="topbar">
+      <a class="ib" id="backLink" href="index.html" aria-label="Back to showcase"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span class="lbl">Showcase</span></a>
+      <button class="ib" id="tocBtn" aria-expanded="false" aria-controls="toc"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/></svg><span class="lbl">Contents</span></button>
+      <div class="title">The Time Machine <small>· H. G. Wells</small></div>
+      <button class="ib" id="aaBtn" aria-expanded="false" aria-controls="pop" aria-label="Reading settings"><span style="font-family:Georgia,serif;font-size:15px">A</span><span style="font-family:Georgia,serif;font-size:19px;margin-left:-4px">a</span></button>
+    </div>
+    <div class="viewport" id="vp" aria-live="polite" aria-label="Book page. Use arrow keys or drag the page corner to turn.">
+      <div class="page under" id="pgN"><div class="run"><span></span><span></span></div><div class="fw"><div class="flow"></div></div><div class="folio"></div></div>
+      <div class="nshade" id="nShade"></div>
+      <div class="page top-page" id="pgP"><div class="run"><span></span><span></span></div><div class="fw"><div class="flow"></div></div><div class="folio"></div></div>
+      <div class="flapwrap"><div class="flap" id="flap"></div></div>
+      <div class="hint-corner" id="hintCorner"></div>
+      <div class="flash" id="flash"></div>
+    </div>
+    <div class="foot" id="foot">
+      <span id="pgLabel">1 / 1</span>
+      <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Book position">
+      <span id="leftLabel">— min left</span>
+    </div>
+
+    <div class="scrim" id="scrim"></div>
+    <nav class="toc" id="toc" aria-label="Contents">
+      <h4>The Time Machine</h4>
+      <p>An Invention, by H. G. Wells. First published by William Heinemann, London, 1895. The opening chapters, in the public domain.</p>
+      <ol id="tocList"></ol>
+    </nav>
+    <div class="pop" id="pop" hidden role="dialog" aria-label="Reading settings">
+      <div class="grp"><h4>Typeface</h4><div class="seg">
+        <button class="ff1" id="ffLit" aria-pressed="true">Literata</button><button class="ff2" id="ffGar" aria-pressed="false">Garamond</button><button class="ff3" id="ffAtk" aria-pressed="false">Atkinson</button></div></div>
+      <div class="grp"><h4>Size</h4><div class="sizer"><button id="fsDown" aria-label="Smaller text" style="font-size:13px">A</button><input id="fsRange" type="range" min="14" max="26" step="1" value="18" aria-label="Font size"><button id="fsUp" aria-label="Larger text" style="font-size:20px">A</button></div></div>
+      <div class="grp"><h4>Spacing</h4><div class="seg"><button id="lhTight" aria-pressed="false">Compact</button><button id="lhNorm" aria-pressed="true">Book</button><button id="lhLoose" aria-pressed="false">Airy</button></div></div>
+      <div class="grp"><h4>Theme</h4><div class="seg">
+        <button class="sw" id="thPaper" aria-pressed="true" style="background:#eeede8;color:#1f1f1d">Paper</button><button class="sw" id="thSepia" aria-pressed="false" style="background:#f1e7d3;color:#3b2f22">Sepia</button>
+        <button class="sw" id="thSlate" aria-pressed="false" style="background:#dfe4e6;color:#1b2a33">Slate</button><button class="sw" id="thNight" aria-pressed="false" style="background:#141517;color:#cfccc4">Night</button></div></div>
+      <div class="grp" style="margin-bottom:0"><h4>Page turn</h4><div class="seg"><button id="tCurl" aria-pressed="true">Curl</button><button id="tInk" aria-pressed="false">E-ink</button><button id="tJust" aria-pressed="true">Justify</button></div></div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+<div class="measure" id="measure"><div class="page"><div class="fw"><div class="flow"></div></div></div></div>
+
+<template id="book">
+<div class="cover"><div class="t">The Time Machine</div><div class="a">H. G. Wells</div><div class="n">"I have been at work upon this geometry of Four Dimensions for some time. Some of my results are curious."</div></div>
+<h2 data-ch="1">Chapter I</h2><h3>Introduction</h3>
+<p class="first">The Time Traveller (for so it will be convenient to speak of him) was expounding a recondite matter to us. His grey eyes shone and twinkled, and his usually pale face was flushed and animated. The fire burned brightly, and the soft radiance of the incandescent lights in the lilies of silver caught the bubbles that flashed and passed in our glasses. Our chairs, being his patents, embraced and caressed us rather than submitted to be sat upon, and there was that luxurious after-dinner atmosphere when thought roams gracefully free of the trammels of precision. And he put it to us in this way—marking the points with a lean forefinger—as we sat and lazily admired his earnestness over this new paradox (as we thought it) and his fecundity.</p>
+<p>"You must follow me carefully. I shall have to controvert one or two ideas that are almost universally accepted. The geometry, for instance, they taught you at school is founded on a misconception."</p>
+<p>"Is not that rather a large thing to expect us to begin upon?" said Filby, an argumentative person with red hair.</p>
+<p>"I do not mean to ask you to accept anything without reasonable ground for it. You will soon admit as much as I need from you. You know of course that a mathematical line, a line of thickness <i>nil</i>, has no real existence. They taught you that? Neither has a mathematical plane. These things are mere abstractions."</p>
+<p>"That is all right," said the Psychologist.</p>
+<p>"Nor, having only length, breadth, and thickness, can a cube have a real existence."</p>
+<p>"There I object," said Filby. "Of course a solid body may exist. All real things—"</p>
+<p>"So most people think. But wait a moment. Can an <i>instantaneous</i> cube exist?"</p>
+<p>"Don't follow you," said Filby.</p>
+<p>"Can a cube that does not last for any time at all, have a real existence?"</p>
+<p>Filby became pensive. "Clearly," the Time Traveller proceeded, "any real body must have extension in <i>four</i> directions: it must have Length, Breadth, Thickness, and—Duration. But through a natural infirmity of the flesh, which I will explain to you in a moment, we incline to overlook this fact. There are really four dimensions, three which we call the three planes of Space, and a fourth, Time. There is, however, a tendency to draw an unreal distinction between the former three dimensions and the latter, because it happens that our consciousness moves intermittently in one direction along the latter from the beginning to the end of our lives."</p>
+<p>"That," said a very young man, making spasmodic efforts to relight his cigar over the lamp; "that . . . very clear indeed."</p>
+<p>"Now, it is very remarkable that this is so extensively overlooked," continued the Time Traveller, with a slight accession of cheerfulness. "Really this is what is meant by the Fourth Dimension, though some people who talk about the Fourth Dimension do not know they mean it. It is only another way of looking at Time. <i>There is no difference between Time and any of the three dimensions of Space except that our consciousness moves along it.</i> But some foolish people have got hold of the wrong side of that idea. You have all heard what they have to say about this Fourth Dimension?"</p>
+<p>"<i>I</i> have not," said the Provincial Mayor.</p>
+<p>"It is simply this. That Space, as our mathematicians have it, is spoken of as having three dimensions, which one may call Length, Breadth, and Thickness, and is always definable by reference to three planes, each at right angles to the others. But some philosophical people have been asking why <i>three</i> dimensions particularly—why not another direction at right angles to the other three?—and have even tried to construct a Four-Dimensional geometry. Professor Simon Newcomb was expounding this to the New York Mathematical Society only a month or so ago. You know how on a flat surface, which has only two dimensions, we can represent a figure of a three-dimensional solid, and similarly they think that by models of three dimensions they could represent one of four—if they could master the perspective of the thing. See?"</p>
+<p>"I think so," murmured the Provincial Mayor; and, knitting his brows, he lapsed into an introspective state, his lips moving as one who repeats mystic words. "Yes, I think I see it now," he said after some time, brightening in a quite transitory manner.</p>
+<p>"Well, I do not mind telling you I have been at work upon this geometry of Four Dimensions for some time. Some of my results are curious. For instance, here is a portrait of a man at eight years old, another at fifteen, another at seventeen, another at twenty-three, and so on. All these are evidently sections, as it were, Three-Dimensional representations of his Four-Dimensioned being, which is a fixed and unalterable thing.</p>
+<p>"Scientific people," proceeded the Time Traveller, after the pause required for the proper assimilation of this, "know very well that Time is only a kind of Space. Here is a popular scientific diagram, a weather record. This line I trace with my finger shows the movement of the barometer. Yesterday it was so high, yesterday night it fell, then this morning it rose again, and so gently upward to here. Surely the mercury did not trace this line in any of the dimensions of Space generally recognised? But certainly it traced such a line, and that line, therefore, we must conclude, was along the Time-Dimension."</p>
+<p>"But," said the Medical Man, staring hard at a coal in the fire, "if Time is really only a fourth dimension of Space, why is it, and why has it always been, regarded as something different? And why cannot we move in Time as we move about in the other dimensions of Space?"</p>
+<p>The Time Traveller smiled. "Are you so sure we can move freely in Space? Right and left we can go, backward and forward freely enough, and men always have done so. I admit we move freely in two dimensions. But how about up and down? Gravitation limits us there."</p>
+<p>"Not exactly," said the Medical Man. "There are balloons."</p>
+<p>"But before the balloons, save for spasmodic jumping and the inequalities of the surface, man had no freedom of vertical movement."</p>
+<p>"Still they could move a little up and down," said the Medical Man.</p>
+<p>"Easier, far easier down than up."</p>
+<p>"And you cannot move at all in Time, you cannot get away from the present moment."</p>
+<p>"My dear sir, that is just where you are wrong. That is just where the whole world has gone wrong. We are always getting away from the present moment. Our mental existences, which are immaterial and have no dimensions, are passing along the Time-Dimension with a uniform velocity from the cradle to the grave. Just as we should travel <i>down</i> if we began our existence fifty miles above the earth's surface."</p>
+<p>"But the great difficulty is this," interrupted the Psychologist. "You <i>can</i> move about in all directions of Space, but you cannot move about in Time."</p>
+<p>"That is the germ of my great discovery. But you are wrong to say that we cannot move about in Time. For instance, if I am recalling an incident very vividly I go back to the instant of its occurrence: I become absent-minded, as you say. I jump back for a moment. Of course we have no means of staying back for any length of Time, any more than a savage or an animal has of staying six feet above the ground. But a civilised man is better off than the savage in this respect. He can go up against gravitation in a balloon, and why should he not hope that ultimately he may be able to stop or accelerate his drift along the Time-Dimension, or even turn about and travel the other way?"</p>
+<p>"Oh, <i>this</i>," began Filby, "is all—"</p>
+<p>"Why not?" said the Time Traveller.</p>
+<p>"It's against reason," said Filby.</p>
+<p>"What reason?" said the Time Traveller.</p>
+<p>"You can show black is white by argument," said Filby, "but you will never convince me."</p>
+<p>"Possibly not," said the Time Traveller. "But now you begin to see the object of my investigations into the geometry of Four Dimensions. Long ago I had a vague inkling of a machine—"</p>
+<p>"To travel through Time!" exclaimed the Very Young Man.</p>
+<p>"That shall travel indifferently in any direction of Space and Time, as the driver determines."</p>
+<p>Filby contented himself with laughter.</p>
+<p>"But I have experimental verification," said the Time Traveller.</p>
+<p>"It would be remarkably convenient for the historian," the Psychologist suggested. "One might travel back and verify the accepted account of the Battle of Hastings, for instance!"</p>
+<p>"Don't you think you would attract attention?" said the Medical Man. "Our ancestors had no great tolerance for anachronisms."</p>
+<p>"One might get one's Greek from the very lips of Homer and Plato," the Very Young Man thought.</p>
+<p>"In which case they would certainly plough you for the Little-go. The German scholars have improved Greek so much."</p>
+<p>"Then there is the future," said the Very Young Man. "Just think! One might invest all one's money, leave it to accumulate at interest, and hurry on ahead!"</p>
+<p>"To discover a society," said I, "erected on a strictly communistic basis."</p>
+<p>"Of all the wild extravagant theories!" began the Psychologist.</p>
+<p>"Yes, so it seemed to me, and so I never talked of it until—"</p>
+<p>"Experimental verification!" cried I. "You are going to verify <i>that</i>?"</p>
+<p>"The experiment!" cried Filby, who was getting brain-weary.</p>
+<p>"Let's see your experiment anyhow," said the Psychologist, "though it's all humbug, you know."</p>
+<p>The Time Traveller smiled round at us. Then, still smiling faintly, and with his hands deep in his trousers pockets, he walked slowly out of the room, and we heard his slippers shuffling down the long passage to his laboratory.</p>
+<p>The Psychologist looked at us. "I wonder what he's got?"</p>
+<p>"Some sleight-of-hand trick or other," said the Medical Man, and Filby tried to tell us about a conjuror he had seen at Burslem; but before he had finished his preface the Time Traveller came back, and Filby's anecdote collapsed.</p>
+<p>The thing the Time Traveller held in his hand was a glittering metallic framework, scarcely larger than a small clock, and very delicately made. There was ivory in it, and some transparent crystalline substance. And now I must be explicit, for this that follows—unless his explanation is to be accepted—is an absolutely unaccountable thing. He took one of the small octagonal tables that were scattered about the room, and set it in front of the fire, with two legs on the hearthrug. On this table he placed the mechanism. Then he drew up a chair, and sat down. The only other object on the table was a small shaded lamp, the bright light of which fell upon the model. There were also perhaps a dozen candles about, two in brass candlesticks upon the mantel and several in sconces, so that the room was brilliantly illuminated. I sat in a low arm-chair nearest the fire, and I drew this forward so as to be almost between the Time Traveller and the fireplace. Filby sat behind him, looking over his shoulder. The Medical Man and the Provincial Mayor watched him in profile from the right, the Psychologist from the left. The Very Young Man stood behind the Psychologist. We were all on the alert. It appears incredible to me that any kind of trick, however subtly conceived and however adroitly done, could have been played upon us under these conditions.</p>
+<p>The Time Traveller looked at us, and then at the mechanism. "Well?" said the Psychologist.</p>
+<p>"This little affair," said the Time Traveller, resting his elbows upon the table and pressing his hands together above the apparatus, "is only a model. It is my plan for a machine to travel through time. You will notice that it looks singularly askew, and that there is an odd twinkling appearance about this bar, as though it was in some way unreal." He pointed to the part with his finger. "Also, here is one little white lever, and here is another."</p>
+<p>The Medical Man got up out of his chair and peered into the thing. "It's beautifully made," he said.</p>
+<p>"It took two years to make," retorted the Time Traveller. Then, when we had all imitated the action of the Medical Man, he said: "Now I want you clearly to understand that this lever, being pressed over, sends the machine gliding into the future, and this other reverses the motion. This saddle represents the seat of a time traveller. Presently I am going to press the lever, and off the machine will go. It will vanish, pass into future Time, and disappear. Have a good look at the thing. Look at the table too, and satisfy yourselves there is no trickery. I don't want to waste this model, and then be told I'm a quack."</p>
+<p>There was a minute's pause perhaps. The Psychologist seemed about to speak to me, but changed his mind. Then the Time Traveller put forth his finger towards the lever. "No," he said suddenly. "Lend me your hand." And turning to the Psychologist, he took that individual's hand in his own and told him to put out his forefinger. So that it was the Psychologist himself who sent forth the model Time Machine on its interminable voyage. We all saw the lever turn. I am absolutely certain there was no trickery. There was a breath of wind, and the lamp flame jumped. One of the candles on the mantel was blown out, and the little machine suddenly swung round, became indistinct, was seen as a ghost for a second perhaps, as an eddy of faintly glittering brass and ivory; and it was gone—vanished! Save for the lamp the table was bare.</p>
+<p>Everyone was silent for a minute. Then Filby said he was damned.</p>
+<p>The Psychologist recovered from his stupor, and suddenly looked under the table. At that the Time Traveller laughed cheerfully. "Well?" he said, with a reminiscence of the Psychologist. Then, getting up, he went to the tobacco jar on the mantel, and with his back to us began to fill his pipe.</p>
+<p>We stared at each other. "Look here," said the Medical Man, "are you in earnest about this? Do you seriously believe that that machine has travelled into time?"</p>
+<p>"Certainly," said the Time Traveller, stooping to light a spill at the fire. Then he turned, lighting his pipe, to look at the Psychologist's face. (The Psychologist, to show that he was not unhinged, helped himself to a cigar and tried to light it uncut.) "What is more, I have a big machine nearly finished in there"—he indicated the laboratory—"and when that is put together I mean to have a journey on my own account."</p>
+<p>"You mean to say that that machine has travelled into the future?" said Filby.</p>
+<p>"Into the future or the past—I don't, for certain, know which."</p>
+<p>After an interval the Psychologist had an inspiration. "It must have gone into the past if it has gone anywhere," he said.</p>
+<p>"Why?" said the Time Traveller.</p>
+<p>"Because I presume that it has not moved in space, and if it travelled into the future it would still be here all this time, since it must have travelled through this time."</p>
+<p>"But," said I, "If it travelled into the past it would have been visible when we came first into this room; and last Thursday when we were here; and the Thursday before that; and so forth!"</p>
+<p>"Serious objections," remarked the Provincial Mayor, with an air of impartiality, turning towards the Time Traveller.</p>
+<p>"Not a bit," said the Time Traveller, and, to the Psychologist: "You think. <i>You</i> can explain that. It's presentation below the threshold, you know, diluted presentation."</p>
+<p>"Of course," said the Psychologist, and reassured us. "That's a simple point of psychology. I should have thought of it. It's plain enough, and helps the paradox delightfully. We cannot see it, nor can we appreciate this machine, any more than we can the spoke of a wheel spinning, or a bullet flying through the air. If it is travelling through time fifty times or a hundred times faster than we are, if it gets through a minute while we get through a second, the impression it creates will of course be only one-fiftieth or one-hundredth of what it would make if it were not travelling in time. That's plain enough." He passed his hand through the space in which the machine had been. "You see?" he said, laughing.</p>
+<p>We sat and stared at the vacant table for a minute or so. Then the Time Traveller asked us what we thought of it all.</p>
+<p>"It sounds plausible enough to-night," said the Medical Man; "but wait until to-morrow. Wait for the common sense of the morning."</p>
+<p>"Would you like to see the Time Machine itself?" asked the Time Traveller. And therewith, taking the lamp in his hand, he led the way down the long, draughty corridor to his laboratory. I remember vividly the flickering light, his queer, broad head in silhouette, the dance of the shadows, how we all followed him, puzzled but incredulous, and how there in the laboratory we beheld a larger edition of the little mechanism which we had seen vanish from before our eyes. Parts were of nickel, parts of ivory, parts had certainly been filed or sawn out of rock crystal. The thing was generally complete, but the twisted crystalline bars lay unfinished upon the bench beside some sheets of drawings, and I took one up for a better look at it. Quartz it seemed to be.</p>
+<p>"Look here," said the Medical Man, "are you perfectly serious? Or is this a trick—like that ghost you showed us last Christmas?"</p>
+<p>"Upon that machine," said the Time Traveller, holding the lamp aloft, "I intend to explore time. Is that plain? I was never more serious in my life."</p>
+<p>None of us quite knew how to take it.</p>
+<p>I caught Filby's eye over the shoulder of the Medical Man, and he winked at me solemnly.</p>
+<h2 data-ch="2">Chapter II</h2><h3>The Machine</h3>
+<p class="first">I think that at that time none of us quite believed in the Time Machine. The fact is, the Time Traveller was one of those men who are too clever to be believed: you never felt that you saw all round him; you always suspected some subtle reserve, some ingenuity in ambush, behind his lucid frankness. Had Filby shown the model and explained the matter in the Time Traveller's words, we should have shown <i>him</i> far less scepticism. For we should have perceived his motives: a pork-butcher could understand Filby. But the Time Traveller had more than a touch of whim among his elements, and we distrusted him. Things that would have made the fame of a less clever man seemed tricks in his hands. It is a mistake to do things too easily. The serious people who took him seriously never felt quite sure of his deportment; they were somehow aware that trusting their reputations for judgment with him was like furnishing a nursery with eggshell china. So I don't think any of us said very much about time travelling in the interval between that Thursday and the next, though its odd potentialities ran, no doubt, in most of our minds: its plausibility, that is, its practical incredibleness, the curious possibilities of anachronism and of utter confusion it suggested. For my own part, I was particularly preoccupied with the trick of the model. That I remember discussing with the Medical Man, whom I met on Friday at the Linnæan. He said he had seen a similar thing at Tübingen, and laid considerable stress on the blowing out of the candle. But how the trick was done he could not explain.</p>
+<p class="orn">✻ ✻ ✻</p>
+<p style="text-indent:0; font-style:italic; color:var(--mute)">End of sample. The story continues the following Thursday, when the Time Traveller limps in late to his own dinner party, dusty and dishevelled, with a tale of the year Eight Hundred and Two Thousand Seven Hundred and One.</p>
+</template>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store = { get(k){ try{ return JSON.parse(localStorage.getItem('folio-'+k)); }catch(_){ return null; } }, set(k,v){ try{ localStorage.setItem('folio-'+k, JSON.stringify(v)); }catch(_){} } };
+
+/* ---------- content ---------- */
+function smart(html){ return html.replace(/(^|[\s(>— ])"/g, '$1“').replace(/"/g, '”').replace(/(^|[\s(>—])'/g, '$1‘').replace(/'/g, '’'); }
+const src = document.getElementById('book').innerHTML.split(/(<[^>]+>)/).map(part => part.startsWith('<') ? part : smart(part)).join('');
+// smart() is applied per text node; opening quotes after tags are handled by the '>' in the class above
+const BOOK = src;
+const flows = [...document.querySelectorAll('.flow')];
+flows.forEach(f => f.innerHTML = BOOK);
+const WORDS = BOOK.replace(/<[^>]+>/g,' ').split(/\s+/).filter(Boolean).length;
+
+/* ---------- settings ---------- */
+const dev = $('#device');
+const S = Object.assign({ ff:'lit', fs:18, lh:'norm', theme:'paper', turn:'curl', just:true, frac:0 }, store.get('s') || {});
+const FF = { lit:'"Literata","Iowan Old Style",Georgia,serif', gar:'"EB Garamond",Garamond,"Times New Roman",serif', atk:'"Atkinson Hyperlegible",Verdana,system-ui,sans-serif' };
+const LH = { tight:1.42, norm:1.6, loose:1.85 };
+function applyVars(){ dev.style.setProperty('--ff', FF[S.ff]); dev.style.setProperty('--fs', S.fs + 'px'); dev.style.setProperty('--lh', LH[S.lh]); dev.style.setProperty('--just', S.just ? 'justify' : 'left'); dev.dataset.theme = S.theme;
+  const pr = (id, on) => $(id).setAttribute('aria-pressed', on);
+  pr('#ffLit', S.ff==='lit'); pr('#ffGar', S.ff==='gar'); pr('#ffAtk', S.ff==='atk'); pr('#lhTight', S.lh==='tight'); pr('#lhNorm', S.lh==='norm'); pr('#lhLoose', S.lh==='loose');
+  pr('#thPaper', S.theme==='paper'); pr('#thSepia', S.theme==='sepia'); pr('#thSlate', S.theme==='slate'); pr('#thNight', S.theme==='night');
+  pr('#tCurl', S.turn==='curl'); pr('#tInk', S.turn==='ink'); pr('#tJust', S.just); $('#fsRange').value = S.fs; }
+
+/* ---------- pagination ---------- */
+let W = 0, H = 0, CW = 0, CH = 0, GAP = 40, pages = 1, idx = 0, chapters = [];
+function paginate(keepFrac){
+  const frac = keepFrac !== undefined ? keepFrac : (pages > 1 ? idx/(pages-1) : 0);
+  const vp = $('#vp'); W = vp.clientWidth; H = vp.clientHeight;
+  const mp = $('#measure .page'); mp.style.width = W + 'px'; mp.style.height = H + 'px';
+  const fw = $('#measure .fw'); CW = fw.clientWidth; CH = fw.clientHeight;
+  const mflow = $('#measure .flow'); mflow.innerHTML = BOOK;
+  [mflow, ...flows].forEach(f => { f.style.width = CW + 'px'; f.style.columnWidth = CW + 'px'; f.style.columnGap = GAP + 'px'; });
+  pages = Math.max(1, Math.round((mflow.scrollWidth + GAP) / (CW + GAP)));
+  chapters = [...mflow.querySelectorAll('h2')].map(h => ({ n:h.dataset.ch, title:h.nextElementSibling.textContent, page: Math.round(h.offsetLeft / (CW + GAP)) }));
+  idx = Math.max(0, Math.min(pages-1, Math.round(frac*(pages-1))));
+  $('#scrub').max = pages - 1; buildToc(); show(idx);
+}
+function chapterAt(i){ let c = null; for (const ch of chapters) if (ch.page <= i) c = ch; return c; }
+function setPage(el, i){
+  if (i < 0 || i >= pages){ el.style.visibility = 'hidden'; return; } el.style.visibility = '';
+  el.querySelector('.flow').style.transform = `translateX(${-i*(CW+GAP)}px)`;
+  const ch = chapterAt(i); const run = el.querySelectorAll('.run span');
+  run[0].textContent = i === 0 ? '' : 'The Time Machine'; run[1].textContent = ch && i !== ch.page ? ch.title : '';
+  el.querySelector('.folio').textContent = i === 0 ? '' : i;
+}
+function show(i){ idx = i; setPage($('#pgP'), idx); setPage($('#pgN'), idx+1); resetFold(); updateUI(); }
+function updateUI(){
+  $('#pgLabel').textContent = `${idx+1} / ${pages}`; const sc = $('#scrub'); sc.value = idx; sc.style.setProperty('--p', (pages>1 ? idx/(pages-1)*100 : 0) + '%');
+  const left = Math.max(0, Math.round(WORDS * (1 - (idx+1)/pages) / 230)); const ch = chapterAt(idx);
+  $('#leftLabel').textContent = left ? `${left} min left` : 'End of sample';
+  document.querySelectorAll('#tocList button').forEach(b => b.setAttribute('aria-current', ch && b.dataset.p == ch.page));
+  $('#hintCorner').style.opacity = idx < pages-1 ? .9 : 0;
+  S.frac = pages > 1 ? idx/(pages-1) : 0; store.set('s', S);
+  $('#vp').setAttribute('aria-label', `Page ${idx+1} of ${pages}. ${ch ? 'Chapter ' + ch.n + ', ' + ch.title + '.' : 'Title page.'} Use arrow keys or drag the page corner to turn.`);
+}
+function buildToc(){ $('#tocList').innerHTML = `<li><button id="toc-0" data-p="0">Title page<span>1</span></button></li>` + chapters.map(c => `<li><button id="toc-${c.n}" data-p="${c.page}">Chapter ${c.n}. ${c.title}<span>${c.page+1}</span></button></li>`).join('');
+  document.querySelectorAll('#tocList button').forEach(b => b.addEventListener('click', () => { closePanels(); jump(+b.dataset.p); })); }
+
+/* ---------- curl geometry ---------- */
+const pgP = $('#pgP'), pgN = $('#pgN'), flap = $('#flap'), nShade = $('#nShade');
+function clipPoly(poly, f){ const out = []; for (let i=0;i<poly.length;i++){ const a = poly[i], b = poly[(i+1)%poly.length]; const fa = f(a), fb = f(b);
+  if (fa >= 0) out.push(a); if ((fa >= 0) !== (fb >= 0)){ const t = fa/(fa-fb); out.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]); } } return out; }
+const polyCss = p => p.length ? 'polygon(' + p.map(q => `${q[0].toFixed(1)}px ${q[1].toFixed(1)}px`).join(',') + ')' : 'polygon(0 0,0 0,0 0)';
+function resetFold(){ $('#hintCorner').style.opacity = idx < pages-1 ? .9 : 0; pgP.style.clipPath = ''; flap.style.display = 'none'; nShade.style.background = 'none'; nShade.style.clipPath = ''; }
+function clampM(M, C){ const S1 = [0, C[1]], S2 = [0, H - C[1]];
+  let d = Math.hypot(M[0]-S1[0], M[1]-S1[1]); if (d > W){ M = [S1[0] + (M[0]-S1[0])*W/d, S1[1] + (M[1]-S1[1])*W/d]; }
+  const D = Math.hypot(W, H); d = Math.hypot(M[0]-S2[0], M[1]-S2[1]); if (d > D){ M = [S2[0] + (M[0]-S2[0])*D/d, S2[1] + (M[1]-S2[1])*D/d]; }
+  return M; }
+function fold(M, C){
+  const v = [M[0]-C[0], M[1]-C[1]]; const L = Math.hypot(v[0], v[1]); if (L < .5){ resetFold(); return; }
+  $('#hintCorner').style.opacity = 0; const mid = [(M[0]+C[0])/2, (M[1]+C[1])/2]; const f = p => (p[0]-mid[0])*v[0] + (p[1]-mid[1])*v[1];
+  const rect = [[0,0],[W,0],[W,H],[0,H]];
+  const stay = clipPoly(rect, f), far = clipPoly(rect, p => -f(p));
+  pgP.style.clipPath = polyCss(stay);
+  // reflection across fold line
+  const u = [v[0]/L, v[1]/L]; const d = [-u[1], u[0]];
+  const a = 2*d[0]*d[0]-1, b = 2*d[0]*d[1], c2 = 2*d[0]*d[1], dd = 2*d[1]*d[1]-1;
+  const e = mid[0] - (a*mid[0] + c2*mid[1]), g = mid[1] - (b*mid[0] + dd*mid[1]);
+  flap.style.display = 'block'; flap.style.width = W + 'px'; flap.style.height = H + 'px';
+  flap.style.transform = `matrix(${a},${b},${c2},${dd},${e},${g})`; flap.style.clipPath = polyCss(far);
+  // gradients: direction from fold toward corner is -u
+  const ux = -u[0], uy = -u[1]; const ang = Math.atan2(ux, -uy)*180/Math.PI; const GL = Math.abs(W*ux) + Math.abs(H*uy);
+  const fp = GL/2 + ((mid[0]-W/2)*ux + (mid[1]-H/2)*uy); const depth = Math.min(1, L/(W*.9));
+  const night = S.theme === 'night';
+  flap.style.background = `linear-gradient(${ang}deg, rgba(0,0,0,${night?.5:.18}) ${fp}px, rgba(255,255,255,${night?.02:.35}) ${fp + 18}px, rgba(0,0,0,${night?.15:.05}) ${fp + L*.45}px, rgba(0,0,0,${night?.25:.12}) ${fp + L*.5}px), var(--paper)`;
+  nShade.style.clipPath = polyCss(far);
+  nShade.style.background = `linear-gradient(${ang}deg, rgba(0,0,0,${.38*(1-depth*.5)}) ${fp}px, rgba(0,0,0,0) ${fp + 30 + L*.15}px)`;
+}
+/* ---------- turning ---------- */
+let anim = null, dragS = null;
+function tween(from, to, C, ms, done, arc){ cancelAnimationFrame(anim); const t0 = performance.now();
+  const step = t => { const k = Math.min(1, (t-t0)/ms); const e = k<.5 ? 2*k*k : 1 - Math.pow(-2*k+2,2)/2;
+    let M = [from[0] + (to[0]-from[0])*e, from[1] + (to[1]-from[1])*e]; if (arc) M[1] += Math.sin(Math.PI*e)*arc;
+    fold(clampM(M, C), C); if (k < 1) anim = requestAnimationFrame(step); else done && done(); };
+  anim = requestAnimationFrame(step); }
+let busy = false;
+function inkFlash(then){ const fl = $('#flash'); fl.style.background = S.theme==='night' ? '#fff' : '#000'; fl.style.opacity = .85; setTimeout(() => { then(); fl.style.opacity = .35; setTimeout(() => fl.style.opacity = 0, 70); }, 80); }
+function next(){ if (busy || idx >= pages-1) return; if (reduce || S.turn==='ink'){ S.turn==='ink' ? inkFlash(() => show(idx+1)) : show(idx+1); return; }
+  busy = true; const C = [W, H]; tween([W-1, H-1], [-W, H], C, 620, () => { busy = false; show(idx+1); }, -H*.14); }
+function prev(){ if (busy || idx <= 0) return; if (reduce || S.turn==='ink'){ S.turn==='ink' ? inkFlash(() => show(idx-1)) : show(idx-1); return; }
+  busy = true; setPage(pgP, idx-1); setPage(pgN, idx); const C = [W, H]; fold([-W, H], C);
+  tween([-W, H], [W-1, H-1], C, 620, () => { busy = false; show(idx-1); }, -H*.14); }
+function jump(i){ i = Math.max(0, Math.min(pages-1, i)); if (i === idx) return; if (S.turn==='ink') inkFlash(() => show(i)); else show(i); }
+
+const vp = $('#vp');
+function local(e){ const r = vp.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+vp.addEventListener('pointerdown', e => {
+  if (busy) return; const p = local(e); vp.setPointerCapture(e.pointerId);
+  dragS = {start:p, moved:false, mode:null, C:[W, p[1] < H/2 ? 0 : H]};
+});
+vp.addEventListener('pointermove', e => {
+  if (!dragS) return; const p = local(e); const dx = p[0]-dragS.start[0], dy = p[1]-dragS.start[1];
+  if (!dragS.moved && Math.hypot(dx,dy) > 6){ dragS.moved = true;
+    if (S.turn==='ink' || reduce){ dragS.mode = 'swipe'; }
+    else if (dx < 0 && idx < pages-1){ dragS.mode = 'fwd'; }
+    else if (dx > 0 && idx > 0){ dragS.mode = 'back'; setPage(pgP, idx-1); setPage(pgN, idx); }
+    else dragS.mode = 'none'; }
+  if (dragS.mode === 'fwd'){ const C = dragS.C; const M = clampM([Math.min(W-1, p[0] + (W - dragS.start[0])), p[1] + (C[1]-dragS.start[1])*.6], C); dragS.M = M; fold(M, C); }
+  if (dragS.mode === 'back'){ const C = dragS.C; const M = clampM([-W + (p[0]) * 2, p[1]], C); dragS.M = M; fold(M, C); }
+});
+function endDrag(e){
+  if (!dragS) return; const d = dragS; dragS = null;
+  if (!d.moved){ const x = d.start[0]; if (x > W*.62) next(); else if (x < W*.38) prev(); else toggleChrome(); return; }
+  if (d.mode === 'swipe'){ const p = local(e); if (p[0] < d.start[0] - 30) next(); else if (p[0] > d.start[0] + 30) prev(); return; }
+  if (!d.M) { show(idx); return; }
+  busy = true; const C = d.C;
+  if (d.mode === 'fwd'){ if (d.M[0] < W*.55) tween(d.M, [-W, C[1]], C, 380, () => { busy = false; show(idx+1); }); else tween(d.M, [W-1, C[1] ? H-1 : 1], C, 300, () => { busy = false; show(idx); }); }
+  else if (d.mode === 'back'){ if (d.M[0] > -W*.1) tween(d.M, [W-1, C[1] ? H-1 : 1], C, 380, () => { busy = false; show(idx-1); }); else tween(d.M, [-W, C[1]], C, 300, () => { busy = false; show(idx); }); }
+  else busy = false;
+}
+vp.addEventListener('pointerup', endDrag); vp.addEventListener('pointercancel', () => { dragS = null; show(idx); });
+// idle corner peek on hover near the corner
+vp.addEventListener('mousemove', e => { if (dragS || busy || S.turn!=='curl' || reduce || idx >= pages-1) return; const p = local(e);
+  const near = p[0] > W - 90 && p[1] > H - 90; if (near){ const C = [W,H]; fold(clampM([W - 60 + (p[0]-W+90)*.2, H - 50 + (p[1]-H+90)*.2], C), C); vp.dataset.peek = 1; }
+  else if (vp.dataset.peek){ delete vp.dataset.peek; resetFold(); } });
+vp.addEventListener('mouseleave', () => { if (vp.dataset.peek && !dragS && !busy){ delete vp.dataset.peek; resetFold(); } });
+
+/* ---------- chrome, panels ---------- */
+function toggleChrome(){ $('#screen').classList.toggle('hide-chrome'); }
+function closePanels(){ $('#pop').hidden = true; $('#aaBtn').setAttribute('aria-expanded', false); $('#toc').classList.remove('open'); $('#tocBtn').setAttribute('aria-expanded', false); $('#scrim').classList.remove('on'); }
+$('#aaBtn').addEventListener('click', () => { const open = $('#pop').hidden; closePanels(); if (open){ $('#pop').hidden = false; $('#aaBtn').setAttribute('aria-expanded', true); } });
+$('#tocBtn').addEventListener('click', () => { const open = !$('#toc').classList.contains('open'); closePanels(); if (open){ $('#toc').classList.add('open'); $('#tocBtn').setAttribute('aria-expanded', true); $('#scrim').classList.add('on'); } });
+$('#scrim').addEventListener('click', closePanels);
+document.addEventListener('pointerdown', e => { if (!$('#pop').hidden && !e.target.closest('#pop') && !e.target.closest('#aaBtn')) closePanels(); });
+let toastT; function toast(m){ const t = $('#toast'); t.textContent = m; t.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => t.style.opacity = 0, 1400); }
+function change(fn, msg){ fn(); applyVars(); requestAnimationFrame(() => paginate(S.frac)); if (msg) toast(msg); }
+$('#ffLit').addEventListener('click', () => change(() => S.ff = 'lit', 'Literata'));
+$('#ffGar').addEventListener('click', () => change(() => S.ff = 'gar', 'EB Garamond'));
+$('#ffAtk').addEventListener('click', () => change(() => S.ff = 'atk', 'Atkinson Hyperlegible'));
+$('#fsRange').addEventListener('input', e => change(() => S.fs = +e.target.value, S.fs + ' px'));
+$('#fsDown').addEventListener('click', () => change(() => S.fs = Math.max(14, S.fs-1), null));
+$('#fsUp').addEventListener('click', () => change(() => S.fs = Math.min(26, S.fs+1), null));
+$('#lhTight').addEventListener('click', () => change(() => S.lh = 'tight'));
+$('#lhNorm').addEventListener('click', () => change(() => S.lh = 'norm'));
+$('#lhLoose').addEventListener('click', () => change(() => S.lh = 'loose'));
+['Paper','Sepia','Slate','Night'].forEach(t => $('#th'+t).addEventListener('click', () => { S.theme = t.toLowerCase(); applyVars(); store.set('s', S); }));
+$('#tCurl').addEventListener('click', () => { S.turn = 'curl'; applyVars(); store.set('s', S); toast('Page curl'); });
+$('#tInk').addEventListener('click', () => { S.turn = 'ink'; applyVars(); store.set('s', S); toast('E-ink refresh'); });
+$('#tJust').addEventListener('click', () => change(() => S.just = !S.just, S.just ? 'Ragged right' : 'Justified'));
+$('#scrub').addEventListener('input', e => { show(+e.target.value); });
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || (e.key === ' ' && !e.target.closest('button'))){ e.preventDefault(); next(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+  else if (e.key === 'Escape') closePanels();
+  else if (e.key === 'Home') jump(0); else if (e.key === 'End') jump(pages-1);
+});
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => paginate(S.frac), 150); });
+
+applyVars();
+const start = () => paginate(S.frac || 0);
+if (document.fonts && document.fonts.ready){ start(); document.fonts.ready.then(() => paginate(S.frac)); } else start();
+})();
+</script>
+</body>
+</html>

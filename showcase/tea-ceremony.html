@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>In Praise of Tea</title>
+<meta name="description" content="A quiet, shadowed guide to chanoyu, the Japanese tea ceremony: the sequence of a gathering, eight utensils drawn in ink, and a bowl of matcha you whisk yourself.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dark:#171613;
+  --dark-2:#1f1d19;
+  --wood:#2a261f;
+  --shoji:#e6e0d2;
+  --rice:#d8d2c3;
+  --rice-2:#a39d8e;
+  --rice-3:#6e695e;
+  --matcha:#95a85a;
+  --matcha-deep:#4d6325;
+  --seal:#b3302b;
+  --mincho:"Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --goth:"Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html{background:var(--dark)}
+body{margin:0;background:var(--dark);color:var(--rice);font-family:var(--mincho);font-size:18px;line-height:1.95;letter-spacing:.01em;overflow-x:hidden}
+::selection{background:var(--matcha);color:var(--dark)}
+:focus-visible{outline:1px solid var(--matcha);outline-offset:4px}
+.back{position:absolute;top:18px;left:16px;font-family:var(--goth);font-weight:300;font-size:13px;letter-spacing:.2em;color:var(--rice-2);text-decoration:none}
+.back:hover,.back:focus-visible{color:var(--matcha)}
+.v{writing-mode:vertical-rl;text-orientation:upright}
+.tatami{background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px)}
+
+/* hero */
+.hero{min-height:100vh;min-height:100svh;display:grid;grid-template-columns:1fr auto 1.2fr;align-items:center;gap:6vw;padding:12vh 16px 10vh;max-width:1280px;margin:0 auto;position:relative}
+.hero .kanji{font-weight:800;font-size:clamp(84px,13vw,190px);line-height:1;color:var(--shoji);letter-spacing:.14em;justify-self:end;opacity:.94}
+.hero .kanji small{display:block;font-size:.12em;color:var(--rice-3);letter-spacing:.4em;margin-top:.6em}
+.hero .bowl svg{width:min(34vw,360px);height:auto;display:block}
+.hero .txt{max-width:26em}
+.hero .kick{font-family:var(--goth);font-size:12px;letter-spacing:.5em;color:var(--rice-3);text-transform:uppercase}
+.hero h1{font-weight:500;font-size:clamp(36px,4.4vw,64px);line-height:1.1;margin:.4em 0 .5em;color:var(--shoji);letter-spacing:.02em}
+.hero p{margin:0 0 1em;color:var(--rice-2);font-size:17px}
+.seal{display:inline-grid;place-items:center;width:44px;height:44px;background:var(--seal);color:#f3e4d8;font-weight:700;font-size:13px;line-height:1.05;border-radius:4px;transform:rotate(-4deg);margin-top:10px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.15);writing-mode:vertical-rl;letter-spacing:0;padding:2px}
+
+/* sections */
+.sec{max-width:1180px;margin:0 auto;padding:18vh 16px 6vh;position:relative}
+.sec-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 40px;align-items:start;margin-bottom:10vh}
+.sec-head .v{font-size:clamp(36px,4vw,54px);font-weight:700;color:var(--shoji);letter-spacing:.2em;line-height:1}
+.sec-head h2{font-weight:400;font-size:clamp(28px,3vw,40px);margin:0 0 .4em;line-height:1.2;color:var(--shoji)}
+.sec-head p{max-width:34em;margin:0;color:var(--rice-2)}
+.principles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0 0 4vh;border-top:1px solid rgba(216,210,195,.12)}
+.principles div{padding:28px 20px 10px;border-right:1px solid rgba(216,210,195,.12);display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px}
+.principles div:last-child{border-right:0}
+.principles .v{font-size:40px;font-weight:700;color:var(--shoji);line-height:1}
+.principles b{display:block;font-weight:500;color:var(--shoji);font-size:19px}
+.principles span{font-size:15px;color:var(--rice-2);line-height:1.7;display:block}
+
+/* steps */
+.steps{list-style:none;margin:0;padding:0;position:relative}
+.steps::before{content:"";position:absolute;left:36px;top:0;bottom:0;width:1px;background:linear-gradient(rgba(216,210,195,.25),rgba(216,210,195,.05))}
+.step{display:grid;grid-template-columns:72px minmax(0,26em) minmax(0,1fr);gap:0 48px;padding:0 0 14vh;position:relative}
+.step .num{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;font-size:26px;color:var(--rice-3);justify-self:center;background:var(--dark);padding:6px 0;line-height:1;transition:color .6s}
+.step.seen .num{color:var(--matcha)}
+.step h3{font-weight:500;font-size:clamp(24px,2.4vw,32px);color:var(--shoji);margin:0 0 .6em;line-height:1.25}
+.step h3 small{display:block;font-family:var(--goth);font-weight:300;font-size:12px;letter-spacing:.3em;color:var(--rice-3);margin-bottom:.8em;text-transform:uppercase}
+.step p{margin:0 0 .9em;color:var(--rice)}
+.step .aside{align-self:end;justify-self:start;font-size:14px;color:var(--rice-3);line-height:1.8;max-width:18em;border-left:1px solid rgba(216,210,195,.15);padding-left:18px}
+.step .aside .v{float:right;font-size:22px;color:var(--rice-2);margin-left:14px;letter-spacing:.2em;line-height:1}
+
+/* shoji panel for whisk */
+.shoji{max-width:1180px;margin:10vh auto;padding:0 16px}
+.shoji-in{position:relative;background:var(--shoji);color:#2a2721;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:0;
+  box-shadow:0 0 120px rgba(230,224,210,.12)}
+.shoji-in::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+   repeating-linear-gradient(90deg,transparent 0 calc(25% - 3px),#3a3228 calc(25% - 3px) 25%),
+   repeating-linear-gradient(180deg,transparent 0 calc(33.33% - 3px),#3a3228 calc(33.33% - 3px) 33.33%);opacity:.08}
+.whisk-txt{padding:56px 48px;position:relative}
+.whisk-txt .v.lab{position:absolute;right:26px;top:48px;font-size:34px;font-weight:700;letter-spacing:.24em;color:#3a3228;line-height:1}
+.whisk-txt h2{font-weight:500;font-size:clamp(28px,3vw,40px);margin:0 0 .5em;line-height:1.2;max-width:10em}
+.whisk-txt p{margin:0 0 1em;color:#4a453b;max-width:24em}
+.meter{margin-top:26px;font-family:var(--goth);font-size:12px;letter-spacing:.2em;color:#6e695e;text-transform:uppercase}
+.meter .bar{height:3px;background:rgba(58,50,40,.15);margin-top:10px;position:relative}
+.meter .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--matcha-deep);width:0}
+.meter .state{margin-top:12px;font-family:var(--mincho);font-size:18px;letter-spacing:.04em;text-transform:none;color:#2a2721;min-height:1.6em}
+.wbtns{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap}
+.wbtns button{all:unset;cursor:pointer;font-family:var(--goth);font-size:13px;letter-spacing:.2em;padding:10px 18px;border:1px solid #3a3228;color:#2a2721}
+.wbtns button:hover,.wbtns button:focus-visible{background:#2a2721;color:var(--shoji)}
+.wbtns button:focus-visible{outline:1px solid var(--matcha-deep);outline-offset:3px}
+.bowl-wrap{position:relative;background:#1c1a16;min-height:460px}
+#whisk{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#whisk:active{cursor:grabbing}
+.bowl-hint{position:absolute;left:18px;bottom:14px;font-family:var(--goth);font-size:11px;letter-spacing:.24em;color:var(--rice-3);pointer-events:none}
+
+/* utensils */
+.dogu{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9vh 40px}
+.tool{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 14px;align-items:start}
+.tool svg{width:100%;height:auto;aspect-ratio:1;display:block;grid-column:1 / 3;margin-bottom:18px}
+.tool h3{font-weight:500;font-size:22px;margin:0;color:var(--shoji);line-height:1.2}
+.tool h3 small{display:block;font-family:var(--goth);font-weight:300;font-size:12px;letter-spacing:.2em;color:var(--rice-3);margin-top:4px}
+.tool p{grid-column:1;font-size:15px;color:var(--rice-2);line-height:1.8;margin:.6em 0 0}
+.tool .v{grid-column:2;grid-row:2 / 4;font-size:24px;color:var(--rice-2);letter-spacing:.18em;line-height:1}
+.ink path,.ink ellipse,.ink circle,.ink line{fill:none;stroke:var(--rice);stroke-linecap:round;stroke-linejoin:round}
+
+.coda{max-width:1180px;margin:0 auto;padding:20vh 16px 12vh;display:grid;grid-template-columns:auto minmax(0,1fr);gap:48px;align-items:center}
+.coda .v{font-size:clamp(48px,6vw,86px);font-weight:800;color:var(--shoji);letter-spacing:.2em;line-height:1}
+.coda p{font-size:clamp(20px,2vw,26px);max-width:24em;color:var(--rice);line-height:1.8;margin:0}
+.coda p small{display:block;font-size:14px;color:var(--rice-3);margin-top:1.5em;font-family:var(--goth);letter-spacing:.14em}
+footer{max-width:1180px;margin:0 auto;padding:30px 16px 60px;border-top:1px solid rgba(216,210,195,.1);font-family:var(--goth);font-weight:300;font-size:12px;letter-spacing:.2em;color:var(--rice-3);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+@media (max-width:980px){
+  .hero{grid-template-columns:auto minmax(0,1fr);gap:28px}
+  .hero .bowl{display:none}
+  .principles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .principles div:nth-child(2){border-right:0}
+  .step{grid-template-columns:72px minmax(0,1fr)}
+  .step .aside{grid-column:2;margin-top:10px}
+  .dogu{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .shoji-in{grid-template-columns:minmax(0,1fr)}
+  .bowl-wrap{min-height:380px}
+}
+@media (max-width:560px){
+  body{font-size:17px}
+  .hero{grid-template-columns:minmax(0,1fr);padding-top:80px}
+  .hero .kanji{justify-self:start;font-size:92px}
+  .principles{grid-template-columns:minmax(0,1fr)}
+  .principles div{border-right:0;border-bottom:1px solid rgba(216,210,195,.12)}
+  .sec-head{grid-template-columns:minmax(0,1fr)}
+  .sec-head .v{writing-mode:horizontal-tb;margin-bottom:12px}
+  .steps::before{left:20px}
+  .step{grid-template-columns:40px minmax(0,1fr);gap:0 16px}
+  .step .num{font-size:20px}
+  .dogu{grid-template-columns:minmax(0,1fr)}
+  .whisk-txt{padding:40px 20px}
+  .whisk-txt .v.lab{display:none}
+  .coda{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+</head>
+<body class="tatami">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="brush"><feTurbulence baseFrequency=".05" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="5"/></filter></defs></svg>
+<a class="back" href="index.html">← SHOWCASE</a>
+
+<header class="hero">
+  <div class="kanji v" lang="ja">茶の湯<small>ちゃのゆ</small></div>
+  <div class="bowl" aria-hidden="true">
+    <svg viewBox="0 0 360 300" class="ink">
+      <g filter="url(#brush)">
+        <path d="M40 110 C40 210 100 262 180 262 C260 262 320 210 320 110" stroke-width="7"/>
+        <ellipse cx="180" cy="110" rx="140" ry="26" stroke-width="3"/>
+        <ellipse cx="180" cy="112" rx="118" ry="18" stroke-width="1.5" style="stroke:var(--matcha)"/>
+        <path d="M130 262 L136 282 H224 L230 262" stroke-width="4"/>
+        <path d="M70 160 C120 180 220 186 300 150" stroke-width="1.2" opacity=".5"/>
+        <path d="M60 136 C90 170 140 150 170 176" stroke-width="1" opacity=".35"/>
+      </g>
+      <path d="M100 30 C120 50 150 40 170 60" stroke-width="1" opacity=".3"/>
+      <path d="M190 20 C200 44 230 40 236 66" stroke-width="1" opacity=".3"/>
+    </svg>
+  </div>
+  <div class="txt">
+    <div class="kick">A guide for the first-time guest</div>
+    <h1>In praise of a bowl of tea</h1>
+    <p>Chanoyu — literally <em>hot water for tea</em> — is the Japanese art of preparing and serving powdered green tea to guests. It asks for about four hours, a small room, some charcoal, and your whole attention. What it gives back is harder to describe.</p>
+    <p>This is an outline of an ordinary gathering, of the tools on the mat, and of the one gesture everyone remembers: the whisking.</p>
+    <span class="seal" lang="ja" aria-label="seal: ichigo ichie">一期一会</span>
+  </div>
+</header>
+
+<section class="sec" aria-labelledby="wayTitle">
+  <div class="sec-head">
+    <div class="v" lang="ja" aria-hidden="true">和敬清寂</div>
+    <div>
+      <h2 id="wayTitle">Four words over the door</h2>
+      <p>In the sixteenth century the tea master Sen no Rikyū stripped the ceremony of the gold and imported porcelain his patrons loved, and left something austere: a thatched hut, a rough local bowl, a single flower. He is credited with the four principles that still govern it. They are less rules than a description of how the room should feel when everything is going well.</p>
+    </div>
+  </div>
+  <div class="principles">
+    <div><span class="v" lang="ja">和</span><div><b>Wa · harmony</b><span>Between host and guest, between the utensils and the season, between the room and the garden outside it.</span></div></div>
+    <div><span class="v" lang="ja">敬</span><div><b>Kei · respect</b><span>For each person and object, shown in bows and in the careful, unhurried handling of every tool.</span></div></div>
+    <div><span class="v" lang="ja">清</span><div><b>Sei · purity</b><span>The ritual cleaning of the utensils in front of the guests, which is also a clearing of the mind.</span></div></div>
+    <div><span class="v" lang="ja">寂</span><div><b>Jaku · tranquillity</b><span>The stillness that arrives, if you are lucky, once the other three are in place.</span></div></div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="stepsTitle" style="padding-top:8vh">
+  <div class="sec-head">
+    <div class="v" lang="ja" aria-hidden="true">点前</div>
+    <div>
+      <h2 id="stepsTitle">The gathering, in order</h2>
+      <p>A full formal chaji includes a meal and two kinds of tea. This is the shape of a simpler gathering for thin tea, usucha, as a guest will experience it. Every school — Urasenke, Omotesenke, Mushakōjisenke — varies the details. The order holds.</p>
+    </div>
+  </div>
+  <ol class="steps" id="steps">
+    <li class="step"><span class="num" lang="ja">一</span><div><h3><small>Roji · the dewy path</small>Walk through the garden and wash</h3><p>Guests gather in a waiting arbour, then follow a path of stepping stones laid deliberately uneven so you must watch your feet and leave the city behind. At a low stone basin, the tsukubai, you crouch to rinse your hands and mouth with a bamboo ladle.</p><p>The crouch is the point. Everyone, whatever their rank, bends to the water.</p></div><div class="aside"><span class="v" lang="ja">蹲踞</span>The basin is set low on purpose: tsukubai means “to crouch”.</div></li>
+    <li class="step"><span class="num" lang="ja">二</span><div><h3><small>Nijiriguchi · the crawl-in door</small>Enter on your knees</h3><p>The guests' entrance to a traditional tea room is a square opening barely seventy centimetres high. You kneel, set your fan in front of you, and shuffle through. Samurai were obliged to leave their swords on a rack outside, since there was no way to bring them through.</p><p>Inside, the room may be as small as four and a half tatami mats — about three metres square.</p></div><div class="aside"><span class="v" lang="ja">躙口</span>Rikyū is said to have taken the idea from the tiny doors of fishing boats.</div></li>
+    <li class="step"><span class="num" lang="ja">三</span><div><h3><small>Tokonoma · the alcove</small>Bow to the scroll and the flower</h3><p>Before you sit, go to the alcove and bow. The hanging scroll, chosen by the host for this day alone, sets the theme of the gathering — often a single line of Zen calligraphy. Beneath it stands a flower arranged in the chabana style: one or two stems, as they would grow in a field.</p></div><div class="aside"><span class="v" lang="ja">床の間</span>It is polite to ask about the scroll later. The host will be glad you did.</div></li>
+    <li class="step"><span class="num" lang="ja">四</span><div><h3><small>Omogashi · the sweet</small>Eat before you drink</h3><p>A small confection of sweet bean paste, shaped and coloured for the season — a maple leaf in autumn, a plum blossom in late winter — is passed on a lacquer tray. You lift it onto a folded sheet of kaishi paper and eat it in a few bites with a pick.</p><p>The sweetness prepares the tongue for the bitterness of the tea to come.</p></div><div class="aside"><span class="v" lang="ja">主菓子</span>Finish the sweet completely before the tea is served.</div></li>
+    <li class="step"><span class="num" lang="ja">五</span><div><h3><small>Hakobidashi · carrying in</small>The host brings the tools</h3><p>The host enters through the service door carrying the tea bowl, with the whisk, cloth and scoop arranged inside it, and the tea caddy. Then the waste-water bowl, with the ladle resting on top. Each is set on the mat in a fixed position, its distance measured in the woven rows of the tatami.</p></div><div class="aside"><span class="v" lang="ja">運び出し</span>Nothing in the room is placed by chance.</div></li>
+    <li class="step"><span class="num" lang="ja">六</span><div><h3><small>Fukusa sabaki · the silk cloth</small>Purify the caddy and the scoop</h3><p>The host folds a square silk cloth, the fukusa, in a sequence so precise that students practise it for months. With it, the lid of the tea caddy is wiped in the shape of the character こ, then the tea scoop from end to end. The utensils are already clean. The wiping is for everyone watching.</p></div><div class="aside"><span class="v" lang="ja">袱紗</span>Men usually carry a purple fukusa, women red or orange.</div></li>
+    <li class="step"><span class="num" lang="ja">七</span><div><h3><small>Chasen tōshi · inspecting the whisk</small>Warm the bowl, wake the whisk</h3><p>Hot water is ladled from the iron kettle into the bowl. The host rests the whisk in it, lifts and turns it, and looks carefully at the tines — a fine bamboo whisk breaks easily, and a broken tine would spoil the foam. The water is poured away and the bowl wiped with a linen cloth.</p></div><div class="aside"><span class="v" lang="ja">茶筅通し</span>The soaking also softens the bamboo so it bends rather than snaps.</div></li>
+    <li class="step"><span class="num" lang="ja">八</span><div><h3><small>Ocha o tateru · making tea</small>Two scoops, one ladle, the whisk</h3><p>Two scoops of matcha from the chashaku, a tap on the rim to loosen the last of the powder. A ladle of water just off the boil — about seventy millilitres. Then the whisking: fast, from the wrist, in a zigzag, until a fine pale foam covers the surface, and a final slow circle to lift the whisk out from the centre.</p></div><div class="aside"><span class="v" lang="ja">点てる</span>Try it yourself, below.</div></li>
+    <li class="step"><span class="num" lang="ja">九</span><div><h3><small>Nomikata · drinking</small>Turn the bowl, and drink</h3><p>The bowl is set before you with its front — its most beautiful side — facing you. Bow to the next guest: “Osaki ni” — excuse me for going before you. Lift the bowl, thank the host silently, turn it clockwise twice so you do not drink from its face, and finish the tea in three and a half sips. The last is a small, audible slurp. It is a compliment.</p></div><div class="aside"><span class="v" lang="ja">お先に</span>Wipe the rim with your fingers, then your fingers on the kaishi.</div></li>
+    <li class="step"><span class="num" lang="ja">十</span><div><h3><small>Haiken · appreciation</small>Admire the tools, then leave</h3><p>After the host cleans the utensils, the principal guest may ask to look more closely at the caddy and scoop. They are passed, examined low to the mat with great care, and returned, with questions: who made the scoop, what poetic name has it been given. Then bows, and the guests crawl out the way they came.</p><p>The host watches them go down the path and does not close the door until they are out of sight.</p></div><div class="aside"><span class="v" lang="ja">拝見</span>Every scoop has a name, often taken from a poem.</div></li>
+  </ol>
+</section>
+
+<section class="shoji" aria-labelledby="whiskTitle">
+  <div class="shoji-in">
+    <div class="whisk-txt">
+      <span class="v lab" lang="ja" aria-hidden="true">点てる</span>
+      <h2 id="whiskTitle">Whisk a bowl of usucha</h2>
+      <p>Drag across the bowl — quickly, back and forth, in a zigzag from the wrist rather than circles from the elbow. The dark tea will lighten as a fine froth rises. Too slow, and the bubbles stay large and coarse; the aim is a surface like fresh moss after rain.</p>
+      <p>Or hold the button below and let the host do it.</p>
+      <div class="meter" aria-live="polite">Froth<div class="bar"><i id="frothBar"></i></div><div class="state" id="frothState">The tea waits, dark and still.</div></div>
+      <div class="wbtns"><button type="button" id="autoWhisk">Hold to whisk</button><button type="button" id="resetBowl">A fresh bowl</button></div>
+    </div>
+    <div class="bowl-wrap">
+      <canvas id="whisk" aria-label="A bowl of matcha seen from above. Drag to whisk." role="img"></canvas>
+      <span class="bowl-hint">DRAG · ZIGZAG · FAST</span>
+    </div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="doguTitle">
+  <div class="sec-head">
+    <div class="v" lang="ja" aria-hidden="true">道具</div>
+    <div><h2 id="doguTitle">Eight tools on the mat</h2><p>A tea room holds very little, and everything it holds is chosen. These are the essential utensils, dōgu, of a thin-tea gathering.</p></div>
+  </div>
+  <div class="dogu" id="dogu"></div>
+</section>
+
+<section class="coda">
+  <div class="v" lang="ja" aria-hidden="true">一期一会</div>
+  <p>Ichigo ichie — one time, one meeting. This gathering, with these people, in this weather, will never happen again. Pour the water as if you knew that. <small>A phrase attributed to Ii Naosuke, who wrote it into his own tea teachings in the 1850s.</small></p>
+</section>
+<footer><span>In Praise of Tea · a guide for guests</span><span>Utensils drawn in ink, in the browser</span></footer>
+
+<script>
+(function(){
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=id=>document.getElementById(id);
+/* ---- steps seen ---- */
+const io=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('seen');}),{rootMargin:'0px 0px -35% 0px'}):null;
+document.querySelectorAll('.step').forEach(s=>io?io.observe(s):s.classList.add('seen'));
+
+/* ---- utensils ---- */
+const T=[
+ {n:'Chawan',jp:'茶碗',en:'tea bowl',p:'Often raku ware, hand-formed without a wheel. Irregularities, glaze runs and even repairs in gold lacquer are treasured.',svg:`<path d="M30 80 C30 150 70 172 100 172 C130 172 170 150 170 80" stroke-width="5"/><path d="M30 80 C60 70 140 70 170 80" stroke-width="2.4"/><path d="M34 84 C70 92 130 92 166 84" stroke-width="1.2"/><path d="M78 172 L82 184 H118 L122 172" stroke-width="3"/><path d="M40 110 C70 130 90 100 120 128 C140 142 160 118 166 112" stroke-width="1" opacity=".5"/>`},
+ {n:'Chasen',jp:'茶筅',en:'bamboo whisk',p:'Carved from a single piece of bamboo into as many as a hundred and twenty fine tines, curled inward at the tips.',svg:`<path d="M92 20 H108 V96 H92Z" stroke-width="2.4"/><path d="M92 40 H108" stroke-width="1"/>${Array.from({length:15},(_,i)=>{const x=60+i*5.7;return `<path d="M${100+(i-7)*1.2} 96 C${x} 120 ${x} 160 ${100+(x-100)*.72} 176" stroke-width="1.1"/>`}).join('')}<path d="M86 118 C90 110 110 110 114 118" stroke-width="1.4"/>`},
+ {n:'Chashaku',jp:'茶杓',en:'tea scoop',p:'A thin sliver of bamboo, bent at the tip by steam. Masters carve their own and give each a poetic name.',svg:`<path d="M20 150 C60 138 120 110 170 70 C176 64 184 62 186 68 C188 74 182 78 176 80" stroke-width="3.2"/><path d="M92 118 L98 124" stroke-width="3"/><path d="M24 156 C62 144 120 118 168 80" stroke-width="1" opacity=".5"/>`},
+ {n:'Natsume',jp:'棗',en:'tea caddy',p:'A lacquered container for thin tea, named for the jujube fruit it resembles. Often black, sometimes with gold maki-e.',svg:`<path d="M52 92 C52 60 148 60 148 92" stroke-width="3"/><path d="M50 96 H150" stroke-width="2"/><path d="M52 100 C44 150 70 172 100 172 C130 172 156 150 148 100" stroke-width="4"/><path d="M76 128 C90 120 110 136 124 126" stroke-width="1" opacity=".6"/>`},
+ {n:'Hishaku',jp:'柄杓',en:'bamboo ladle',p:'A small cup on a long straight handle. How it is held, rested and set down is one of the first things a student learns.',svg:`<path d="M20 60 L150 150" stroke-width="3"/><path d="M142 132 H184 V172 C184 180 142 180 142 172Z" stroke-width="3"/><path d="M142 140 H184" stroke-width="1"/>`},
+ {n:'Kama',jp:'釜',en:'iron kettle',p:'Cast iron, set over charcoal sunk in the floor or in a brazier. The faint sound of its water is called matsukaze, wind in the pines.',svg:`<path d="M40 110 C40 70 160 70 160 110 C160 160 130 176 100 176 C70 176 40 160 40 110Z" stroke-width="4"/><path d="M70 74 C70 60 130 60 130 74" stroke-width="2"/><circle cx="100" cy="62" r="7" stroke-width="2"/><path d="M40 106 H26 M160 106 H174" stroke-width="3"/><path d="M50 120 C80 126 120 126 150 120" stroke-width="1" opacity=".5"/><path d="M92 40 C96 30 104 36 108 24" stroke-width="1" opacity=".4"/>`},
+ {n:'Fukusa',jp:'袱紗',en:'silk cloth',p:'A square of silk folded and refolded in precise sequence to purify the caddy and scoop, then tucked into the obi.',svg:`<path d="M40 70 L160 60 L166 150 L46 160Z" stroke-width="2.6"/><path d="M40 70 L166 150" stroke-width="1" opacity=".5"/><path d="M60 100 L150 94 M62 124 L154 118" stroke-width="1" opacity=".35"/>`},
+ {n:'Mizusashi',jp:'水指',en:'fresh-water jar',p:'Holds cold water to replenish the kettle and rinse the bowl. Its lid is sometimes a single lacquered sheet, sometimes a leaf.',svg:`<path d="M56 58 V160 C56 170 144 170 144 160 V58" stroke-width="4"/><path d="M50 56 C80 48 120 48 150 56" stroke-width="2.4"/><path d="M60 90 C90 96 110 84 140 92" stroke-width="1" opacity=".5"/><path d="M60 130 C90 136 110 124 140 132" stroke-width="1" opacity=".5"/>`},
+];
+$('dogu').innerHTML=T.map((t,i)=>`<figure class="tool" style="margin:0"><svg viewBox="0 0 200 200" class="ink" aria-hidden="true"><g filter="url(#brush)">${t.svg}</g></svg><h3>${t.n}<small>${t.en}</small></h3><span class="v" lang="ja">${t.jp}</span><p>${t.p}</p></figure>`).join('');
+
+/* ---- whisk sim ---- */
+const cv=$('whisk'),ctx=cv.getContext('2d');let W,H,dpr,R,cx,cy;
+function size(){const r=cv.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);R=Math.min(W,H)*.36;cx=W/2;cy=H/2;}
+size();addEventListener('resize',()=>{size();paint();});
+const SPK=Array.from({length:900},()=>{const a=Math.random()*6.283,r=Math.sqrt(Math.random());return[Math.cos(a)*r,Math.sin(a)*r];});
+let froth=.08,bubbles=[],wx=0,wy=0,lastX=null,lastY=null,energy=0,active=false,auto=false,autoT=0;
+function mixc(a,b,t){return `rgb(${Math.round(a[0]+(b[0]-a[0])*t)},${Math.round(a[1]+(b[1]-a[1])*t)},${Math.round(a[2]+(b[2]-a[2])*t)})`;}
+function seed(){bubbles=Array.from({length:30},()=>{const a=Math.random()*6.28,r=Math.sqrt(Math.random())*.85;return{x:Math.cos(a)*r,y:Math.sin(a)*r,s:.012+Math.random()*.03,life:1};});}
+seed();
+function paint(){
+  ctx.clearRect(0,0,W,H);
+  // tatami beneath
+  ctx.fillStyle='#1c1a16';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(216,210,195,.05)';for(let y=0;y<H;y+=6){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // bowl shadow + body (top-down)
+  ctx.fillStyle='rgba(0,0,0,.45)';ctx.beginPath();ctx.ellipse(cx+10,cy+14,R*1.28,R*1.28,0,0,7);ctx.fill();
+  const bg=ctx.createRadialGradient(cx-R*.4,cy-R*.5,R*.2,cx,cy,R*1.28);bg.addColorStop(0,'#5a4a3c');bg.addColorStop(.7,'#2e241d');bg.addColorStop(1,'#1a1410');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,R*1.26,0,7);ctx.fill();
+  // glaze drips
+  ctx.strokeStyle='rgba(180,160,130,.15)';ctx.lineWidth=3;for(let i=0;i<9;i++){const a=i*.7+.3;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*R*1.25,cy+Math.sin(a)*R*1.25);ctx.lineTo(cx+Math.cos(a)*R*1.06,cy+Math.sin(a)*R*1.06);ctx.stroke();}
+  // tea surface
+  const f=froth;
+  const tg=ctx.createRadialGradient(cx,cy,0,cx,cy,R);tg.addColorStop(0,mixc([62,90,30],[178,196,110],f));tg.addColorStop(.85,mixc([46,70,22],[150,170,86],f));tg.addColorStop(1,mixc([30,48,16],[110,130,60],f));
+  ctx.fillStyle=tg;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fill();
+  // fine foam speckle
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.clip();
+  const fine=Math.floor(f*900);ctx.fillStyle=`rgba(236,240,200,${.18+.25*f})`;
+  for(let i=0;i<fine;i++){const q=SPK[i%SPK.length];ctx.fillRect(cx+q[0]*R,cy+q[1]*R,1.2,1.2);}
+  // bubbles
+  bubbles.forEach(b=>{ctx.strokeStyle=`rgba(230,236,200,${.5*b.life})`;ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx+b.x*R,cy+b.y*R,b.s*R,0,7);ctx.stroke();ctx.fillStyle=`rgba(255,255,240,${.35*b.life})`;ctx.beginPath();ctx.arc(cx+b.x*R-b.s*R*.3,cy+b.y*R-b.s*R*.3,b.s*R*.25,0,7);ctx.fill();});
+  ctx.restore();
+  // rim highlight
+  ctx.strokeStyle='rgba(220,200,170,.25)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,R*1.25,Math.PI*1.05,Math.PI*1.6);ctx.stroke();
+  // whisk (top-down): ring of tines
+  const on=active||auto;const px=on?wx:cx+R*.55,py=on?wy:cy-R*.55;
+  ctx.save();ctx.translate(px,py);
+  ctx.strokeStyle='rgba(222,206,160,.9)';ctx.lineWidth=1;
+  for(let i=0;i<48;i++){const a=i/48*6.283;ctx.beginPath();ctx.moveTo(Math.cos(a)*R*.08,Math.sin(a)*R*.08);ctx.lineTo(Math.cos(a)*R*.2,Math.sin(a)*R*.2);ctx.stroke();}
+  ctx.fillStyle='#d8c690';ctx.beginPath();ctx.arc(0,0,R*.075,0,7);ctx.fill();
+  ctx.strokeStyle='#8a7a50';ctx.beginPath();ctx.arc(0,0,R*.075,0,7);ctx.stroke();
+  ctx.restore();
+}
+function stir(x,y){
+  const dx=lastX==null?0:x-lastX,dy=lastY==null?0:y-lastY;lastX=x;lastY=y;
+  const inside=Math.hypot(x-cx,y-cy)<R;if(!inside)return;
+  const sp=Math.hypot(dx,dy);
+  // zigzag rewarded: horizontal speed
+  energy=Math.min(1.5,energy+sp*.004+Math.abs(dx)*.002);
+  froth=Math.min(1,froth+sp*.00035*(1.1-froth));
+  if(Math.random()<.5+sp*.02){const s=.04*(1-froth*.8)*(.4+Math.random());bubbles.push({x:(x-cx)/R+(Math.random()-.5)*.1,y:(y-cy)/R+(Math.random()-.5)*.1,s:Math.max(.006,s),life:1});}
+  if(bubbles.length>260)bubbles.splice(0,bubbles.length-260);
+}
+const STATES=[[.12,'The tea waits, dark and still.'],[.3,'Lumps dissolving. Keep going — faster.'],[.55,'Coarse bubbles rising. Loosen the wrist.'],[.8,'A pale froth is forming. Almost.'],[.95,'Fine foam, like moss after rain. Lift from the centre.'],[1.01,'Perfect. Turn the bowl twice, and drink.']];
+function ui(){$('frothBar').style.width=(froth*100).toFixed(1)+'%';const s=STATES.find(s=>froth<s[0])||STATES[STATES.length-1];$('frothState').textContent=s[1];}
+function tick(t){
+  if(auto){autoT+=16;const k=autoT*.02;wx=cx+Math.sin(k*1.9)*R*.55;wy=cy+Math.sin(k*.35)*R*.35+((k*1.9/Math.PI)%2<1?-1:1)*R*.05;stir(wx,wy);}
+  // bubbles pop / shrink
+  bubbles.forEach(b=>{b.life-=.003+(b.s>.02?.006:0);b.s*=.999;});
+  bubbles=bubbles.filter(b=>b.life>0);
+  energy*=.95;
+  paint();ui();
+  requestAnimationFrame(tick);
+}
+function pos(e){const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top];}
+cv.addEventListener('pointerdown',e=>{active=true;cv.setPointerCapture(e.pointerId);[wx,wy]=pos(e);lastX=wx;lastY=wy;});
+cv.addEventListener('pointermove',e=>{const [x,y]=pos(e);if(e.pointerType==='mouse'&&!active&&Math.hypot(x-cx,y-cy)<R){wx=x;wy=y;active=true;stir(x,y);active=false;return;}if(!active)return;wx=x;wy=y;stir(x,y);});
+cv.addEventListener('pointerup',()=>{active=false;lastX=lastY=null;});
+cv.addEventListener('pointerleave',()=>{active=false;lastX=lastY=null;});
+const ab=$('autoWhisk');
+const start=e=>{e.preventDefault();auto=true;lastX=lastY=null;};const stop=()=>{auto=false;lastX=lastY=null;};
+ab.addEventListener('pointerdown',start);ab.addEventListener('pointerup',stop);ab.addEventListener('pointerleave',stop);
+ab.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){start(e);}});ab.addEventListener('keyup',stop);
+$('resetBowl').addEventListener('click',()=>{froth=.08;seed();});
+requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

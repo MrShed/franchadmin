@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Meridian Orbital Lines</title>
+<title>Apogee Orbital Lines</title>
 <meta name="description" content="A 1960s travel-poster site for a fictional space tourism line, with a launch countdown, illustrated destination posters and a fare calculator that prints your boarding pass.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -135,10 +135,10 @@ footer b{font-family:var(--wide);color:var(--paper);letter-spacing:.14em;font-si
 <header class="hero">
   <svg class="poster" id="poster" viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
   <div class="copy">
-    <div class="kick">Meridian Orbital Lines · Since 1961*</div>
+    <div class="kick">Apogee Orbital Lines · Since 1961*</div>
     <h1>Fly to<span>the Moon</span>by Tuesday.</h1>
     <p>Jet-age comfort, lunar-age distances. Four destinations, champagne in zero-g, and a window seat on every single seat.</p>
-    <div class="count-label" id="countLabel">Next departure · Flight MO-7 to Hotel Tranquility</div>
+    <div class="count-label" id="countLabel">Next departure · Flight AO-7 to Hotel Tranquility</div>
     <div class="count" role="timer" aria-live="off" aria-label="Countdown to next launch">
       <div><span class="flap" id="cd-d">00</span><small>Days</small></div>
       <div><span class="flap" id="cd-h">00</span><small>Hrs</small></div>
@@ -146,7 +146,7 @@ footer b{font-family:var(--wide);color:var(--paper);letter-spacing:.14em;font-si
       <div><span class="flap" id="cd-s">00</span><small>Sec</small></div>
     </div>
   </div>
-  <div class="stamp" aria-hidden="true"><div>Cape Meridian<b>T-MINUS</b>Pad 39-M</div></div>
+  <div class="stamp" aria-hidden="true"><div>Cape Apogee<b>T-MINUS</b>Pad 39-M</div></div>
 </header>
 <div class="stripe" aria-hidden="true"></div>
 
@@ -154,7 +154,7 @@ footer b{font-family:var(--wide);color:var(--paper);letter-spacing:.14em;font-si
   <div class="wrap">
     <div class="wide" style="font-size:11px;color:var(--orange)">Destinations</div>
     <h2>Where will you<br>go this season?</h2>
-    <p class="lead">Every Meridian Clipper departs from Cape Meridian, Florida, and returns you within fourteen days — tanned by starlight, three centimetres taller, with a story nobody at the club can top.</p>
+    <p class="lead">Every Apogee Clipper departs from Cape Apogee, Florida, and returns you within fourteen days — tanned by starlight, three centimetres taller, with a story nobody at the club can top.</p>
     <div class="dest" id="dest"></div>
   </div>
 </section>
@@ -183,8 +183,8 @@ footer b{font-family:var(--wide);color:var(--paper);letter-spacing:.14em;font-si
       <div>
         <div class="pass" id="pass">
           <div class="main">
-            <div class="top"><b>Meridian Orbital</b><span class="wide" style="font-size:9px" id="pClass">Clipper</span></div>
-            <div class="route"><div>CMF<small>Cape Meridian</small></div>
+            <div class="top"><b>Apogee Orbital</b><span class="wide" style="font-size:9px" id="pClass">Clipper</span></div>
+            <div class="route"><div>CMF<small>Cape Apogee</small></div>
               <svg viewBox="0 0 200 30" aria-hidden="true"><path d="M5 25 Q100 -10 195 25" fill="none" stroke="#14213d" stroke-width="2" stroke-dasharray="4 5"/><g transform="translate(100,8) rotate(0)"><path d="M-10 0 L8 0 L12 -2 L8 -4 L-10 -4Z M-6 -4 L-10 -9 M-6 0 L-10 5" fill="#f26b38" stroke="#14213d" stroke-width="1.2"/></g></svg>
               <div id="pCode">TRQ<small id="pName">Hotel Tranquility</small></div></div>
             <dl>
@@ -221,7 +221,7 @@ footer b{font-family:var(--wide);color:var(--paper);letter-spacing:.14em;font-si
   </div>
 </section>
 
-<footer><b>Meridian Orbital Lines</b><span>*In spirit. Fares illustrative. Moon subject to availability.</span></footer>
+<footer><b>Apogee Orbital Lines</b><span>*In spirit. Fares illustrative. Moon subject to availability.</span></footer>
 
 <script>
 (function(){
@@ -320,7 +320,7 @@ footer b{font-family:var(--wide);color:var(--paper);letter-spacing:.14em;font-si
     var pass=document.getElementById('pass'); pass.classList.remove('bump'); void pass.offsetWidth; pass.classList.add('bump');
     document.getElementById('reserveMsg').textContent='';
   }
-  document.getElementById('reserve').addEventListener('click',function(){ var ref='MO-'+Math.random().toString(36).slice(2,7).toUpperCase(); document.getElementById('reserveMsg').textContent='Seats held for 48 hours · reference '+ref+'. A Meridian stewardess will call to discuss your medical.'; });
+  document.getElementById('reserve').addEventListener('click',function(){ var ref='AO-'+Math.random().toString(36).slice(2,7).toUpperCase(); document.getElementById('reserveMsg').textContent='Seats held for 48 hours · reference '+ref+'. A Apogee stewardess will call to discuss your medical.'; });
   calc();
 })();
 </script>

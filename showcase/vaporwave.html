@@ -88,10 +88,10 @@ h2 small{display:block;font:16px var(--dot);letter-spacing:.4em;color:var(--pink
 
 /* player */
 .player{background:#12032a;background-image:radial-gradient(ellipse at 50% 120%,#5b1a7a 0%,transparent 60%)}
-.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:30px;align-items:center}
+.pgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px;margin-top:30px;align-items:center}
 .deck .wb{display:flex;flex-direction:column;gap:14px;background:#e8e8e8}
 .lcd{background:#0d1f16;color:var(--mint);font:15px var(--dot);padding:10px 12px;box-shadow:inset 2px 2px #000;display:flex;justify-content:space-between;gap:10px;text-shadow:0 0 6px var(--mint);min-height:44px;align-items:center}
-.lcd .scroll{white-space:nowrap;overflow:hidden;flex:1}
+.lcd .scroll{white-space:nowrap;overflow:hidden;flex:1;min-width:0}
 .lcd .scroll span{display:inline-block;padding-left:100%;animation:marq 14s linear infinite}
 @keyframes marq{to{transform:translateX(-100%)}}
 #viz{width:100%;height:120px;display:block;background:#1a0b2e;box-shadow:inset 2px 2px #000}
@@ -139,7 +139,7 @@ footer{padding-top:30px;padding-bottom:40px;text-align:center;color:#c8a7e8;font
 footer .big{font:400 28px var(--neon);color:var(--pink);text-shadow:0 0 12px var(--pink);display:block;margin-bottom:10px}
 
 @media (max-width:980px){
-  .hgrid,.pgrid,.dwrap{grid-template-columns:1fr}
+  .hgrid,.pgrid,.dwrap{grid-template-columns:minmax(0,1fr)}
   .figs{grid-template-columns:1fr 1fr}
   .princ{grid-template-columns:1fr 1fr}
   .map{max-width:360px}

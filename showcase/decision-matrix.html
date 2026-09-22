@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blueline Decision Matrix</title>
+<meta name="description" content="A weighted decision matrix drawn as an architect's blueprint: score options against weighted criteria, see a ranked result as dimensioned bars, and find out how close the call really is.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Azeret+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4f8fc; --grid:rgba(30,90,170,.10); --grid-2:rgba(30,90,170,.22);
+  --line:#1d4f91; --line-soft:rgba(29,79,145,.45); --ink:#123463; --ink-soft:#4e6c95;
+  --cell:#ffffff; --cell-edge:rgba(29,79,145,.35);
+  --hi:#d9480f; --good:#1a7f5a;
+  --s0:rgba(29,79,145,0); --s10:rgba(29,79,145,.14);
+  --seg-a:#1d4f91; --seg-b:#3f7fd1; --seg-c:#7fb0ea; --seg-d:#0e2f5a; --seg-e:#5c93d8; --seg-f:#a9c9f0;
+  --focus:#d9480f;
+  --shadow:0 20px 40px -26px rgba(18,52,99,.5);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#0c3468; --grid:rgba(255,255,255,.07); --grid-2:rgba(255,255,255,.16);
+    --line:#e6f0ff; --line-soft:rgba(230,240,255,.45); --ink:#f1f6ff; --ink-soft:#a9c3e8;
+    --cell:#0f3d78; --cell-edge:rgba(230,240,255,.3);
+    --hi:#ffb35c; --good:#7ef0b8;
+    --s0:rgba(255,255,255,0); --s10:rgba(255,255,255,.14);
+    --seg-a:#e6f0ff; --seg-b:#9cc3ff; --seg-c:#5f95e0; --seg-d:#cfe2ff; --seg-e:#7fb0f5; --seg-f:#3f73c0;
+    --focus:#ffb35c;
+    --shadow:0 20px 40px -20px rgba(0,0,0,.6);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; min-height:100vh; color:var(--ink); background-color:var(--paper);
+  background-image:linear-gradient(var(--grid-2) 1px, transparent 1px), linear-gradient(90deg, var(--grid-2) 1px, transparent 1px), linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  font-family:"Azeret Mono",ui-monospace,Menlo,Consolas,monospace; font-size:14px;
+  padding:max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left))}
+:focus-visible{outline:2px dashed var(--focus); outline-offset:3px}
+.hand{font-family:"Architects Daughter","Segoe Print","Comic Sans MS",cursive}
+.sheet{max-width:1240px; margin:0 auto; border:2px solid var(--line); padding:26px 26px 22px; position:relative; box-shadow:inset 0 0 0 6px var(--paper), inset 0 0 0 7px var(--line-soft)}
+@media (max-width:600px){ .sheet{padding:18px 14px} }
+.mark{position:absolute; width:18px; height:18px; border-color:var(--line); border-style:solid}
+.m1{top:-10px; left:-10px; border-width:0 1px 1px 0} .m2{top:-10px; right:-10px; border-width:0 0 1px 1px} .m3{bottom:-10px; left:-10px; border-width:1px 1px 0 0} .m4{bottom:-10px; right:-10px; border-width:1px 0 0 1px}
+header{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:22px}
+header > div{flex:1 1 320px; min-width:0}
+.qwrap input{flex:1 1 260px}
+.eyebrow{font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--ink-soft)}
+h1{margin:4px 0 0; font-family:"Architects Daughter",cursive; font-weight:400; font-size:clamp(30px,5vw,50px); line-height:1.05}
+.qwrap{max-width:760px; margin-top:10px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.qwrap label{font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft)}
+#question{font:22px "Architects Daughter",cursive; color:var(--ink); background:transparent; border:0; border-bottom:1px dashed var(--line-soft); padding:2px 4px; min-width:0; width:100%}
+.back{font-family:"Architects Daughter",cursive; font-size:17px; color:var(--ink); text-decoration:none; border:1.5px solid var(--line); padding:4px 12px; background:var(--paper)}
+.back:hover{background:var(--line); color:var(--paper)}
+
+h2{font-family:"Architects Daughter",cursive; font-weight:400; font-size:26px; margin:0; display:flex; align-items:baseline; gap:12px; flex-wrap:wrap}
+h2 .no{font-family:"Azeret Mono",monospace; font-size:11px; letter-spacing:.2em; border:1px solid var(--line); padding:2px 6px}
+.sec{margin-bottom:34px}
+.sec-h{display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:12px; border-bottom:1px solid var(--line); padding-bottom:6px}
+.btn{font:500 12px "Azeret Mono",monospace; letter-spacing:.08em; text-transform:uppercase; padding:8px 11px; border:1.5px solid var(--line); background:var(--paper); color:var(--ink); cursor:pointer}
+.btn:hover{background:var(--line); color:var(--paper)}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+
+.scroll{overflow-x:auto; padding-bottom:6px}
+table{border-collapse:collapse; min-width:100%}
+th, td{border:1px solid var(--cell-edge); padding:0; vertical-align:middle}
+thead th{padding:8px 8px 6px; background:var(--paper); text-align:center; min-width:112px}
+thead th:first-child{text-align:left; min-width:200px}
+thead th.wcol{min-width:150px}
+.optname{display:flex; align-items:center; gap:4px}
+.optname input, .critname input{font:18px "Architects Daughter",cursive; color:var(--ink); background:transparent; border:0; border-bottom:1px dashed transparent; width:100%; min-width:0; padding:2px 2px; text-align:center}
+.critname input{text-align:left; font-size:17px}
+.optname input:hover, .critname input:hover, .optname input:focus, .critname input:focus{border-bottom-color:var(--line-soft)}
+.x{border:0; background:none; color:var(--ink-soft); cursor:pointer; font:500 14px "Azeret Mono",monospace; padding:2px 5px; flex:none}
+.x:hover{color:var(--hi)}
+td.crit{padding:6px 8px}
+.critname{display:flex; align-items:center; gap:4px}
+.inv{display:flex; align-items:center; gap:5px; font-size:10px; letter-spacing:.06em; color:var(--ink-soft); margin-top:2px; cursor:pointer}
+.inv input{accent-color:var(--line); width:13px; height:13px; margin:0}
+td.w{padding:6px 10px}
+.wrow{display:flex; align-items:center; gap:8px}
+.wrow input[type=range]{flex:1; min-width:70px; accent-color:var(--hi)}
+.wrow output{font-weight:600; width:22px; text-align:right}
+.wpct{font-size:10px; color:var(--ink-soft)}
+td.sc{position:relative; text-align:center}
+td.sc input{width:100%; height:100%; min-height:44px; border:0; background:transparent; text-align:center; font:600 17px "Azeret Mono",monospace; color:var(--ink); padding:6px 4px; -moz-appearance:textfield}
+td.sc input::-webkit-outer-spin-button, td.sc input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+td.sc input:focus{outline:2px dashed var(--focus); outline-offset:-4px}
+td.sc .fill{position:absolute; left:0; bottom:0; width:100%; background:var(--s10); pointer-events:none; transition:height .3s}
+td.sc.best input{color:var(--hi)}
+tfoot td{padding:8px; text-align:center; font-weight:600; font-size:16px; background:var(--paper)}
+tfoot td:first-child{text-align:left; font:18px "Architects Daughter",cursive}
+tfoot td.win{color:var(--hi)}
+@media (max-width:600px){ thead th:first-child{min-width:150px} thead th.wcol{min-width:120px} thead th{min-width:84px} }
+.hint{font-size:12px; color:var(--ink-soft); margin:8px 0 0; line-height:1.6}
+
+/* results drawing */
+.drawing{display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:28px}
+@media (max-width:900px){ .drawing{grid-template-columns:minmax(0,1fr)} }
+#bars{width:100%; height:auto; display:block; overflow:visible}
+#bars text{font-family:"Azeret Mono",monospace; fill:var(--ink)}
+#bars .lbl{font-family:"Architects Daughter",cursive; font-size:17px}
+#bars .dim{stroke:var(--line); stroke-width:1; fill:none}
+#bars .ext{stroke:var(--line-soft); stroke-width:1; stroke-dasharray:3 3}
+#bars .rank{font-size:12px; fill:var(--ink-soft)}
+#bars .score{font-size:13px; font-weight:600}
+#bars .win .score, #bars .win .lbl{fill:var(--hi)}
+#bars .seg{stroke:var(--paper); stroke-width:1}
+.legend{display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:10px; font-size:12px}
+.legend span{display:flex; align-items:center; gap:6px}
+.legend i{width:14px; height:10px; display:inline-block; border:1px solid var(--line)}
+.notes{border:1.5px solid var(--line); padding:14px 16px; position:relative; background:var(--paper)}
+.notes h3{margin:0 0 8px; font:20px "Architects Daughter",cursive}
+.notes p{margin:0 0 10px; line-height:1.6}
+.notes .big{font:26px "Architects Daughter",cursive; color:var(--hi); line-height:1.2}
+.notes ul{margin:0; padding-left:18px; line-height:1.6}
+.meterbar{height:10px; border:1px solid var(--line); margin:6px 0 4px; position:relative; background:repeating-linear-gradient(45deg, transparent 0 4px, var(--grid-2) 4px 5px)}
+.meterbar i{position:absolute; left:0; top:0; bottom:0; background:var(--line)}
+.titleblock{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); border:2px solid var(--line); margin-top:10px; font-size:11px}
+.titleblock div{padding:6px 8px; border-right:1px solid var(--line)}
+.titleblock div:last-child{border-right:0}
+.titleblock b{display:block; font:16px "Architects Daughter",cursive; margin-top:2px; font-weight:400}
+.titleblock span{letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft)}
+@media (max-width:560px){ .titleblock{grid-template-columns:repeat(2,minmax(0,1fr))} .titleblock div:nth-child(2){border-right:0} .titleblock div:nth-child(-n+2){border-bottom:1px solid var(--line)} }
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+@media (prefers-reduced-motion: reduce){ td.sc .fill{transition:none} }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <span class="mark m1"></span><span class="mark m2"></span><span class="mark m3"></span><span class="mark m4"></span>
+  <header>
+    <div>
+      <div class="eyebrow">Blueline &middot; weighted decision matrix</div>
+      <h1>Decide it on paper.</h1>
+      <div class="qwrap"><label for="question">The question</label><input id="question" maxlength="90"></div>
+    </div>
+    <a class="back" href="index.html">&larr; Showcase</a>
+  </header>
+
+  <section class="sec" aria-labelledby="h-mx">
+    <div class="sec-h">
+      <h2 id="h-mx"><span class="no">SHT 01</span> The matrix</h2>
+      <div class="tools">
+        <button class="btn" id="add-opt">+ Option</button>
+        <button class="btn" id="add-crit">+ Criterion</button>
+        <button class="btn" id="reset">Reset example</button>
+      </div>
+    </div>
+    <div class="scroll"><table id="mx"></table></div>
+    <p class="hint">Score each option 0&ndash;10 on each criterion (higher is better; tick <em>lower is better</em> for things like cost, then enter the raw rating and it will be flipped). Weights run 0&ndash;10 and are normalised automatically. Arrow keys nudge a score.</p>
+  </section>
+
+  <section class="sec" aria-labelledby="h-res">
+    <div class="sec-h"><h2 id="h-res"><span class="no">SHT 02</span> Ranked result</h2><span class="eyebrow">Weighted score out of 10 &middot; segments show each criterion&rsquo;s contribution</span></div>
+    <div class="drawing">
+      <div>
+        <svg id="bars" role="img" aria-labelledby="bars-t"><title id="bars-t">Ranked weighted scores</title></svg>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="notes" aria-live="polite">
+        <h3>Engineer&rsquo;s notes</h3>
+        <div id="notes"></div>
+      </div>
+    </div>
+    <div class="titleblock">
+      <div><span>Drawing</span><b id="tb-title">&nbsp;</b></div>
+      <div><span>Options &times; criteria</span><b id="tb-size">&nbsp;</b></div>
+      <div><span>Revised</span><b id="tb-date">&nbsp;</b></div>
+      <div><span>Scale</span><b>0 &ndash; 10, weighted mean</b></div>
+    </div>
+  </section>
+</div>
+<p class="sr" id="live" aria-live="polite"></p>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "blueline-matrix-v1";
+  var $ = function(id){ return document.getElementById(id); };
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+
+  function example(){
+    var o = [{id:uid(), name:"Bristol"},{id:uid(), name:"Leeds"},{id:uid(), name:"Glasgow"},{id:uid(), name:"Lisbon"}];
+    var c = [
+      {id:uid(), name:"Studio rent", w:8, inv:true, s:[7,5,4,5]},
+      {id:uid(), name:"Hiring pool", w:9, inv:false, s:[8,7,7,6]},
+      {id:uid(), name:"Rail to clients", w:6, inv:false, s:[7,8,5,3]},
+      {id:uid(), name:"Cost of living", w:5, inv:true, s:[7,5,5,4]},
+      {id:uid(), name:"Team wants to move", w:7, inv:false, s:[8,5,6,9]},
+      {id:uid(), name:"Time-zone fit", w:3, inv:false, s:[10,10,10,9]}
+    ];
+    var scores = {}; c.forEach(function(cr){ scores[cr.id] = {}; o.forEach(function(op, i){ scores[cr.id][op.id] = cr.s[i]; }); delete cr.s; });
+    return {q:"Where should Ferrous Studio open its second office?", opts:o, crits:c, scores:scores, t:Date.now()};
+  }
+  var st; try { st = JSON.parse(localStorage.getItem(KEY)); } catch(e){ st = null; }
+  if (!st || !Array.isArray(st.opts) || !Array.isArray(st.crits)) st = example();
+  function save(){ st.t = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){} }
+
+  function sc(cid, oid){ var r = st.scores[cid] && st.scores[cid][oid]; return typeof r === "number" && isFinite(r) ? r : 5; }
+  function eff(c, oid){ var r = sc(c.id, oid); return c.inv ? 10 - r : r; }
+  function wsum(ws){ return ws.reduce(function(a,b){ return a + b; }, 0); }
+  function results(weights){
+    var W = weights || st.crits.map(function(c){ return c.w; }), T = wsum(W) || 1;
+    return st.opts.map(function(o){
+      var parts = st.crits.map(function(c, i){ return W[i] * eff(c, o.id) / T; });
+      return {o:o, total:wsum(parts), parts:parts};
+    });
+  }
+
+  // ---------- matrix ----------
+  function renderMatrix(){
+    var t = $("mx"); t.innerHTML = "";
+    var res = results(), best = {};
+    st.crits.forEach(function(c){ var m = -1; st.opts.forEach(function(o){ m = Math.max(m, eff(c, o.id)); }); best[c.id] = m; });
+    var thead = document.createElement("thead"), hr = document.createElement("tr");
+    var h0 = document.createElement("th"); h0.textContent = "Criterion"; h0.scope = "col"; h0.className = "eyebrow"; hr.appendChild(h0);
+    var h1 = document.createElement("th"); h1.textContent = "Weight"; h1.scope = "col"; h1.className = "eyebrow wcol"; hr.appendChild(h1);
+    st.opts.forEach(function(o){
+      var th = document.createElement("th"); th.scope = "col";
+      var d = document.createElement("div"); d.className = "optname";
+      var inp = document.createElement("input"); inp.value = o.name; inp.id = "on-" + o.id; inp.maxLength = 30; inp.setAttribute("aria-label","Option name");
+      inp.addEventListener("change", function(){ o.name = inp.value.trim() || "Option"; save(); renderAll(false); });
+      var x = document.createElement("button"); x.className = "x"; x.type = "button"; x.textContent = "×"; x.id = "ox-" + o.id; x.setAttribute("aria-label","Remove option " + o.name);
+      x.addEventListener("click", function(){ if (st.opts.length <= 2){ say("Keep at least two options."); return; } st.opts = st.opts.filter(function(z){ return z !== o; }); save(); renderAll(true); });
+      d.appendChild(inp); d.appendChild(x); th.appendChild(d); hr.appendChild(th);
+    });
+    thead.appendChild(hr); t.appendChild(thead);
+    var tb = document.createElement("tbody"), T = wsum(st.crits.map(function(c){ return c.w; })) || 1;
+    st.crits.forEach(function(c){
+      var tr = document.createElement("tr");
+      var td0 = document.createElement("td"); td0.className = "crit";
+      var cn = document.createElement("div"); cn.className = "critname";
+      var ci = document.createElement("input"); ci.value = c.name; ci.id = "cn-" + c.id; ci.maxLength = 40; ci.setAttribute("aria-label","Criterion name");
+      ci.addEventListener("change", function(){ c.name = ci.value.trim() || "Criterion"; save(); renderAll(false); });
+      var cx = document.createElement("button"); cx.className = "x"; cx.type = "button"; cx.textContent = "×"; cx.id = "cx-" + c.id; cx.setAttribute("aria-label","Remove criterion " + c.name);
+      cx.addEventListener("click", function(){ if (st.crits.length <= 1){ say("Keep at least one criterion."); return; } st.crits = st.crits.filter(function(z){ return z !== c; }); delete st.scores[c.id]; save(); renderAll(true); });
+      cn.appendChild(ci); cn.appendChild(cx); td0.appendChild(cn);
+      var inv = document.createElement("label"); inv.className = "inv"; inv.setAttribute("for","inv-" + c.id);
+      var ib = document.createElement("input"); ib.type = "checkbox"; ib.id = "inv-" + c.id; ib.checked = !!c.inv;
+      ib.addEventListener("change", function(){ c.inv = ib.checked; save(); renderAll(false); });
+      inv.appendChild(ib); inv.appendChild(document.createTextNode("lower is better")); td0.appendChild(inv);
+      tr.appendChild(td0);
+      var td1 = document.createElement("td"); td1.className = "w";
+      var wr = document.createElement("div"); wr.className = "wrow";
+      var rg = document.createElement("input"); rg.type = "range"; rg.min = 0; rg.max = 10; rg.step = 1; rg.value = c.w; rg.id = "w-" + c.id; rg.setAttribute("aria-label","Weight for " + c.name);
+      var out = document.createElement("output"); out.setAttribute("for", rg.id); out.textContent = c.w;
+      var pct = document.createElement("div"); pct.className = "wpct"; pct.textContent = Math.round(c.w/T*100) + "% of decision";
+      rg.addEventListener("input", function(){ c.w = +rg.value; out.textContent = c.w; save(); renderAll(false, true); });
+      wr.appendChild(rg); wr.appendChild(out); td1.appendChild(wr); td1.appendChild(pct); tr.appendChild(td1);
+      st.opts.forEach(function(o){
+        var td = document.createElement("td"); td.className = "sc" + (eff(c, o.id) === best[c.id] ? " best" : "");
+        var fill = document.createElement("span"); fill.className = "fill"; fill.style.height = (sc(c.id, o.id) * 10) + "%"; td.appendChild(fill);
+        var inp = document.createElement("input"); inp.type = "number"; inp.min = 0; inp.max = 10; inp.step = 1; inp.inputMode = "numeric"; inp.value = sc(c.id, o.id); inp.id = "s-" + c.id + "-" + o.id;
+        inp.setAttribute("aria-label", o.name + ", " + c.name + (c.inv ? " (lower is better)" : "") + ", score out of 10");
+        inp.addEventListener("input", function(){ var v = Math.max(0, Math.min(10, Math.round(+inp.value))); if (inp.value === "" || !isFinite(v)) return; st.scores[c.id] = st.scores[c.id] || {}; st.scores[c.id][o.id] = v; fill.style.height = (v*10) + "%"; save(); renderAll(false, true); });
+        inp.addEventListener("blur", function(){ inp.value = sc(c.id, o.id); });
+        td.appendChild(inp); tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    var tf = document.createElement("tfoot"), fr = document.createElement("tr");
+    var f0 = document.createElement("td"); f0.textContent = "Weighted score"; f0.colSpan = 2; fr.appendChild(f0);
+    var top = Math.max.apply(null, res.map(function(r){ return r.total; }));
+    res.forEach(function(r){ var td = document.createElement("td"); td.id = "tot-" + r.o.id; td.textContent = r.total.toFixed(2); if (Math.abs(r.total - top) < 1e-9) td.className = "win"; fr.appendChild(td); });
+    tf.appendChild(fr); t.appendChild(tf);
+  }
+  function refreshTotals(){
+    var res = results(), top = Math.max.apply(null, res.map(function(r){ return r.total; }));
+    res.forEach(function(r){ var td = $("tot-" + r.o.id); if (td){ td.textContent = r.total.toFixed(2); td.className = Math.abs(r.total - top) < 1e-9 ? "win" : ""; } });
+    var T = wsum(st.crits.map(function(c){ return c.w; })) || 1;
+    st.crits.forEach(function(c){
+      var rg = $("w-" + c.id); if (rg){ var p = rg.closest("td").querySelector(".wpct"); if (p) p.textContent = Math.round(c.w/T*100) + "% of decision"; }
+      var m = -1; st.opts.forEach(function(o){ m = Math.max(m, eff(c, o.id)); });
+      st.opts.forEach(function(o){ var inp = $("s-" + c.id + "-" + o.id); if (inp) inp.parentNode.classList.toggle("best", eff(c, o.id) === m); });
+    });
+  }
+
+  // ---------- drawing ----------
+  var NS = "http://www.w3.org/2000/svg";
+  function el(n, a, p){ var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  var SEGS = ["var(--seg-a)","var(--seg-b)","var(--seg-c)","var(--seg-d)","var(--seg-e)","var(--seg-f)"];
+  function hatch(defs, i){
+    var id = "h" + i, p = el("pattern", {id:id, width:6, height:6, patternUnits:"userSpaceOnUse", patternTransform:"rotate(" + (i*30 + 45) + ")"}, defs);
+    el("rect", {width:6, height:6, fill:SEGS[i % SEGS.length], opacity:i >= SEGS.length ? .55 : 1}, p);
+    if (i >= SEGS.length) el("line", {x1:0, y1:0, x2:0, y2:6, stroke:"var(--paper)", "stroke-width":2}, p);
+    return "url(#" + id + ")";
+  }
+  function renderBars(){
+    var s = $("bars"), res = results().sort(function(a,b){ return b.total - a.total; });
+    var W = Math.max(320, s.parentNode.clientWidth || 600), rowH = 58, top = 34, L = Math.min(150, W*0.3), R = 70, H = top + res.length*rowH + 30;
+    s.setAttribute("viewBox", "0 0 " + W + " " + H); s.setAttribute("width", W); s.setAttribute("height", H);
+    while (s.childNodes.length > 1) s.removeChild(s.lastChild);
+    var defs = el("defs", {}, s), fills = st.crits.map(function(c, i){ return hatch(defs, i); });
+    var mk = el("marker", {id:"arr", viewBox:"0 0 10 10", refX:10, refY:5, markerWidth:8, markerHeight:8, orient:"auto-start-reverse"}, defs);
+    el("path", {d:"M0,1 L10,5 L0,9", fill:"none", stroke:"var(--line)", "stroke-width":1.4}, mk);
+    var span = W - L - R, x = function(v){ return L + span * v / 10; };
+    // scale
+    for (var t=0;t<=10;t++){ el("line", {x1:x(t), y1:top-10, x2:x(t), y2:H-24, "class":"ext", opacity:t%5 ? .5 : 1}, s); var tx = el("text", {x:x(t), y:top-16, "text-anchor":"middle", "font-size":10, fill:"var(--ink-soft)"}, s); tx.textContent = t; }
+    res.forEach(function(r, k){
+      var y = top + k*rowH, g = el("g", {"class":k === 0 ? "win" : ""}, s);
+      var rk = el("text", {x:0, y:y+14, "class":"rank"}, g); rk.textContent = "No. " + (k+1);
+      var lb = el("text", {x:0, y:y+33, "class":"lbl"}, g); lb.textContent = r.o.name.length > 16 ? r.o.name.slice(0,15) + "…" : r.o.name;
+      var cx = L;
+      r.parts.forEach(function(p, i){ var w = span * p / 10; if (w <= 0) return; var rect = el("rect", {x:cx, y:y+6, width:Math.max(0,w), height:22, fill:fills[i], "class":"seg"}, g); var tt = el("title", {}, rect); tt.textContent = st.crits[i].name + ": +" + p.toFixed(2); cx += w; });
+      el("rect", {x:L, y:y+6, width:Math.max(0, cx - L), height:22, fill:"none", stroke:"var(--line)", "stroke-width":1.2}, g);
+      // dimension line
+      el("line", {x1:L, y1:y+40, x2:x(r.total), y2:y+40, "class":"dim", "marker-start":"url(#arr)", "marker-end":"url(#arr)"}, g);
+      el("line", {x1:x(r.total), y1:y+4, x2:x(r.total), y2:y+46, "class":"dim"}, g);
+      var sv = el("text", {x:x(r.total) + 8, y:y+22, "class":"score"}, g); sv.textContent = r.total.toFixed(2);
+      if (k > 0){ var gap = el("text", {x:x(r.total) + 8, y:y+38, "font-size":10, fill:"var(--ink-soft)"}, g); gap.textContent = "−" + (res[0].total - r.total).toFixed(2); }
+    });
+    var lg = $("legend"); lg.innerHTML = "";
+    st.crits.forEach(function(c, i){ var sp = document.createElement("span"); var ic = document.createElementNS(NS, "svg"); ic.setAttribute("width", 16); ic.setAttribute("height", 12); var d2 = el("defs", {}, ic); var f = hatch(d2, i).replace("#h", "#lg-h"); d2.firstChild.id = "lg-h" + i; el("rect", {width:16, height:12, fill:f, stroke:"var(--line)"}, ic); sp.appendChild(ic); sp.appendChild(document.createTextNode(c.name + " · w" + c.w)); lg.appendChild(sp); });
+  }
+
+  // ---------- sensitivity ----------
+  function renderNotes(){
+    var box = $("notes"); box.innerHTML = "";
+    var res = results().sort(function(a,b){ return b.total - a.total; });
+    if (res.length < 2) return;
+    var A = res[0], B = res[1], margin = A.total - B.total;
+    var p = document.createElement("p"); p.className = "big";
+    p.textContent = margin < 1e-9 ? "A dead heat between " + A.o.name + " and " + B.o.name + "." : A.o.name + " leads by " + margin.toFixed(2) + " points.";
+    box.appendChild(p);
+    // for each criterion: smallest weight change (0..10) that flips A vs B
+    var W = st.crits.map(function(c){ return c.w; });
+    var flips = [];
+    st.crits.forEach(function(c, k){
+      var best = null;
+      for (var nw = 0; nw <= 10; nw++){
+        if (nw === c.w) continue;
+        var w2 = W.slice(); w2[k] = nw; if (!wsum(w2)) continue;
+        var r2 = results(w2), a = r2.filter(function(r){ return r.o === A.o; })[0].total, top = Math.max.apply(null, r2.map(function(r){ return r.total; }));
+        if (top - a > 1e-9){ var winner = r2.filter(function(r){ return Math.abs(r.total - top) < 1e-9; })[0]; if (!best || Math.abs(nw - c.w) < Math.abs(best.nw - c.w)) best = {c:c, nw:nw, who:winner.o.name, d:Math.abs(nw - c.w)}; }
+      }
+      if (best) flips.push(best);
+    });
+    flips.sort(function(a,b){ return a.d - b.d; });
+    // single score change that flips
+    var scoreFlip = null;
+    st.crits.forEach(function(c){
+      st.opts.forEach(function(o){
+        if (o === A.o) return;
+        var orig = sc(c.id, o.id);
+        for (var d=1; d<=10; d++){
+          var v = c.inv ? orig - d : orig + d; if (v < 0 || v > 10) break;
+          st.scores[c.id][o.id] = v;
+          var r2 = results(), top = Math.max.apply(null, r2.map(function(r){ return r.total; })), me = r2.filter(function(r){ return r.o === o; })[0].total;
+          st.scores[c.id][o.id] = orig;
+          if (Math.abs(me - top) < 1e-9 && me > r2.filter(function(r){ return r.o === A.o; })[0].total){ if (!scoreFlip || d < scoreFlip.d) scoreFlip = {c:c, o:o, d:d, v:v, orig:orig}; break; }
+        }
+      });
+    });
+    var robust = flips.length === 0 || flips[0].d >= 4;
+    var label = document.createElement("p");
+    var strength = Math.min(1, flips.length ? flips[0].d / 6 : 1);
+    label.innerHTML = "";
+    label.appendChild(document.createTextNode(robust ? "Verdict: robust. " : (flips[0].d <= 1 ? "Verdict: knife-edge. " : "Verdict: sensitive. ")));
+    box.appendChild(label);
+    var mb = document.createElement("div"); mb.className = "meterbar"; var mi = document.createElement("i"); mi.style.width = (strength*100) + "%"; mb.appendChild(mi); box.appendChild(mb);
+    var cap = document.createElement("p"); cap.style.fontSize = "11px"; cap.style.color = "var(--ink-soft)"; cap.textContent = "Robustness: how far a single weight must move to change the winner."; box.appendChild(cap);
+    var ul = document.createElement("ul");
+    if (flips.length){
+      flips.slice(0,3).forEach(function(f){ var li = document.createElement("li"); li.textContent = (f.nw > f.c.w ? "Raise" : "Lower") + " “" + f.c.name + "” from " + f.c.w + " to " + f.nw + " and " + f.who + " wins."; ul.appendChild(li); });
+    } else { var li = document.createElement("li"); li.textContent = "No single weight change within 0–10 dethrones " + A.o.name + "."; ul.appendChild(li); }
+    if (scoreFlip){ var li2 = document.createElement("li"); li2.textContent = "Or if " + scoreFlip.o.name + " scored " + scoreFlip.v + " instead of " + scoreFlip.orig + " on “" + scoreFlip.c.name + "”, it would take the lead."; ul.appendChild(li2); }
+    var lead = A.parts.map(function(p, i){ return {i:i, d:p - B.parts[i]}; }).sort(function(a,b){ return b.d - a.d; })[0];
+    if (lead && lead.d > 0){ var li3 = document.createElement("li"); li3.textContent = "Biggest edge over " + B.o.name + ": “" + st.crits[lead.i].name + "” (+" + lead.d.toFixed(2) + ")."; ul.appendChild(li3); }
+    box.appendChild(ul);
+  }
+
+  function say(s){ $("live").textContent = s; }
+  function renderAll(rebuild, soft){
+    if (soft) refreshTotals(); else renderMatrix();
+    renderBars(); renderNotes();
+    $("tb-title").textContent = st.q || "Untitled";
+    $("tb-size").textContent = st.opts.length + " × " + st.crits.length;
+    $("tb-date").textContent = new Date(st.t || Date.now()).toLocaleDateString(undefined, {day:"numeric", month:"short", year:"numeric"});
+  }
+
+  $("question").value = st.q;
+  $("question").addEventListener("input", function(){ st.q = this.value; save(); $("tb-title").textContent = st.q || "Untitled"; });
+  $("add-opt").addEventListener("click", function(){ if (st.opts.length >= 8){ say("Eight options is the most this sheet holds."); return; } var o = {id:uid(), name:"Option " + String.fromCharCode(65 + st.opts.length)}; st.opts.push(o); st.crits.forEach(function(c){ st.scores[c.id] = st.scores[c.id] || {}; st.scores[c.id][o.id] = 5; }); save(); renderAll(true); var n = $("on-" + o.id); if (n){ n.focus(); n.select(); } });
+  $("add-crit").addEventListener("click", function(){ if (st.crits.length >= 12){ say("Twelve criteria is the limit."); return; } var c = {id:uid(), name:"New criterion", w:5, inv:false}; st.crits.push(c); st.scores[c.id] = {}; st.opts.forEach(function(o){ st.scores[c.id][o.id] = 5; }); save(); renderAll(true); var n = $("cn-" + c.id); if (n){ n.focus(); n.select(); } });
+  var armT = 0;
+  $("reset").addEventListener("click", function(){ var b = this; if (!b.dataset.armed){ b.dataset.armed = "1"; b.textContent = "Tap again to reset"; armT = setTimeout(function(){ delete b.dataset.armed; b.textContent = "Reset example"; }, 3000); return; } clearTimeout(armT); delete b.dataset.armed; b.textContent = "Reset example"; st = example(); save(); $("question").value = st.q; renderAll(true); say("Example restored"); });
+  st.crits.forEach(function(c){ st.scores[c.id] = st.scores[c.id] || {}; });
+  var rt = 0; window.addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(renderBars, 120); });
+  renderAll(true);
+})();
+</script>
+</body>
+</html>
