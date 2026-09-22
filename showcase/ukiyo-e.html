@@ -268,14 +268,14 @@ footer .s{font:26px var(--brush);color:var(--washi)}
 
     /* back wave (right, lower) */
     var back=layer('back',.35);
-    shape(back,'M700 760 C760 660 860 590 980 580 C1080 572 1160 610 1200 640 V760Z','prussian');
-    shape(back,'M760 760 C810 690 890 640 980 630 C1060 624 1130 650 1200 690 V760Z','pale');
-    foamClaws(back,'M860 612 C920 586 1000 574 1080 590 C1130 600 1170 620 1200 640',9,20,LS,true);
+    shape(back,'M290 760 C350 688 430 656 520 664 C600 672 660 708 720 760Z','prussian');
+    shape(back,'M340 760 C390 712 450 694 520 700 C580 706 630 728 660 760Z','pale');
+    foamClaws(back,'M330 712 C380 680 450 660 520 664 C580 668 630 690 670 720',9,16,LS,true);
 
     /* boats */
     var boats=layer('boats',.5);
-    boat(boats,120,586,-8,LS);
-    boat(boats,780,690,-14,LS);
+    boat(boats,90,668,-9,LS);
+    boat(boats,380,672,-5,LS);
 
     /* main wave */
     var main=layer('main',.75);
