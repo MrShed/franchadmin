@@ -84,7 +84,7 @@ body{margin:0;background:var(--wall);color:var(--ink);font-family:var(--body);fo
 .rule{height:0;border-top:2px solid var(--ink);margin:16px auto;width:80%}
 .rule.th{border-top:6px double var(--ink);width:100%}
 .orn{font-size:22px;letter-spacing:.4em;margin:6px 0}
-.l-title{font-family:var(--fat);font-size:clamp(30px,7.8vw,100px);line-height:.88;letter-spacing:-.01em;margin:14px 0 4px;text-transform:uppercase}
+.l-title{font-family:var(--fat);font-size:clamp(30px,7.2vw,84px);line-height:.88;letter-spacing:-.01em;margin:14px 0 4px;text-transform:uppercase}
 .l-title span{display:block;font-size:.52em;letter-spacing:.06em}
 .l-or{font-family:var(--black);font-size:clamp(26px,4vw,40px);color:var(--red);margin:4px 0}
 .l-sub{font-family:var(--deco);font-size:clamp(22px,4vw,40px);text-transform:uppercase;letter-spacing:.02em}
@@ -316,17 +316,17 @@ function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t
 const R=rng(1887);
 function tier(sec,rows,r0,dr,a0,a1,letters,label,ly){
   for(let i=0;i<rows;i++){const r=r0+i*dr;const n=Math.floor((a1-a0)*r/15);
-    for(let j=0;j<n;j++){const a=a0+(j+.5)*(a1-a0)/n;const x=cx+Math.cos(a)*r,y=cy-60+Math.sin(a)*r*.82;
+    for(let j=0;j<n;j++){const a=a0+(j+.5)*(a1-a0)/n;const x=cx+Math.cos(a)*r,y=cy-60+Math.sin(a)*r*.95;
       if(sec==='stalls'&&Math.abs(Math.cos(a))<.03)continue; // centre aisle
       seats.push({sec,row:letters[i],num:j+1,x,y,sold:R()<.32});}}
-  ly=cy-60-(r0+(rows-1)*dr)*.82-10;
+  ly=cy-60-(r0+(rows-1)*dr)*.95-10;
   s+=`<text x="${cx}" y="${ly}" text-anchor="middle" font-family="Old Standard TT, serif" font-style="italic" font-size="13" fill="#e6cfa6">${label}</text>`;
 }
-tier('stalls',8,90,17,Math.PI*1.18,Math.PI*1.82,'ABCDEFGH','Orchestra Stalls',cy-60-240);
-s+=`<path d="M${cx-265} ${cy-120} Q${cx} ${cy-470} ${cx+265} ${cy-120}" fill="none" stroke="#d8b25a" stroke-opacity=".5" stroke-dasharray="4 4"/>`;
-tier('circle',3,258,16,Math.PI*1.16,Math.PI*1.84,'JKL','Dress Circle',cy-60-305);
-tier('upper',3,312,15,Math.PI*1.2,Math.PI*1.8,'MNO','Upper Circle',cy-60-352);
-tier('gallery',3,362,14,Math.PI*1.24,Math.PI*1.76,'PQR','Gallery · “the Gods”',22);
+tier('stalls',7,72,15,Math.PI*1.16,Math.PI*1.84,'ABCDEFG','Orchestra Stalls',cy-60-240);
+s+=`<path d="M${cx-190} ${cy-60} A190 180 0 0 1 ${cx+190} ${cy-60}" fill="none" stroke="#d8b25a" stroke-opacity=".35" stroke-dasharray="4 4"/>`;
+tier('circle',3,208,15,Math.PI*1.2,Math.PI*1.8,'JKL','Dress Circle',cy-60-305);
+tier('upper',3,266,14,Math.PI*1.24,Math.PI*1.76,'MNO','Upper Circle',cy-60-352);
+tier('gallery',3,320,14,Math.PI*1.28,Math.PI*1.72,'PQR','Gallery · “the Gods”',22);
 // boxes left and right
 [['L',70],['R',630]].forEach(([side,x])=>{for(let k=0;k<4;k++){const y=300+k*50;seats.push({sec:'boxes',row:'Box '+side+(k+1),num:1,x,y,box:true,sold:R()<.4});}
   s+=`<text x="${x}" y="286" text-anchor="middle" font-family="Old Standard TT, serif" font-style="italic" font-size="12" fill="#e6cfa6">Boxes</text>`;});
