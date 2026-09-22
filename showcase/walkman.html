@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kōdo Stride Walkman</title>
+<meta name="description" content="A yellow sports cassette walkman you can actually play: latching keys, spinning reels, winding tape and ten synthesised lo-fi and chiptune tracks on a hand-lettered J-card.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Permanent+Marker&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cobalt:#1b36b8; --cobalt-deep:#0f1f78; --yellow:#f5c416; --yellow-dark:#c99a06; --rubber:#3a3d44;
+  --rubber-hi:#555a63; --paper:#fbf7ec; --ink:#1c2a8c; --red:#e2412b; --mono:"Share Tech Mono",ui-monospace,Menlo,monospace;
+  --wide:"Syncopate","Arial Black",system-ui,sans-serif; --hand:"Permanent Marker","Comic Sans MS","Segoe Print",cursive;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh; background:var(--cobalt); color:#fff; font-family:var(--mono);
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,.12), transparent 40%),
+    radial-gradient(rgba(0,0,0,.22) 1.2px, transparent 1.4px);
+  background-size:auto, 9px 9px; overflow-x:hidden;
+}
+.backword{position:fixed; inset:auto 0 -4vw 0; font-family:var(--wide); font-weight:700; font-size:22vw; line-height:.8; letter-spacing:-.02em;
+  color:transparent; -webkit-text-stroke:2px rgba(255,255,255,.12); white-space:nowrap; pointer-events:none; user-select:none; text-align:center; z-index:0; transition:opacity .6s}
+header{position:relative; z-index:2; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:22px max(16px,4vw) 0}
+.brand{font-family:var(--wide); font-weight:700; letter-spacing:.35em; font-size:13px; line-height:1.6}
+.brand small{display:block; font-family:var(--mono); letter-spacing:.2em; font-weight:400; opacity:.7; font-size:11px}
+.back{color:#fff; font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-decoration:none; border:1.5px solid rgba(255,255,255,.5); padding:6px 10px; border-radius:3px; white-space:nowrap}
+.back:hover{background:var(--yellow); color:var(--cobalt-deep); border-color:var(--yellow)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--yellow); outline-offset:3px}
+main{position:relative; z-index:1; display:grid; grid-template-columns:minmax(0,470px) minmax(0,420px); gap:clamp(28px,6vw,90px); justify-content:center; align-items:start; padding:64px max(16px,4vw) 60px}
+
+/* ---------- walkman ---------- */
+.walkman-wrap{position:relative; padding-top:34px}
+.walkman{position:relative; z-index:1; width:100%; background:linear-gradient(160deg,#ffd940 0%,var(--yellow) 38%,#e8b40c 100%);
+  border-radius:34px 34px 40px 40px; padding:22px 22px 26px;
+  box-shadow: inset 0 3px 0 rgba(255,255,255,.55), inset 0 -8px 0 var(--yellow-dark), inset 6px 0 14px rgba(255,255,255,.2),
+    0 30px 60px -20px rgba(0,0,20,.7), 0 8px 0 #9d7800;}
+.walkman.jolt{animation:jolt .18s ease-out}
+@keyframes jolt{0%{transform:translateY(0)}35%{transform:translateY(3px) rotate(-.3deg)}100%{transform:none}}
+.keys{position:absolute; left:34px; right:90px; top:4px; display:flex; gap:8px; z-index:0}
+.key{flex:1; height:52px; border:0; border-radius:8px 8px 3px 3px; cursor:pointer; position:relative; color:#e9eaee;
+  background:linear-gradient(180deg,#6d727c,#454951 60%,#34373d); box-shadow:inset 0 2px 0 rgba(255,255,255,.35), 0 3px 0 #22242a;
+  transition:transform .32s cubic-bezier(.25,1.9,.45,1), filter .2s; display:flex; align-items:flex-start; justify-content:center; padding-top:9px}
+.key svg{width:22px; height:14px; fill:currentColor}
+.key.play{background:linear-gradient(180deg,#f0563c,#c53220 60%,#9b2415); flex:1.4}
+.key.down{transform:translateY(17px); transition:transform .07s cubic-bezier(.5,0,1,.6); filter:brightness(.85)}
+.key.tap{transform:translateY(17px); transition:transform .06s ease-in}
+.key-labels{display:flex; gap:8px; margin:0 68px 12px 12px; font-family:var(--wide); font-size:8px; letter-spacing:.14em; color:#6a5100; font-weight:700}
+.key-labels span{flex:1; text-align:center} .key-labels span.p{flex:1.4}
+.lid{position:relative; border-radius:18px; padding:10px; background:linear-gradient(180deg,#2c2f35,#1a1c20); box-shadow:inset 0 2px 8px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.6)}
+.window{position:relative; border-radius:12px; overflow:hidden; background:#0d0e10; perspective:900px}
+.window::after{content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(115deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.05) 22%, transparent 23%, transparent 60%, rgba(255,255,255,.07) 61%, transparent 75%),
+  linear-gradient(180deg, rgba(40,20,0,.18), rgba(40,20,0,.35)); mix-blend-mode:screen}
+#cassette{display:block; width:100%; height:auto; transform-origin:50% 50%}
+.lid-print{display:flex; justify-content:space-between; font-family:var(--wide); font-size:8px; letter-spacing:.3em; color:#9aa0aa; padding:9px 4px 0}
+.body-row{display:grid; grid-template-columns:1fr auto; gap:16px; align-items:center; margin-top:18px}
+.logo{font-family:var(--wide); font-weight:700; color:var(--cobalt-deep); line-height:1; font-size:19px; letter-spacing:.06em}
+.logo em{font-style:normal; display:block; font-size:9px; letter-spacing:.42em; color:#6a5100; margin-top:6px}
+.counter{display:flex; align-items:center; gap:8px}
+.counter .digits{display:flex; background:#111; padding:4px 5px; border-radius:4px; box-shadow:inset 0 2px 4px #000, 0 1px 0 rgba(255,255,255,.5)}
+.digit{width:15px; height:22px; overflow:hidden; background:linear-gradient(#e9e9e9,#fff 40%,#d8d8d8); margin:0 1px; border-radius:1px}
+.digit .strip{display:flex; flex-direction:column; font:700 17px/22px var(--mono); color:#111; text-align:center; will-change:transform}
+.reset{width:18px; height:18px; border-radius:50%; border:0; background:radial-gradient(circle at 40% 35%,#777,#2d2f33); box-shadow:0 2px 0 #7a5d00; cursor:pointer}
+.reset:active{transform:translateY(2px); box-shadow:none}
+.controls{display:grid; grid-template-columns:1fr auto auto; gap:14px; margin-top:18px; align-items:end}
+.vol label,.sw label{display:block; font-family:var(--wide); font-size:8px; letter-spacing:.2em; color:#6a5100; font-weight:700; margin-bottom:7px}
+#volume{-webkit-appearance:none; appearance:none; width:100%; height:26px; background:transparent; cursor:pointer}
+#volume::-webkit-slider-runnable-track{height:10px; border-radius:6px; background:repeating-linear-gradient(90deg,#2b2e33 0 3px,#44484f 3px 6px); box-shadow:inset 0 2px 3px #000}
+#volume::-moz-range-track{height:10px; border-radius:6px; background:repeating-linear-gradient(90deg,#2b2e33 0 3px,#44484f 3px 6px)}
+#volume::-webkit-slider-thumb{-webkit-appearance:none; width:22px; height:26px; margin-top:-8px; border-radius:5px; background:linear-gradient(90deg,#3d4047,#8a8f99 50%,#3d4047); box-shadow:0 2px 3px rgba(0,0,0,.5)}
+#volume::-moz-range-thumb{width:22px; height:26px; border:0; border-radius:5px; background:linear-gradient(90deg,#3d4047,#8a8f99 50%,#3d4047)}
+.slide{position:relative; width:52px; height:22px; border-radius:4px; background:#22252a; box-shadow:inset 0 2px 4px #000; border:0; cursor:pointer; padding:0}
+.slide::after{content:""; position:absolute; top:3px; left:3px; width:22px; height:16px; border-radius:3px; background:repeating-linear-gradient(90deg,#9ca1ab 0 2px,#6b7079 2px 4px); transition:left .18s cubic-bezier(.3,1.5,.6,1)}
+.slide[aria-pressed="true"]::after{left:27px; background:repeating-linear-gradient(90deg,#ff7a5c 0 2px,#d33a22 2px 4px)}
+.grip{position:absolute; right:-10px; top:90px; bottom:70px; width:16px; border-radius:6px; background:repeating-linear-gradient(180deg,var(--rubber) 0 5px,var(--rubber-hi) 5px 7px); box-shadow:inset -2px 0 3px rgba(0,0,0,.5)}
+.flipbtn{margin-top:18px; width:100%; border:0; cursor:pointer; padding:11px; border-radius:10px; font-family:var(--wide); font-weight:700; font-size:10px; letter-spacing:.3em;
+  color:var(--yellow); background:linear-gradient(#2d3036,#1c1e22); box-shadow:0 4px 0 #7a5d00, inset 0 1px 0 rgba(255,255,255,.2)}
+.flipbtn:active{transform:translateY(3px); box-shadow:0 1px 0 #7a5d00}
+.hint{margin-top:20px; font-size:12px; letter-spacing:.08em; color:rgba(255,255,255,.75); line-height:1.8}
+.hint kbd{font-family:var(--mono); border:1px solid rgba(255,255,255,.45); border-bottom-width:3px; padding:0 6px; border-radius:3px; color:#fff}
+
+/* ---------- J-card ---------- */
+.jcard{position:relative; background:var(--paper); color:var(--ink); border-radius:3px; transform:rotate(1.4deg);
+  box-shadow:0 30px 50px -25px rgba(0,0,30,.8), 0 2px 0 rgba(0,0,0,.1);
+  display:grid; grid-template-columns:44px 1fr; overflow:hidden}
+.jcard::before{content:""; position:absolute; inset:0; pointer-events:none; background:
+  repeating-linear-gradient(180deg, transparent 0 33px, rgba(28,42,140,.13) 33px 34px); background-position:0 86px}
+.spine{background:var(--red); color:var(--paper); writing-mode:vertical-rl; transform:rotate(180deg); display:flex; align-items:center; justify-content:space-between; padding:16px 0;
+  font-family:var(--hand); font-size:18px; letter-spacing:.06em; border-left:2px dashed rgba(255,255,255,.4)}
+.spine small{font-family:var(--wide); font-size:8px; letter-spacing:.3em}
+.jin{position:relative; padding:20px 22px 22px}
+.jtitle{font-family:var(--hand); font-size:clamp(30px,5vw,40px); line-height:1; margin:0 0 4px; transform:rotate(-2deg); transform-origin:left}
+.jsub{font-family:var(--hand); font-size:15px; color:var(--red); margin:0 0 18px 4px}
+.side-h{display:flex; align-items:baseline; gap:10px; font-family:var(--wide); font-weight:700; font-size:10px; letter-spacing:.3em; margin:12px 0 2px; color:var(--red)}
+.side-h::after{content:""; flex:1; height:2px; background:currentColor; opacity:.3}
+ol.tracks{list-style:none; margin:0; padding:0}
+.tr{width:100%; display:grid; grid-template-columns:26px 1fr auto; align-items:center; gap:6px; background:none; border:0; padding:0 4px; height:34px;
+  font-family:var(--hand); font-size:17px; color:var(--ink); text-align:left; cursor:pointer; position:relative; border-radius:2px}
+.tr .n{font-family:var(--mono); font-size:12px; opacity:.6}
+.tr .d{font-family:var(--mono); font-size:12px; opacity:.7}
+.tr:hover{background:rgba(245,196,22,.3)}
+.tr.on{color:var(--red)}
+.tr .scrib{position:absolute; left:28px; bottom:3px; height:8px; width:0; overflow:visible; transition:width .5s ease}
+.tr.on .scrib{width:calc(100% - 80px)}
+.tr .scrib path{stroke:var(--red); stroke-width:2.2; fill:none; stroke-linecap:round}
+.tr.other-side{opacity:.45}
+.np{margin-top:18px; display:grid; grid-template-columns:1fr 110px; gap:12px; align-items:end; border-top:2px solid rgba(28,42,140,.2); padding-top:14px}
+.np .st{font-family:var(--wide); font-size:9px; letter-spacing:.25em; font-weight:700}
+.np .nm{font-family:var(--hand); font-size:20px; line-height:1.15; margin-top:4px; min-height:24px}
+.np .tm{font-family:var(--mono); font-size:13px; margin-top:4px}
+#spec{width:110px; height:44px; display:block}
+.sticker{position:absolute; right:14px; top:14px; width:70px; height:70px; border-radius:50%; background:var(--yellow); color:var(--ink); display:grid; place-items:center; text-align:center;
+  font-family:var(--wide); font-weight:700; font-size:8px; letter-spacing:.12em; line-height:1.4; transform:rotate(14deg); box-shadow:0 2px 0 rgba(0,0,0,.15)}
+.sticker b{font-family:var(--hand); font-size:18px; letter-spacing:0; display:block}
+.note{font-family:var(--hand); font-size:14px; color:rgba(28,42,140,.75); margin:14px 0 0; line-height:1.4}
+
+@media (max-width:900px){
+  main{grid-template-columns:minmax(0,470px); padding-top:48px}
+  .jcard{transform:rotate(.6deg)}
+}
+@media (max-width:460px){
+  .walkman{padding:18px 14px 22px; border-radius:26px}
+  .keys{left:22px; right:54px; gap:5px}
+  .key-labels{margin:0 40px 10px 6px; gap:5px; font-size:7px}
+  .logo{font-size:15px}
+  .grip{display:none}
+  .controls{grid-template-columns:1fr auto; }
+  .controls .vol{grid-column:1/-1}
+  .jin{padding:16px 14px}
+  .sticker{width:58px; height:58px; font-size:7px}
+  .np{grid-template-columns:1fr 84px} #spec{width:84px}
+}
+@media (prefers-reduced-motion:reduce){
+  .walkman.jolt{animation:none}
+  .key,.slide::after,.tr .scrib{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="backword" id="backword" aria-hidden="true">SIDE A</div>
+<header>
+  <div class="brand">KŌDO STRIDE<small>TX-88 SPORTS CASSETTE PLAYER · 1989</small></div>
+  <a class="back" href="index.html" id="backLink">← SHOWCASE</a>
+</header>
+
+<main>
+  <section class="walkman-wrap" aria-label="Walkman">
+    <div class="keys" role="group" aria-label="Transport keys">
+        <button class="key" id="kStop" aria-label="Stop / eject"><svg viewBox="0 0 22 14"><rect x="5" y="1" width="12" height="12"/></svg></button>
+        <button class="key" id="kRew" aria-label="Rewind"><svg viewBox="0 0 22 14"><path d="M11 1L1 7l10 6zM21 1l-10 6 10 6z"/></svg></button>
+        <button class="key play" id="kPlay" aria-label="Play"><svg viewBox="0 0 22 14"><path d="M6 0l12 7-12 7z"/></svg></button>
+        <button class="key" id="kFf" aria-label="Fast forward"><svg viewBox="0 0 22 14"><path d="M1 1l10 6-10 6zM11 1l10 6-10 6z"/></svg></button>
+      </div>
+    <div class="walkman" id="walkman">
+      <div class="key-labels" aria-hidden="true"><span>STOP·EJ</span><span>REW</span><span class="p">PLAY</span><span>FF</span></div>
+      <div class="lid">
+        <div class="window">
+          <svg id="cassette" viewBox="0 0 400 256" role="img" aria-label="Cassette tape">
+            <defs>
+              <clipPath id="winClip"><rect x="62" y="64" width="276" height="86" rx="10"/></clipPath>
+              <radialGradient id="tapeG" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#2a170d"/><stop offset=".85" stop-color="#4a2c19"/><stop offset="1" stop-color="#6b4127"/></radialGradient>
+              <linearGradient id="stripes" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#f4ecd8"/><stop offset=".58" stop-color="#f4ecd8"/>
+                <stop offset=".58" stop-color="#e2412b"/><stop offset=".68" stop-color="#e2412b"/>
+                <stop offset=".68" stop-color="#f59a1b"/><stop offset=".78" stop-color="#f59a1b"/>
+                <stop offset=".78" stop-color="#f5c416"/><stop offset=".88" stop-color="#f5c416"/>
+                <stop offset=".88" stop-color="#1b36b8"/><stop offset="1" stop-color="#1b36b8"/>
+              </linearGradient>
+              <g id="hub">
+                <circle r="21" fill="#f2f2ee"/><circle r="21" fill="none" stroke="#bdbdb6" stroke-width="2"/>
+                <circle r="11" fill="#1a1a1a"/>
+                <g fill="#f2f2ee"><rect x="-2.5" y="-11" width="5" height="5"/><rect x="-2.5" y="6" width="5" height="5"/>
+                  <rect x="-2.5" y="-11" width="5" height="5" transform="rotate(60)"/><rect x="-2.5" y="-11" width="5" height="5" transform="rotate(120)"/>
+                  <rect x="-2.5" y="-11" width="5" height="5" transform="rotate(240)"/><rect x="-2.5" y="-11" width="5" height="5" transform="rotate(300)"/></g>
+                <rect x="-1.5" y="-20" width="3" height="7" fill="#e2412b"/>
+              </g>
+            </defs>
+            <g id="cassBody">
+              <rect x="4" y="4" width="392" height="248" rx="14" fill="#26272b"/>
+              <rect x="4" y="4" width="392" height="248" rx="14" fill="none" stroke="#3b3d42" stroke-width="2"/>
+              <rect x="22" y="16" width="356" height="170" rx="8" fill="url(#stripes)"/>
+              <text x="36" y="46" font-family="Syncopate,Arial Black,sans-serif" font-weight="700" font-size="26" fill="#1b36b8" id="sideLetter">A</text>
+              <text x="70" y="44" font-family="Permanent Marker,cursive" font-size="20" fill="#1c2a8c" id="cassTitle">summer '89 → for R.</text>
+              <text x="364" y="44" text-anchor="end" font-family="Share Tech Mono,monospace" font-size="12" fill="#1b36b8">C-60 · TYPE II</text>
+              <line x1="70" y1="52" x2="360" y2="52" stroke="#1b36b8" stroke-width="1" opacity=".4"/>
+              <!-- window -->
+              <rect x="60" y="62" width="280" height="90" rx="11" fill="#0d0d0f" stroke="#2b2b2e" stroke-width="3"/>
+              <g clip-path="url(#winClip)">
+                <rect x="62" y="64" width="276" height="86" fill="#191512"/>
+                <circle id="packL" cx="130" cy="107" r="60" fill="url(#tapeG)"/>
+                <circle id="packR" cx="270" cy="107" r="22" fill="url(#tapeG)"/>
+                <line x1="62" y1="107" x2="338" y2="107" stroke="rgba(255,255,255,.04)" stroke-width="30"/>
+              </g>
+              <use href="#hub" id="hubL" x="0" y="0" transform="translate(130 107)"/>
+              <use href="#hub" id="hubR" x="0" y="0" transform="translate(270 107)"/>
+              <rect x="60" y="62" width="280" height="90" rx="11" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+              <!-- head area -->
+              <path d="M70 252 L92 196 L308 196 L330 252 Z" fill="#1d1e21" stroke="#34363b" stroke-width="2"/>
+              <path id="tapePath" d="M66 236 L334 236" stroke="#5a3620" stroke-width="3.5" fill="none"/>
+              <circle cx="66" cy="236" r="6" fill="#bbb"/><circle cx="334" cy="236" r="6" fill="#bbb"/>
+              <rect x="104" y="226" width="14" height="14" fill="#101012"/><rect x="282" y="226" width="14" height="14" fill="#101012"/>
+              <rect x="168" y="222" width="64" height="18" rx="2" fill="#101012"/>
+              <g fill="#4a4c52"><circle cx="18" cy="18" r="5"/><circle cx="382" cy="18" r="5"/><circle cx="18" cy="238" r="5"/><circle cx="382" cy="238" r="5"/><circle cx="200" cy="208" r="5"/></g>
+              <text x="200" y="176" text-anchor="middle" font-family="Syncopate,sans-serif" font-weight="700" font-size="9" letter-spacing="4" fill="#fff">KŌDO CHROME · 60 MIN</text>
+            </g>
+          </svg>
+        </div>
+        <div class="lid-print"><span>AUTO-STOP</span><span>DOLBY B NR</span><span>◀ SIDE ▶</span></div>
+      </div>
+
+      <div class="body-row">
+        <div class="logo">STRIDE<em>TX-88 · SPORTS</em></div>
+        <div class="counter" aria-label="Tape counter">
+          <div class="digits" id="digits"></div>
+          <button class="reset" id="counterReset" aria-label="Reset tape counter"></button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="vol"><label for="volume">VOLUME</label><input id="volume" type="range" min="0" max="10" step="0.1" value="6"></div>
+        <div class="sw"><label for="megaBass">MEGA BASS</label><button class="slide" id="megaBass" aria-pressed="false" aria-label="Mega bass"></button></div>
+        <div class="sw"><label for="dolby">DOLBY NR</label><button class="slide" id="dolby" aria-pressed="true" aria-label="Dolby noise reduction"></button></div>
+      </div>
+      <button class="flipbtn" id="flip">EJECT &amp; FLIP ⟲ SIDE B</button>
+      <div class="grip" aria-hidden="true"></div>
+    </div>
+    <p class="hint"><kbd>Space</kbd> play / stop &nbsp; <kbd>←</kbd> rew &nbsp; <kbd>→</kbd> ff &nbsp; <kbd>F</kbd> flip · or tap a song on the J-card and the tape winds to it.</p>
+  </section>
+
+  <aside class="jcard" aria-label="J-card tracklist">
+    <div class="spine"><span>summer '89</span><small>KŌDO C-60</small></div>
+    <div class="jin">
+      <div class="sticker"><div><b>R.</b>DON'T<br>TAPE OVER</div></div>
+      <h1 class="jtitle">summer '89</h1>
+      <p class="jsub">for R. — the long way home</p>
+      <div class="side-h">SIDE A</div>
+      <ol class="tracks" id="listA"></ol>
+      <div class="side-h">SIDE B</div>
+      <ol class="tracks" id="listB"></ol>
+      <div class="np" aria-live="polite">
+        <div>
+          <div class="st" id="npState">■ STOPPED · SIDE A</div>
+          <div class="nm" id="npName">Leith Shore, 6am</div>
+          <div class="tm" id="npTime">00:00 / 00:00</div>
+        </div>
+        <canvas id="spec" aria-hidden="true"></canvas>
+      </div>
+      <p class="note">recorded off my own little synth. side B is better. rewind with a pencil if the batteries die x</p>
+    </div>
+  </aside>
+</main>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------------- tracks ---------------- */
+const SCALES = { major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10], mixo:[0,2,4,5,7,9,10] };
+function T(title, style, bpm, bars, root, scale, prog, seed){ return {title, style, bpm, bars, root, scale:SCALES[scale], prog, seed, dur: bars*4*60/bpm}; }
+const SIDES = {
+  A:[ T('Leith Shore, 6am','lofi',78,20,57,'dorian',[0,3,5,4],11),
+      T('Pocket Arcade','chip',148,40,60,'major',[0,4,5,3],23),
+      T('Bus 23 to Morningside','lofi',86,22,55,'minor',[0,5,2,6],37),
+      T('Lemon Soda Bossa','bossa',112,28,62,'major',[1,4,0,5],41),
+      T('Walk Home Slowly','dream',70,16,60,'mixo',[0,6,3,0],53) ],
+  B:[ T('Rooftop Antenna','chip',132,36,57,'minor',[0,5,6,4],61),
+      T('Neon Laundromat','lofi',92,24,53,'dorian',[0,3,1,4],73),
+      T('Sunday Tape Loop','dream',66,14,55,'major',[0,3,5,4],89),
+      T('Last Train, Platform 4','bossa',104,26,58,'minor',[0,3,6,4],97),
+      T('Rewind Me','chip',156,40,62,'major',[5,3,0,4],113) ]
+};
+const GAP = 2.2;
+let SIDE_LEN = 0;
+for (const k of ['A','B']) { let t = 3; for (const tr of SIDES[k]) { tr.start = t; t += tr.dur + GAP; } SIDES[k].end = t; SIDE_LEN = Math.max(SIDE_LEN, t + 3); }
+
+function rng(seed){ let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function degMidi(tr, deg){ const o = Math.floor(deg/7); const i = ((deg%7)+7)%7; return tr.root + tr.scale[i] + 12*o; }
+// melody: two 4-bar phrases, 64 sixteenths each
+function genMelody(tr, seedOff){
+  const r = rng(tr.seed*31 + seedOff); const out = new Array(64).fill(null);
+  let cur = 9; let s = 0;
+  while (s < 64){
+    const bar = Math.floor(s/16); const chord = tr.prog[bar % tr.prog.length];
+    const strong = s % 4 === 0;
+    const density = tr.style === 'chip' ? .78 : tr.style === 'dream' ? .45 : .6;
+    if (r() < (strong ? density+.15 : density*.55)) {
+      if (strong) { const opts = [0,2,4].map(x => chord + x); let best = opts[0]+7, bd = 99;
+        for (const o of opts) for (const oc of [0,7,14]) { const d = Math.abs(o+oc-cur); if (d < bd) { bd = d; best = o+oc; } } cur = best; }
+      else cur += [-2,-1,-1,1,1,2][Math.floor(r()*6)];
+      cur = Math.max(5, Math.min(15, cur));
+      const len = tr.style === 'dream' ? (r()<.6?8:4) : (r()<.5?2:(r()<.6?4:1));
+      out[s] = {deg:cur, len}; s += Math.max(1,len);
+    } else s += (tr.style==='chip'?1:2);
+  }
+  return out;
+}
+for (const k of ['A','B']) for (const tr of SIDES[k]) { tr.melA = genMelody(tr,1); tr.melB = genMelody(tr,7); }
+
+/* ---------------- audio ---------------- */
+let ctx=null, bus, master, shelf, lp, delay, delayFb, delayIn, hiss, hissGain, analyser, wowGain, session=null, windSrc=null;
+let noiseBuf;
+function initAudio(){
+  if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  ctx = new AC();
+  master = ctx.createGain(); master.gain.value = vol()*0.9;
+  shelf = ctx.createBiquadFilter(); shelf.type='lowshelf'; shelf.frequency.value=110; shelf.gain.value = megaOn?9:0;
+  lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=5200; lp.Q.value=.3;
+  analyser = ctx.createAnalyser(); analyser.fftSize = 128; analyser.smoothingTimeConstant=.7;
+  bus = ctx.createGain(); bus.gain.value = .55;
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value=-14; comp.ratio.value=4;
+  bus.connect(shelf); shelf.connect(lp); lp.connect(comp); comp.connect(master); master.connect(analyser); analyser.connect(ctx.destination);
+  delayIn = ctx.createGain(); delayIn.gain.value=.3; delay = ctx.createDelay(1); delay.delayTime.value=.33; delayFb = ctx.createGain(); delayFb.gain.value=.35;
+  const dlp = ctx.createBiquadFilter(); dlp.type='lowpass'; dlp.frequency.value=2200;
+  delayIn.connect(delay); delay.connect(dlp); dlp.connect(delayFb); delayFb.connect(delay); dlp.connect(bus);
+  noiseBuf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  hiss = ctx.createBufferSource(); hiss.buffer = noiseBuf; hiss.loop = true;
+  const hp = ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=3500;
+  hissGain = ctx.createGain(); hissGain.gain.value = 0; hiss.connect(hp); hp.connect(hissGain); hissGain.connect(master); hiss.start();
+  const wow = ctx.createOscillator(); wow.frequency.value = .55; wowGain = ctx.createGain(); wowGain.gain.value = 7; wow.connect(wowGain); wow.start();
+}
+function vol(){ return parseFloat($('#volume').value)/10; }
+function mtof(m){ return 440*Math.pow(2,(m-69)/12); }
+function tone(dest, t, midi, dur, type, g, a=.008, rel=.08){
+  const o = ctx.createOscillator(); o.type = type; o.frequency.value = mtof(midi); wowGain.connect(o.detune);
+  const e = ctx.createGain(); e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(g,t+a); e.gain.setTargetAtTime(g*.6,t+a,dur*.4); e.gain.setTargetAtTime(0,t+dur,rel/3);
+  o.connect(e); e.connect(dest); o.start(t); o.stop(t+dur+rel*2+.05);
+  o.onended = () => { try{ wowGain.disconnect(o.detune); }catch(_){} };
+  return e;
+}
+function kick(dest,t,g=.9){ const o=ctx.createOscillator(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(42,t+.13);
+  const e=ctx.createGain(); e.gain.setValueAtTime(g,t); e.gain.exponentialRampToValueAtTime(.001,t+.28); o.connect(e); e.connect(dest); o.start(t); o.stop(t+.3); }
+function noiseHit(dest,t,type,f,dur,g,q=1){ const s=ctx.createBufferSource(); s.buffer=noiseBuf; const fl=ctx.createBiquadFilter(); fl.type=type; fl.frequency.value=f; fl.Q.value=q;
+  const e=ctx.createGain(); e.gain.setValueAtTime(g,t); e.gain.exponentialRampToValueAtTime(.001,t+dur); s.connect(fl); fl.connect(e); e.connect(dest); s.start(t, Math.random()); s.stop(t+dur+.02); }
+
+function playStep(tr, idx, t, dest){
+  const bar = Math.floor(idx/16), s = idx%16, chordDeg = tr.prog[bar % tr.prog.length];
+  const sd = 60/tr.bpm/4; const totalBars = tr.bars;
+  const fade = bar >= totalBars-2 ? .5 : 1;
+  const st = tr.style;
+  // drums
+  const intro = bar < 2;
+  if (st==='lofi'){
+    if (!intro || s===0) { if (s===0||s===10) kick(dest,t,.8*fade); }
+    if (!intro && (s===4||s===12)) noiseHit(dest,t,'bandpass',1600,.18,.35*fade,.7);
+    if (s%2===0) noiseHit(dest,t,'highpass',7000,.05,(s%4===2?.12:.07)*fade);
+  } else if (st==='chip'){
+    if (!intro && (s===0||s===8||(s===11&&bar%2))) kick(dest,t,.85*fade);
+    if (!intro && (s===4||s===12)) noiseHit(dest,t,'highpass',2400,.12,.3*fade);
+    noiseHit(dest,t,'highpass',9000,.03,(s%2?.04:.08)*fade);
+  } else if (st==='bossa'){
+    if ([0,6,8,14].includes(s)) kick(dest,t,.55*fade);
+    if ([0,3,6,10,12].includes(s)) noiseHit(dest,t,'bandpass',3200,.04,.25*fade,4);
+    noiseHit(dest,t,'highpass',8000,.03,.05*fade);
+  } else if (st==='dream'){
+    if (!intro && (s===0||s===8)) kick(dest,t,.4*fade);
+    if (s%4===2) noiseHit(dest,t,'highpass',8000,.08,.05*fade);
+  }
+  // bass
+  const bRoot = degMidi(tr, chordDeg) - 24;
+  if (st==='chip'){ if (s%2===0) tone(dest,t,bRoot+(s%4===2?12:0),sd*1.6,'triangle',.5*fade,.004,.03); }
+  else if (st==='bossa'){ if (s===0) tone(dest,t,bRoot,sd*5,'sine',.6*fade); if (s===6) tone(dest,t,degMidi(tr,chordDeg+4)-24,sd*2,'sine',.5*fade); if (s===8) tone(dest,t,degMidi(tr,chordDeg+4)-24,sd*5,'sine',.55*fade); }
+  else { if (s===0) tone(dest,t,bRoot,sd*6,'triangle',.55*fade); if (s===10 && st==='lofi') tone(dest,t,bRoot+7,sd*4,'triangle',.4*fade); }
+  // chords / arps
+  if (st==='chip'){ const n=[0,2,4,7][s%4]; tone(dest,t,degMidi(tr,chordDeg+n)+12,sd*.8,'square',.045*fade,.002,.02); }
+  else if (s===0 || (st==='bossa' && (s===3||s===10))){
+    const len = st==='bossa' ? sd*2.5 : sd*15; const type = st==='dream'?'sine':'triangle'; const g = st==='dream' ? .09 : .065;
+    for (const n of [0,2,4,6]) tone(dest,t,degMidi(tr,chordDeg+n),len,type,g*fade,st==='dream'?.4:.02,.5);
+  }
+  // lead
+  if (bar >= 4 && bar < totalBars-1){
+    const block = Math.floor((bar-4)/4) % 4; const mel = block===2 ? tr.melB : tr.melA;
+    const note = mel[(bar%4)*16 + s];
+    if (note){ const type = st==='chip'?'square':st==='dream'?'sine':st==='bossa'?'sine':'triangle';
+      const g = st==='chip'?.07:.16; const e = tone(dest,t,degMidi(tr,note.deg)+12,sd*note.len*.95,type,g*fade,.01,.12);
+      if (st!=='chip' || block===1) e.connect(delayIn); }
+  }
+}
+
+/* ---------------- state ---------------- */
+let side = 'A', pos = 3, mode = 'stop', target = null, lastT = performance.now();
+let angL = 0, angR = 0, counterVal = 0, megaOn = false, dolbyOn = true;
+const K = 92, FF = 16;
+const RMIN = 22, RMAX = 62;
+function radii(p){ const f = Math.min(1,Math.max(0,p/SIDE_LEN)); const a2 = RMIN*RMIN, b2 = RMAX*RMAX;
+  return [Math.sqrt(a2 + (b2-a2)*(1-f)), Math.sqrt(a2 + (b2-a2)*f)]; }
+function trackAt(p){ const list = SIDES[side]; let cur = null; for (const tr of list) if (p >= tr.start - GAP/2) cur = tr; return cur || list[0]; }
+function fmt(s){ s = Math.max(0,s); const m = Math.floor(s/60); return String(m).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0'); }
+
+/* scheduler */
+function startSession(){
+  const g = ctx.createGain(); g.gain.value = 1; g.connect(bus);
+  const S = { g, list: SIDES[side], startCtx: ctx.currentTime + .06, startPos: pos, timer: null };
+  // find track & step
+  let ti = S.list.findIndex(tr => pos < tr.start + tr.dur);
+  if (ti < 0) { session = S; S.done = true; return S; }
+  let tr = S.list[ti]; const sd = 60/tr.bpm/4; const local = pos - tr.start;
+  let idx, nt;
+  if (local < 0){ idx = 0; nt = S.startCtx - local; }
+  else { idx = Math.ceil(local/sd); nt = S.startCtx + (idx*sd - local); }
+  S.ti = ti; S.idx = idx; S.nt = nt;
+  S.timer = setInterval(() => pump(S), 25); pump(S);
+  return S;
+}
+function pump(S){
+  if (!ctx || S.done) return;
+  while (S.nt < ctx.currentTime + .15){
+    const tr = S.list[S.ti]; const sd = 60/tr.bpm/4; const total = tr.bars*16;
+    if (S.idx >= total){ S.ti++; if (S.ti >= S.list.length){ S.done = true; break; } const nx = S.list[S.ti]; S.nt += GAP; S.idx = 0; continue; }
+    const swing = (tr.style==='lofi' && S.idx%2===1) ? sd*.22 : 0;
+    playStep(tr, S.idx, S.nt + swing, S.g);
+    S.idx++; S.nt += sd;
+  }
+}
+function endSession(){
+  if (!session) return; const S = session; session = null; clearInterval(S.timer); S.done = true;
+  if (ctx){ const t = ctx.currentTime; S.g.gain.cancelScheduledValues(t); S.g.gain.setValueAtTime(S.g.gain.value, t);
+    // tape drag: quick fade like a motor stopping
+    S.g.gain.linearRampToValueAtTime(0, t+.09); setTimeout(() => { try{ S.g.disconnect(); }catch(_){} }, 400); }
+}
+function startWind(dir){
+  stopWind(); if (!ctx) return;
+  const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+  const bp = ctx.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=6; bp.frequency.value=1200;
+  const g = ctx.createGain(); g.gain.value = 0; g.gain.linearRampToValueAtTime(.05, ctx.currentTime+.2);
+  const o = ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=180; const og = ctx.createGain(); og.gain.value=.012;
+  s.connect(bp); bp.connect(g); g.connect(master); o.connect(og); og.connect(master); s.start(); o.start();
+  windSrc = {s,o,g,og,bp};
+}
+function stopWind(){ if (!windSrc || !ctx) return; const w = windSrc; windSrc = null; const t = ctx.currentTime;
+  w.g.gain.setTargetAtTime(0,t,.03); w.og.gain.setTargetAtTime(0,t,.03); setTimeout(()=>{ try{ w.s.stop(); w.o.stop(); }catch(_){} },200); }
+function clunk(big){ if (!ctx) return; const t = ctx.currentTime; noiseHit(master,t,'lowpass',big?900:1400,.07,.5); kick(master,t,big?.35:.18); noiseHit(master,t+.02,'bandpass',3000,.03,.15,3); }
+
+function setMode(m, silent){
+  if (m === mode) return;
+  if (mode === 'play') endSession();
+  if (mode === 'ff' || mode === 'rew') stopWind();
+  mode = m;
+  if (ctx){ hissGain.gain.setTargetAtTime(m==='play' ? (dolbyOn ? .006 : .028) : 0, ctx.currentTime, .05); }
+  if (m === 'play' && ctx){ session = startSession(); }
+  if ((m === 'ff' || m === 'rew') && ctx) startWind(m);
+  if (m !== 'ff' && m !== 'rew') target = null;
+  if (!silent) clunk(m==='stop');
+  if (!reduce){ const w = $('#walkman'); w.classList.remove('jolt'); void w.offsetWidth; w.classList.add('jolt'); }
+  renderKeys(); renderNow();
+}
+function renderKeys(){
+  $('#kPlay').classList.toggle('down', mode==='play'); $('#kFf').classList.toggle('down', mode==='ff'); $('#kRew').classList.toggle('down', mode==='rew');
+  $('#kPlay').setAttribute('aria-pressed', mode==='play'); $('#kFf').setAttribute('aria-pressed', mode==='ff'); $('#kRew').setAttribute('aria-pressed', mode==='rew');
+}
+function tapKey(el){ el.classList.add('tap'); setTimeout(() => el.classList.remove('tap'), 140); }
+
+/* J-card */
+const scrib = '<svg class="scrib" viewBox="0 0 100 8" preserveAspectRatio="none"><path d="M1 5 C 20 1, 30 8, 50 4 S 80 2, 99 5"/></svg>';
+function buildList(k){
+  const ol = $('#list'+k); ol.innerHTML = '';
+  SIDES[k].forEach((tr,i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button'); b.className = 'tr'; b.id = 'tr'+k+i;
+    b.innerHTML = `<span class="n">${k}${i+1}</span><span>${tr.title}</span><span class="d">${fmt(tr.dur)}</span>${scrib}`;
+    b.addEventListener('click', () => cue(k, i)); li.appendChild(b); ol.appendChild(li); tr.el = b;
+  });
+}
+function cue(k, i){
+  initAudio();
+  if (k !== side){ flip(() => cue(k,i)); return; }
+  const tr = SIDES[side][i]; const dest = tr.start - .4;
+  if (Math.abs(dest - pos) < .6){ setMode('play'); return; }
+  target = dest; setMode(dest > pos ? 'ff' : 'rew'); target = dest;
+}
+let flipping = false;
+function flip(after){
+  if (flipping) return; flipping = true; initAudio();
+  setMode('stop'); const svg = $('#cassette');
+  const half = () => { side = side==='A'?'B':'A'; pos = SIDE_LEN - pos; $('#sideLetter').textContent = side;
+    $('#backword').textContent = 'SIDE '+side; $('#flip').innerHTML = 'EJECT &amp; FLIP ⟲ SIDE '+(side==='A'?'B':'A'); renderNow(); drawTape(); };
+  if (reduce || !svg.animate){ half(); flipping = false; after && after(); return; }
+  svg.animate([{transform:'rotateY(0) translateY(0)'},{transform:'rotateY(90deg) translateY(-14px)'}],{duration:260,easing:'ease-in'}).onfinish = () => {
+    half(); clunk(false);
+    svg.animate([{transform:'rotateY(-90deg) translateY(-14px)'},{transform:'rotateY(0) translateY(0)'}],{duration:320,easing:'cubic-bezier(.3,1.4,.5,1)'}).onfinish = () => { flipping = false; after && after(); };
+  };
+}
+
+/* now playing */
+let lastNowKey = '';
+function renderNow(){
+  const tr = trackAt(pos);
+  const label = {stop:'■ STOPPED', play:'▶ PLAYING', ff:'▶▶ FAST FWD', rew:'◀◀ REWIND'}[mode];
+  $('#npState').textContent = label + ' · SIDE ' + side;
+  const key = side + tr.title;
+  if (key !== lastNowKey){ lastNowKey = key; $('#npName').textContent = tr.title;
+    for (const k of ['A','B']) SIDES[k].forEach(t => { t.el.classList.toggle('on', k===side && t===tr); t.el.classList.toggle('other-side', k!==side); }); }
+  $('#npTime').textContent = fmt(pos - tr.start) + ' / ' + fmt(tr.dur) + '   ·   TAPE ' + fmt(pos) + '/' + fmt(SIDE_LEN);
+}
+
+/* counter */
+const digitsEl = $('#digits'); const strips = [];
+for (let i=0;i<3;i++){ const d = document.createElement('div'); d.className='digit'; const s = document.createElement('div'); s.className='strip';
+  s.innerHTML = '0123456789'.split('').concat('0').map(x=>`<span>${x}</span>`).join(''); d.appendChild(s); digitsEl.appendChild(d); strips.push(s); }
+function renderCounter(){
+  const v = ((counterVal % 1000) + 1000) % 1000; const h = 22;
+  const ones = v % 10; const tens = Math.floor(v/10)%10; const hund = Math.floor(v/100)%10;
+  const roll = ones > 9 ? ones - 9 : 0;
+  strips[2].style.transform = `translateY(${-ones*h}px)`;
+  strips[1].style.transform = `translateY(${-(tens + roll)*h}px)`;
+  strips[0].style.transform = `translateY(${-(hund + (tens===9?roll:0))*h}px)`;
+}
+
+/* tape drawing */
+function drawTape(){
+  const [rl, rr] = radii(pos);
+  $('#packL').setAttribute('r', rl.toFixed(2)); $('#packR').setAttribute('r', rr.toFixed(2));
+  $('#hubL').setAttribute('transform', `translate(130 107) rotate(${(angL*180/Math.PI).toFixed(2)})`);
+  $('#hubR').setAttribute('transform', `translate(270 107) rotate(${(angR*180/Math.PI).toFixed(2)})`);
+}
+
+/* spectrum */
+const spec = $('#spec'); const sctx = spec.getContext('2d'); let specData = null; const bars = new Array(14).fill(0);
+function sizeSpec(){ const dpr = window.devicePixelRatio||1; const r = spec.getBoundingClientRect(); spec.width = Math.max(1,r.width*dpr); spec.height = Math.max(1,r.height*dpr); }
+function drawSpec(){
+  const w = spec.width, h = spec.height; sctx.clearRect(0,0,w,h);
+  if (analyser && mode==='play'){ if (!specData) specData = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(specData);
+    for (let i=0;i<bars.length;i++){ const v = specData[Math.floor(Math.pow(i/bars.length,1.6)*40)+1]/255; bars[i] = Math.max(v, bars[i]*.9); } }
+  else for (let i=0;i<bars.length;i++) bars[i] *= .9;
+  const bw = w/bars.length; const seg = h/8;
+  for (let i=0;i<bars.length;i++){ const n = Math.round(bars[i]*8);
+    for (let j=0;j<8;j++){ sctx.fillStyle = j < n ? (j>5 ? '#e2412b' : '#1c2a8c') : 'rgba(28,42,140,.1)'; sctx.fillRect(i*bw+1, h-(j+1)*seg+1, bw-2, seg-2); } }
+}
+
+/* main loop */
+function frame(now){
+  const dt = Math.min(.1, (now - lastT)/1000); lastT = now;
+  let v = 0;
+  if (mode === 'play'){
+    if (ctx && session){ const np = session.startPos + Math.max(0, ctx.currentTime - session.startCtx); v = (np - pos); pos = np; } else { pos += dt; v = dt; }
+    if (pos >= SIDES[side].end - GAP + .5 || pos >= SIDE_LEN){ setMode('stop'); }
+  } else if (mode === 'ff' || mode === 'rew'){
+    const [rl, rr] = radii(pos);
+    // winding speed rises as the supply pack empties (constant motor speed)
+    const sp = FF * (mode==='ff' ? (RMAX/(rl+20)) : (RMAX/(rr+20))) * 1.1;
+    const dir = mode==='ff' ? 1 : -1; let np = pos + dir*sp*dt;
+    if (target !== null && ((dir>0 && np >= target) || (dir<0 && np <= target))){ np = target; pos = np; v = 0; target = null; setMode('play'); }
+    else if (np >= SIDE_LEN){ np = SIDE_LEN; pos = np; setMode('stop'); }
+    else if (np <= 0){ np = 0; pos = np; setMode('stop'); }
+    v = np - pos; pos = np;
+    if (windSrc && ctx){ windSrc.bp.frequency.setTargetAtTime(700 + sp*70, ctx.currentTime, .1); windSrc.o.frequency.setTargetAtTime(90+sp*9, ctx.currentTime, .1); }
+  }
+  if (v !== 0){ const [rl, rr] = radii(pos); angL += v*K/rl; angR += v*K/rr; counterVal += v*K/rr/(Math.PI*2)/1.4; renderCounter(); renderNow(); }
+  drawTape(); drawSpec();
+  requestAnimationFrame(frame);
+}
+
+/* bindings */
+$('#kPlay').addEventListener('click', () => { initAudio(); setMode(mode==='play' ? 'stop' : 'play'); });
+$('#kStop').addEventListener('click', e => { initAudio(); tapKey(e.currentTarget); if (mode==='stop') flip(); else setMode('stop'); });
+$('#kFf').addEventListener('click', () => { initAudio(); target = null; setMode(mode==='ff' ? 'stop' : 'ff'); });
+$('#kRew').addEventListener('click', () => { initAudio(); target = null; setMode(mode==='rew' ? 'stop' : 'rew'); });
+$('#flip').addEventListener('click', () => flip());
+$('#counterReset').addEventListener('click', () => { counterVal = 0; renderCounter(); });
+$('#volume').addEventListener('input', () => { if (master) master.gain.setTargetAtTime(vol()*.9, ctx.currentTime, .03); });
+$('#megaBass').addEventListener('click', e => { megaOn = !megaOn; e.currentTarget.setAttribute('aria-pressed', megaOn); if (shelf) shelf.gain.setTargetAtTime(megaOn?9:0, ctx.currentTime, .05); clunk(false); });
+$('#dolby').addEventListener('click', e => { dolbyOn = !dolbyOn; e.currentTarget.setAttribute('aria-pressed', dolbyOn);
+  if (lp) lp.frequency.setTargetAtTime(dolbyOn?5200:9000, ctx.currentTime, .05); if (hissGain && mode==='play') hissGain.gain.setTargetAtTime(dolbyOn?.006:.028, ctx.currentTime,.05); clunk(false); });
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' && e.key.startsWith('Arrow')) return;
+  if (e.code === 'Space' && e.target.tagName !== 'BUTTON'){ e.preventDefault(); $('#kPlay').click(); }
+  else if (e.key === 'ArrowRight'){ e.preventDefault(); $('#kFf').click(); }
+  else if (e.key === 'ArrowLeft'){ e.preventDefault(); $('#kRew').click(); }
+  else if (e.key === 'f' || e.key === 'F'){ flip(); }
+  else if (e.key === 's' || e.key === 'S'){ $('#kStop').click(); }
+});
+window.addEventListener('resize', sizeSpec);
+
+buildList('A'); buildList('B'); sizeSpec(); renderCounter(); renderKeys(); renderNow(); drawTape();
+requestAnimationFrame(t => { lastT = t; frame(t); });
+})();
+</script>
+</body>
+</html>

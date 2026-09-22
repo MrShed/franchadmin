@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thornwood Foraging Guild</title>
+<meta name="description" content="A dark forest-floor site for a fictional mushroom foraging guild, with a bioluminescent mycelium network you can seed by clicking, species cards with spore prints and a fruiting-season calendar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --soil:#0d110c; --loam:#161c14; --moss:#243022; --bark:#3a3226; --bone:#e7e2d3; --lichen:#a9b39a;
+  --glow:#7ef0d4; --glow2:#b6a6ff; --amber:#e8b464; --blood:#e0645a;
+  --serif:"Cormorant Garamond","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--soil);color:var(--bone);font-family:var(--serif);font-size:20px;line-height:1.5;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.08;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+a{color:var(--glow)}
+:focus-visible{outline:1px solid var(--glow);outline-offset:4px;box-shadow:0 0 0 4px rgba(126,240,212,.18)}
+.mono{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+.back{position:fixed;top:16px;right:16px;z-index:40;font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--lichen);text-decoration:none;padding:8px 12px;border:1px solid rgba(169,179,154,.35);background:rgba(13,17,12,.7);backdrop-filter:blur(6px)}
+.back:hover{color:var(--glow);border-color:var(--glow)}
+/* hero */
+.hero{position:relative;height:100vh;min-height:640px;max-height:980px;overflow:hidden;background:radial-gradient(120% 90% at 30% 110%,#1d2a1b 0%,#0d110c 60%)}
+#net{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair}
+.hero-copy{position:absolute;left:clamp(16px,6vw,96px);bottom:clamp(40px,10vh,110px);z-index:2;max-width:760px;pointer-events:none}
+.hero-copy .mono{color:var(--glow)}
+.hero h1{font-weight:400;font-style:italic;font-size:clamp(60px,10vw,150px);line-height:.82;margin:.18em 0 .25em;letter-spacing:-.02em}
+.hero h1 span{display:block;font-style:normal;font-weight:500;font-size:.42em;letter-spacing:.02em;color:var(--lichen);margin-top:.35em}
+.hero p{max-width:32ch;margin:0;color:var(--lichen);font-size:clamp(19px,1.8vw,23px)}
+.seed-hint{position:absolute;right:clamp(16px,4vw,48px);bottom:clamp(40px,10vh,110px);z-index:2;text-align:right;color:var(--lichen)}
+.seed-hint b{display:block;color:var(--glow);font-weight:500}
+#regrow{margin-top:10px;background:none;border:1px solid rgba(126,240,212,.4);color:var(--glow);padding:8px 12px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+#regrow:hover{background:rgba(126,240,212,.08)}
+/* sections */
+section{position:relative;z-index:2;padding:clamp(70px,10vw,140px) clamp(16px,6vw,96px)}
+.wrap{max-width:1240px;margin:0 auto}
+h2{font-weight:400;font-size:clamp(44px,6.4vw,92px);line-height:.92;margin:.1em 0 .35em;letter-spacing:-.015em}
+h2 em{color:var(--glow)}
+.lede{display:grid;grid-template-columns:260px 1fr;gap:clamp(24px,5vw,80px);border-top:1px solid rgba(169,179,154,.2);padding-top:28px}
+.lede .mono{color:var(--amber)}
+.lede p{margin:0 0 1em;max-width:60ch;font-size:22px}
+.lede p:first-child{font-size:clamp(26px,2.6vw,34px);line-height:1.25;font-style:italic;color:#f2eee2}
+.rules{list-style:none;padding:0;margin:40px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid rgba(169,179,154,.2)}
+.rules li{padding:22px 24px 10px 0;border-right:1px solid rgba(169,179,154,.2);margin-right:24px}
+.rules li:last-child{border-right:0}
+.rules b{display:block;font-family:var(--mono);font-weight:500;font-size:12px;letter-spacing:.14em;color:var(--glow);margin-bottom:8px}
+.rules span{font-size:19px;color:var(--lichen)}
+/* species */
+.species{background:linear-gradient(180deg,var(--soil),var(--loam) 30%,var(--loam))}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 30px}
+.chip{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;background:transparent;color:var(--lichen);border:1px solid rgba(169,179,154,.35);padding:9px 14px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--bone);color:var(--soil);border-color:var(--bone)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1px;background:rgba(169,179,154,.18);border:1px solid rgba(169,179,154,.18)}
+.sp{background:var(--loam);padding:22px 22px 20px;position:relative;min-height:420px;display:flex;flex-direction:column;transition:background .4s}
+.sp:hover{background:#1b2319}
+.sp[hidden]{display:none}
+.sp .fig{height:190px;position:relative;margin:4px 0 10px}
+.sp .fig svg{position:absolute;inset:0;width:100%;height:100%;transition:opacity .6s,transform .8s cubic-bezier(.2,.8,.2,1)}
+.sp .fig .print{opacity:0;transform:rotate(-30deg) scale(.9)}
+.sp.show-print .fig .print{opacity:1;transform:none}
+.sp.show-print .fig .shroom{opacity:0;transform:translateY(12px)}
+.sp h3{margin:0;font-weight:500;font-style:italic;font-size:28px;line-height:1.05}
+.sp .common{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--lichen);margin:6px 0 10px}
+.sp p{margin:0 0 12px;font-size:17px;line-height:1.4;color:#cfcabb;flex:1}
+.badge{position:absolute;top:18px;right:18px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:5px 9px;border:1px solid}
+.b-edible{color:var(--glow);border-color:rgba(126,240,212,.5)}
+.b-toxic{color:var(--amber);border-color:rgba(232,180,100,.5)}
+.b-deadly{color:#fff;background:var(--blood);border-color:var(--blood)}
+.b-medicinal{color:var(--glow2);border-color:rgba(182,166,255,.5)}
+.sp .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid rgba(169,179,154,.15);padding-top:12px}
+.sp .foot span{font-family:var(--mono);font-size:11px;color:var(--lichen);letter-spacing:.06em}
+.flip{background:none;border:0;color:var(--glow);font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:6px 0}
+/* calendar */
+.cal{overflow-x:auto;-webkit-overflow-scrolling:touch;border-top:1px solid rgba(169,179,154,.2)}
+.cal table{border-collapse:collapse;width:100%;min-width:720px}
+.cal th,.cal td{padding:0;height:44px;border-bottom:1px solid rgba(169,179,154,.1)}
+.cal thead th{font-family:var(--mono);font-weight:400;font-size:11px;letter-spacing:.12em;color:var(--lichen);text-align:center}
+.cal thead th button{background:none;border:0;color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;padding:12px 2px;width:100%}
+.cal thead th.now button{color:var(--glow)}
+.cal thead th[aria-sort] button,.cal thead th button[aria-pressed="true"]{color:var(--soil);background:var(--glow)}
+.cal tbody th{text-align:left;font-weight:400;font-style:italic;font-size:19px;padding-right:18px;white-space:nowrap}
+.cal td{position:relative}
+.cal td.now{background:rgba(126,240,212,.05)}
+.cal .bar{position:absolute;left:0;right:0;top:15px;height:14px}
+.cal .bar.on{background:var(--c,var(--glow));opacity:.85}
+.cal .bar.peak{height:14px;box-shadow:0 0 14px var(--c,var(--glow))}
+.cal .bar.start{border-radius:8px 0 0 8px;left:4px}
+.cal .bar.end{border-radius:0 8px 8px 0;right:4px}
+.cal tr.dim th,.cal tr.dim .bar{opacity:.18}
+.cal-note{margin-top:18px;color:var(--lichen);font-size:18px}
+/* forays */
+.forays{background:var(--loam)}
+.foray-list{list-style:none;margin:0;padding:0}
+.foray-list li{display:grid;grid-template-columns:150px 1fr 200px;gap:28px;padding:26px 0;border-top:1px solid rgba(169,179,154,.2);align-items:baseline}
+.foray-list time{font-family:var(--mono);font-size:13px;color:var(--amber);letter-spacing:.08em}
+.foray-list h3{margin:0 0 6px;font-weight:500;font-size:30px;line-height:1.05}
+.foray-list p{margin:0;color:#cfcabb;font-size:18px;max-width:58ch}
+.foray-list .meta{font-family:var(--mono);font-size:12px;color:var(--lichen);letter-spacing:.05em;line-height:1.7}
+.join{display:grid;grid-template-columns:1.2fr 1fr;gap:clamp(24px,5vw,80px);align-items:end}
+.join form{display:grid;gap:12px}
+.join label{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--lichen)}
+.join input,.join select{width:100%;background:transparent;border:0;border-bottom:1px solid rgba(169,179,154,.5);color:var(--bone);font-family:var(--serif);font-size:24px;padding:8px 0;border-radius:0}
+.join select option{background:var(--soil)}
+.join button{justify-self:start;margin-top:10px;background:var(--glow);color:var(--soil);border:0;padding:14px 22px;font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+#joinMsg{min-height:1.5em;color:var(--glow);font-style:italic}
+footer{position:relative;z-index:2;padding:40px clamp(16px,6vw,96px) 60px;border-top:1px solid rgba(169,179,154,.2);color:var(--lichen);display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;font-size:17px}
+@media (max-width:860px){
+  .lede,.join{grid-template-columns:1fr}
+  .rules{grid-template-columns:1fr}
+  .rules li{border-right:0;margin-right:0;border-bottom:1px solid rgba(169,179,154,.2)}
+  .foray-list li{grid-template-columns:1fr;gap:6px}
+  .seed-hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .sp .fig svg{transition:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<header class="hero">
+  <canvas id="net" aria-label="A glowing mycelium network growing across the forest floor. Click to seed new growth." role="img"></canvas>
+  <div class="hero-copy">
+    <div class="mono">Est. 1911 · Thornwood Forest · Chapter House No. 4</div>
+    <h1>Beneath<br>the leaf litter<span>The Thornwood Foraging Guild</span></h1>
+    <p>A hundred and fifteen years of walking slowly, looking down, and teaching each other what not to eat.</p>
+  </div>
+  <div class="seed-hint mono"><b>Click the soil</b>to seed a hypha<br><button id="regrow" type="button">Regrow network</button></div>
+</header>
+
+<section id="about">
+  <div class="wrap">
+    <div class="lede">
+      <div class="mono">I. On the Guild</div>
+      <div>
+        <p>The mushroom is only the fruit. The organism is the thread — kilometres of it under a single oak, trading sugar for phosphorus, stitching the forest into one slow body.</p>
+        <p>We are a society of amateurs in the old sense: people who love a thing. Our members include a retired anaesthetist, three schoolteachers, a baker who makes the best chanterelle toast in the county and a dozen children who can tell a <em>Russula</em> from a <em>Lactarius</em> by the milk. We meet each Saturday of the season at the Chapter House and walk the wood in small parties, each led by a Warden with at least seven years' standing.</p>
+        <p>Nothing is picked that won't be identified, and nothing identified is eaten without a second Warden's word.</p>
+      </div>
+    </div>
+    <ol class="rules">
+      <li><b>Rule the First</b><span>Never eat a mushroom identified by one person, one book, or one app.</span></li>
+      <li><b>Rule the Second</b><span>Take a spore print. The colour of the dust is older and more honest than the colour of the cap.</span></li>
+      <li><b>Rule the Third</b><span>Cut, don't pull. Leave the smallest and the oldest. Carry a basket, never a bag.</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="species" id="species">
+  <div class="wrap">
+    <div class="mono" style="color:var(--amber)">II. The Register</div>
+    <h2>Twelve we know <em>by heart</em></h2>
+    <div class="filters" role="group" aria-label="Filter species" id="filters">
+      <button class="chip" id="f-all" data-f="all" aria-pressed="true">All twelve</button>
+      <button class="chip" id="f-edible" data-f="edible" aria-pressed="false">Edible</button>
+      <button class="chip" id="f-medicinal" data-f="medicinal" aria-pressed="false">Medicinal</button>
+      <button class="chip" id="f-toxic" data-f="toxic" aria-pressed="false">Toxic</button>
+      <button class="chip" id="f-deadly" data-f="deadly" aria-pressed="false">Deadly</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</section>
+
+<section id="calendar">
+  <div class="wrap">
+    <div class="mono" style="color:var(--amber)">III. The Fruiting Year</div>
+    <h2>When the wood <em>gives</em></h2>
+    <div class="cal"><table id="calTable" aria-label="Fruiting seasons by month"></table></div>
+    <p class="cal-note" id="calNote"></p>
+  </div>
+</section>
+
+<section class="forays" id="forays">
+  <div class="wrap">
+    <div class="mono" style="color:var(--amber)">IV. Forays this season</div>
+    <h2>Walk with a <em>Warden</em></h2>
+    <ul class="foray-list">
+      <li><time>Sat 26 Sept · 08:30</time><div><h3>The Beech Hanger</h3><p>Our richest autumn ground. Expect ceps, hedgehogs and the first of the amethyst deceivers. Warden Aldous Pryce leads; bring a knife and a soft brush.</p></div><div class="meta">4.2 km · gentle<br>12 places · 3 left</div></li>
+      <li><time>Sat 3 Oct · 09:00</time><div><h3>Deadly Lookalikes Clinic</h3><p>An indoor morning at the Chapter House with fresh specimens of death cap, destroying angel and funeral bell beside their edible doubles. Required before your first solo season.</p></div><div class="meta">Chapter House<br>30 places · open</div></li>
+      <li><time>Sat 17 Oct · 07:45</time><div><h3>Dawn on Kestrel Bog</h3><p>Wellingtons essential. Sphagnum, sundew and the tiny orange bog beacons. Warden Imogen Hale will bring a thermos of birch-polypore tea (a matter of taste).</p></div><div class="meta">3.1 km · wet<br>10 places · 1 left</div></li>
+      <li><time>Sat 31 Oct · 16:30</time><div><h3>Lantern Walk: Foxfire</h3><p>After dark, looking for the green glow of honey fungus mycelium on rotting stumps — the reason this page glows. Children very welcome.</p></div><div class="meta">2 km · dusk<br>40 places · open</div></li>
+    </ul>
+  </div>
+</section>
+
+<section id="join">
+  <div class="wrap join">
+    <div>
+      <div class="mono" style="color:var(--amber)">V. Membership</div>
+      <h2>Join the <em>Guild</em></h2>
+      <p style="color:var(--lichen);max-width:44ch;margin:0">£24 a year, or £8 for under-18s. Membership includes forays, the Clinic, the lending library of 1,400 field guides and a vote at the Autumn Moot.</p>
+    </div>
+    <form id="joinForm" novalidate>
+      <label for="jname">Your name</label>
+      <input id="jname" name="jname" autocomplete="name" value="Hazel Morrow">
+      <label for="jlevel">Experience</label>
+      <select id="jlevel"><option>Never foraged</option><option selected>A few chanterelles</option><option>Confident with 20+ species</option><option>I own a microscope</option></select>
+      <button type="submit" id="joinBtn">Request a welcome letter</button>
+      <div id="joinMsg" aria-live="polite"></div>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <span>The Thornwood Foraging Guild · Chapter House, Mill Lane</span>
+  <span class="mono">When in doubt, throw it out.</span>
+</footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* ---------- MYCELIUM CANVAS ---------- */
+  var cv = document.getElementById('net'), ctx = cv.getContext('2d');
+  var W=0,H=0,dpr=1, tips=[], nodes=[], frame=0;
+  var cols = ['126,240,212','182,166,255','232,180,100'];
+  function resize(){
+    dpr = Math.min(2, window.devicePixelRatio||1);
+    var r = cv.getBoundingClientRect(); W=r.width; H=r.height;
+    cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    seedAll();
+  }
+  function tip(x,y,a,gen,c){ return {x:x,y:y,a:a,gen:gen,life:120+Math.random()*220,c:c,w:Math.max(.35,1.6-gen*.3)}; }
+  function seed(x,y,c){
+    var n = 5+Math.floor(Math.random()*4);
+    for(var i=0;i<n;i++) tips.push(tip(x,y,Math.random()*Math.PI*2,0,c));
+    nodes.push({x:x,y:y,r:4,c:c,t:0});
+  }
+  function seedAll(){
+    ctx.clearRect(0,0,W,H); tips=[]; nodes=[];
+    var n = Math.max(3, Math.round(W/320));
+    for(var i=0;i<n;i++) seed(W*(i+.5)/n + (Math.random()-.5)*80, H*(.25+Math.random()*.6), cols[i%2]);
+    // pre-grow so the page is complete at rest
+    for(var s=0;s<(reduce?420:180);s++) step();
+  }
+  function step(){
+    var next=[];
+    ctx.globalCompositeOperation='lighter';
+    for(var i=0;i<tips.length;i++){
+      var t=tips[i];
+      t.a += (Math.random()-.5)*.45;
+      var sp = 1.6;
+      var nx = t.x+Math.cos(t.a)*sp, ny = t.y+Math.sin(t.a)*sp;
+      ctx.strokeStyle='rgba('+t.c+','+(0.16+0.1/(t.gen+1)).toFixed(3)+')';
+      ctx.lineWidth=t.w;
+      ctx.beginPath(); ctx.moveTo(t.x,t.y); ctx.lineTo(nx,ny); ctx.stroke();
+      t.x=nx; t.y=ny; t.life--;
+      if(t.life>0 && nx>-20 && nx<W+20 && ny>-20 && ny<H+20){
+        next.push(t);
+        if(Math.random()<.018 && t.gen<5 && tips.length<520){
+          next.push(tip(t.x,t.y,t.a+(Math.random()<.5?-1:1)*(.5+Math.random()*.6),t.gen+1,t.c));
+        }
+      } else if(t.life<=0 && Math.random()<.35){
+        nodes.push({x:t.x,y:t.y,r:1.2+Math.random()*2.2,c:Math.random()<.2?cols[2]:t.c,t:Math.random()*6});
+        ctx.fillStyle='rgba('+t.c+',.5)'; ctx.beginPath(); ctx.arc(t.x,t.y,1.4,0,6.283); ctx.fill();
+      }
+    }
+    tips=next;
+    ctx.globalCompositeOperation='source-over';
+  }
+  var glowC = document.createElement('canvas'), gctx = glowC.getContext('2d');
+  function loop(){
+    frame++;
+    if(!reduce){
+      for(var k=0;k<2;k++) step();
+      // pulse nodes
+      ctx.globalCompositeOperation='lighter';
+      for(var i=Math.max(0,nodes.length-60);i<nodes.length;i++){
+        var n=nodes[i]; n.t+=.05;
+        if(frame%3===0){
+          var a = (Math.sin(n.t)*.5+.5)*.06;
+          var g = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*6);
+          g.addColorStop(0,'rgba('+n.c+','+a.toFixed(3)+')'); g.addColorStop(1,'rgba('+n.c+',0)');
+          ctx.fillStyle=g; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*6,0,6.283); ctx.fill();
+        }
+      }
+      ctx.globalCompositeOperation='source-over';
+      // slow fade so old growth dims and new growth reads
+      if(frame%40===0){ ctx.fillStyle='rgba(13,17,12,.035)'; ctx.fillRect(0,0,W,H); }
+      if(tips.length<6 && frame%240===0) seed(Math.random()*W, H*(.3+Math.random()*.6), cols[Math.floor(Math.random()*2)]);
+    }
+    requestAnimationFrame(loop);
+  }
+  cv.addEventListener('pointerdown', function(e){
+    var r=cv.getBoundingClientRect(); var x=e.clientX-r.left, y=e.clientY-r.top;
+    seed(x,y,cols[Math.floor(Math.random()*2)]);
+    ctx.globalCompositeOperation='lighter';
+    var g=ctx.createRadialGradient(x,y,0,x,y,40); g.addColorStop(0,'rgba(126,240,212,.35)'); g.addColorStop(1,'rgba(126,240,212,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,40,0,6.283); ctx.fill(); ctx.globalCompositeOperation='source-over';
+    if(reduce) for(var s=0;s<200;s++) step();
+  });
+  document.getElementById('regrow').addEventListener('click', seedAll);
+  var rt; window.addEventListener('resize', function(){ clearTimeout(rt); rt=setTimeout(resize,200); });
+  resize(); requestAnimationFrame(loop);
+
+  /* ---------- SPECIES ---------- */
+  var S = [
+    {lat:'Cantharellus cibarius',com:'Golden chanterelle',k:'edible',cap:'#e5a53c',stem:'#e8b85a',shape:'funnel',print:'#f1dcc0',pc:'pale cream',s:[6,7,8,9,10],peak:[7,8],hab:'Oak & beech, mossy banks',d:'Apricot scent, false gills that run down the stem like melted wax. The Guild\'s first lesson and most frequent reward.'},
+    {lat:'Boletus edulis',com:'Penny bun · cep',k:'edible',cap:'#8a5530',stem:'#e6dcc2',shape:'bun',print:'#6b5a2c',pc:'olive brown',s:[7,8,9,10],peak:[8,9],hab:'Birch, pine, beech',d:'A cap like a glazed bread roll, a fat netted stem, pores instead of gills. Check for maggots; share generously.'},
+    {lat:'Amanita phalloides',com:'Death cap',k:'deadly',cap:'#9aa46a',stem:'#ece8d6',shape:'dome',ring:1,volva:1,print:'#f5f3ee',pc:'white',s:[7,8,9,10],peak:[8,9],hab:'Oak, sweet chestnut',d:'Responsible for most mushroom deaths worldwide. Greenish cap, white gills, a skirt and a cup-like sac at the base. Symptoms are delayed; by then the liver is failing.'},
+    {lat:'Hydnum repandum',com:'Hedgehog',k:'edible',cap:'#e3b782',stem:'#efdcc0',shape:'flat',teeth:1,print:'#f3e9d8',pc:'white',s:[7,8,9,10,11],peak:[9,10],hab:'Mixed woodland',d:'Soft spines hang beneath the cap instead of gills. Nothing dangerous looks like it, which is why beginners love it.'},
+    {lat:'Amanita muscaria',com:'Fly agaric',k:'toxic',cap:'#d8412f',stem:'#f3eedf',shape:'flat',spots:1,ring:1,print:'#f5f3ee',pc:'white',s:[7,8,9,10,11],peak:[8,9],hab:'Birch & pine',d:'The storybook toadstool. Psychoactive and nauseating; not usually fatal, but we do not recommend finding out.'},
+    {lat:'Trametes versicolor',com:'Turkey tail',k:'medicinal',cap:'#5a6b7a',stem:'#5a6b7a',shape:'bracket',print:'#f5f3ee',pc:'white',s:[0,1,2,3,4,5,6,7,8,9,10,11],peak:[10,11,0],hab:'Dead hardwood, year-round',d:'Banded fans on fallen logs. Studied for polysaccharide-K; brewed by members into a bitter, earthy tea.'},
+    {lat:'Coprinus comatus',com:'Shaggy ink cap',k:'edible',cap:'#e9e3d3',stem:'#f3efe4',shape:'bell',print:'#1a1a1a',pc:'black',s:[4,5,6,7,8,9,10],peak:[8,9],hab:'Verges, lawns, disturbed soil',d:'Eat within hours: it digests itself into black ink. The Guild\'s founder wrote her minutes with it.'},
+    {lat:'Galerina marginata',com:'Funeral bell',k:'deadly',cap:'#a86a2c',stem:'#b88a54',shape:'dome',ring:1,print:'#8a5a2a',pc:'rusty brown',s:[8,9,10,11],peak:[9,10],hab:'Rotting conifer wood',d:'Small, brown and forgettable — and carrying the same amatoxins as the death cap. Easily mistaken for velvet shank.'},
+    {lat:'Pleurotus ostreatus',com:'Oyster mushroom',k:'edible',cap:'#8d8c96',stem:'#dcd8cc',shape:'bracket',print:'#d6c9e8',pc:'pale lilac',s:[0,1,2,9,10,11],peak:[10,11],hab:'Beech logs, winter',d:'Shelves of grey fans on dying beech, even in frost. Carnivorous: it lassos nematodes for nitrogen.'},
+    {lat:'Hypholoma fasciculare',com:'Sulphur tuft',k:'toxic',cap:'#d9c24a',stem:'#e3d174',shape:'dome',clust:1,print:'#3d2f3a',pc:'purple brown',s:[0,1,2,3,4,5,6,7,8,9,10,11],peak:[9,10],hab:'Stumps, clusters',d:'Bitter, bright and gregarious. Causes vomiting. The easiest way to spot it is the greenish gills.'},
+    {lat:'Ganoderma lucidum',com:'Lacquered bracket',k:'medicinal',cap:'#7a2a1c',stem:'#5a2014',shape:'bracket',print:'#6b4a33',pc:'brown',s:[5,6,7,8,9],peak:[7,8],hab:'Hardwood stumps',d:'Glossy as varnished mahogany; the reishi of herbalists. Too woody to eat, a museum piece to look at.'},
+    {lat:'Morchella esculenta',com:'Yellow morel',k:'edible',cap:'#c8a46a',stem:'#efe4cc',shape:'morel',print:'#e6d3a8',pc:'cream-yellow',s:[3,4],peak:[4],hab:'Ash & apple, spring',d:'A honeycombed sponge on a hollow stem. Must be cooked — raw morels are toxic. Guard your spots.'}
+  ];
+  var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function shroomSVG(s){
+    var p='<svg class="shroom" viewBox="0 0 200 190" aria-hidden="true"><defs><radialGradient id="g'+s.lat.replace(/\W/g,'')+'" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>';
+    var gid='url(#g'+s.lat.replace(/\W/g,'')+')';
+    p+='<path d="M20 178 Q100 168 180 178" stroke="#3a3226" stroke-width="2" fill="none"/>';
+    // moss tufts
+    p+='<g stroke="#4c5e3e" stroke-width="1.5">'+[30,44,150,166].map(function(x){return '<path d="M'+x+' 178 l-4 -10 M'+x+' 178 l0 -12 M'+x+' 178 l5 -9"/>';}).join('')+'</g>';
+    function one(cx,sc){
+      var o='<g transform="translate('+cx+',178) scale('+sc+')">';
+      var st='<path d="M-9 0 C-7 -30 -8 -60 -6 -84 L6 -84 C8 -60 7 -30 9 0Z" fill="'+s.stem+'"/>';
+      if(s.volva) o+='<path d="M-16 0 C-18 -14 -12 -22 -10 -24 L10 -24 C12 -22 18 -14 16 0Z" fill="#e8e3cf" opacity=".9"/>';
+      if(s.shape==='bracket'){
+        o+='<path d="M-70 -40 Q0 -110 70 -40 Q0 -60 -70 -40Z" fill="'+s.cap+'"/>';
+        o+='<path d="M-60 -52 Q0 -100 60 -52" stroke="#e7e2d3" stroke-opacity=".3" fill="none"/><path d="M-50 -62 Q0 -92 50 -62" stroke="#000" stroke-opacity=".25" fill="none"/>';
+        o+='<path d="M-70 -40 Q0 -110 70 -40 Q0 -60 -70 -40Z" fill="'+gid+'"/>';
+        o+='<path d="M-54 -20 Q0 -76 54 -20 Q0 -36 -54 -20Z" fill="'+s.cap+'" opacity=".85"/>';
+        return o+'</g>';
+      }
+      if(s.shape==='morel'){
+        o+=st.replace('-84','-60').replace('-84','-60');
+        o+='<path d="M-26 -56 C-30 -110 -10 -150 0 -154 C10 -150 30 -110 26 -56Z" fill="'+s.cap+'"/>';
+        for(var r=0;r<6;r++) for(var c=-2;c<=2;c++){ o+='<ellipse cx="'+(c*9)+'" cy="'+(-66-r*15)+'" rx="3.5" ry="5.5" fill="#5a3e1c" opacity=".7"/>'; }
+        o+='<path d="M-26 -56 C-30 -110 -10 -150 0 -154 C10 -150 30 -110 26 -56Z" fill="'+gid+'"/>';
+        return o+'</g>';
+      }
+      o+=st;
+      if(s.ring) o+='<path d="M-14 -66 Q0 -58 14 -66 L10 -58 Q0 -52 -10 -58Z" fill="#f0ecde"/>';
+      var cap;
+      if(s.shape==='funnel') cap='M-48 -92 Q-40 -76 -8 -80 L8 -80 Q40 -76 48 -92 Q30 -104 0 -100 Q-30 -104 -48 -92Z';
+      else if(s.shape==='bun') cap='M-56 -80 C-58 -130 58 -130 56 -80 Q0 -72 -56 -80Z';
+      else if(s.shape==='bell') cap='M-24 -70 C-30 -150 30 -150 24 -70 Q0 -64 -24 -70Z';
+      else if(s.shape==='flat') cap='M-60 -84 C-54 -112 54 -112 60 -84 Q0 -78 -60 -84Z';
+      else cap='M-48 -80 C-50 -126 50 -126 48 -80 Q0 -74 -48 -80Z';
+      if(s.shape==='funnel'){ o+='<path d="M-44 -90 Q0 -70 44 -90" stroke="#b77d24" stroke-width="1" fill="none"/>'; }
+      o+='<path d="'+cap+'" fill="'+s.cap+'"/>';
+      if(s.teeth){ for(var i=-50;i<=50;i+=6) o+='<line x1="'+i+'" y1="-82" x2="'+i+'" y2="-74" stroke="'+s.stem+'" stroke-width="2"/>'; }
+      if(s.shape==='bell'){ for(var j=0;j<14;j++){ o+='<path d="M'+(-18+ (j%5)*9)+' '+(-126+Math.floor(j/5)*18)+' l4 6" stroke="#8c8472" stroke-width="2"/>'; } }
+      if(s.spots){ [[-30,-96],[-8,-104],[18,-100],[38,-90],[-44,-88],[4,-92],[-20,-90]].forEach(function(q){ o+='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="4" fill="#f4efe0"/>'; }); }
+      o+='<path d="'+cap+'" fill="'+gid+'"/>';
+      return o+'</g>';
+    }
+    if(s.clust){ p+=one(70,.7)+one(130,.8)+one(100,1); }
+    else if(s.shape==='bracket'){ p+='<rect x="60" y="40" width="24" height="140" fill="#3a3226"/>'+one(110,.8).replace('translate(110,178)','translate(118,150)')+one(110,.6).replace('translate(110,178)','translate(112,110)'); }
+    else p+=one(100,1);
+    return p+'</svg>';
+  }
+  function printSVG(s){
+    var p='<svg class="print" viewBox="0 0 200 190" aria-hidden="true"><rect x="30" y="15" width="140" height="160" fill="'+(s.print==='#f5f3ee'||s.print==='#f3e9d8'||s.print==='#f1dcc0'||s.print==='#d6c9e8'||s.print==='#e6d3a8'?'#1a1f18':'#e9e4d6')+'"/>';
+    var n = s.teeth?0:90, R=56;
+    p+='<g transform="translate(100,95)">';
+    if(s.teeth){ for(var i=0;i<220;i++){ var a=i*2.39996, r=Math.sqrt(i/220)*R; p+='<circle cx="'+(Math.cos(a)*r).toFixed(1)+'" cy="'+(Math.sin(a)*r).toFixed(1)+'" r="1.4" fill="'+s.print+'" opacity=".8"/>'; } }
+    else if(s.shape==='bracket'||s.shape==='morel'){ for(var k=0;k<400;k++){ var aa=k*2.39996, rr=Math.sqrt(k/400)*R; p+='<circle cx="'+(Math.cos(aa)*rr).toFixed(1)+'" cy="'+(Math.sin(aa)*rr*.8).toFixed(1)+'" r=".9" fill="'+s.print+'" opacity=".7"/>'; } }
+    else { for(var j=0;j<n;j++){ var t=j/n*Math.PI*2; var r0=j%3===0?6:(j%3===1?22:36); p+='<line x1="'+(Math.cos(t)*r0).toFixed(1)+'" y1="'+(Math.sin(t)*r0).toFixed(1)+'" x2="'+(Math.cos(t)*R).toFixed(1)+'" y2="'+(Math.sin(t)*R).toFixed(1)+'" stroke="'+s.print+'" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>'; }
+      p+='<circle r="6" fill="'+(s.print==='#1a1a1a'||s.print==='#3d2f3a'||s.print==='#6b5a2c'||s.print==='#8a5a2a'||s.print==='#6b4a33'?'#e9e4d6':'#1a1f18')+'"/>'; }
+    p+='</g><text x="100" y="186" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#a9b39a" letter-spacing="1.5">SPORE PRINT · '+s.pc.toUpperCase()+'</text></svg>';
+    return p;
+  }
+  var labels={edible:'Edible',toxic:'Toxic',deadly:'Deadly',medicinal:'Medicinal'};
+  var grid=document.getElementById('grid');
+  grid.innerHTML = S.map(function(s,i){
+    return '<article class="sp" data-k="'+s.k+'"><span class="badge b-'+s.k+'">'+labels[s.k]+'</span>'+
+      '<div class="fig">'+shroomSVG(s)+printSVG(s)+'</div>'+
+      '<h3>'+s.lat+'</h3><div class="common">'+s.com+'</div><p>'+s.d+'</p>'+
+      '<div class="foot"><span>'+s.hab+'</span><button class="flip" id="print-'+i+'" aria-pressed="false">Spore print</button></div></article>';
+  }).join('');
+  grid.addEventListener('click', function(e){
+    var b = e.target.closest('.flip'); if(!b) return;
+    var card = b.closest('.sp'); var on = !card.classList.contains('show-print');
+    card.classList.toggle('show-print', on); b.setAttribute('aria-pressed', on); b.textContent = on?'Specimen':'Spore print';
+  });
+  var chips = document.querySelectorAll('.chip');
+  document.getElementById('filters').addEventListener('click', function(e){
+    var c = e.target.closest('.chip'); if(!c) return;
+    chips.forEach(function(x){ x.setAttribute('aria-pressed', x===c); });
+    var f=c.dataset.f;
+    grid.querySelectorAll('.sp').forEach(function(card){ card.hidden = !(f==='all'||card.dataset.k===f); });
+  });
+
+  /* ---------- CALENDAR ---------- */
+  var now = new Date().getMonth();
+  var sel = now;
+  var colorOf={edible:'#7ef0d4',medicinal:'#b6a6ff',toxic:'#e8b464',deadly:'#e0645a'};
+  var tbl = document.getElementById('calTable');
+  function renderCal(){
+    var h='<thead><tr><th scope="col" style="text-align:left"><span class="mono">Species</span></th>';
+    MONTHS.forEach(function(m,i){ h+='<th scope="col" class="'+(i===now?'now':'')+'"><button id="m-'+i+'" aria-pressed="'+(i===sel)+'">'+m+'</button></th>'; });
+    h+='</tr></thead><tbody>';
+    S.forEach(function(s){
+      var inSel = s.s.indexOf(sel)>=0;
+      h+='<tr class="'+(inSel?'':'dim')+'"><th scope="row">'+s.com+'</th>';
+      for(var m=0;m<12;m++){
+        var on = s.s.indexOf(m)>=0, prev=s.s.indexOf((m+11)%12)>=0, nxt=s.s.indexOf((m+1)%12)>=0, pk=s.peak.indexOf(m)>=0;
+        var cls = on?('bar on'+(pk?' peak':'')+(!prev||m===0?' start':'')+(!nxt||m===11?' end':'')):'bar';
+        h+='<td class="'+(m===now?'now':'')+'"><span class="'+cls+'" style="--c:'+colorOf[s.k]+'"></span></td>';
+      }
+      h+='</tr>';
+    });
+    tbl.innerHTML = h+'</tbody>';
+    var list = S.filter(function(s){return s.s.indexOf(sel)>=0;});
+    var peaking = list.filter(function(s){return s.peak.indexOf(sel)>=0;}).map(function(s){return s.com.toLowerCase();});
+    document.getElementById('calNote').textContent = (sel===now?'This month':'In '+['January','February','March','April','May','June','July','August','September','October','November','December'][sel])+
+      ': '+list.length+' of our twelve are fruiting'+(peaking.length?', with '+peaking.join(', ')+' at their peak.':'.');
+  }
+  tbl.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; sel=+b.id.slice(2); renderCal(); document.getElementById('m-'+sel).focus(); });
+  renderCal();
+
+  document.getElementById('joinForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var n = document.getElementById('jname').value.trim() || 'friend';
+    document.getElementById('joinMsg').textContent = 'Thank you, '+n.split(' ')[0]+'. The Warden of Welcomes will write by hand within the fortnight.';
+  });
+})();
+</script>
+</body>
+</html>

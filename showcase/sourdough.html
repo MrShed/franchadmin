@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coldhouse Country Loaf</title>
+<meta name="description" content="A sourdough country loaf on flour-dusted slate, with a live baker's percentage calculator, a clock-timed bake schedule and a crumb that opens as hydration rises.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,600;0,700;1,400&family=Chivo:ital,wght@0,300;0,400;0,600;1,300&family=Chivo+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --slate:#262b30;
+  --slate-2:#30363c;
+  --slate-3:#3b4249;
+  --flour:#eceee9;
+  --flour-dim:#b9bfbf;
+  --chalk:#d9dfdc;
+  --crust:#c8914f;
+  --crust-dk:#8a5a2b;
+  --rye:#5b3d2a;
+  --levain:#e6cf82;
+  --line:rgba(236,238,233,.16);
+  --slab:"Zilla Slab", Rockwell, "Roboto Slab", Georgia, serif;
+  --sans:"Chivo", "Helvetica Neue", Arial, sans-serif;
+  --mono:"Chivo Mono", ui-monospace, Menlo, monospace;
+  --hand:"Caveat", "Bradley Hand", cursive;
+}
+*{box-sizing:border-box}
+html{background:var(--slate)}
+body{
+  margin:0;color:var(--flour);font-family:var(--sans);font-weight:300;font-size:17px;line-height:1.6;overflow-x:hidden;
+  background-color:var(--slate);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 12% 8%, rgba(236,238,233,.10), transparent 70%),
+    radial-gradient(ellipse 50% 35% at 88% 32%, rgba(236,238,233,.07), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 30% 70%, rgba(236,238,233,.06), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+a{color:var(--levain)}
+:focus-visible{outline:2px dashed var(--levain);outline-offset:3px}
+.back{position:absolute;top:18px;right:16px;font-family:var(--hand);font-size:22px;color:var(--flour-dim);text-decoration:none;transform:rotate(-3deg)}
+.back:hover,.back:focus-visible{color:var(--levain)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+
+/* dust canvas */
+#dust{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.wrap,header{position:relative;z-index:1}
+
+header.top{padding:70px 0 40px}
+.stamp{display:inline-flex;gap:10px;align-items:center;font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--flour-dim);border:1px solid var(--line);padding:6px 12px}
+.stamp b{color:var(--levain);font-weight:600}
+h1{font-family:var(--slab);font-weight:700;font-size:clamp(58px,12vw,168px);line-height:.84;margin:28px 0 0;letter-spacing:-.025em;color:var(--flour)}
+h1 span{display:block;color:transparent;-webkit-text-stroke:1.5px var(--flour);font-style:italic;font-weight:400}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:48px;align-items:end;margin-top:36px}
+.intro p{font-size:19px;max-width:36em;margin:0 0 1em}
+.intro p:first-child::first-line{font-weight:600;letter-spacing:.02em}
+.quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.quick div{padding:14px 10px;border-right:1px solid var(--line)}
+.quick div:last-child{border:0}
+.quick dt{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--flour-dim)}
+.quick dd{margin:4px 0 0;font-family:var(--slab);font-size:28px;font-weight:600}
+.loafpic{position:relative}
+.loafpic svg{width:100%;height:auto;display:block}
+.hand{font-family:var(--hand);color:var(--levain);font-size:24px;line-height:1.1}
+
+h2{font-family:var(--slab);font-weight:700;font-size:clamp(38px,6vw,76px);line-height:.95;margin:0;letter-spacing:-.015em}
+h2 em{font-weight:400;color:var(--levain)}
+.sec{padding:90px 0 20px;border-top:1px solid var(--line);margin-top:70px}
+.sec-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:end;margin-bottom:40px}
+.sec-head p{margin:0;color:var(--flour-dim);max-width:34em}
+.num{font-family:var(--mono);font-size:13px;letter-spacing:.2em;color:var(--levain);display:block;margin-bottom:14px}
+
+/* calculator */
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:40px}
+.panel{background:rgba(20,24,28,.55);border:1px solid var(--line);padding:24px;position:relative}
+.panel::before{content:"";position:absolute;inset:-1px;background:linear-gradient(135deg,rgba(236,238,233,.18),transparent 30%);pointer-events:none;mix-blend-mode:screen}
+.mode{display:flex;gap:0;margin-bottom:22px;border:1px solid var(--line);width:max-content;max-width:100%}
+.mode button{all:unset;cursor:pointer;padding:9px 16px;font-family:var(--mono);font-size:13px;letter-spacing:.08em;color:var(--flour-dim)}
+.mode button[aria-pressed="true"]{background:var(--flour);color:var(--slate)}
+.mode button:focus-visible{outline:2px dashed var(--levain)}
+.field{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;margin-bottom:18px}
+.field label{font-size:14px;font-weight:400;letter-spacing:.02em}
+.field output,.field .unit{font-family:var(--mono);font-size:14px;color:var(--levain)}
+.field input[type=range]{grid-column:1 / 3;width:100%;accent-color:var(--levain)}
+.field input[type=number]{width:110px;background:transparent;border:0;border-bottom:1px solid var(--flour-dim);color:var(--flour);font-family:var(--mono);font-size:18px;padding:4px 2px;text-align:right}
+.field input[type=number]:focus{outline:none;border-color:var(--levain)}
+.hidden{display:none !important}
+input[type=range]{height:24px;background:transparent}
+
+table.formula{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:15px}
+table.formula th{font-family:var(--sans);font-weight:400;text-align:left;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--flour-dim);padding:0 0 10px;border-bottom:1px solid var(--line)}
+table.formula th:not(:first-child),table.formula td:not(:first-child){text-align:right}
+table.formula td{padding:11px 0;border-bottom:1px dashed var(--line)}
+table.formula td:first-child{font-family:var(--sans);font-weight:400}
+table.formula td .bar{display:block;height:3px;background:var(--flour);opacity:.4;margin-top:6px}
+table.formula tr.sum td{border-bottom:0;border-top:1px solid var(--flour);font-weight:600;color:var(--levain)}
+.crumbbox{margin-top:26px;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.crumbbox svg{width:100%;height:auto;display:block}
+.crumbnote{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:12px;color:var(--flour-dim);letter-spacing:.06em;flex-wrap:wrap}
+
+/* timeline */
+.tl-controls{display:flex;flex-wrap:wrap;gap:24px;align-items:end;margin-bottom:34px}
+.tl-controls label{display:block;font-size:13px;color:var(--flour-dim);margin-bottom:6px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.tl-controls input{background:transparent;border:1px solid var(--line);color:var(--flour);font-family:var(--mono);font-size:17px;padding:8px 10px;color-scheme:dark}
+.timeline{position:relative;list-style:none;margin:0;padding:0}
+.timeline::before{content:"";position:absolute;left:112px;top:10px;bottom:10px;width:2px;background:repeating-linear-gradient(var(--flour-dim) 0 6px,transparent 6px 12px);opacity:.5}
+.timeline li{display:grid;grid-template-columns:100px 24px minmax(0,1fr);gap:0 14px;padding:14px 0;align-items:start}
+.timeline time{font-family:var(--mono);font-size:15px;text-align:right;color:var(--levain);padding-top:3px}
+.timeline time small{display:block;color:var(--flour-dim);font-size:11px;letter-spacing:.1em}
+.timeline .dot{width:16px;height:16px;border-radius:50%;background:var(--slate);border:2px solid var(--flour);margin:4px 0 0 5px;position:relative;z-index:1}
+.timeline li.key .dot{background:var(--levain);border-color:var(--levain)}
+.timeline h3{margin:0;font-family:var(--slab);font-weight:600;font-size:22px}
+.timeline p{margin:4px 0 0;color:var(--flour-dim);max-width:44em;font-size:16px}
+.timeline .dur{font-family:var(--mono);font-size:12px;color:var(--flour-dim);border:1px solid var(--line);padding:1px 7px;margin-left:8px;vertical-align:3px;white-space:nowrap}
+
+/* notes */
+.notes{columns:3 260px;column-gap:40px}
+.notes p{margin:0 0 1em;break-inside:avoid}
+.notes p b{font-family:var(--slab);font-weight:600;font-size:19px;display:block;color:var(--flour)}
+footer{padding:60px 0 80px;margin-top:60px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;color:var(--flour-dim);font-family:var(--mono);font-size:12px;letter-spacing:.08em}
+
+@media (max-width:880px){
+  .hero-grid,.calc,.sec-head{grid-template-columns:minmax(0,1fr)}
+  .quick{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .quick div:nth-child(2){border-right:0}
+  .quick div:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .timeline::before{left:78px}
+  .timeline li{grid-template-columns:66px 24px minmax(0,1fr);gap:0 8px}
+  .timeline time{font-size:13px}
+}
+</style>
+</head>
+<body>
+<canvas id="dust" aria-hidden="true"></canvas>
+<div class="wrap">
+  <a class="back" href="index.html">← Showcase</a>
+  <header class="top">
+    <span class="stamp">Coldhouse Bakery <b>No. 07</b> · the everyday loaf</span>
+    <h1>Country<span>Loaf.</span></h1>
+    <div class="hero-grid">
+      <div class="intro">
+        <p>This is the bread we bake every morning at Coldhouse, and the one we teach first. It is not the most open, the most sour or the most photogenic loaf in the world. It is simply the most dependable: a mild, wheaty sourdough with ten percent whole wheat, a crackling crust, and a crumb that stays soft for three days on a board under a tea towel.</p>
+        <p>Everything below is written in baker's percentages, which means every ingredient is expressed as a proportion of the total flour. Once you think this way, a recipe stops being a list of grams and becomes a shape — one you can scale to a single loaf or a rack of twelve without a calculator. Though, since you're here, there's one of those too.</p>
+        <p class="hand">↓ dust the slate, move the sliders, watch the crumb open.</p>
+      </div>
+      <div>
+        <div class="loafpic">
+          <svg viewBox="0 0 400 250" role="img" aria-label="A scored country loaf, drawn in chalk">
+            <defs>
+              <radialGradient id="crust" cx=".45" cy=".35" r=".7"><stop offset="0" stop-color="#e3b476"/><stop offset=".6" stop-color="#b37638"/><stop offset="1" stop-color="#6f4420"/></radialGradient>
+              <filter id="rough"><feTurbulence baseFrequency=".04" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="4"/></filter>
+            </defs>
+            <ellipse cx="200" cy="222" rx="170" ry="16" fill="rgba(0,0,0,.35)"/>
+            <path filter="url(#rough)" d="M40 205 C30 120 110 58 205 56 C300 54 372 116 362 205 C300 222 110 224 40 205Z" fill="url(#crust)"/>
+            <path d="M88 150 C140 96 250 84 316 128" fill="none" stroke="#f3e2c0" stroke-width="7" stroke-linecap="round" opacity=".85"/>
+            <path d="M92 156 C150 108 250 98 312 136" fill="none" stroke="#5b3718" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+            <g fill="#f4f5f1" opacity=".75">
+              <circle cx="140" cy="90" r="1.6"/><circle cx="180" cy="74" r="1.2"/><circle cx="240" cy="80" r="1.8"/><circle cx="270" cy="96" r="1.1"/>
+              <circle cx="210" cy="70" r="1"/><circle cx="120" cy="120" r="1.3"/><circle cx="300" cy="120" r="1.5"/><circle cx="160" cy="100" r="1"/>
+              <circle cx="228" cy="94" r="1.4"/><circle cx="196" cy="88" r="1.1"/>
+            </g>
+            <text x="300" y="36" font-family="Caveat, cursive" font-size="22" fill="#e6cf82" transform="rotate(-6 300 36)">ear!</text>
+            <path d="M296 44 C290 60 284 74 270 92" stroke="#e6cf82" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+        <dl class="quick">
+          <div><dt>Hydration</dt><dd id="qHyd">75%</dd></div>
+          <div><dt>Levain</dt><dd id="qLev">20%</dd></div>
+          <div><dt>Salt</dt><dd id="qSalt">2%</dd></div>
+          <div><dt>Hands-on</dt><dd>40m</dd></div>
+        </dl>
+      </div>
+    </div>
+  </header>
+
+  <section class="sec" aria-labelledby="calcTitle">
+    <div class="sec-head">
+      <div><span class="num">01 / FORMULA</span><h2 id="calcTitle">Scale it <em>by the percent.</em></h2></div>
+      <p>Choose whether to scale by the number of loaves you want or by the flour you have in the bin. The levain is assumed to be a ripe 100% hydration starter, and its flour and water are counted in the totals — true baker's math, so a 75% dough is really 75%.</p>
+    </div>
+    <div class="calc">
+      <div class="panel">
+        <div class="mode" role="group" aria-label="Scale by">
+          <button type="button" id="modeLoaves" aria-pressed="true">By loaves</button>
+          <button type="button" id="modeFlour" aria-pressed="false">By flour</button>
+        </div>
+        <div id="loafFields">
+          <div class="field"><label for="loaves">Number of loaves</label><output id="loavesOut" for="loaves">2</output><input type="range" id="loaves" min="1" max="12" step="1" value="2"></div>
+          <div class="field"><label for="loafWt">Dough per loaf</label><output id="loafWtOut" for="loafWt">900 g</output><input type="range" id="loafWt" min="400" max="1600" step="50" value="900"></div>
+        </div>
+        <div id="flourFields" class="hidden">
+          <div class="field"><label for="flourIn">Total flour available</label><span><input type="number" id="flourIn" min="100" max="20000" step="50" value="1000"> <span class="unit">g</span></span></div>
+        </div>
+        <div class="field"><label for="hyd">Hydration</label><output id="hydOut" for="hyd">75%</output><input type="range" id="hyd" min="60" max="90" step="1" value="75"></div>
+        <div class="field"><label for="lev">Levain (of mix flour)</label><output id="levOut" for="lev">20%</output><input type="range" id="lev" min="5" max="40" step="1" value="20"></div>
+        <div class="field"><label for="ww">Whole wheat share</label><output id="wwOut" for="ww">10%</output><input type="range" id="ww" min="0" max="60" step="5" value="10"></div>
+        <div class="field"><label for="salt">Salt</label><output id="saltOut" for="salt">2.0%</output><input type="range" id="salt" min="1.5" max="2.6" step="0.1" value="2"></div>
+      </div>
+      <div class="panel">
+        <table class="formula" aria-live="polite">
+          <thead><tr><th>Ingredient</th><th>Baker's %</th><th>Grams</th></tr></thead>
+          <tbody id="fBody"></tbody>
+        </table>
+        <div class="crumbbox">
+          <svg id="crumb" viewBox="0 0 480 220" role="img" aria-label="Cross-section of the loaf, with crumb that opens as hydration increases"></svg>
+          <div class="crumbnote"><span id="crumbLabel">Crumb: moderately open</span><span>cross-section · not to scale</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="tlTitle">
+    <div class="sec-head">
+      <div><span class="num">02 / SCHEDULE</span><h2 id="tlTitle">Two days, <em>forty minutes of work.</em></h2></div>
+      <p>Sourdough is mostly waiting. Set the time you'll mix and the temperature of your dough, and the schedule rewrites itself. Warm doughs ferment fast; every degree cooler adds roughly a seventh to the bulk.</p>
+    </div>
+    <div class="tl-controls">
+      <div><label for="startTime">Mix at</label><input type="time" id="startTime" value="09:00"></div>
+      <div><label for="doughTemp">Dough temp °C</label><input type="number" id="doughTemp" min="18" max="30" step="1" value="24"></div>
+      <div class="hand" id="bulkNote">bulk ≈ 5 h at 24°C</div>
+    </div>
+    <ol class="timeline" id="timeline"></ol>
+  </section>
+
+  <section class="sec" aria-labelledby="notesTitle">
+    <div class="sec-head"><div><span class="num">03 / NOTES</span><h2 id="notesTitle">What the <em>dough</em> is telling you.</h2></div>
+    <p>Clocks are a guide, not a law. These are the signs we actually look for at the bench.</p></div>
+    <div class="notes">
+      <p><b>A ripe levain</b>has roughly doubled, smells of yoghurt and green apple rather than nail varnish, and a spoonful floats in water. If it has collapsed and smells sharp, it's past its peak: use a little less, or feed again and wait.</p>
+      <p><b>The end of bulk</b>isn't a time, it's a look. The dough should have grown by about half, feel airy and jiggly when you shake the tub, show a few bubbles at the edges, and dome slightly where it meets the container.</p>
+      <p><b>Shaping tension</b>comes from dragging the dough towards you on an unfloured patch of bench. The skin should tighten like a drum; if it tears, you've gone too far — let it rest five minutes and try again.</p>
+      <p><b>The cold retard</b>in the fridge slows yeast more than it slows bacteria, which deepens flavour and makes the loaf far easier to score. Twelve to sixteen hours is our sweet spot; up to thirty-six will still bake well.</p>
+      <p><b>Scoring</b>should be one confident cut at a shallow angle, about 5 mm deep, just off the centre line. The flap that lifts in the oven is the "ear"; it's lovely but it isn't the point.</p>
+      <p><b>Cooling</b>is the step everyone skips and shouldn't. The crumb is still setting for the first hour out of the oven. Cut it hot and it will be gummy; wait, and it will be the bread in the picture.</p>
+      <p><b>Higher hydration</b>makes a more open, glossier crumb, but it asks more of your shaping. If you're new to this, stay at 70–72% for a few bakes before pushing past 78%.</p>
+      <p><b>Whole wheat</b>drinks more water and ferments faster. Above 30%, add two or three points of hydration and keep an eye on the bulk — it may finish an hour early.</p>
+    </div>
+  </section>
+
+  <footer><span>Coldhouse Bakery · formula card 07 · revised autumn</span><span>All illustrations drawn with chalk and code</span></footer>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let mode='loaves';
+  const setMode=m=>{mode=m;$('modeLoaves').setAttribute('aria-pressed',m==='loaves');$('modeFlour').setAttribute('aria-pressed',m==='flour');
+    $('loafFields').classList.toggle('hidden',m!=='loaves');$('flourFields').classList.toggle('hidden',m!=='flour');calc();};
+  $('modeLoaves').onclick=()=>setMode('loaves'); $('modeFlour').onclick=()=>setMode('flour');
+
+  // seeded rng
+  function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+
+  function calc(){
+    const h=+$('hyd').value/100, L=+$('lev').value/100, w=+$('ww').value/100, s=+$('salt').value/100;
+    let T;
+    if(mode==='loaves'){ const D=+$('loaves').value*+$('loafWt').value; T=D/(1+h+s); }
+    else { T=Math.max(100,+$('flourIn').value||1000); }
+    const M=T/(1+L/2);            // mix flour
+    const levain=L*M, levFlour=levain/2, levWater=levain/2;
+    const wwG=w*T, white=M-wwG, water=h*T-levWater, salt=s*T;
+    const rows=[
+      ['Bread flour', white/T*100, white],
+      ['Whole wheat flour', wwG/T*100, wwG],
+      ['Water', water/T*100, water],
+      ['Levain (100% hyd.)', levain/T*100, levain],
+      ['Salt', s*100, salt],
+    ];
+    const total=white+wwG+water+levain+salt;
+    const max=Math.max(...rows.map(r=>r[2]));
+    $('fBody').innerHTML=rows.map(r=>`<tr><td>${r[0]}<span class="bar" style="width:${(r[2]/max*100).toFixed(1)}%"></span></td><td>${r[1].toFixed(1)}%</td><td>${Math.round(r[2]).toLocaleString()} g</td></tr>`).join('')+
+      `<tr class="sum"><td>Total dough</td><td>${((1+h+s)*100).toFixed(1)}%</td><td>${Math.round(total).toLocaleString()} g</td></tr>`;
+    $('loavesOut').textContent=$('loaves').value; $('loafWtOut').textContent=$('loafWt').value+' g';
+    $('hydOut').textContent=Math.round(h*100)+'%'; $('levOut').textContent=Math.round(L*100)+'%';
+    $('wwOut').textContent=Math.round(w*100)+'%'; $('saltOut').textContent=(s*100).toFixed(1)+'%';
+    $('qHyd').textContent=Math.round(h*100)+'%'; $('qLev').textContent=Math.round(L*100)+'%'; $('qSalt').textContent=(s*100).toFixed(1).replace('.0','')+'%';
+    drawCrumb(h,w);
+  }
+  ['loaves','loafWt','hyd','lev','ww','salt','flourIn'].forEach(id=>$(id).addEventListener('input',calc));
+
+  function drawCrumb(h,w){
+    const svg=$('crumb'); const R=rng(7);
+    const open=(h-0.6)/0.3; // 0..1
+    const tone=w; // browner crumb with more whole wheat
+    const cr=Math.round(236-tone*60), cg=Math.round(222-tone*70), cb=Math.round(190-tone*80);
+    let out=`<defs><clipPath id="cc"><path d="M30 200 C24 110 120 34 240 32 C360 30 456 110 450 200 Z"/></clipPath>
+      <radialGradient id="cg" cx=".5" cy=".7" r=".7"><stop offset="0" stop-color="rgb(${cr},${cg},${cb})"/><stop offset="1" stop-color="rgb(${cr-24},${cg-28},${cb-30})"/></radialGradient></defs>`;
+    out+=`<path d="M22 204 C14 104 116 24 240 22 C364 20 466 104 458 204 Z" fill="#6f4420"/>`;
+    out+=`<path d="M30 200 C24 110 120 34 240 32 C360 30 456 110 450 200 Z" fill="url(#cg)"/>`;
+    out+=`<g clip-path="url(#cc)">`;
+    const n=Math.round(420-open*180);
+    for(let i=0;i<n;i++){
+      const x=30+R()*420, y=40+R()*160;
+      const big=R()<(.02+open*.1);
+      let rx=(1.2+R()*2.2+open*3.6*R())*(big?2.6+open*2:1), ry=rx*(.45+R()*.35);
+      // holes elongate upward in oven spring toward the top
+      const ang=-20+R()*40;
+      const a=(0.35+R()*.45).toFixed(2);
+      out+=`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" transform="rotate(${ang.toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})" fill="rgba(${60+Math.round(tone*20)},${40},${22},${a})"/>`;
+    }
+    // bran flecks
+    const flecks=Math.round(tone*260);
+    for(let i=0;i<flecks;i++){const x=30+R()*420,y=40+R()*160;out+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="1.6" height="1" fill="#6b4a2e" opacity=".55"/>`;}
+    out+=`</g><path d="M22 204 L458 204" stroke="#1a1e22" stroke-width="3"/>`;
+    svg.innerHTML=out;
+    $('crumbLabel').textContent='Crumb: '+(open<.25?'tight and even — great for sandwiches':open<.5?'moderately open — the everyday loaf':open<.75?'open and glossy':'wild, lacy and a little unruly');
+  }
+
+  /* timeline */
+  function fmt(mins){ const d=Math.floor(mins/1440); const m=((mins%1440)+1440)%1440; const hh=Math.floor(m/60), mm=Math.round(m%60);
+    return {t:`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`, d:d}; }
+  function durTxt(m){ if(m<60) return m+' min'; const h=Math.floor(m/60), r=Math.round(m%60); return h+' h'+(r?' '+r+' m':''); }
+  function schedule(){
+    const [H,M]=($('startTime').value||'09:00').split(':').map(Number);
+    const temp=Math.min(30,Math.max(18,+$('doughTemp').value||24));
+    const bulk=Math.round(300*Math.pow(0.87,temp-24)/5)*5;
+    $('bulkNote').textContent=`bulk ≈ ${durTxt(bulk)} at ${temp}°C`;
+    const mix=H*60+M;
+    const steps=[
+      {o:-12*60, d:12*60, n:'Feed the levain', p:'The night before: 1 part starter, 5 parts flour, 5 parts water. Cover and leave at room temperature.', key:true},
+      {o:-60, d:60, n:'Autolyse', p:'Mix all the flour with all but 50 g of the water until no dry bits remain. Cover and leave for an hour.'},
+      {o:0, d:30, n:'Add the levain', p:'Dimple the ripe levain into the dough and pinch it through with a wet hand until it disappears.', key:true},
+      {o:30, d:0, n:'Add the salt', p:'Sprinkle the salt over with the reserved water. Squeeze and fold for three minutes until the dough tightens.'},
+      {o:60, d:120, n:'Four sets of stretch & folds', p:'Every 30 minutes, lift each side of the dough and fold it over itself. After the fourth set, leave it alone.'},
+      {o:bulk, d:30, n:'Pre-shape', p:'Tip the dough out, divide, and round each piece loosely. Rest uncovered on the bench.', key:true},
+      {o:bulk+30, d:15, n:'Final shape', p:'Shape into a tight boule or batard and set seam-side up in a floured banneton.'},
+      {o:bulk+45, d:14*60, n:'Cold retard', p:'Cover and refrigerate overnight. The flavour builds here, quietly.'},
+      {o:bulk+45+14*60-60, d:60, n:'Preheat the oven', p:'250°C with a cast-iron pot inside, for a full hour. The pot must be scorching.'},
+      {o:bulk+45+14*60, d:20, n:'Bake, lid on', p:'Turn out, score once, and bake covered for 20 minutes to trap the steam.', key:true},
+      {o:bulk+65+14*60, d:25, n:'Bake, lid off', p:'Lower to 230°C and bake another 20–25 minutes, until deeply burnished and hollow when tapped.'},
+      {o:bulk+90+14*60, d:60, n:'Cool', p:'At least an hour on a rack. We know. Wait anyway.', key:true},
+    ];
+    const days=['Day 1','Day 2','Day 3','Day 4'];
+    $('timeline').innerHTML=steps.map(s=>{const f=fmt(mix+s.o); const dayIdx=Math.floor((mix+s.o)/1440)+1;
+      return `<li class="${s.key?'key':''}"><time>${f.t}<small>${days[Math.max(0,Math.min(3,dayIdx))]}</small></time><span class="dot"></span><div><h3>${s.n}${s.d?`<span class="dur">${durTxt(s.d)}</span>`:''}</h3><p>${s.p}</p></div></li>`}).join('');
+  }
+  $('startTime').addEventListener('input',schedule); $('doughTemp').addEventListener('input',schedule);
+
+  calc(); schedule();
+
+  /* flour dust drifting in light */
+  const cv=$('dust'), ctx=cv.getContext('2d'); let W,H,dpr;
+  const motes=Array.from({length:70},()=>({x:Math.random(),y:Math.random(),r:.4+Math.random()*1.6,v:.2+Math.random()*.6,p:Math.random()*6}));
+  function size(){dpr=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+  size(); addEventListener('resize',size);
+  let mx=.5,my=.5; addEventListener('pointermove',e=>{mx=e.clientX/W;my=e.clientY/H;});
+  function tick(t){
+    ctx.clearRect(0,0,W,H);
+    motes.forEach(m=>{
+      if(!reduce){ m.y-=m.v*.0006; m.x+=Math.sin(t*.0004+m.p)*.0003+(mx-.5)*.0002; if(m.y<-.02){m.y=1.02;m.x=Math.random();} }
+      ctx.globalAlpha=.25+.25*Math.sin(t*.001+m.p);
+      ctx.fillStyle='#f4f5f1'; ctx.beginPath(); ctx.arc(m.x*W,m.y*H,m.r,0,7); ctx.fill();
+    });
+    if(!reduce) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

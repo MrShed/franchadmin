@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stellar Fusion Chart</title>
+<meta name="description" content="A 2048-style sliding puzzle where matching tiles fuse into the next element, from hydrogen towards iron, styled as a periodic wall chart that records every discovery.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#10161f;
+  --bg2:#17202c;
+  --line:#2a3646;
+  --ink:#e8ecf1;
+  --dim:#8795a8;
+  --gold:#f2c14e;
+  /* category colours, wall-chart style */
+  --c-nonmetal:#7fd18b;
+  --c-noble:#7cb7f2;
+  --c-alkali:#f28b6b;
+  --c-alkaline:#f4c25b;
+  --c-metalloid:#5fd0c2;
+  --c-halogen:#c9e46a;
+  --c-post:#b3a6d9;
+  --c-transition:#f0a0b8;
+  --gap:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:
+    radial-gradient(900px 500px at 15% -10%, #22314a 0%, transparent 60%),
+    radial-gradient(700px 500px at 110% 110%, #2a1e33 0%, transparent 60%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  min-height:100vh;
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
+}
+a.back{position:absolute; top:14px; right:16px; color:var(--dim); font-size:12px; text-decoration:none; letter-spacing:.08em}
+a.back:hover{color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold); outline-offset:3px}
+.wrap{max-width:1100px; margin:0 auto}
+header{display:grid; grid-template-columns:auto 1fr; gap:22px; align-items:end; padding:34px 0 22px; border-bottom:1px solid var(--line)}
+.big-sym{
+  font-family:"Big Shoulders Display", "Arial Narrow", sans-serif; font-weight:900; font-size:clamp(84px,14vw,150px); line-height:.78;
+  width:1.25em; aspect-ratio:1; display:grid; place-items:center; position:relative;
+  background:var(--c-nonmetal); color:#10161f; border-radius:3px;
+}
+.big-sym small{position:absolute; top:8px; left:10px; font-family:"IBM Plex Mono",monospace; font-size:14px; font-weight:600}
+h1{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:900; text-transform:uppercase; font-size:clamp(44px,8vw,96px); line-height:.86; margin:0; letter-spacing:.005em}
+h1 span{color:var(--gold)}
+.sub{color:var(--dim); font-size:13px; margin:12px 0 0; max-width:62ch; line-height:1.55}
+main{display:grid; grid-template-columns:minmax(0,520px) minmax(0,1fr); gap:40px; margin-top:28px}
+.bar{display:flex; gap:10px; align-items:stretch; margin-bottom:14px; flex-wrap:wrap}
+.meter{background:var(--bg2); border:1px solid var(--line); padding:8px 12px; min-width:104px}
+.meter span{display:block; font-size:10px; letter-spacing:.14em; color:var(--dim); text-transform:uppercase}
+.meter b{font-family:"Big Shoulders Display",sans-serif; font-size:30px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums}
+.btns{margin-left:auto; display:flex; gap:8px}
+button{font-family:inherit; cursor:pointer}
+.tbtn{background:transparent; color:var(--ink); border:1px solid var(--line); padding:0 14px; font-size:12px; letter-spacing:.1em; text-transform:uppercase; min-height:44px}
+.tbtn:hover{border-color:var(--gold); color:var(--gold)}
+.tbtn[aria-pressed="true"]{color:var(--dim); text-decoration:line-through}
+
+#board{
+  position:relative; width:100%; aspect-ratio:1; background:#0b1017; border:1px solid var(--line);
+  padding:var(--gap); touch-action:none; user-select:none; -webkit-user-select:none; border-radius:4px;
+}
+.cells{display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(4,1fr); gap:var(--gap); width:100%; height:100%}
+.cells div{border:1px dashed #243041; border-radius:3px; position:relative}
+.cells div::after{content:attr(data-g); position:absolute; bottom:4px; right:6px; font-size:9px; color:#2d3a4d}
+.tile{
+  position:absolute; top:0; left:0; border-radius:3px; color:#0f141b; overflow:hidden;
+  transition:transform 110ms ease-out; will-change:transform;
+  display:block; padding:6% 8%;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.18), 0 6px 16px -8px rgba(0,0,0,.7);
+}
+.tile .z{font-size:clamp(9px,2.4vw,13px); font-weight:600; display:flex; justify-content:space-between}
+.tile .s{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:900; font-size:clamp(30px,9.5vw,58px); line-height:.9; margin-top:4%}
+.tile .n{font-size:clamp(8px,2vw,11px); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.tile .m{font-size:clamp(7px,1.8vw,10px); opacity:.7}
+.tile.pop .inner{animation:pop 200ms ease-out}
+.tile.new .inner{animation:appear 200ms ease-out}
+.inner{width:100%; height:100%; display:flex; flex-direction:column}
+@keyframes appear{from{transform:scale(.2); opacity:0} to{transform:scale(1); opacity:1}}
+@keyframes pop{0%{transform:scale(1)} 45%{transform:scale(1.14)} 100%{transform:scale(1)}}
+.tile.hi{outline:2px solid var(--gold); outline-offset:-2px}
+.flash{position:absolute; inset:0; pointer-events:none; border-radius:4px; background:radial-gradient(circle, rgba(242,193,78,.35), transparent 60%); opacity:0; transition:opacity .5s}
+.flash.on{opacity:1; transition:none}
+
+.overlay{position:absolute; inset:0; display:none; place-items:center; background:rgba(11,16,23,.86); z-index:5; text-align:center; padding:20px; border-radius:4px}
+.overlay.show{display:grid}
+.overlay h2{font-family:"Big Shoulders Display",sans-serif; font-size:56px; margin:0; text-transform:uppercase; line-height:.9}
+.overlay p{color:var(--dim); font-size:13px; max-width:34ch; margin:10px auto 16px}
+.primary{background:var(--gold); color:#10161f; border:0; padding:12px 18px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; min-height:44px}
+.hint{font-size:11px; color:var(--dim); margin-top:10px; letter-spacing:.05em}
+
+aside h3{font-family:"Big Shoulders Display",sans-serif; font-size:22px; text-transform:uppercase; letter-spacing:.04em; margin:0 0 10px; display:flex; justify-content:space-between; align-items:baseline}
+aside h3 small{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--dim); letter-spacing:.08em}
+.ptable{display:grid; grid-template-columns:repeat(18,1fr); gap:3px; margin-bottom:10px}
+.pt{aspect-ratio:1; font-size:clamp(6px,1.1vw,10px); display:grid; place-items:center; border:1px solid var(--line); color:#3b4a5e; border-radius:2px; font-weight:600; transition:background .4s, color .4s}
+.pt.on{color:#10161f; border-color:transparent}
+.pt.best{outline:2px solid var(--gold); outline-offset:1px}
+.pt.goal{border-style:dashed; border-color:var(--gold); color:var(--gold)}
+.legend{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:10px; color:var(--dim); margin-bottom:26px}
+.legend i{display:inline-block; width:10px; height:10px; margin-right:5px; vertical-align:-1px; border-radius:1px}
+.card{border:1px solid var(--line); background:var(--bg2); display:grid; grid-template-columns:120px 1fr; min-height:150px; position:relative; overflow:hidden}
+.card .sym{display:flex; flex-direction:column; justify-content:space-between; padding:10px; color:#10161f}
+.card .sym b{font-family:"Big Shoulders Display",sans-serif; font-size:64px; line-height:.8; font-weight:900}
+.card .sym span{font-size:11px; font-weight:600}
+.card .txt{padding:14px 16px}
+.card .tag{font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold)}
+.card h4{font-family:"Big Shoulders Display",sans-serif; font-size:30px; margin:4px 0 6px; text-transform:uppercase; line-height:1}
+.card p{margin:0; font-size:13px; line-height:1.55; color:#c3ccd8}
+.card.new{animation:cardin .6s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes cardin{from{transform:translateY(12px) scale(.97); opacity:.3}}
+.log{margin-top:24px; font-size:12px; color:var(--dim); border-top:1px solid var(--line); padding-top:10px; max-height:150px; overflow:auto}
+.log div{padding:3px 0; display:flex; gap:10px}
+.log div b{color:var(--ink); font-weight:500; min-width:32px}
+@media (max-width:900px){ main{grid-template-columns:1fr} header{grid-template-columns:1fr} .big-sym{display:none} :root{--gap:7px} }
+@media (prefers-reduced-motion:reduce){ .tile{transition:none} .tile .inner, .card.new{animation:none!important} }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="wrap">
+  <header>
+    <div class="big-sym" aria-hidden="true"><small>1</small>H</div>
+    <div>
+      <h1>Stellar <span>Fusion</span><br>Chart</h1>
+      <p class="sub">Slide the tiles. Two identical nuclei fuse into the next element: hydrogen to helium, helium to lithium, and on towards the heart of a dying star. Reach <strong style="color:var(--gold)">sodium (Na)</strong> to finish the chart, then keep going towards iron.</p>
+    </div>
+  </header>
+
+  <main>
+    <section aria-label="Game board">
+      <div class="bar">
+        <div class="meter"><span>Energy</span><b id="score">0</b></div>
+        <div class="meter"><span>Record</span><b id="best">0</b></div>
+        <div class="meter"><span>Heaviest</span><b id="heavy">H</b></div>
+        <div class="btns">
+          <button class="tbtn" id="undo" title="Undo last move (U)">Undo</button>
+          <button class="tbtn" id="mute" aria-pressed="false" title="Sound (M)">Sound</button>
+          <button class="tbtn" id="new" title="New game (N)">New</button>
+        </div>
+      </div>
+      <div id="board" tabindex="0" aria-label="4 by 4 fusion board. Use arrow keys or swipe.">
+        <div class="cells" aria-hidden="true"></div>
+        <div class="flash" id="flash"></div>
+        <div class="overlay" id="over">
+          <div>
+            <h2 id="over-title">Core collapse</h2>
+            <p id="over-text">No fusions left. Your star has run out of fuel.</p>
+            <button class="primary" id="again">Ignite a new star</button>
+            <button class="tbtn" id="keep" style="margin-left:6px;display:none">Keep fusing</button>
+          </div>
+        </div>
+      </div>
+      <div class="hint">Arrow keys / WASD · swipe on touch · U undo · N new · M sound</div>
+    </section>
+
+    <aside aria-label="Discoveries">
+      <h3>Discovered <small id="count">1 / 36</small></h3>
+      <div class="ptable" id="ptable"></div>
+      <div class="legend" id="legend"></div>
+      <div class="card" id="card" aria-live="polite"></div>
+      <div class="log" id="log" aria-label="Fusion log"></div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+  const E = [null,
+    ['H','Hydrogen',1.008,'nonmetal','About 74% of all ordinary matter in the universe by mass is hydrogen. Every star starts here.'],
+    ['He','Helium',4.0026,'noble','Found in the Sun\'s spectrum in 1868, 27 years before anyone isolated it on Earth.'],
+    ['Li','Lithium',6.94,'alkali','The lightest metal of all. It is so light that it floats on water, and even on oil.'],
+    ['Be','Beryllium',9.0122,'alkaline','Emerald and aquamarine are both the mineral beryl, a beryllium silicate coloured by trace impurities.'],
+    ['B','Boron',10.81,'metalloid','Borosilicate glass, the stuff of lab beakers, survives sudden heat because boron lets it barely expand.'],
+    ['C','Carbon',12.011,'nonmetal','The same atoms make graphite and diamond. Carbon forms more compounds than any element except hydrogen.'],
+    ['N','Nitrogen',14.007,'nonmetal','78% of the air by volume. Yet almost no living thing can use it directly without help from bacteria.'],
+    ['O','Oxygen',15.999,'nonmetal','Liquid oxygen is pale sky-blue, and it clings to the poles of a strong magnet.'],
+    ['F','Fluorine',18.998,'halogen','The most reactive element known. It attacks glass and will even form compounds with xenon.'],
+    ['Ne','Neon',20.180,'noble','Neon glows reddish orange. The other colours on "neon" signs come from different gases and coatings.'],
+    ['Na','Sodium',22.990,'alkali','Soft enough to cut with a knife, and it skitters and fizzes across water. Its symbol comes from the Latin natrium.'],
+    ['Mg','Magnesium',24.305,'alkaline','It burns with a blinding white light, which is why early photographers used it for flash.'],
+    ['Al','Aluminium',26.982,'post','Once rarer than gold: Napoleon III kept aluminium cutlery for his most honoured guests.'],
+    ['Si','Silicon',28.085,'metalloid','The second most common element in Earth\'s crust, after oxygen, and the base of every microchip.'],
+    ['P','Phosphorus',30.974,'nonmetal','Discovered in 1669 by Hennig Brand, who was boiling down urine in search of the philosopher\'s stone.'],
+    ['S','Sulfur',32.06,'nonmetal','The "brimstone" of old texts. Pure sulfur is odourless; the rotten-egg smell comes from its compounds.'],
+    ['Cl','Chlorine',35.45,'halogen','A yellow-green gas named from the Greek chloros, "pale green".'],
+    ['Ar','Argon',39.95,'noble','Nearly 1% of every breath. The name is Greek for "the lazy one", because it reacts with almost nothing.'],
+    ['K','Potassium',39.098,'alkali','Its symbol K comes from kalium, a word traced back to the Arabic for plant ashes.'],
+    ['Ca','Calcium',40.078,'alkaline','The most abundant metal in the human body, most of it in your bones and teeth.'],
+    ['Sc','Scandium',44.956,'transition','Mendeleev predicted it as "eka-boron" in 1871. Nilson found it in 1879, with nearly the properties Mendeleev had forecast.'],
+    ['Ti','Titanium',47.867,'transition','Roughly as strong as steel but about 45% lighter, and it barely corrodes in seawater.'],
+    ['V','Vanadium',50.942,'transition','Named after Vanadís, a Norse goddess of beauty, for the rainbow of colours its compounds take.'],
+    ['Cr','Chromium',51.996,'transition','Traces of chromium give rubies their red and emeralds their green.'],
+    ['Mn','Manganese',54.938,'transition','Plants need a cluster of manganese atoms to split water and release oxygen in photosynthesis.'],
+    ['Fe','Iron',55.845,'transition','The end of the line. Fusing iron costs energy instead of releasing it, so once a massive star\'s core fills with iron, it collapses.'],
+    ['Co','Cobalt',58.933,'transition','Named after the kobold, a mischievous goblin blamed by German miners for troublesome ores.'],
+    ['Ni','Nickel',58.693,'transition','Most iron meteorites contain between 5% and 30% nickel.'],
+    ['Cu','Copper',63.546,'transition','Used for at least 10,000 years. The Statue of Liberty is copper, turned green by its patina.'],
+    ['Zn','Zinc',65.38,'transition','Brass is copper plus zinc. People made it for centuries before zinc itself was identified.']
+  ];
+  const CAT = {nonmetal:'Reactive nonmetal', noble:'Noble gas', alkali:'Alkali metal', alkaline:'Alkaline earth', metalloid:'Metalloid', halogen:'Halogen', post:'Post-transition', transition:'Transition metal'};
+  const catColor = c => `var(--c-${c})`;
+  const GOAL = 11;
+  const MAXV = E.length - 1;
+
+  // ---- storage ----
+  const store = {
+    get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v);}catch(e){return d;} },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+
+  // ---- audio ----
+  let ac=null, muted=store.get('fusion.muted', false);
+  const muteBtn = document.getElementById('mute');
+  function paintMute(){ muteBtn.setAttribute('aria-pressed', String(muted)); muteBtn.textContent = muted ? 'Muted' : 'Sound'; }
+  paintMute();
+  function A(){ if (muted) return null; if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } } if(ac.state==='suspended') ac.resume(); return ac; }
+  function tone(f, t0, dur, type='sine', vol=.12){
+    const a=A(); if(!a) return; const t=a.currentTime+t0;
+    const o=a.createOscillator(), g=a.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+.01); g.gain.exponentialRampToValueAtTime(.0005,t+dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur+.05);
+  }
+  function whoosh(){
+    const a=A(); if(!a) return; const t=a.currentTime;
+    const len = Math.floor(a.sampleRate*.09), b=a.createBuffer(1,len,a.sampleRate), d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
+    const s=a.createBufferSource(); s.buffer=b; const f=a.createBiquadFilter(); f.type='bandpass'; f.frequency.setValueAtTime(900,t); f.frequency.linearRampToValueAtTime(2400,t+.09); f.Q.value=1.2;
+    const g=a.createGain(); g.gain.value=.08; s.connect(f).connect(g).connect(a.destination); s.start(t);
+  }
+  const SCALE=[0,2,4,7,9]; // pentatonic
+  function fuseSound(v){ const step=v-1; const f=220*Math.pow(2,(SCALE[step%5]+12*Math.floor(step/5))/12); tone(f,0,.35,'triangle',.14); tone(f*2,.02,.25,'sine',.05); }
+  function discoverySound(){ [0,4,7,12,16].forEach((s,i)=>tone(523.25*Math.pow(2,s/12), i*.07, .5, 'sine', .08)); }
+  function overSound(){ [7,3,0,-5].forEach((s,i)=>tone(196*Math.pow(2,s/12), i*.15, .5, 'sawtooth', .04)); }
+  muteBtn.addEventListener('click', ()=>{ muted=!muted; store.set('fusion.muted', muted); paintMute(); if(!muted) tone(660,0,.12); });
+
+  // ---- periodic mini-table (periods 1-4) ----
+  const pos = {}; // z -> [row,col]
+  (function(){
+    pos[1]=[1,1]; pos[2]=[1,18];
+    [3,4].forEach((z,i)=>pos[z]=[2,1+i]); for(let z=5;z<=10;z++) pos[z]=[2,13+(z-5)];
+    [11,12].forEach((z,i)=>pos[z]=[3,1+i]); for(let z=13;z<=18;z++) pos[z]=[3,13+(z-13)];
+    for(let z=19;z<=36;z++) pos[z]=[4,z-18];
+  })();
+  const SYM4 = ['','H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl','Ar','K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr'];
+  const pt = document.getElementById('ptable');
+  const ptCells = {};
+  for (let z=1; z<=36; z++){
+    const d=document.createElement('div'); d.className='pt'; d.textContent=SYM4[z];
+    d.style.gridRow=pos[z][0]; d.style.gridColumn=pos[z][1]; d.title = z<=MAXV ? E[z][1] : SYM4[z];
+    if (z===GOAL) d.classList.add('goal');
+    pt.appendChild(d); ptCells[z]=d;
+  }
+  document.getElementById('legend').innerHTML = Object.keys(CAT).map(c=>`<span><i style="background:${catColor(c)}"></i>${CAT[c]}</span>`).join('');
+
+  // ---- board ----
+  const board = document.getElementById('board');
+  const cellsEl = board.querySelector('.cells');
+  for (let i=0;i<16;i++){ const c=document.createElement('div'); c.dataset.g = String.fromCharCode(97+(i%4)) + (4-Math.floor(i/4)); cellsEl.appendChild(c); }
+  let grid, tiles, score, best=store.get('fusion.best',0), ever=new Set(store.get('fusion.ever',[1])), found, idc=0, won=false, keepGoing=false, history=[];
+  let geom = {cell:0, gap:0, pad:0};
+  function measure(){
+    const r = board.getBoundingClientRect(); const cs = getComputedStyle(board);
+    const pad = parseFloat(cs.paddingLeft); const gap = parseFloat(getComputedStyle(cellsEl).columnGap) || 8;
+    const inner = r.width - pad*2 - 2; // border
+    geom = {pad, gap, cell:(inner - gap*3)/4};
+  }
+  function place(t){
+    const x = geom.pad + t.x*(geom.cell+geom.gap), y = geom.pad + t.y*(geom.cell+geom.gap);
+    t.el.style.width = t.el.style.height = geom.cell + 'px';
+    t.el.style.transform = `translate(${x}px,${y}px)`;
+  }
+  function tileHTML(v){
+    const e=E[v];
+    return `<div class="inner"><div class="z"><span>${v}</span><span>${e[2].toFixed(e[2]<10?3:2)}</span></div><div class="s">${e[0]}</div><div class="n">${e[1]}</div></div>`;
+  }
+  function makeTile(x,y,v,cls){
+    const el=document.createElement('div'); el.className='tile'+(cls?' '+cls:'');
+    el.innerHTML=tileHTML(v); el.style.background=catColor(E[v][3]);
+    const t={id:++idc,x,y,v,el}; board.appendChild(el); place(t);
+    if (cls) setTimeout(()=>el.classList.remove(cls), 220);
+    return t;
+  }
+  function empties(){ const a=[]; for(let y=0;y<4;y++) for(let x=0;x<4;x++) if(!grid[y][x]) a.push([x,y]); return a; }
+  function spawn(){
+    const e=empties(); if(!e.length) return;
+    const [x,y]=e[Math.floor(Math.random()*e.length)];
+    const v = Math.random()<.9?1:2;
+    const t=makeTile(x,y,v,'new'); grid[y][x]=t; tiles.push(t); markFound(v,false);
+  }
+  function snapshot(){ return {g:grid.map(r=>r.map(t=>t?t.v:0)), score, found:[...found]}; }
+  function restore(s){
+    tiles.forEach(t=>t.el.remove()); tiles=[]; grid=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]].map(r=>r.map(()=>null));
+    for(let y=0;y<4;y++) for(let x=0;x<4;x++) if(s.g[y][x]){ const t=makeTile(x,y,s.g[y][x]); grid[y][x]=t; tiles.push(t); }
+    score=s.score; found=new Set(s.found); refresh();
+  }
+
+  function newGame(){
+    tiles && tiles.forEach(t=>t.el.remove());
+    grid=[0,1,2,3].map(()=>[null,null,null,null]); tiles=[]; score=0; found=new Set(); won=false; keepGoing=false; history=[];
+    document.getElementById('over').classList.remove('show');
+    document.getElementById('log').innerHTML='';
+    measure();
+    // example opening: a few tiles already in play
+    const seed=[[0,3,1],[1,3,1],[3,0,2],[2,2,1],[3,3,3]];
+    seed.forEach(([x,y,v])=>{ const t=makeTile(x,y,v,'new'); grid[y][x]=t; tiles.push(t); found.add(v); });
+    logLine(1,'Primordial hydrogen and helium'); logLine(3,'Lithium seeded by the Big Bang');
+    refresh(); showCard(3,false);
+  }
+
+  function logLine(v, txt){
+    const l=document.getElementById('log'); const d=document.createElement('div');
+    d.innerHTML=`<b style="color:${catColor(E[v][3])}">${E[v][0]}</b><span>${txt}</span>`; l.prepend(d);
+  }
+  function showCard(v, isNew){
+    const e=E[v], c=document.getElementById('card');
+    c.innerHTML=`<div class="sym" style="background:${catColor(e[3])}"><span>${v}</span><b>${e[0]}</b><span>${e[2]}</span></div>
+      <div class="txt"><div class="tag">${isNew?'New discovery':'Heaviest in this star'} · ${CAT[e[3]]}</div><h4>${e[1]}</h4><p>${e[4]}</p></div>`;
+    c.classList.remove('new'); void c.offsetWidth; if (isNew) c.classList.add('new');
+  }
+  function markFound(v, announce){
+    if (!found.has(v)){
+      found.add(v);
+      const firstEver = !ever.has(v);
+      if (firstEver){ ever.add(v); store.set('fusion.ever',[...ever]); }
+      if (announce){
+        logLine(v, (firstEver?'First ever: ':'Fused ') + E[v][1]);
+        showCard(v, true);
+        if (v>=3) { discoverySound(); const f=document.getElementById('flash'); f.classList.add('on'); setTimeout(()=>f.classList.remove('on'),30); }
+      }
+    }
+  }
+  function heaviest(){ return tiles.reduce((m,t)=>Math.max(m,t.v),1); }
+  function refresh(){
+    document.getElementById('score').textContent=score;
+    if (score>best){ best=score; store.set('fusion.best',best); }
+    document.getElementById('best').textContent=best;
+    const h=heaviest(); document.getElementById('heavy').textContent=E[h][0];
+    for (let z=1; z<=36; z++){
+      const c=ptCells[z]; const on = z<=MAXV && (found.has(z) || ever.has(z));
+      c.classList.toggle('on', on); c.style.background = on ? catColor(E[z][3]) : ''; c.style.opacity = on && !found.has(z) ? .45 : 1;
+      c.classList.toggle('best', z===h);
+    }
+    document.getElementById('count').textContent = `${found.size} this star · ${ever.size} ever`;
+    tiles.forEach(t=>t.el.classList.toggle('hi', t.v===h && h>2));
+  }
+
+  let busy=false;
+  function move(dx,dy){
+    if (busy || document.getElementById('over').classList.contains('show')) return;
+    const snap=snapshot();
+    const xs=[0,1,2,3], ys=[0,1,2,3]; if(dx===1) xs.reverse(); if(dy===1) ys.reverse();
+    let moved=false; const mergedNew=[]; const dying=[]; let gained=0, topFused=0;
+    for (const y of ys) for (const x of xs){
+      const t=grid[y][x]; if(!t) continue;
+      let cx=x, cy=y;
+      for(;;){
+        const nx=cx+dx, ny=cy+dy;
+        if (nx<0||nx>3||ny<0||ny>3) break;
+        const o=grid[ny][nx];
+        if (!o){ cx=nx; cy=ny; continue; }
+        if (o.v===t.v && !o.fresh && t.v<MAXV){
+          // fuse
+          grid[y][x]=null; t.x=nx; t.y=ny; place(t); dying.push(t,o);
+          const nv=t.v+1;
+          const nt={id:++idc,x:nx,y:ny,v:nv,el:null,fresh:true};
+          grid[ny][nx]=nt; mergedNew.push(nt);
+          gained += Math.pow(2,nv); topFused=Math.max(topFused,nv); moved=true;
+          cx=null; break;
+        }
+        break;
+      }
+      if (cx!==null && (cx!==x||cy!==y)){ grid[y][x]=null; grid[cy][cx]=t; t.x=cx; t.y=cy; place(t); moved=true; }
+    }
+    if (!moved) return;
+    history.push(snap); if(history.length>20) history.shift();
+    busy=true;
+    tiles = tiles.filter(t=>!dying.includes(t));
+    whoosh();
+    setTimeout(()=>{
+      dying.forEach(t=>t.el.remove());
+      mergedNew.forEach(nt=>{ nt.el=makeTile(nt.x,nt.y,nt.v,'pop').el; delete nt.fresh; tiles.push(nt); });
+      mergedNew.forEach(nt=>markFound(nt.v,true));
+      if (topFused) fuseSound(topFused);
+      score+=gained; spawn(); refresh(); busy=false;
+      if (!won && heaviest()>=GOAL){ won=true; showOver(true); }
+      else if (!canMove()) { showOver(false); }
+    }, 115);
+  }
+  function canMove(){
+    if (empties().length) return true;
+    for (let y=0;y<4;y++) for (let x=0;x<4;x++){
+      const v=grid[y][x].v; if (x<3 && grid[y][x+1].v===v) return true; if (y<3 && grid[y+1][x].v===v) return true;
+    }
+    return false;
+  }
+  function showOver(win){
+    const o=document.getElementById('over');
+    document.getElementById('over-title').textContent = win ? 'Sodium lit' : 'Core collapse';
+    document.getElementById('over-text').textContent = win
+      ? `You fused your way to Na with ${score} energy. The chart is complete, but the star can burn further, all the way to iron.`
+      : `No fusions left. This star burned ${score} energy and reached ${E[heaviest()][1].toLowerCase()}.`;
+    document.getElementById('keep').style.display = win ? 'inline-block' : 'none';
+    o.classList.add('show');
+    if (win) discoverySound(); else overSound();
+  }
+  document.getElementById('again').addEventListener('click', newGame);
+  document.getElementById('keep').addEventListener('click', ()=>{ keepGoing=true; document.getElementById('over').classList.remove('show'); board.focus(); });
+  document.getElementById('new').addEventListener('click', newGame);
+  document.getElementById('undo').addEventListener('click', undo);
+  function undo(){ if (busy || !history.length) return; restore(history.pop()); document.getElementById('over').classList.remove('show'); tone(330,0,.1,'triangle',.08); }
+
+  window.addEventListener('keydown', e=>{
+    if (e.target.tagName==='BUTTON' && (e.key===' '||e.key==='Enter')) return;
+    const k=e.key.toLowerCase();
+    const map={arrowleft:[-1,0],a:[-1,0],arrowright:[1,0],d:[1,0],arrowup:[0,-1],w:[0,-1],arrowdown:[0,1],s:[0,1]};
+    if (map[k]){ e.preventDefault(); move(...map[k]); }
+    else if (k==='u'){ undo(); } else if (k==='n'){ newGame(); } else if (k==='m'){ muteBtn.click(); }
+  });
+  let sp=null;
+  board.addEventListener('pointerdown', e=>{ sp={x:e.clientX,y:e.clientY}; });
+  board.addEventListener('pointerup', e=>{
+    if(!sp) return; const dx=e.clientX-sp.x, dy=e.clientY-sp.y; sp=null;
+    if (Math.max(Math.abs(dx),Math.abs(dy))<24) return;
+    if (Math.abs(dx)>Math.abs(dy)) move(dx>0?1:-1,0); else move(0,dy>0?1:-1);
+  });
+  board.addEventListener('pointercancel', ()=>{ sp=null; });
+  window.addEventListener('resize', ()=>{ measure(); tiles.forEach(place); });
+
+  newGame();
+})();
+</script>
+</body>
+</html>

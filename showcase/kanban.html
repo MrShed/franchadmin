@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pinboard Kanban</title>
+<meta name="description" content="A personal kanban board on real-feeling cork: pin index cards into columns, drag them by mouse or touch, add labels, due dates and WIP limits, and export or import the whole board as JSON.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cork:#c49a6c; --cork-dk:#a67c50; --cork-lt:#d8b287; --frame:#6e4a2c; --frame-hi:#8f6540;
+  --card:#fffef9; --card-rule:#bcd4ea; --card-red:#e27a7a; --ink:#22211f; --ink-soft:#5c5750;
+  --strip:#fbf6e6; --strip-ink:#1f1d1a;
+  --over:#c62828; --ok:#2e7d32;
+  --panel:#fffdf6; --panel-ink:#22211f; --panel-line:#d9d1bf;
+  --focus:#0b57d0;
+  --lbl-bug:#e5484d; --lbl-feature:#2f7fe0; --lbl-design:#b35ad6; --lbl-chore:#6b7a2a; --lbl-urgent:#f08c00;
+  --shadow:0 1px 1px rgba(0,0,0,.18), 0 6px 12px -4px rgba(40,20,5,.45);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --cork:#4a3726; --cork-dk:#35271a; --cork-lt:#5d4632; --frame:#1f150d; --frame-hi:#33241a;
+    --card:#e9e4d6; --card-rule:#9fb6cc; --card-red:#c86464; --ink:#1c1b19; --ink-soft:#4e4a44;
+    --strip:#d9d1bb; --strip-ink:#1a1814;
+    --panel:#211a14; --panel-ink:#eee6d6; --panel-line:#44382c;
+    --focus:#8ab4ff;
+    --shadow:0 1px 1px rgba(0,0,0,.4), 0 8px 16px -4px rgba(0,0,0,.7);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; min-height:100vh; color:var(--panel-ink);
+  font-family:"Courier Prime","Courier New",ui-monospace,monospace; font-size:16px;
+  background-color:var(--frame);
+  padding:max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
+}
+:focus-visible{outline:3px solid var(--focus); outline-offset:2px}
+.board-frame{
+  max-width:1400px; margin:0 auto; border-radius:10px; padding:14px;
+  background:linear-gradient(135deg, var(--frame-hi), var(--frame));
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.15), 0 20px 40px -20px rgba(0,0,0,.6);
+}
+.cork{
+  position:relative; border-radius:4px; padding:18px 18px 26px; min-height:calc(100vh - 60px);
+  background-color:var(--cork);
+  background-image:
+    radial-gradient(circle at 20% 30%, var(--cork-dk) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 70% 60%, var(--cork-lt) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 40% 80%, var(--cork-dk) 0 .8px, transparent 1.4px),
+    radial-gradient(circle at 85% 15%, var(--cork-dk) 0 1.4px, transparent 2px),
+    radial-gradient(circle at 10% 75%, var(--cork-lt) 0 1px, transparent 1.6px);
+  background-size:13px 11px, 17px 19px, 9px 12px, 23px 21px, 15px 14px;
+  box-shadow:inset 0 3px 10px rgba(0,0,0,.35);
+}
+header.top{display:flex; flex-wrap:wrap; gap:14px 20px; align-items:center; justify-content:space-between; margin-bottom:18px}
+.title-strip{display:inline-block; background:var(--strip); color:var(--strip-ink); padding:8px 18px 6px; transform:rotate(-1.4deg); box-shadow:var(--shadow);
+  font-family:"Permanent Marker","Marker Felt","Comic Sans MS",cursive; font-size:clamp(24px,4vw,36px); line-height:1.05; position:relative}
+.title-strip small{display:block; font-family:"Courier Prime",monospace; font-size:13px; letter-spacing:.08em}
+.tape{position:absolute; width:70px; height:22px; background:rgba(255,248,200,.6); top:-10px; left:calc(50% - 35px); transform:rotate(3deg); box-shadow:0 1px 2px rgba(0,0,0,.15)}
+a.back{font-family:"Permanent Marker",cursive; color:var(--strip-ink); background:var(--strip); padding:4px 10px; text-decoration:none; transform:rotate(2deg); display:inline-block; box-shadow:var(--shadow); font-size:15px}
+a.back:hover{transform:rotate(0)}
+.tools{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.tools input[type=search]{font:inherit; padding:9px 12px; border:0; border-radius:2px; background:var(--card); color:var(--ink); box-shadow:var(--shadow); width:210px; max-width:100%}
+.btn{font:700 14px/1 "Courier Prime",monospace; padding:10px 12px; border:0; border-radius:2px; cursor:pointer; background:var(--card); color:var(--ink); box-shadow:var(--shadow)}
+.btn:hover{transform:translateY(-1px) rotate(-.5deg)}
+.btn.dark{background:#2a2622; color:#f6efe0}
+.filters{display:flex; gap:6px; flex-wrap:wrap}
+.chip{font:700 12px/1 "Courier Prime",monospace; letter-spacing:.04em; padding:6px 9px 6px 22px; border-radius:20px; border:0; cursor:pointer; background:var(--card); color:var(--ink); position:relative; box-shadow:var(--shadow); opacity:.75}
+.chip::before{content:""; position:absolute; left:7px; top:50%; width:10px; height:10px; margin-top:-5px; border-radius:50%; background:var(--c)}
+.chip[aria-pressed="true"]{opacity:1; outline:2px solid var(--ink); outline-offset:1px}
+
+.board{display:flex; gap:22px; align-items:flex-start; overflow-x:auto; padding:14px 4px 30px; scroll-snap-type:x proximity}
+@media (max-width:720px){ .board{flex-direction:column; overflow:visible} .col{width:100% !important; flex:none !important} .tools input[type=search]{width:100%} .tools{width:100%} }
+.col{flex:0 0 300px; width:300px; scroll-snap-align:start}
+.col-head{position:relative; background:var(--strip); color:var(--strip-ink); padding:10px 12px 8px; box-shadow:var(--shadow); margin-bottom:16px}
+.col:nth-child(3n+1) .col-head{transform:rotate(-1deg)}
+.col:nth-child(3n+2) .col-head{transform:rotate(.8deg)}
+.col:nth-child(3n) .col-head{transform:rotate(-.4deg)}
+.col-head .name{width:100%; font-family:"Permanent Marker","Marker Felt",cursive; font-size:24px; border:0; background:transparent; color:inherit; padding:0; line-height:1.2}
+.col-head .meta{display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; margin-top:4px}
+.col-head .count{font-weight:700}
+.col-head.over .count{color:var(--over)}
+.col-head.over{box-shadow:0 0 0 3px var(--over), var(--shadow)}
+.col-head label{display:flex; align-items:center; gap:6px}
+.col-head input[type=number]{width:52px; font:inherit; padding:2px 4px; border:1px solid #bbb2a0; background:transparent; color:inherit}
+.col-actions{display:flex; gap:2px}
+.icon{border:0; background:transparent; font:700 15px/1 "Courier Prime",monospace; cursor:pointer; padding:4px 6px; color:inherit; border-radius:3px}
+.icon:hover{background:rgba(0,0,0,.08)}
+.icon.armed{background:var(--over); color:#fff}
+.drop{min-height:80px; display:flex; flex-direction:column; gap:16px; padding:6px 0 10px; border-radius:4px}
+.drop.hot{background:rgba(255,255,255,.12); outline:2px dashed rgba(255,255,255,.5); outline-offset:4px}
+
+.card{position:relative; background:var(--card); color:var(--ink); padding:22px 14px 12px; cursor:grab; box-shadow:var(--shadow);
+  background-image:linear-gradient(transparent 0 13px, var(--card-red) 13px 14.5px, transparent 14.5px),
+                   repeating-linear-gradient(transparent 0 21px, var(--card-rule) 21px 22px);
+  background-position:0 0, 0 20px; background-repeat:no-repeat, repeat-y;
+  transform:rotate(var(--tilt,0deg)); transition:transform .15s, box-shadow .15s; touch-action:manipulation; user-select:none; -webkit-user-select:none}
+.card:hover{transform:rotate(0) translateY(-2px); box-shadow:0 2px 2px rgba(0,0,0,.2), 0 14px 20px -8px rgba(40,20,5,.55)}
+.card:focus-visible{outline-offset:4px}
+.pin{position:absolute; top:-7px; left:50%; width:18px; height:18px; margin-left:-9px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #fff 0 10%, var(--pc) 30%, color-mix(in srgb, var(--pc) 60%, #000) 100%);
+  box-shadow:2px 4px 3px rgba(0,0,0,.35)}
+.card h3{margin:0 0 6px; font-size:17px; line-height:22px; font-weight:700}
+.card p{margin:0; font-size:14px; line-height:22px; color:var(--ink-soft); white-space:pre-line; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical}
+.labels{display:flex; gap:5px; flex-wrap:wrap; margin-top:8px}
+.lbl{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#fff; background:var(--c); padding:2px 6px; transform:rotate(-2deg)}
+.lbl:nth-child(even){transform:rotate(1.5deg)}
+.due{display:inline-block; margin-top:8px; font-size:12px; font-weight:700; letter-spacing:.08em; border:2px solid currentColor; padding:1px 6px; border-radius:3px; color:#2d5b87; transform:rotate(-3deg)}
+.due.soon{color:#b86e00} .due.late{color:var(--over)} .due.done{color:var(--ok)}
+.card.ghost{position:fixed; z-index:50; pointer-events:none; transform:rotate(4deg) scale(1.04); box-shadow:0 30px 40px -10px rgba(0,0,0,.6); transition:none; width:300px; margin:0}
+.card.placeholder{background:rgba(0,0,0,.14); box-shadow:inset 0 0 0 2px rgba(255,255,255,.35); background-image:none}
+.card.placeholder > *{visibility:hidden}
+.card.dim{opacity:.25}
+.add{display:flex; gap:6px; margin-top:4px}
+.add input{flex:1; min-width:0; font:inherit; font-size:14px; padding:9px 10px; border:0; background:rgba(255,255,255,.75); color:#222; box-shadow:inset 0 1px 3px rgba(0,0,0,.2)}
+.add button{flex:none}
+.newcol{flex:0 0 220px; align-self:stretch; display:flex; align-items:flex-start}
+.newcol button{width:100%; min-height:90px; font-family:"Permanent Marker",cursive; font-size:20px; border:3px dashed rgba(255,255,255,.55); background:transparent; color:#fff; cursor:pointer; border-radius:6px}
+@media (max-width:720px){ .newcol{flex:none; width:100%} .newcol button{min-height:60px} }
+
+/* modal */
+.scrim{position:fixed; inset:0; background:rgba(20,12,4,.55); display:none; align-items:center; justify-content:center; z-index:80; padding:16px}
+.scrim.open{display:flex}
+.sheet{width:min(560px,100%); max-height:calc(100vh - 32px); overflow:auto; background:var(--panel); color:var(--panel-ink); padding:22px; box-shadow:0 30px 60px -10px rgba(0,0,0,.6); transform:rotate(-.6deg); position:relative}
+.sheet h2{font-family:"Permanent Marker",cursive; font-weight:400; margin:0 0 14px; font-size:26px}
+.field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px; font-size:13px; letter-spacing:.06em; text-transform:uppercase}
+.field input,.field textarea,.field select{font:16px "Courier Prime",monospace; text-transform:none; letter-spacing:0; padding:9px 10px; border:1px solid var(--panel-line); background:transparent; color:inherit; border-radius:2px}
+.field select option{color:#222}
+.field textarea{min-height:110px; resize:vertical}
+.lblpick{display:flex; flex-wrap:wrap; gap:8px}
+.lblpick label{display:flex; align-items:center; gap:6px; text-transform:uppercase; font-size:12px; padding:5px 8px; border:1px solid var(--panel-line); cursor:pointer}
+.lblpick input{accent-color:var(--c)}
+.lblpick i{width:10px; height:10px; border-radius:50%; background:var(--c)}
+.sheet .row{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:6px}
+.btn.danger{background:var(--over); color:#fff}
+.btn.primary{background:#2a2622; color:#f6efe0}
+@media (prefers-color-scheme: dark){ .btn.primary{background:#efe6d2; color:#1d1a16} }
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+@media (max-width:460px){ .grid2{grid-template-columns:1fr} }
+#io-text{width:100%; min-height:260px; font:13px/1.45 "Courier Prime",monospace}
+.msg{font-size:14px; min-height:20px; margin:6px 0 0}
+.msg.err{color:var(--over)} .msg.ok{color:var(--ok)}
+.help{font-size:13px; color:#f7ecd8; opacity:.9; margin:10px 4px 0}
+@media (prefers-reduced-motion: reduce){ .card,.btn{transition:none} .card:hover{transform:rotate(var(--tilt,0deg))} }
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="board-frame">
+<div class="cork">
+  <header class="top">
+    <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap">
+      <a class="back" href="index.html">&larr; Showcase</a>
+      <div class="title-strip"><span class="tape"></span><span id="board-title">Larkspur relaunch</span><small>personal pinboard &middot; <span id="total">0</span> cards</small></div>
+    </div>
+    <div class="tools">
+      <label class="sr" for="search">Search cards</label>
+      <input type="search" id="search" placeholder="Find a card&hellip;" autocomplete="off">
+      <div class="filters" id="filters" role="group" aria-label="Filter by label"></div>
+      <button class="btn" id="btn-io">Export / Import</button>
+      <button class="btn dark" id="btn-reset">Reset demo</button>
+    </div>
+  </header>
+
+  <div class="board" id="board"></div>
+  <p class="help">Drag cards to move them (on touch, press and hold). Focus a card and press <b>[</b> or <b>]</b> to shift columns, <b>&uarr;/&darr;</b> with Alt to reorder, <b>Enter</b> to edit.</p>
+  <p class="sr" id="live" aria-live="polite"></p>
+</div>
+</div>
+
+<div class="scrim" id="edit-scrim" role="dialog" aria-modal="true" aria-labelledby="edit-h">
+  <div class="sheet">
+    <h2 id="edit-h">Edit card</h2>
+    <div class="field"><label for="e-title">Title</label><input id="e-title" maxlength="120"></div>
+    <div class="field"><label for="e-notes">Notes</label><textarea id="e-notes"></textarea></div>
+    <div class="grid2">
+      <div class="field"><label for="e-due">Due date</label><input id="e-due" type="date"></div>
+      <div class="field"><label for="e-col">Column</label><select id="e-col"></select></div>
+    </div>
+    <div class="field"><span>Labels</span><div class="lblpick" id="e-labels"></div></div>
+    <div class="row">
+      <button class="btn danger" id="e-delete">Delete card</button>
+      <div style="display:flex; gap:8px">
+        <button class="btn" id="e-cancel">Cancel</button>
+        <button class="btn primary" id="e-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="io-scrim" role="dialog" aria-modal="true" aria-labelledby="io-h">
+  <div class="sheet">
+    <h2 id="io-h">Export / Import</h2>
+    <p style="margin:0 0 10px; font-size:14px">This is your whole board as JSON. Copy it somewhere safe, or paste a board here and press Import.</p>
+    <label class="sr" for="io-text">Board JSON</label>
+    <textarea id="io-text" spellcheck="false"></textarea>
+    <p class="msg" id="io-msg"></p>
+    <div class="row">
+      <button class="btn" id="io-copy">Copy JSON</button>
+      <div style="display:flex; gap:8px">
+        <button class="btn" id="io-close">Close</button>
+        <button class="btn primary" id="io-import">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "pinboard-kanban-v1";
+  var LABELS = [
+    {id:"bug", name:"Bug", c:"var(--lbl-bug)"},
+    {id:"feature", name:"Feature", c:"var(--lbl-feature)"},
+    {id:"design", name:"Design", c:"var(--lbl-design)"},
+    {id:"chore", name:"Chore", c:"var(--lbl-chore)"},
+    {id:"urgent", name:"Urgent", c:"var(--lbl-urgent)"}
+  ];
+  var PINS = ["#d93636","#2f6fd6","#f2b705","#2c9a55","#8e44ad","#e8710a"];
+  var $ = function(id){ return document.getElementById(id); };
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+  function iso(offsetDays){ var d = new Date(); d.setDate(d.getDate()+offsetDays); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+
+  function demo(){
+    return {title:"Larkspur relaunch", cols:[
+      {id:uid(), name:"Backlog", wip:0, cards:[
+        {id:uid(), title:"Seasonal menu page", notes:"Autumn loaves + the cardamom bun that sold out twice.\nNeeds photos from Priya.", labels:["feature"], due:iso(12)},
+        {id:uid(), title:"Allergen matrix as a table", notes:"Replace the PDF with an accessible HTML table.", labels:["feature","design"], due:""},
+        {id:uid(), title:"Set up order-ahead email receipts", notes:"", labels:["chore"], due:iso(20)},
+        {id:uid(), title:"Wholesale enquiry form", notes:"Cafés keep emailing the generic inbox.", labels:["feature"], due:""}
+      ]},
+      {id:uid(), name:"Doing", wip:3, cards:[
+        {id:uid(), title:"Checkout drops the gift note", notes:"Only on Safari when the note has an emoji. Repro in staging.", labels:["bug","urgent"], due:iso(1)},
+        {id:uid(), title:"New logotype lockups", notes:"Stacked + horizontal. Test at 24px favicon.", labels:["design"], due:iso(4)}
+      ]},
+      {id:uid(), name:"Review", wip:2, cards:[
+        {id:uid(), title:"Copy for 'Our flour' page", notes:"Mill visit story, 180 words max.", labels:["design"], due:iso(-1)}
+      ]},
+      {id:uid(), name:"Done", wip:0, cards:[
+        {id:uid(), title:"Move DNS to new host", notes:"TTL lowered on Monday, switched Wednesday.", labels:["chore"], due:iso(-3)},
+        {id:uid(), title:"Photograph the sourdough range", notes:"", labels:["design"], due:""}
+      ]}
+    ]};
+  }
+  function load(){ try { var s = JSON.parse(localStorage.getItem(KEY)); if (valid(s)) return s; } catch(e){} return null; }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+  function valid(s){ return s && Array.isArray(s.cols) && s.cols.every(function(c){ return c && typeof c.name === "string" && Array.isArray(c.cards); }); }
+  function normalize(s){
+    s.title = typeof s.title === "string" ? s.title : "My board";
+    s.cols.forEach(function(c){ c.id = c.id || uid(); c.wip = Math.max(0, parseInt(c.wip,10)||0);
+      c.cards = c.cards.filter(function(k){ return k && typeof k.title === "string"; }).map(function(k){
+        return {id:k.id||uid(), title:k.title, notes:typeof k.notes==="string"?k.notes:"", labels:Array.isArray(k.labels)?k.labels.filter(function(l){ return LABELS.some(function(L){return L.id===l;}); }):[], due:typeof k.due==="string"?k.due:""};
+      });
+    });
+    return s;
+  }
+  var state = load() || demo();
+  var filter = {q:"", labels:{}};
+
+  function hash(s){ var h = 0; for (var i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i))|0; return Math.abs(h); }
+  function findCard(id){ for (var i=0;i<state.cols.length;i++){ var c = state.cols[i]; for (var j=0;j<c.cards.length;j++) if (c.cards[j].id===id) return {col:c, ci:i, idx:j, card:c.cards[j]}; } return null; }
+  function announce(s){ $("live").textContent = s; }
+
+  function dueInfo(due, colName){
+    if (!due) return null;
+    var d = new Date(due+"T00:00:00"), today = new Date(); today.setHours(0,0,0,0);
+    var diff = Math.round((d - today)/864e5);
+    var txt = d.toLocaleDateString(undefined, {day:"numeric", month:"short"});
+    if (/done/i.test(colName)) return {cls:"done", txt:"Done · " + txt};
+    if (diff < 0) return {cls:"late", txt:"Overdue · " + txt};
+    if (diff === 0) return {cls:"soon", txt:"Due today"};
+    if (diff <= 2) return {cls:"soon", txt:"Due " + (diff===1?"tomorrow":txt)};
+    return {cls:"", txt:"Due " + txt};
+  }
+  function matches(card){
+    var q = filter.q.trim().toLowerCase();
+    if (q && (card.title + " " + card.notes).toLowerCase().indexOf(q) < 0) return false;
+    var act = Object.keys(filter.labels).filter(function(k){ return filter.labels[k]; });
+    if (act.length && !act.some(function(l){ return card.labels.indexOf(l) >= 0; })) return false;
+    return true;
+  }
+
+  // ---------- render ----------
+  function render(focusId){
+    var board = $("board"); board.innerHTML = "";
+    var total = 0;
+    state.cols.forEach(function(col, ci){
+      total += col.cards.length;
+      var sec = document.createElement("section"); sec.className = "col"; sec.dataset.col = col.id; sec.setAttribute("aria-label", col.name);
+      var over = col.wip > 0 && col.cards.length > col.wip;
+      var head = document.createElement("div"); head.className = "col-head" + (over ? " over" : "");
+      var nm = document.createElement("input"); nm.className = "name"; nm.id = "col-name-" + col.id; nm.value = col.name; nm.setAttribute("aria-label","Column name");
+      nm.addEventListener("change", function(){ col.name = nm.value.trim() || "Untitled"; save(); render(); });
+      var meta = document.createElement("div"); meta.className = "meta";
+      var count = document.createElement("span"); count.className = "count"; count.textContent = col.cards.length + (col.wip ? " / " + col.wip : "") + (over ? " over limit" : " cards");
+      var wl = document.createElement("label"); wl.setAttribute("for","wip-"+col.id); wl.textContent = "WIP";
+      var wi = document.createElement("input"); wi.type = "number"; wi.min = 0; wi.max = 99; wi.id = "wip-"+col.id; wi.value = col.wip || ""; wi.placeholder = "∞";
+      wi.addEventListener("change", function(){ col.wip = Math.max(0, parseInt(wi.value,10)||0); save(); render(); });
+      wl.appendChild(wi);
+      var acts = document.createElement("div"); acts.className = "col-actions";
+      acts.appendChild(iconBtn("←", "Move column left", "colL-"+col.id, function(){ if (ci>0){ state.cols.splice(ci-1,0,state.cols.splice(ci,1)[0]); save(); render(); } }));
+      acts.appendChild(iconBtn("→", "Move column right", "colR-"+col.id, function(){ if (ci<state.cols.length-1){ state.cols.splice(ci+1,0,state.cols.splice(ci,1)[0]); save(); render(); } }));
+      var del = iconBtn("×", "Delete column", "colD-"+col.id, null);
+      armed(del, function(){ state.cols.splice(ci,1); save(); render(); announce("Column deleted"); }, "Delete column and its cards?");
+      acts.appendChild(del);
+      meta.appendChild(count); meta.appendChild(wl); meta.appendChild(acts);
+      head.appendChild(nm); head.appendChild(meta); sec.appendChild(head);
+
+      var drop = document.createElement("div"); drop.className = "drop"; drop.dataset.col = col.id;
+      col.cards.forEach(function(card){
+        var el = cardEl(card, col); if (!matches(card)) el.classList.add("dim"); drop.appendChild(el);
+      });
+      sec.appendChild(drop);
+
+      var add = document.createElement("form"); add.className = "add";
+      var ai = document.createElement("input"); ai.id = "add-"+col.id; ai.placeholder = "Pin a new card…"; ai.setAttribute("aria-label","New card title in " + col.name); ai.maxLength = 120;
+      var ab = document.createElement("button"); ab.className = "btn"; ab.type = "submit"; ab.textContent = "Pin"; ab.id = "addbtn-"+col.id;
+      add.appendChild(ai); add.appendChild(ab);
+      add.addEventListener("submit", function(e){ e.preventDefault(); var t = ai.value.trim(); if (!t) return; col.cards.push({id:uid(), title:t, notes:"", labels:[], due:""}); save(); render(); var n = $("add-"+col.id); if (n) n.focus(); announce("Card added to " + col.name); });
+      sec.appendChild(add);
+      board.appendChild(sec);
+    });
+    var nc = document.createElement("div"); nc.className = "newcol";
+    var nb = document.createElement("button"); nb.id = "btn-addcol"; nb.textContent = "+ new column";
+    nb.addEventListener("click", function(){ var c = {id:uid(), name:"New column", wip:0, cards:[]}; state.cols.push(c); save(); render(); var n = $("col-name-"+c.id); if (n){ n.focus(); n.select(); } });
+    nc.appendChild(nb); board.appendChild(nc);
+    $("total").textContent = total;
+    $("board-title").textContent = state.title;
+    if (focusId){ var f = document.querySelector('[data-card="'+focusId+'"]'); if (f) f.focus(); }
+  }
+  function iconBtn(txt, label, id, fn){ var b = document.createElement("button"); b.className = "icon"; b.type = "button"; b.textContent = txt; b.id = id; b.setAttribute("aria-label", label); b.title = label; if (fn) b.addEventListener("click", fn); return b; }
+  function armed(btn, fn, label){
+    var t = 0, orig = btn.textContent, origLabel = btn.getAttribute("aria-label");
+    btn.addEventListener("click", function(){
+      if (!btn.classList.contains("armed")){ btn.classList.add("armed"); btn.textContent = btn.classList.contains("icon") ? "sure?" : "Tap again to confirm"; btn.setAttribute("aria-label", label); t = setTimeout(function(){ btn.classList.remove("armed"); btn.textContent = orig; btn.setAttribute("aria-label", origLabel); }, 2800); return; }
+      clearTimeout(t); fn();
+    });
+  }
+  function cardEl(card, col){
+    var el = document.createElement("article"); el.className = "card"; el.tabIndex = 0; el.dataset.card = card.id; el.id = "card-" + card.id;
+    var h = hash(card.id); el.style.setProperty("--tilt", ((h % 7) - 3) * 0.45 + "deg");
+    var pin = document.createElement("span"); pin.className = "pin"; pin.style.setProperty("--pc", PINS[h % PINS.length]); el.appendChild(pin);
+    var t = document.createElement("h3"); t.textContent = card.title; el.appendChild(t);
+    if (card.notes){ var p = document.createElement("p"); p.textContent = card.notes; el.appendChild(p); }
+    if (card.labels.length){
+      var ls = document.createElement("div"); ls.className = "labels";
+      card.labels.forEach(function(l){ var L = LABELS.filter(function(x){return x.id===l;})[0]; if (!L) return; var s = document.createElement("span"); s.className = "lbl"; s.style.setProperty("--c", L.c); s.textContent = L.name; ls.appendChild(s); });
+      el.appendChild(ls);
+    }
+    var di = dueInfo(card.due, col.name);
+    if (di){ var d = document.createElement("span"); d.className = "due " + di.cls; d.textContent = di.txt; el.appendChild(d); }
+    el.setAttribute("aria-label", card.title + (di ? ", " + di.txt : "") + ". In " + col.name + ".");
+    el.addEventListener("keydown", function(e){ cardKey(e, card.id); });
+    el.addEventListener("pointerdown", function(e){ startPress(e, el, card.id); });
+    return el;
+  }
+
+  // ---------- keyboard moves ----------
+  function cardKey(e, id){
+    var f = findCard(id); if (!f) return;
+    if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openEditor(id); return; }
+    if (e.key === "[" || e.key === "]"){
+      var to = f.ci + (e.key === "]" ? 1 : -1); if (to < 0 || to >= state.cols.length) return;
+      f.col.cards.splice(f.idx,1); state.cols[to].cards.push(f.card); save(); render(id); announce("Moved to " + state.cols[to].name); e.preventDefault(); return;
+    }
+    if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")){
+      var ni = f.idx + (e.key === "ArrowDown" ? 1 : -1); if (ni < 0 || ni >= f.col.cards.length) return;
+      f.col.cards.splice(ni, 0, f.col.cards.splice(f.idx,1)[0]); save(); render(id); e.preventDefault(); return;
+    }
+    if (e.key === "Delete"){ f.col.cards.splice(f.idx,1); save(); render(); announce("Card deleted"); }
+  }
+
+  // ---------- pointer drag (mouse + touch) ----------
+  var drag = null, press = null;
+  function startPress(e, el, id){
+    if (e.button && e.button !== 0) return;
+    press = {id:id, el:el, x:e.clientX, y:e.clientY, pid:e.pointerId, touch:e.pointerType !== "mouse", timer:0, started:false};
+    if (press.touch){ press.timer = setTimeout(function(){ if (press && !press.started) beginDrag(press.x, press.y); }, 260); }
+  }
+  document.addEventListener("pointermove", function(e){
+    if (!press || e.pointerId !== press.pid) return;
+    if (drag){ moveDrag(e.clientX, e.clientY); e.preventDefault(); return; }
+    var dx = e.clientX - press.x, dy = e.clientY - press.y, dist = Math.sqrt(dx*dx+dy*dy);
+    if (press.touch){ if (dist > 10){ clearTimeout(press.timer); press = null; } return; }
+    if (dist > 5){ beginDrag(e.clientX, e.clientY); moveDrag(e.clientX, e.clientY); }
+  }, {passive:false});
+  document.addEventListener("touchmove", function(e){ if (drag) e.preventDefault(); }, {passive:false});
+  document.addEventListener("pointerup", function(e){
+    if (!press) return;
+    clearTimeout(press.timer);
+    if (drag){ endDrag(); }
+    else if (!press.started){ var id = press.id; press = null; openEditor(id); return; }
+    press = null;
+  });
+  document.addEventListener("pointercancel", function(){ if (press) clearTimeout(press.timer); if (drag) endDrag(true); press = null; });
+
+  function beginDrag(x, y){
+    press.started = true;
+    var el = press.el, r = el.getBoundingClientRect();
+    var ghost = el.cloneNode(true); ghost.classList.add("ghost"); ghost.removeAttribute("id"); ghost.style.width = r.width + "px"; ghost.style.left = r.left + "px"; ghost.style.top = r.top + "px";
+    document.body.appendChild(ghost);
+    el.classList.add("placeholder"); el.style.height = r.height + "px";
+    drag = {ghost:ghost, el:el, id:press.id, ox:x - r.left, oy:y - r.top};
+    if (navigator.vibrate && press.touch) try { navigator.vibrate(12); } catch(err){}
+  }
+  function moveDrag(x, y){
+    drag.ghost.style.left = (x - drag.ox) + "px"; drag.ghost.style.top = (y - drag.oy) + "px";
+    var under = document.elementFromPoint(x, y);
+    var zone = under && under.closest ? under.closest(".drop, .col") : null;
+    if (zone && zone.classList.contains("col")) zone = zone.querySelector(".drop");
+    document.querySelectorAll(".drop.hot").forEach(function(d){ if (d !== zone) d.classList.remove("hot"); });
+    if (!zone) return;
+    zone.classList.add("hot");
+    var cards = Array.prototype.filter.call(zone.children, function(c){ return c !== drag.el; });
+    var before = null;
+    for (var i=0;i<cards.length;i++){ var r = cards[i].getBoundingClientRect(); if (y < r.top + r.height/2){ before = cards[i]; break; } }
+    if (before) { if (drag.el.nextSibling !== before || drag.el.parentNode !== zone) zone.insertBefore(drag.el, before); }
+    else if (zone.lastElementChild !== drag.el) zone.appendChild(drag.el);
+    // edge auto-scroll
+    var H = window.innerHeight; if (y < 60) window.scrollBy(0, -12); else if (y > H - 60) window.scrollBy(0, 12);
+    var b = $("board"), br = b.getBoundingClientRect(); if (x > br.right - 50) b.scrollLeft += 14; else if (x < br.left + 50) b.scrollLeft -= 14;
+  }
+  function endDrag(cancel){
+    var d = drag; drag = null;
+    d.ghost.remove();
+    document.querySelectorAll(".drop.hot").forEach(function(z){ z.classList.remove("hot"); });
+    if (!cancel){
+      var zone = d.el.parentNode, colId = zone && zone.dataset.col;
+      var f = findCard(d.id), target = state.cols.filter(function(c){ return c.id === colId; })[0];
+      if (f && target){
+        var idx = Array.prototype.indexOf.call(zone.querySelectorAll(".card"), d.el);
+        f.col.cards.splice(f.idx, 1); target.cards.splice(Math.max(0, idx), 0, f.card);
+        save(); announce("Moved to " + target.name);
+      }
+    }
+    render();
+  }
+
+  // ---------- editor ----------
+  var editing = null, lastFocus = null;
+  (function buildLabelPick(){
+    var box = $("e-labels");
+    LABELS.forEach(function(L){ var lab = document.createElement("label"); lab.style.setProperty("--c", L.c); lab.setAttribute("for","e-lbl-"+L.id);
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.id = "e-lbl-"+L.id; cb.value = L.id;
+      var dot = document.createElement("i"); lab.appendChild(cb); lab.appendChild(dot); lab.appendChild(document.createTextNode(L.name)); box.appendChild(lab); });
+  })();
+  function openEditor(id){
+    var f = findCard(id); if (!f) return;
+    editing = id; lastFocus = document.activeElement;
+    $("e-title").value = f.card.title; $("e-notes").value = f.card.notes; $("e-due").value = f.card.due || "";
+    var sel = $("e-col"); sel.innerHTML = ""; state.cols.forEach(function(c){ var o = document.createElement("option"); o.value = c.id; o.textContent = c.name; if (c === f.col) o.selected = true; sel.appendChild(o); });
+    LABELS.forEach(function(L){ $("e-lbl-"+L.id).checked = f.card.labels.indexOf(L.id) >= 0; });
+    $("edit-scrim").classList.add("open"); setTimeout(function(){ $("e-title").focus(); }, 20);
+  }
+  function closeEditor(){ $("edit-scrim").classList.remove("open"); var id = editing; editing = null; var n = id && document.querySelector('[data-card="'+id+'"]'); if (n) n.focus(); else if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  $("e-save").addEventListener("click", function(){
+    var f = findCard(editing); if (!f) return closeEditor();
+    f.card.title = $("e-title").value.trim() || "Untitled card"; f.card.notes = $("e-notes").value; f.card.due = $("e-due").value;
+    f.card.labels = LABELS.filter(function(L){ return $("e-lbl-"+L.id).checked; }).map(function(L){ return L.id; });
+    var to = $("e-col").value; if (to !== f.col.id){ var t = state.cols.filter(function(c){ return c.id===to; })[0]; if (t){ f.col.cards.splice(f.idx,1); t.cards.push(f.card); } }
+    save(); render(); closeEditor();
+  });
+  $("e-cancel").addEventListener("click", closeEditor);
+  armed($("e-delete"), function(){ var f = findCard(editing); if (f){ f.col.cards.splice(f.idx,1); save(); } editing = null; $("edit-scrim").classList.remove("open"); render(); announce("Card deleted"); var b = $("e-delete"); b.classList.remove("armed"); b.textContent = "Delete card"; }, "Confirm delete");
+  $("edit-scrim").addEventListener("click", function(e){ if (e.target === this) closeEditor(); });
+
+  // ---------- import / export ----------
+  function openIO(){ $("io-text").value = JSON.stringify(state, null, 2); $("io-msg").textContent = ""; $("io-msg").className = "msg"; $("io-scrim").classList.add("open"); setTimeout(function(){ $("io-text").focus(); }, 20); }
+  function closeIO(){ $("io-scrim").classList.remove("open"); $("btn-io").focus(); }
+  $("btn-io").addEventListener("click", openIO);
+  $("io-close").addEventListener("click", closeIO);
+  $("io-scrim").addEventListener("click", function(e){ if (e.target === this) closeIO(); });
+  $("io-import").addEventListener("click", function(){
+    var m = $("io-msg");
+    try {
+      var s = JSON.parse($("io-text").value);
+      if (!valid(s)) throw new Error("Expected an object with a \"cols\" array, each with \"name\" and \"cards\".");
+      state = normalize(s); save(); render(); m.className = "msg ok"; m.textContent = "Imported " + state.cols.length + " columns.";
+    } catch(e){ m.className = "msg err"; m.textContent = "Could not import: " + e.message; }
+  });
+  $("io-copy").addEventListener("click", function(){
+    var ta = $("io-text"), m = $("io-msg");
+    function fallback(){ ta.focus(); ta.select(); try { var ok = document.execCommand("copy"); m.className = "msg " + (ok?"ok":"err"); m.textContent = ok ? "Copied." : "Select all and copy manually."; } catch(e){ m.className = "msg err"; m.textContent = "Select all and copy manually."; } }
+    if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value).then(function(){ m.className = "msg ok"; m.textContent = "Copied to clipboard."; }, fallback); } else fallback();
+  });
+
+  armed($("btn-reset"), function(){ state = demo(); save(); render(); var b = $("btn-reset"); b.classList.remove("armed"); b.textContent = "Reset demo"; announce("Demo board restored"); }, "Confirm reset");
+
+  // ---------- filters ----------
+  (function(){
+    var box = $("filters");
+    LABELS.forEach(function(L){ var b = document.createElement("button"); b.className = "chip"; b.id = "f-"+L.id; b.style.setProperty("--c", L.c); b.textContent = L.name; b.setAttribute("aria-pressed","false");
+      b.addEventListener("click", function(){ filter.labels[L.id] = !filter.labels[L.id]; b.setAttribute("aria-pressed", filter.labels[L.id] ? "true":"false"); render(); });
+      box.appendChild(b); });
+  })();
+  $("search").addEventListener("input", function(){ filter.q = this.value; render(); });
+
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape"){ if ($("edit-scrim").classList.contains("open")) closeEditor(); else if ($("io-scrim").classList.contains("open")) closeIO(); }
+  });
+
+  state = normalize(state);
+  render();
+})();
+</script>
+</body>
+</html>

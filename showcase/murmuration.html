@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Saltmere Murmuration</title>
+<meta name="description" content="Thousands of simulated starlings wheel over a sunset fen in a live boids murmuration; your cursor is the peregrine that splits the flock.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Italiana&family=Karla:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dusk:#2a1a2e;
+  --ember:#f0a36b;
+  --paper:#fbe9d8;
+  --soft:rgba(251,233,216,.72);
+  --line:rgba(251,233,216,.28);
+  --display:"Italiana","Didot","Bodoni 72","Playfair Display",Georgia,serif;
+  --text:"Karla","Avenir Next","Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--dusk);overflow:hidden}
+body{color:var(--paper);font-family:var(--text)}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:none;touch-action:none}
+:focus-visible{outline:2px solid var(--ember);outline-offset:3px}
+.back{position:fixed;z-index:5;top:max(16px,env(safe-area-inset-top));left:max(16px,env(safe-area-inset-left));
+  color:var(--soft);text-decoration:none;font-size:13px;letter-spacing:.08em;font-style:italic}
+.back:hover{color:var(--paper)}
+.titlecard{
+  position:fixed;z-index:4;left:max(20px,env(safe-area-inset-left));bottom:max(22px,env(safe-area-inset-bottom));
+  max-width:min(520px,calc(100vw - 40px));pointer-events:none;
+  animation:rise 2.4s cubic-bezier(.2,.7,.2,1) both .3s;
+}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.titlecard .kicker{font-size:11px;letter-spacing:.38em;text-transform:uppercase;color:var(--soft);display:flex;gap:14px;align-items:center}
+.titlecard .kicker::after{content:"";height:1px;width:64px;background:var(--line)}
+.titlecard h1{font-family:var(--display);font-weight:400;font-size:clamp(46px,8vw,112px);line-height:.9;margin:.12em 0 .1em;letter-spacing:.01em}
+.titlecard p{margin:0;font-size:15px;line-height:1.55;color:var(--soft);max-width:44ch}
+.titlecard .stat{margin-top:14px;display:flex;gap:26px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft)}
+.titlecard .stat b{display:block;font-family:var(--display);font-size:26px;letter-spacing:0;color:var(--paper);font-weight:400}
+.panel{
+  position:fixed;z-index:6;top:max(14px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));
+  display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+}
+.panel .toggle{background:none;border:1px solid var(--line);color:var(--paper);font:600 11px var(--text);letter-spacing:.24em;text-transform:uppercase;padding:9px 14px;cursor:pointer;border-radius:999px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.panel .body{width:min(280px,calc(100vw - 28px));background:rgba(30,16,30,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);padding:16px;border-radius:14px}
+.panel .body[hidden]{display:none}
+.field{margin:10px 0}
+.field label{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--soft);margin-bottom:6px}
+input[type=range]{width:100%;accent-color:var(--ember)}
+input[type=text]{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--paper);font:400 16px var(--text);padding:4px 0}
+.skies{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.sky{height:38px;border-radius:8px;border:1px solid var(--line);cursor:pointer;position:relative}
+.sky[aria-pressed="true"]{outline:2px solid var(--paper);outline-offset:2px}
+.skyname{font-style:italic;font-size:13px;color:var(--soft);margin-top:6px;min-height:1.3em}
+.btns{display:flex;gap:6px;margin-top:12px}
+.btns button{flex:1;background:transparent;border:1px solid var(--line);color:var(--paper);padding:9px 4px;border-radius:999px;font:600 11px var(--text);letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.btns button.hot{background:var(--paper);color:var(--dusk);border-color:var(--paper)}
+.btns button:hover{border-color:var(--paper)}
+@media (max-width:640px){
+  .titlecard .stat{gap:18px}
+  .titlecard p{font-size:14px}
+}
+</style>
+</head>
+<body>
+<canvas id="sky" aria-label="Starling murmuration over a fen at sunset. Move the pointer to hunt the flock."></canvas>
+<a class="back" href="index.html">← Showcase</a>
+
+<div class="titlecard">
+  <div class="kicker"><span>Saltmere Fen</span><span id="clock">16:48 · November</span></div>
+  <h1>The Murmuration</h1>
+  <p>Each starling watches only its seven nearest neighbours, yet the whole flock turns as one body. Move your pointer through the sky — you are the peregrine.</p>
+  <div class="stat"><span><b id="birdCount">3,200</b>starlings</span><span><b id="splitCount">0</b>scatters</span><span><b id="fpsOut">—</b>frames/s</span></div>
+</div>
+
+<div class="panel">
+  <button class="toggle" id="panelToggle" aria-expanded="false" aria-controls="panelBody">Field notes</button>
+  <div class="body" id="panelBody" hidden>
+    <div class="field"><label for="seed">Seed</label><input id="seed" type="text" inputmode="numeric" value="1104" autocomplete="off"></div>
+    <div class="field"><label>Sky</label><div class="skies" id="skies" role="group" aria-label="Sky palette"></div><div class="skyname" id="skyName"></div></div>
+    <div class="field"><label for="count">Flock <span id="countOut">3200</span></label><input id="count" type="range" min="500" max="6000" step="100" value="3200"></div>
+    <div class="field"><label for="fear">Fear of falcon <span id="fearOut">1.0</span></label><input id="fear" type="range" min="0" max="2.5" step="0.1" value="1"></div>
+    <div class="btns"><button id="pauseBtn">Pause</button><button id="resetBtn" class="hot">New flock</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const SKIES = [
+  { id:'ember', name:'Ember — the last ten minutes', stops:['#2a1a3a','#6b2f4a','#c4554a','#f0a36b','#fcd7a1'], sun:'#fff0cf', land:'#1c1016', water:['#4a2a3a','#c77a5e'], bird:'17,9,14' },
+  { id:'rose', name:'Rose dusk — haar off the sea', stops:['#28253f','#5b4a6e','#b77b8d','#e7b3a4','#f6dccb'], sun:'#fff3ea', land:'#211a26', water:['#3e3550','#c6978f'], bird:'24,18,30' },
+  { id:'violet', name:'Winter violet — frost coming', stops:['#101832','#2a2f5c','#6a5a8c','#c28aa0','#f1c4a8'], sun:'#ffe9d6', land:'#0b0d1a', water:['#1f2346','#a57b93'], bird:'8,9,20' },
+  { id:'smoke', name:'Stubble smoke — October', stops:['#2d2a26','#57463a','#9c6a45','#d6a066','#efd4a2'], sun:'#fff6de', land:'#191511', water:['#3b3128','#b28a60'], bird:'20,15,10' }
+];
+const canvas = $('sky'), ctx = canvas.getContext('2d');
+const bg = document.createElement('canvas'), bgx = bg.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+let W, H, DPR, horizon;
+let sky = SKIES[0], seed = 1104, N = window.innerWidth < 640 ? 1800 : 3200, fear = 1;
+let running = true, scatters = 0;
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+
+// ---------- scenery ----------
+function paintScene() {
+  const r = mulberry32(seed * 7 + 3);
+  bg.width = canvas.width; bg.height = canvas.height;
+  bgx.setTransform(DPR,0,0,DPR,0,0);
+  const g = bgx.createLinearGradient(0, 0, 0, horizon);
+  sky.stops.forEach((c, i) => g.addColorStop(i / (sky.stops.length - 1), c));
+  bgx.fillStyle = g; bgx.fillRect(0, 0, W, horizon + 2);
+  // sun
+  const sx = W * (.62 + r() * .2), sy = horizon - Math.min(W, H) * .02;
+  const sr = Math.min(W, H) * .055;
+  const glow = bgx.createRadialGradient(sx, sy, 0, sx, sy, Math.max(W, H) * .6);
+  glow.addColorStop(0, 'rgba(255,230,190,.55)'); glow.addColorStop(.25, 'rgba(255,190,140,.18)'); glow.addColorStop(1, 'rgba(255,190,140,0)');
+  bgx.fillStyle = glow; bgx.fillRect(0, 0, W, horizon);
+  bgx.save(); bgx.beginPath(); bgx.rect(0, 0, W, horizon); bgx.clip();
+  bgx.fillStyle = sky.sun; bgx.beginPath(); bgx.arc(sx, sy, sr, 0, Math.PI * 2); bgx.fill();
+  bgx.restore();
+  // long thin cloud streaks
+  for (let i = 0; i < 14; i++) {
+    const y = horizon * (.25 + r() * .65), x = r() * W - W * .2, w = W * (.2 + r() * .5), h = 1 + r() * 4;
+    bgx.globalAlpha = .08 + r() * .14; bgx.fillStyle = r() < .5 ? sky.stops[1] : '#fff1dc';
+    bgx.beginPath(); bgx.ellipse(x + w / 2, y, w / 2, h, 0, 0, Math.PI * 2); bgx.fill();
+  }
+  bgx.globalAlpha = 1;
+  // water
+  const wg = bgx.createLinearGradient(0, horizon, 0, H);
+  wg.addColorStop(0, sky.water[1]); wg.addColorStop(.35, sky.water[0]); wg.addColorStop(1, sky.land);
+  bgx.fillStyle = wg; bgx.fillRect(0, horizon, W, H - horizon);
+  // sun path on water
+  for (let y = horizon + 2; y < H; y += 2 + (y - horizon) * .04) {
+    const spread = sr * (1 + (y - horizon) / 40), a = Math.max(0, .5 - (y - horizon) / (H - horizon) * .6);
+    bgx.fillStyle = `rgba(255,236,200,${a * (.3 + r() * .7)})`;
+    const len = spread * (0.3 + r());
+    bgx.fillRect(sx - len / 2 + (r() - .5) * spread, y, len, 1 + r());
+  }
+  // far tree line
+  bgx.fillStyle = sky.land; bgx.globalAlpha = .55;
+  bgx.beginPath(); bgx.moveTo(0, horizon);
+  for (let x = 0; x <= W; x += 6) {
+    const n = Math.sin(x * .013 + seed) * 3 + Math.sin(x * .041) * 2 + (r() < .06 ? -6 - r() * 10 : 0);
+    bgx.lineTo(x, horizon - 4 - Math.max(0, n + 3));
+  }
+  bgx.lineTo(W, horizon); bgx.closePath(); bgx.fill(); bgx.globalAlpha = 1;
+  // mud banks
+  bgx.fillStyle = sky.land;
+  for (let i = 0; i < 5; i++) {
+    const y = horizon + (H - horizon) * (.2 + r() * .6), x = r() * W, w = W * (.15 + r() * .35);
+    bgx.beginPath(); bgx.ellipse(x, y, w, 2 + r() * 5, 0, 0, Math.PI * 2); bgx.fill();
+  }
+  // reed beds, foreground
+  const reeds = (base, height, dens, alpha) => {
+    bgx.strokeStyle = sky.land; bgx.globalAlpha = alpha; bgx.lineCap = 'round';
+    for (let x = -10; x < W + 10; x += dens * (0.4 + r())) {
+      const clump = Math.sin(x * .006 + seed) * .5 + .5;
+      if (clump < .25) continue;
+      const h = height * (.5 + r() * .8) * clump, lean = (r() - .5) * .35 + .12;
+      bgx.lineWidth = .8 + r() * 1.3;
+      bgx.beginPath(); bgx.moveTo(x, base + 4);
+      bgx.quadraticCurveTo(x + lean * h * .4, base - h * .5, x + lean * h, base - h); bgx.stroke();
+      if (r() < .28) { // seed head
+        bgx.save(); bgx.translate(x + lean * h, base - h); bgx.rotate(lean + (r() - .5) * .3);
+        bgx.beginPath(); bgx.ellipse(0, -6, 2.2, 8, 0, 0, Math.PI * 2); bgx.fillStyle = sky.land; bgx.fill(); bgx.restore();
+      }
+    }
+    bgx.globalAlpha = 1;
+  };
+  reeds(H - (H - horizon) * .45, Math.min(90, H * .1), 7, .8);
+  bgx.fillStyle = sky.land; bgx.fillRect(0, H - (H - horizon) * .18, W, H);
+  reeds(H - (H - horizon) * .15, Math.min(180, H * .22), 4, 1);
+  // a lone hide on stilts
+  const hx = W * (.12 + r() * .15), hy = H - (H - horizon) * .42;
+  bgx.fillStyle = sky.land; bgx.fillRect(hx, hy - 26, 46, 18);
+  bgx.beginPath(); bgx.moveTo(hx - 4, hy - 26); bgx.lineTo(hx + 23, hy - 40); bgx.lineTo(hx + 50, hy - 26); bgx.fill();
+  bgx.fillRect(hx + 4, hy - 8, 2, 16); bgx.fillRect(hx + 40, hy - 8, 2, 16);
+  bgx.fillStyle = sky.stops[3]; bgx.globalAlpha = .6; bgx.fillRect(hx + 10, hy - 20, 26, 3); bgx.globalAlpha = 1;
+}
+
+// ---------- flock ----------
+let px, py, vx, vy, sz, ax, ay;
+let grid, gridNext, cell = 26, gw, gh;
+let wander = { x:0, y:0, t:0 };
+const falcon = { x:-999, y:-999, vx:0, vy:0, active:false, auto:true, lastMove:0, angle:0 };
+
+function build() {
+  const r = mulberry32(seed);
+  px = new Float32Array(N); py = new Float32Array(N); vx = new Float32Array(N); vy = new Float32Array(N); sz = new Float32Array(N);
+  ax = new Float32Array(N); ay = new Float32Array(N);
+  const cx = W * (.3 + r() * .4), cy = horizon * (.35 + r() * .25);
+  for (let i = 0; i < N; i++) {
+    const a = r() * Math.PI * 2, d = Math.sqrt(r()) * Math.min(W, horizon) * .22;
+    px[i] = cx + Math.cos(a) * d * 1.6; py[i] = cy + Math.sin(a) * d * .6;
+    const h = r() * .6 - .3 + (r() < .5 ? 0 : Math.PI);
+    vx[i] = Math.cos(h) * 2; vy[i] = Math.sin(h) * 2;
+    sz[i] = .7 + Math.pow(r(), 2) * 1.3;
+  }
+  wander.t = r() * 100;
+  gw = Math.ceil(W / cell) + 2; gh = Math.ceil(H / cell) + 2;
+  grid = new Int32Array(gw * gh); gridNext = new Int32Array(N);
+  scatters = 0; $('splitCount').textContent = '0';
+  $('birdCount').textContent = N.toLocaleString('en-US');
+}
+
+function step(dt) {
+  wander.t += .0035 * dt;
+  wander.x = W * (.5 + .3 * Math.sin(wander.t * 1.3) + .08 * Math.sin(wander.t * 3.7));
+  wander.y = horizon * (.45 + .18 * Math.sin(wander.t * 2.1 + 1) + .06 * Math.cos(wander.t * 4.3));
+  // autopilot falcon when the pointer is idle
+  const now = performance.now();
+  if (now - falcon.lastMove > 4000) {
+    falcon.auto = true;
+    const t = now * .00025;
+    const tx = W * (.5 + .55 * Math.sin(t * 1.7)), ty = horizon * (.45 + .35 * Math.sin(t * 2.9 + .5));
+    falcon.vx += (tx - falcon.x) * .002 * dt; falcon.vy += (ty - falcon.y) * .002 * dt;
+    falcon.vx *= .97; falcon.vy *= .97;
+    const sp = Math.hypot(falcon.vx, falcon.vy), mx = 7;
+    if (sp > mx) { falcon.vx *= mx / sp; falcon.vy *= mx / sp; }
+    falcon.x += falcon.vx * dt; falcon.y += falcon.vy * dt;
+    falcon.active = (Math.sin(t * .9) > -.2);
+  }
+  if (Math.hypot(falcon.vx, falcon.vy) > .3) falcon.angle = Math.atan2(falcon.vy, falcon.vx);
+
+  grid.fill(-1);
+  for (let i = 0; i < N; i++) {
+    const gx = Math.min(gw - 1, Math.max(0, (px[i] / cell | 0) + 1)), gy = Math.min(gh - 1, Math.max(0, (py[i] / cell | 0) + 1));
+    const k = gy * gw + gx; gridNext[i] = grid[k]; grid[k] = i;
+  }
+  const sepR = 7, sepR2 = sepR * sepR, visR2 = cell * cell;
+  const fr = 110 + 40 * fear, fr2 = fr * fr;
+  const maxS = 3.4, minS = 1.9;
+  let panicked = 0;
+  for (let i = 0; i < N; i++) {
+    const x = px[i], y = py[i];
+    let sx = 0, sy = 0, axx = 0, ayy = 0, cxx = 0, cyy = 0, n = 0;
+    const gx = Math.min(gw - 1, Math.max(0, (x / cell | 0) + 1)), gy = Math.min(gh - 1, Math.max(0, (y / cell | 0) + 1));
+    outer:
+    for (let oy = -1; oy <= 1; oy++) {
+      const yy = gy + oy; if (yy < 0 || yy >= gh) continue;
+      for (let ox = -1; ox <= 1; ox++) {
+        const xx = gx + ox; if (xx < 0 || xx >= gw) continue;
+        let j = grid[yy * gw + xx];
+        while (j !== -1) {
+          if (j !== i) {
+            const dx = x - px[j], dy = y - py[j], d2 = dx * dx + dy * dy;
+            if (d2 < visR2) {
+              if (d2 < sepR2 && d2 > .0001) { sx += dx / d2; sy += dy / d2; }
+              axx += vx[j]; ayy += vy[j]; cxx += px[j]; cyy += py[j]; n++;
+              if (n >= 9) break outer;
+            }
+          }
+          j = gridNext[j];
+        }
+      }
+    }
+    let fx = 0, fy = 0;
+    if (n) {
+      fx += (axx / n - vx[i]) * .06 + (cxx / n - x) * .0028 + sx * 1.6;
+      fy += (ayy / n - vy[i]) * .06 + (cyy / n - y) * .0028 + sy * 1.6;
+    }
+    // global pull toward the drifting roost centre keeps a cohesive mass
+    const wx = wander.x - x, wy = wander.y - y, wd = Math.hypot(wx, wy) + 1;
+    const pull = .0009 + Math.min(.02, wd * .00002);
+    fx += wx * pull * .6; fy += wy * pull;
+    // soft ceiling and horizon
+    if (y < 30) fy += (30 - y) * .01;
+    if (y > horizon - 30) fy -= (y - horizon + 30) * .012;
+    // falcon
+    if (falcon.active) {
+      const dx = x - falcon.x, dy = y - falcon.y, d2 = dx * dx + dy * dy;
+      if (d2 < fr2) {
+        const d = Math.sqrt(d2) + .01, s = (1 - d / fr) * .9 * fear;
+        fx += dx / d * s; fy += dy / d * s; panicked++;
+      }
+    }
+    ax[i] = fx; ay[i] = fy;
+  }
+  for (let i = 0; i < N; i++) {
+    let nvx = vx[i] + ax[i] * dt, nvy = vy[i] + ay[i] * dt;
+    const s = Math.hypot(nvx, nvy) + 1e-6;
+    const cl = s > maxS ? maxS / s : s < minS ? minS / s : 1;
+    vx[i] = nvx * cl; vy[i] = nvy * cl;
+    px[i] += vx[i] * dt; py[i] += vy[i] * dt;
+  }
+  if (panicked > N * .05 && !falcon.wasPanicking) { scatters++; $('splitCount').textContent = scatters; }
+  falcon.wasPanicking = panicked > N * .05;
+}
+
+function draw() {
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.drawImage(bg, 0, 0);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  const col = sky.bird;
+  ctx.lineCap = 'round';
+  // two depth passes: far (small, lighter) and near (larger, darker)
+  for (let pass = 0; pass < 2; pass++) {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const big = sz[i] > 1.25; if ((pass === 1) !== big) continue;
+      const s = sz[i] * 1.6, inv = 1 / (Math.hypot(vx[i], vy[i]) + 1e-6);
+      const dx = vx[i] * inv * s, dy = vy[i] * inv * s;
+      ctx.moveTo(px[i] - dx, py[i] - dy); ctx.lineTo(px[i] + dx, py[i] + dy);
+    }
+    ctx.strokeStyle = `rgba(${col},${pass ? .92 : .62})`; ctx.lineWidth = pass ? 1.9 : 1.2; ctx.stroke();
+  }
+  // reflection in the water
+  ctx.save(); ctx.beginPath(); ctx.rect(0, horizon, W, H - horizon); ctx.clip();
+  ctx.beginPath();
+  for (let i = 0; i < N; i += 2) {
+    const ry = horizon + (horizon - py[i]) * .55;
+    if (ry < horizon || ry > H) continue;
+    ctx.moveTo(px[i] - 1.2, ry); ctx.lineTo(px[i] + 1.2, ry);
+  }
+  ctx.strokeStyle = `rgba(${col},.18)`; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+  // falcon
+  if (falcon.active && falcon.x > -500) {
+    ctx.save(); ctx.translate(falcon.x, falcon.y); ctx.rotate(falcon.angle);
+    const flap = Math.sin(performance.now() * .012) * 2.5;
+    ctx.fillStyle = `rgb(${col})`;
+    ctx.beginPath();
+    ctx.moveTo(12, 0); ctx.quadraticCurveTo(4, -2, 0, -3); ctx.lineTo(-8, -18 - flap); ctx.lineTo(-4, -2);
+    ctx.lineTo(-14, -2); ctx.lineTo(-17, 0); ctx.lineTo(-14, 2); ctx.lineTo(-4, 2);
+    ctx.lineTo(-8, 18 + flap); ctx.lineTo(0, 3); ctx.quadraticCurveTo(4, 2, 12, 0); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  horizon = Math.round(H * (W < 640 ? .7 : .74));
+  paintScene();
+}
+
+// ---------- loop ----------
+let raf = 0, last = 0, fpsAcc = 0, fpsN = 0;
+function frame(t) {
+  raf = 0; if (document.hidden) return;
+  const dt = Math.min(2, last ? (t - last) / 16.67 : 1); last = t;
+  if (running) step(reduce.matches ? dt * .45 : dt);
+  draw();
+  fpsAcc += dt; fpsN++;
+  if (fpsN === 30) { $('fpsOut').textContent = Math.round(60 * fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
+  raf = requestAnimationFrame(frame);
+}
+function kick() { if (!raf && !document.hidden) { last = 0; raf = requestAnimationFrame(frame); } }
+document.addEventListener('visibilitychange', kick);
+
+// ---------- input ----------
+function pointer(e) {
+  falcon.lastMove = performance.now(); falcon.auto = false; falcon.active = true;
+  const nx = e.clientX, ny = e.clientY;
+  if (falcon.x > -500) { falcon.vx = nx - falcon.x; falcon.vy = ny - falcon.y; }
+  falcon.x = nx; falcon.y = ny;
+}
+canvas.addEventListener('pointermove', pointer);
+canvas.addEventListener('pointerdown', pointer);
+canvas.addEventListener('pointerleave', () => { falcon.lastMove = 0; });
+
+// ---------- UI ----------
+const skiesEl = $('skies');
+SKIES.forEach(s => {
+  const b = document.createElement('button'); b.className = 'sky'; b.id = 'sky-' + s.id; b.type = 'button';
+  b.setAttribute('aria-label', s.name);
+  b.style.background = `linear-gradient(${s.stops.join(',')})`;
+  b.addEventListener('click', () => { sky = s; syncSky(); paintScene(); if (!running) draw(); try { localStorage.setItem('murm.sky', s.id); } catch (e) {} });
+  skiesEl.appendChild(b);
+});
+function syncSky() {
+  [...skiesEl.children].forEach(b => b.setAttribute('aria-pressed', b.id === 'sky-' + sky.id));
+  $('skyName').textContent = sky.name;
+  document.body.style.background = sky.stops[0];
+}
+$('panelToggle').addEventListener('click', e => {
+  const body = $('panelBody'); body.hidden = !body.hidden; e.currentTarget.setAttribute('aria-expanded', !body.hidden);
+});
+$('seed').addEventListener('change', e => { seed = parseInt(String(e.target.value).replace(/\D/g, ''), 10) || 0; e.target.value = seed; paintScene(); build(); });
+$('count').addEventListener('input', e => { $('countOut').textContent = e.target.value; });
+$('count').addEventListener('change', e => { N = +e.target.value; build(); });
+$('fear').addEventListener('input', e => { fear = +e.target.value; $('fearOut').textContent = fear.toFixed(1); });
+$('pauseBtn').addEventListener('click', e => { running = !running; e.currentTarget.textContent = running ? 'Pause' : 'Resume'; });
+$('resetBtn').addEventListener('click', () => { seed = (Math.random() * 9999) | 0; $('seed').value = seed; paintScene(); build(); });
+let rt = 0;
+addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { resize(); build(); }, 150); });
+
+// a believable dusk clock
+(() => { const m = 42 + (seed % 14); $('clock').textContent = `16:${m} · 4 November`; })();
+
+try { const s = localStorage.getItem('murm.sky'); const f = SKIES.find(x => x.id === s); if (f) sky = f; } catch (e) {}
+$('count').value = N; $('countOut').textContent = N;
+syncSky(); resize(); build();
+for (let i = 0; i < 90; i++) step(1); // let the flock organise before first paint
+draw(); kick();
+})();
+</script>
+</body>
+</html>
