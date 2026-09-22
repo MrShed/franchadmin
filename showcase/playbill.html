@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Royal Gaslight Playbill</title>
+<meta name="description" content="A Victorian playbill for a fictional melodrama at the Royal Gaslight Theatre: the velvet curtain rises on wood-type billing, cast, acts and scenes, programme notes and a bookable horseshoe seat plan priced in pounds, shillings and pence.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Holtwood+One+SC&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Rye&family=Pirata+One&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wall:#2a0d0f;
+  --wall-2:#3a1215;
+  --velvet:#7a0f18;
+  --velvet-dk:#3d060b;
+  --stock:#efd46e;
+  --stock-2:#e5c555;
+  --ink:#16110c;
+  --red:#b8161b;
+  --gold:#d8b25a;
+  --fat:"Abril Fatface", "Didot", Georgia, serif;
+  --wide:"Holtwood One SC", "Rockwell Extra Bold", Georgia, serif;
+  --body:"Old Standard TT", "Times New Roman", serif;
+  --deco:"Rye", "Rockwell", Georgia, serif;
+  --black:"Pirata One", "UnifrakturMaguntia", Georgia, serif;
+}
+*{box-sizing:border-box}
+html{background:var(--wall)}
+body{margin:0;background:var(--wall);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;overflow-x:hidden;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% 0, rgba(255,190,90,.18), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 60px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M30 6 L36 24 L54 30 L36 36 L30 54 L24 36 L6 30 L24 24Z' fill='none' stroke='%23d8b25a' stroke-opacity='.07'/%3E%3C/svg%3E")}
+:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+.back{position:fixed;z-index:60;top:12px;left:16px;font-family:var(--deco);font-size:14px;color:var(--gold);text-decoration:none;letter-spacing:.06em;background:rgba(42,13,15,.85);padding:6px 10px;border:1px solid rgba(216,178,90,.5)}
+.back:hover,.back:focus-visible{background:var(--gold);color:var(--wall)}
+
+/* ============ CURTAIN ============ */
+.proscenium{position:fixed;inset:0;z-index:50;pointer-events:none}
+.valance{position:absolute;left:0;right:0;top:0;height:74px;z-index:3;
+  background:repeating-linear-gradient(90deg,#6a0c14 0 22px,#8f1520 22px 36px,#4a070d 36px 44px);
+  box-shadow:0 8px 20px rgba(0,0,0,.6)}
+.valance::after{content:"";position:absolute;left:0;right:0;bottom:-18px;height:20px;
+  background:repeating-linear-gradient(90deg,var(--gold) 0 3px,transparent 3px 8px);
+  -webkit-mask:linear-gradient(#000,rgba(0,0,0,.4));mask:linear-gradient(#000,rgba(0,0,0,.4))}
+.valance::before{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:linear-gradient(#f3d88c,#9b7a2e)}
+.drape{position:absolute;left:0;right:0;top:0;height:100%;z-index:2;pointer-events:auto;
+  background:
+    linear-gradient(180deg,rgba(0,0,0,.35),transparent 20%,transparent 80%,rgba(0,0,0,.5)),
+    repeating-linear-gradient(90deg,#4a070d 0,#8a1320 3%,#a5202c 5%,#7a0f18 7.5%,#4a070d 10%);
+  transition:transform 2.2s cubic-bezier(.7,0,.25,1);display:grid;place-items:center}
+.drape::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:26px;
+  background:repeating-linear-gradient(90deg,var(--gold) 0 4px,#9b7a2e 4px 6px,transparent 6px 9px)}
+.proscenium.up .drape{transform:translateY(-100%)}
+.proscenium.up{pointer-events:none}
+.proscenium.up .valance{transform:translateY(-10px)}
+.drape .call{text-align:center;color:#f6e0a8;text-shadow:0 2px 0 #2a0508}
+.drape .call small{display:block;font-family:var(--deco);letter-spacing:.3em;font-size:14px;margin-bottom:14px;color:var(--gold)}
+.drape .call b{display:block;font-family:var(--black);font-weight:400;font-size:clamp(42px,8vw,96px);line-height:1}
+.drape button{margin-top:24px;all:unset;cursor:pointer;font-family:var(--deco);font-size:16px;letter-spacing:.14em;color:#2a0508;background:linear-gradient(#f3d88c,#b58f3a);padding:12px 22px;border:2px solid #6b4f1a;box-shadow:0 4px 0 #6b4f1a}
+.drape button:focus-visible{outline:3px solid #fff}
+.drape .rope{position:absolute;right:8%;top:74px;width:6px;height:40%;background:repeating-linear-gradient(135deg,#caa24a 0 4px,#8b6a24 4px 8px)}
+.drape .rope::after{content:"";position:absolute;left:50%;bottom:-24px;transform:translateX(-50%);width:16px;height:28px;border-radius:40% 40% 50% 50%;background:repeating-linear-gradient(90deg,var(--gold) 0 2px,#8b6a24 2px 4px)}
+
+/* ============ POSTER ============ */
+.stage{max-width:900px;margin:0 auto;padding:110px 16px 60px;position:relative}
+.footlights{position:absolute;left:10%;right:10%;top:70px;height:30px;display:flex;justify-content:space-between}
+.footlights i{width:10px;height:10px;border-radius:50%;background:#ffe7a6;box-shadow:0 0 18px 8px rgba(255,200,90,.45);animation:flick 3s infinite alternate}
+.footlights i:nth-child(2n){animation-delay:-1.2s}.footlights i:nth-child(3n){animation-delay:-.4s}
+@keyframes flick{0%{opacity:.85}40%{opacity:1}60%{opacity:.78}100%{opacity:.95}}
+.bill{background:var(--stock);position:relative;padding:40px 44px 50px;text-align:center;
+  box-shadow:0 30px 60px -20px #000, inset 0 0 90px rgba(120,70,0,.28);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .22 0 0 0 0 0 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 20% 10%, rgba(255,255,255,.25), transparent 50%)}
+.bill::before{content:"";position:absolute;inset:12px;border:3px double var(--ink);pointer-events:none}
+.bill > *{position:relative}
+.bill .ln{margin:0;line-height:1.05}
+.l-theatre{font-family:var(--wide);font-size:clamp(22px,4.2vw,44px);letter-spacing:.02em}
+.l-small{font-family:var(--body);font-style:italic;font-size:clamp(15px,1.8vw,19px);margin:6px 0}
+.l-caps{font-family:var(--body);font-weight:700;letter-spacing:.3em;text-transform:uppercase;font-size:clamp(12px,1.5vw,15px)}
+.l-red{color:var(--red)}
+.rule{height:0;border-top:2px solid var(--ink);margin:16px auto;width:80%}
+.rule.th{border-top:6px double var(--ink);width:100%}
+.orn{font-size:22px;letter-spacing:.4em;margin:6px 0}
+.l-title{font-family:var(--fat);font-size:clamp(30px,7.8vw,100px);line-height:.88;letter-spacing:-.01em;margin:14px 0 4px;text-transform:uppercase}
+.l-title span{display:block;font-size:.52em;letter-spacing:.06em}
+.l-or{font-family:var(--black);font-size:clamp(26px,4vw,40px);color:var(--red);margin:4px 0}
+.l-sub{font-family:var(--deco);font-size:clamp(22px,4vw,40px);text-transform:uppercase;letter-spacing:.02em}
+.l-mega{font-family:var(--wide);font-size:clamp(28px,6vw,62px);color:var(--red);letter-spacing:.01em}
+.l-cond{font-family:var(--fat);font-size:clamp(20px,3.4vw,34px);text-transform:uppercase;letter-spacing:.14em;transform:scaleY(1.25);display:block;margin:8px 0}
+.pull{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;margin:18px 0}
+.pull::before,.pull::after{content:"";height:2px;background:var(--ink)}
+.pull span{font-family:var(--body);font-weight:700;font-style:italic;font-size:18px}
+
+.cast{text-align:left;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 40px;margin:20px 0 10px}
+.cast div{display:flex;align-items:baseline;gap:6px;font-size:17px}
+.cast div b{font-family:var(--body);font-weight:700;white-space:nowrap}
+.cast div i{flex:1;border-bottom:2px dotted rgba(22,17,12,.6);transform:translateY(-4px);min-width:12px}
+.cast div span{font-family:var(--fat);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;font-size:15px}
+.cast div span.star{color:var(--red);font-size:18px}
+
+.acts{text-align:left;margin:18px 0}
+.act{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;border-top:2px solid var(--ink);padding:14px 0}
+.act h3{margin:0;font-family:var(--wide);font-weight:400;font-size:22px;line-height:1.1}
+.act h3 small{display:block;font-family:var(--body);font-style:italic;font-size:15px;letter-spacing:0;color:var(--red);margin-top:4px}
+.act ol{margin:0;padding:0;list-style:none}
+.act li{padding:2px 0;font-size:17px}
+.act li b{font-family:var(--deco);font-weight:400;font-size:14px;letter-spacing:.06em;color:var(--red);margin-right:8px}
+.sensation{margin-top:8px;border:3px solid var(--red);padding:10px 14px;text-align:center;font-family:var(--fat);text-transform:uppercase;letter-spacing:.06em;font-size:clamp(16px,2.4vw,22px);color:var(--red);transform:rotate(-1.2deg)}
+.sensation small{display:block;font-family:var(--body);font-style:italic;text-transform:none;letter-spacing:0;color:var(--ink);font-size:15px}
+
+.prices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:2px solid var(--ink);margin:18px 0 10px}
+.prices div{padding:8px 4px;border-right:1px solid var(--ink)}
+.prices div:last-child{border:0}
+.prices b{display:block;font-family:var(--wide);font-weight:400;font-size:18px}
+.prices span{font-size:13px;font-style:italic}
+.l-foot{font-size:13px;font-style:italic;margin-top:14px}
+
+/* notes */
+.notes{margin:60px auto 0;max-width:900px;padding:0 16px;color:#f0dfbd}
+.notes-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px;border-top:1px solid rgba(216,178,90,.4);padding-top:36px}
+.notes h2{grid-column:1 / 3;font-family:var(--black);font-weight:400;font-size:clamp(38px,6vw,64px);color:var(--gold);margin:0;line-height:1}
+.notes p{margin:0 0 1em;font-size:18px;line-height:1.65}
+.notes p:first-of-type::first-letter{font-family:var(--fat);float:left;font-size:4em;line-height:.8;margin:.06em .08em 0 0;color:var(--gold)}
+.notes .sig{font-style:italic;color:var(--gold)}
+
+/* box office */
+.office{max-width:1100px;margin:70px auto 0;padding:0 16px 80px}
+.office h2{font-family:var(--wide);font-weight:400;font-size:clamp(28px,4.4vw,48px);color:var(--stock);margin:0;text-align:left;line-height:1}
+.office .lead{color:#e6cfa6;font-style:italic;margin:8px 0 24px;max-width:40em}
+.office-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:28px;align-items:start}
+.plan{background:#1a0708;border:1px solid rgba(216,178,90,.35);padding:10px;position:relative}
+.plan svg{width:100%;height:auto;display:block}
+.plan .seat{cursor:pointer;transition:fill .15s}
+.plan .seat.sold{cursor:not-allowed}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:#e6cfa6;padding:8px 6px 2px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.ticket{background:var(--stock);padding:22px 22px 18px;position:relative;box-shadow:0 20px 40px -18px #000;
+  -webkit-mask:radial-gradient(circle 12px at 0 50%,transparent 11px,#000 12px) left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 50%,transparent 11px,#000 12px) right/51% 100% no-repeat;
+  mask:radial-gradient(circle 12px at 0 50%,transparent 11px,#000 12px) left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 50%,transparent 11px,#000 12px) right/51% 100% no-repeat}
+.ticket h3{font-family:var(--wide);font-weight:400;font-size:20px;margin:0 0 4px;text-align:center}
+.ticket .perf{text-align:center;font-style:italic;font-size:15px;border-bottom:2px dashed var(--ink);padding-bottom:10px;margin-bottom:12px}
+.ticket label{display:block;font-family:var(--body);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:12px;margin:10px 0 4px}
+.ticket select,.ticket input{width:100%;font-family:var(--body);font-size:17px;background:transparent;border:0;border-bottom:2px solid var(--ink);padding:4px 0;color:var(--ink)}
+.ticket select:focus,.ticket input:focus{outline:none;border-color:var(--red)}
+.ticket .row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
+.ticket button{all:unset;cursor:pointer;display:block;text-align:center;margin-top:14px;font-family:var(--deco);letter-spacing:.1em;padding:10px;background:var(--ink);color:var(--stock)}
+.ticket button.alt{background:transparent;color:var(--ink);border:2px solid var(--ink);padding:8px}
+.ticket button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.chosen{margin:14px 0 0;padding:10px 0 0;border-top:2px dashed var(--ink);font-size:15px;min-height:60px}
+.chosen ul{list-style:none;margin:0;padding:0;max-height:140px;overflow:auto}
+.chosen li{display:flex;justify-content:space-between;border-bottom:1px dotted rgba(22,17,12,.4);padding:2px 0}
+.total{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;font-family:var(--wide);font-size:22px}
+.total small{font-family:var(--body);font-size:13px;font-style:italic}
+.msg{font-style:italic;color:var(--red);font-size:14px;min-height:1.3em;margin-top:6px}
+footer{text-align:center;color:#b99c6a;font-style:italic;font-size:14px;padding:0 16px 50px}
+
+@media (max-width:760px){
+  .bill{padding:30px 22px 40px}
+  .cast{grid-template-columns:minmax(0,1fr)}
+  .act{grid-template-columns:minmax(0,1fr);gap:6px}
+  .prices{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .prices div{border-bottom:1px solid var(--ink)}
+  .notes-in{grid-template-columns:minmax(0,1fr)}
+  .notes h2{grid-column:1}
+  .office-grid{grid-template-columns:minmax(0,1fr)}
+  .cast div span{white-space:normal}
+}
+@media (prefers-reduced-motion:reduce){
+  .drape{transition:none}
+  .footlights i{animation:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+
+<div class="proscenium" id="curtain">
+  <div class="valance"></div>
+  <div class="drape">
+    <div class="call"><small>Ladies &amp; gentlemen, your seats please</small><b>Overture</b><button type="button" id="raise">Raise the curtain</button></div>
+    <div class="rope" aria-hidden="true"></div>
+  </div>
+</div>
+
+<main>
+  <div class="stage">
+    <div class="footlights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <article class="bill" aria-label="Playbill">
+      <p class="ln l-caps">Under the Patronage of the Worshipful Company of Lamplighters</p>
+      <div class="rule"></div>
+      <p class="ln l-theatre">Theatre Royal Gaslight</p>
+      <p class="ln l-small">Bankside, Southwark &nbsp;·&nbsp; Sole Lessee &amp; Manager, Mr. Augustus Pennifold</p>
+      <div class="rule th"></div>
+      <p class="ln l-caps l-red">On Monday, October 17th, 1887, and Every Evening until Further Notice</p>
+      <p class="ln l-small">will be presented, for the First Time on any Stage, an entirely Original</p>
+      <p class="ln l-sub">Domestic &amp; Sensational Drama</p>
+      <p class="ln l-small">in Three Acts and Nine Tableaux, entitled</p>
+      <h1 class="ln l-title"><span>The</span>Lamplighter’s Daughter</h1>
+      <p class="ln l-or">or,</p>
+      <p class="ln l-sub">A Fog upon the Thames!</p>
+      <p class="orn" aria-hidden="true">☙ ❦ ❧</p>
+      <p class="ln l-small">Written expressly for this Theatre by <b>Mr. Silas Wexford-Brine</b>, author of <i>The Coiner’s Widow</i> &amp; <i>Blind Justice at Wapping</i></p>
+      <span class="l-cond">New &amp; Magnificent Scenery</span>
+      <p class="ln l-small">by Mr. Tobias Grell &amp; Assistants &nbsp;·&nbsp; Music composed &amp; arranged by Signor Enrico Palladi</p>
+      <p class="ln l-mega">REAL WATER! &nbsp;REAL FOG!</p>
+
+      <div class="pull"><span>Characters in the Drama</span></div>
+      <div class="cast">
+        <div><b>Nell Harrow</b><i></i><span class="star">Miss Clementine Vane</span></div>
+        <div><b>Old Jacob Harrow</b><i></i><span>Mr. Horace Dunmore</span></div>
+        <div><b>Capt. Rupert Sallow</b><i></i><span class="star">Mr. Lionel Marchbanks</span></div>
+        <div><b>Tom Whitlock</b><i></i><span>Mr. Frederick Ashby</span></div>
+        <div><b>Mrs. Grimsditch</b><i></i><span>Mrs. Adelaide Pole</span></div>
+        <div><b>Inspector Crale</b><i></i><span>Mr. Walter Nutt</span></div>
+        <div><b>“Sparrow”, a crossing-sweeper</b><i></i><span>Little Kitty Farr</span></div>
+        <div><b>Lady Harriet Sallow</b><i></i><span>Miss Evangeline Rook</span></div>
+        <div><b>Barnaby Quill, a waterman</b><i></i><span>Mr. Joseph Tinney</span></div>
+        <div><b>The Doctor</b><i></i><span>Mr. Cecil Hobb</span></div>
+      </div>
+      <p class="ln l-small">Watermen, Lamplighters, Constables, Costermongers, Guests at the Ball, &amp;c., by the Company</p>
+
+      <div class="pull"><span>Synopsis of Scenery &amp; Incidents</span></div>
+      <section class="acts">
+        <div class="act"><h3>Act I.<small>“The Last Lamp in Pudding Lane”</small></h3>
+          <ol><li><b>Tableau 1.</b>A lamplighter’s garret overlooking the river. Evening. — <i>Jacob’s pride. Nell’s promise.</i></li>
+          <li><b>Tableau 2.</b>The Embankment, the lamps being lit. — <i>A stranger in a silk hat. “Your father owes me, girl.”</i></li>
+          <li><b>Tableau 3.</b>The Harrow garret by night. — <i>The forged note! The constable at the door! Jacob taken!</i></li></ol></div>
+        <div class="act"><h3>Act II.<small>“Above &amp; Below”</small></h3>
+          <ol><li><b>Tableau 4.</b>The ballroom at Sallow House, Belgravia. — <i>Nell in borrowed silk. The Captain’s wager.</i></li>
+          <li><b>Tableau 5.</b>The kitchens of Sallow House. — <i>Sparrow overhears. The locket and the letter.</i></li>
+          <li><b>Tableau 6.</b>Wapping Old Stairs, at midnight. — <i>Tom Whitlock rows for his life.</i></li></ol>
+          <div class="sensation">The Great River Sensation!<small>A real skiff upon 4,000 gallons of real Thames water, in a fog of Mr. Grell’s own devising</small></div></div>
+        <div class="act"><h3>Act III.<small>“The Lamp Relit”</small></h3>
+          <ol><li><b>Tableau 7.</b>Newgate. The condemned cell. — <i>Father and daughter.</i></li>
+          <li><b>Tableau 8.</b>The fog, Blackfriars Bridge. — <i>Every lamp on the river goes out at once. Unmasked by gaslight!</i></li>
+          <li><b>Tableau 9.</b>Pudding Lane, at dawn. — <i>The last lamp is lit. Happiness at last.</i></li></ol></div>
+      </section>
+      <div class="pull"><span>Prices of Admission</span></div>
+      <div class="prices">
+        <div><b>£1 1s.</b><span>Private Boxes</span></div>
+        <div><b>5s.</b><span>Orchestra Stalls</span></div>
+        <div><b>3s.</b><span>Dress Circle</span></div>
+        <div><b>1s. 6d.</b><span>Upper Circle</span></div>
+        <div><b>6d.</b><span>Gallery</span></div>
+      </div>
+      <p class="ln l-caps">Doors open at Half-past Six · Overture at Seven · Carriages at Eleven</p>
+      <p class="l-foot">No Money Returned. The Management reserve the Right of Refusing Admission. Ladies are respectfully requested to remove their Bonnets in the Stalls. — Printed by J. Staunch &amp; Sons, Steam Printers, Borough.</p>
+    </article>
+  </div>
+
+  <section class="notes" aria-labelledby="notesTitle">
+    <div class="notes-in">
+      <h2 id="notesTitle">Notes for the Programme</h2>
+      <div>
+        <p>Nobody in 1887 would have called this play subtle, and nobody went to the Gaslight hoping it would be. Victorian melodrama was the popular entertainment of its century: a theatre of absolute virtue and perfect villainy, of stolen wills, false accusations and last-minute rescues, played to houses of two and three thousand people who hissed, cheered, and occasionally threw things.</p>
+        <p>It was also a theatre of machines. Managers competed on <em>sensation scenes</em> — spectacular climaxes staged with every technology the age could offer. Audiences came to see real locomotives, real horses on treadmills, real water in tanks beneath the stage. Our river sensation in Act Two borrows from that tradition, as does the fog, which in the original would have been steam piped up through the traps and lit green by limelight.</p>
+      </div>
+      <div>
+        <p>Mr. Wexford-Brine is our invention, but his plots are faithful to the genre: an honest working father, a daughter sent among the rich, a villain with a moustache and a mortgage. The lamplighters are real enough. London kept thousands of them, walking the streets at dusk with ladders and long poles to light the gas lamps, and again at dawn to put them out.</p>
+        <p>Gas was also what made the theatre itself possible. Gaslit stages could be dimmed and brightened from a central “gas table”, which meant for the first time that the audience could sit in the dark and look at a lit picture. It was dangerous — fire claimed theatre after theatre — and within a decade electricity would replace it. But for a while, every play was performed by gaslight, and every scene had its own soft, flickering weather.</p>
+        <p class="sig">— A. Pennifold, Manager</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="office" aria-labelledby="officeTitle">
+    <h2 id="officeTitle">The Box Office</h2>
+    <p class="lead">Choose your places on the plan — the Gallery for the true enthusiast, the Stalls for those who wish to be seen. Seats marked dark are already taken.</p>
+    <div class="office-grid">
+      <div class="plan">
+        <svg id="plan" viewBox="0 0 700 560" role="group" aria-label="Seating plan of the Theatre Royal Gaslight"></svg>
+        <div class="legend"><span><i style="background:#e7cf7a"></i>Available</span><span><i style="background:#b8161b"></i>Your choice</span><span><i style="background:#4a2a24"></i>Taken</span></div>
+      </div>
+      <div class="ticket">
+        <h3>Theatre Royal Gaslight</h3>
+        <div class="perf">The Lamplighter’s Daughter · Evening Performance</div>
+        <label for="night">Performance</label>
+        <select id="night"><option>Mon. 17th October, at 7</option><option>Tues. 18th October, at 7</option><option>Wed. 19th October, at 7</option><option>Sat. 22nd October, Matinée at 2</option></select>
+        <div class="row">
+          <div><label for="section">Best available in</label><select id="section"><option value="stalls">Orchestra Stalls — 5s.</option><option value="circle">Dress Circle — 3s.</option><option value="upper">Upper Circle — 1s. 6d.</option><option value="gallery">Gallery — 6d.</option><option value="boxes">Private Box — £1 1s.</option></select></div>
+          <div><label for="qty">Places</label><input id="qty" type="number" min="1" max="8" value="2"></div>
+        </div>
+        <button type="button" id="best">Find me seats</button>
+        <div class="chosen" aria-live="polite"><ul id="chosen"></ul><div class="total"><span>Total</span><span id="total">£0 0s. 0d.</span></div><div class="msg" id="msg"></div></div>
+        <button type="button" class="alt" id="clear">Return all tickets</button>
+      </div>
+    </div>
+  </section>
+  <footer>A fiction, printed in the browser · No bonnets were harmed</footer>
+</main>
+
+<script>
+(function(){
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=id=>document.getElementById(id);
+/* curtain */
+const cur=$('curtain');
+function raise(){cur.classList.add('up');setTimeout(()=>{cur.style.display='none';},reduce?0:2300);}
+$('raise').addEventListener('click',raise);
+cur.querySelector('.drape').addEventListener('click',e=>{if(e.target.id!=='raise')raise();});
+if(reduce)raise();else setTimeout(raise,1500);
+
+/* seat plan */
+const PRICE={stalls:60,circle:36,upper:18,gallery:6,boxes:252}; // in pence
+const NAMES={stalls:'Stalls',circle:'Dress Circle',upper:'Upper Circle',gallery:'Gallery',boxes:'Box'};
+const svg=$('plan');const cx=350,cy=560;
+let s=`<defs><linearGradient id="stg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5b3a1c"/><stop offset="1" stop-color="#2d1a0c"/></linearGradient></defs>`;
+// stage at bottom
+s+=`<path d="M190 560 L200 505 H500 L510 560Z" fill="url(#stg)" stroke="#d8b25a"/><text x="350" y="540" text-anchor="middle" font-family="Rye, serif" font-size="16" fill="#efd46e" letter-spacing="4">STAGE</text>`;
+s+=`<path d="M200 505 Q350 488 500 505" fill="none" stroke="#ffd98a" stroke-width="3" opacity=".7"/>`;
+const seats=[];
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const R=rng(1887);
+function tier(sec,rows,r0,dr,a0,a1,letters,label,ly){
+  for(let i=0;i<rows;i++){const r=r0+i*dr;const n=Math.floor((a1-a0)*r/15);
+    for(let j=0;j<n;j++){const a=a0+(j+.5)*(a1-a0)/n;const x=cx+Math.cos(a)*r,y=cy-60+Math.sin(a)*r*.82;
+      if(sec==='stalls'&&Math.abs(Math.cos(a))<.03)continue; // centre aisle
+      seats.push({sec,row:letters[i],num:j+1,x,y,sold:R()<.32});}}
+  ly=cy-60-(r0+(rows-1)*dr)*.82-10;
+  s+=`<text x="${cx}" y="${ly}" text-anchor="middle" font-family="Old Standard TT, serif" font-style="italic" font-size="13" fill="#e6cfa6">${label}</text>`;
+}
+tier('stalls',8,90,17,Math.PI*1.18,Math.PI*1.82,'ABCDEFGH','Orchestra Stalls',cy-60-240);
+s+=`<path d="M${cx-265} ${cy-120} Q${cx} ${cy-470} ${cx+265} ${cy-120}" fill="none" stroke="#d8b25a" stroke-opacity=".5" stroke-dasharray="4 4"/>`;
+tier('circle',3,258,16,Math.PI*1.16,Math.PI*1.84,'JKL','Dress Circle',cy-60-305);
+tier('upper',3,312,15,Math.PI*1.2,Math.PI*1.8,'MNO','Upper Circle',cy-60-352);
+tier('gallery',3,362,14,Math.PI*1.24,Math.PI*1.76,'PQR','Gallery · “the Gods”',22);
+// boxes left and right
+[['L',70],['R',630]].forEach(([side,x])=>{for(let k=0;k<4;k++){const y=300+k*50;seats.push({sec:'boxes',row:'Box '+side+(k+1),num:1,x,y,box:true,sold:R()<.4});}
+  s+=`<text x="${x}" y="286" text-anchor="middle" font-family="Old Standard TT, serif" font-style="italic" font-size="12" fill="#e6cfa6">Boxes</text>`;});
+seats.forEach((st,i)=>{st.i=i;
+  if(st.box)s+=`<rect class="seat${st.sold?' sold':''}" data-i="${i}" x="${st.x-22}" y="${st.y-16}" width="44" height="32" rx="4" fill="${st.sold?'#4a2a24':'#e7cf7a'}" stroke="#1a0708"><title>${st.row}${st.sold?' — taken':''}</title></rect>`;
+  else s+=`<circle class="seat${st.sold?' sold':''}" data-i="${i}" cx="${st.x.toFixed(1)}" cy="${st.y.toFixed(1)}" r="5.6" fill="${st.sold?'#4a2a24':'#e7cf7a'}"><title>${NAMES[st.sec]} ${st.row}${st.num}${st.sold?' — taken':''}</title></circle>`;});
+svg.innerHTML=s;
+const chosen=new Set();
+function lsd(p){const L=Math.floor(p/240),S=Math.floor(p%240/12),D=p%12;return `£${L} ${S}s. ${D}d.`;}
+function label(st){return st.box?st.row:`${NAMES[st.sec]}, ${st.row}${st.num}`;}
+function paint(){
+  svg.querySelectorAll('.seat').forEach(el=>{const st=seats[+el.dataset.i];el.setAttribute('fill',st.sold?'#4a2a24':chosen.has(st.i)?'#b8161b':'#e7cf7a');});
+  const list=[...chosen].map(i=>seats[i]);
+  $('chosen').innerHTML=list.length?list.map(st=>`<li><span>${label(st)}</span><span>${lsd(PRICE[st.sec]).replace('£0 ','').replace(/ 0d\.$/,'')}</span></li>`).join(''):'<li><span><i>No places chosen yet.</i></span></li>';
+  $('total').textContent=lsd(list.reduce((a,st)=>a+PRICE[st.sec],0));
+}
+svg.addEventListener('click',e=>{const el=e.target.closest('.seat');if(!el)return;const st=seats[+el.dataset.i];
+  if(st.sold){$('msg').textContent='That place is taken, I’m afraid.';return;}
+  chosen.has(st.i)?chosen.delete(st.i):chosen.add(st.i);$('msg').textContent='';paint();});
+$('best').addEventListener('click',()=>{
+  const sec=$('section').value,q=Math.max(1,Math.min(8,+$('qty').value||1));
+  const avail=seats.filter(st=>st.sec===sec&&!st.sold&&!chosen.has(st.i));
+  // best = closest to centre-front
+  avail.sort((a,b)=>(Math.hypot(a.x-cx,(a.y-500)*1.3))-(Math.hypot(b.x-cx,(b.y-500)*1.3)));
+  const pick=avail.slice(0,sec==='boxes'?Math.ceil(q/4):q);
+  if(!pick.length){$('msg').textContent='The house is full in that part, sir or madam.';return;}
+  pick.forEach(st=>chosen.add(st.i));$('msg').textContent=sec==='boxes'?'A box seats four.':(pick.length<q?'Only '+pick.length+' could be found.':'');paint();
+});
+$('clear').addEventListener('click',()=>{chosen.clear();$('msg').textContent='';paint();});
+// preload an example choice
+seats.filter(st=>st.sec==='circle'&&!st.sold).slice(18,20).forEach(st=>chosen.add(st.i));
+paint();
+})();
+</script>
+</body>
+</html>

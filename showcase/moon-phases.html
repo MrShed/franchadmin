@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lunar Almanac 2026</title>
+<meta name="description" content="Every night of 2026 with the Moon drawn as it will look, computed from Meeus's lunar theory: exact new, quarter and full moon times in UK time, the traditional names of the thirteen full moons, eclipses and distances, and a live view of tonight's Moon.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#e6e8eb;
+  --paper2:#d9dce1;
+  --ink:#191c33;
+  --ink2:#3b3f5c;
+  --mute:#6d7086;
+  --rule:#b9bcc6;
+  --shadow:#1e2238;
+  --lit:#fbfaf5;
+  --cobalt:#2f3fb8;
+  --serif:"Cormorant Garamond","Cormorant","Garamond","Times New Roman",serif;
+  --sans:"Jost","Futura","Century Gothic","Avenir Next",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper)}
+body{color:var(--ink);font-family:var(--sans);font-weight:400;font-size:15px;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background:radial-gradient(ellipse at 80% -10%,#f4f5f7 0%,transparent 55%),var(--paper)}
+:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px}
+a{color:inherit}
+.back{position:absolute;top:18px;left:max(16px,env(safe-area-inset-left));font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);text-decoration:none}
+.back:hover{color:var(--cobalt)}
+.wrap{max-width:1240px;margin:0 auto;padding:70px max(16px,4vw) 60px}
+
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,420px);gap:clamp(20px,5vw,80px);align-items:center;border-bottom:1px solid var(--ink);padding-bottom:40px}
+.kick{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--mute);margin:0 0 6px}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(90px,17vw,250px);line-height:.78;margin:0;letter-spacing:-.04em}
+h1 em{font-style:italic;font-weight:300;font-size:.34em;letter-spacing:0;display:block;margin:8px 0 0 .1em;line-height:1}
+.lede{font-family:var(--serif);font-size:clamp(19px,1.7vw,23px);line-height:1.45;max-width:30em;margin:22px 0 0;color:var(--ink2)}
+.tonight{text-align:center}
+.tonight svg{width:min(100%,340px);height:auto;display:block;margin:0 auto}
+.tonight .ph{font-family:var(--serif);font-size:34px;font-style:italic;margin:14px 0 2px}
+.tonight .st{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;border-top:1px solid var(--rule);padding-top:12px}
+.tonight .st div{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.tonight .st b{display:block;font-family:var(--serif);font-weight:500;font-size:24px;letter-spacing:0;text-transform:none;color:var(--ink);font-variant-numeric:lining-nums tabular-nums}
+.next{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:0;border-bottom:1px solid var(--rule)}
+.next div{padding:18px 16px 18px 0}
+.next .k{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);display:flex;align-items:center;gap:8px}
+.next .v{font-family:var(--serif);font-size:26px;font-weight:500;line-height:1.1;margin-top:4px}
+.next .c{font-size:13px;color:var(--ink2);margin-top:2px}
+
+h2{font-family:var(--serif);font-weight:400;font-size:clamp(40px,5vw,64px);margin:60px 0 6px;letter-spacing:-.02em;line-height:1}
+h2 + p{margin:0 0 26px;color:var(--ink2);max-width:52em;line-height:1.6}
+.months{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:34px 28px}
+.month h3{font-family:var(--serif);font-weight:500;font-size:28px;margin:0 0 6px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:4px}
+.month h3 small{font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:400}
+.dow,.days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dow span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);text-align:center;padding:4px 0}
+.day{position:relative;display:flex;flex-direction:column;align-items:center;padding:4px 0 3px;border-radius:2px;cursor:default}
+.day svg{width:26px;height:26px;display:block}
+.day .n{font-size:10.5px;color:var(--ink2);margin-top:2px;font-variant-numeric:tabular-nums}
+.day.key{background:var(--paper2)}
+.day.key .n{color:var(--ink);font-weight:600}
+.day.today{outline:1.5px solid var(--cobalt);outline-offset:-1px}
+.day .tag{position:absolute;top:1px;right:2px;font-size:8px;color:var(--cobalt);font-weight:600}
+.events{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:58px}
+.events b{font-weight:500;color:var(--ink)}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--paper);font-size:12px;padding:6px 9px;border-radius:2px;z-index:20;opacity:0;transition:opacity .12s;white-space:nowrap}
+
+.fulls{border-top:1px solid var(--ink)}
+.fm{display:grid;grid-template-columns:70px minmax(0,1.1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1.4fr);gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid var(--rule)}
+.fm svg{width:60px;height:60px}
+.fm .nm{font-family:var(--serif);font-size:30px;font-weight:500;line-height:1}
+.fm .nm small{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);margin-top:6px;font-weight:400}
+.fm .when{font-variant-numeric:tabular-nums}
+.fm .when b{display:block;font-family:var(--serif);font-weight:500;font-size:22px}
+.fm .dist{font-variant-numeric:tabular-nums;font-size:14px}
+.fm .dist i{display:block;height:3px;background:var(--rule);margin-top:6px;position:relative}
+.fm .dist i b{position:absolute;left:0;top:0;bottom:0;background:var(--ink)}
+.fm .note{font-size:13.5px;color:var(--ink2);line-height:1.5}
+.fm .note em{font-style:normal;color:var(--cobalt);font-weight:500}
+.fm.past{opacity:.55}
+footer{margin-top:50px;font-size:12.5px;color:var(--mute);line-height:1.7;max-width:80em}
+@media (max-width:860px){.hero{grid-template-columns:1fr}.next{grid-template-columns:repeat(2,1fr)}.fm{grid-template-columns:60px 1fr 1fr}.fm .dist,.fm .note{grid-column:2/-1}}
+@media (max-width:420px){.fm{grid-template-columns:52px 1fr}.fm .when{grid-column:2}.fm svg{width:52px;height:52px}}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="wrap">
+  <section class="hero">
+    <div>
+      <p class="kick">An almanac for the British Isles</p>
+      <h1>2026<em>the year in moonlight</em></h1>
+      <p class="lede">Every night of the year, drawn as the Moon will actually appear, with the exact moments of new, quarter and full moon — calculated here in your browser from Jean Meeus's <i>Astronomical Algorithms</i> and given in UK clock time, GMT or BST.</p>
+    </div>
+    <div class="tonight" aria-live="polite">
+      <svg id="bigMoon" viewBox="-110 -110 220 220" role="img" aria-label="Tonight's Moon"></svg>
+      <div class="ph" id="phName">—</div>
+      <div id="phDate" style="font-size:13px;color:var(--mute)">—</div>
+      <div class="st">
+        <div>Illuminated<b id="illum">—</b></div>
+        <div>Age<b id="age">—</b></div>
+        <div>Distance<b id="dist">—</b></div>
+      </div>
+    </div>
+  </section>
+  <section class="next" id="next" aria-label="Upcoming phases"></section>
+
+  <h2>The twelve months</h2>
+  <p>Each small moon shows the phase at 9 pm UK time that evening. Shaded squares mark a principal phase; hover or focus for the exact time.</p>
+  <div class="months" id="months"></div>
+
+  <h2>Thirteen full moons</h2>
+  <p>2026 fits thirteen full moons into twelve months, so May has two — the second is a “Blue Moon”. Names follow the traditional North American and English folk calendar popularised by almanacs; the Harvest Moon is the full moon nearest the September equinox.</p>
+  <div class="fulls" id="fulls"></div>
+
+  <footer>Method: principal phases from Meeus, <i>Astronomical Algorithms</i> (2nd ed.), ch. 49, including the fourteen planetary correction terms, typically accurate to under a minute; ΔT taken as 69 s. Nightly illumination from the ch. 48 phase-angle formula; distance from the leading terms of the ch. 47 lunar series (accurate to a few dozen km). Eclipse dates are from published NASA predictions. Times are converted to Europe/London by your browser.</footer>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+(function(){
+"use strict";
+const D2R=Math.PI/180, DT=69/86400;
+const sin=x=>Math.sin(x*D2R), cos=x=>Math.cos(x*D2R);
+const norm=a=>((a%360)+360)%360;
+const jdFromDate=d=>d.getTime()/86400000+2440587.5;
+const dateFromJD=jd=>new Date((jd-2440587.5)*86400000);
+
+// ---------- Meeus ch.49: principal phases ----------
+function phaseJDE(k){ // k integer (+0/.25/.5/.75)
+  const T=k/1236.85, T2=T*T, T3=T2*T, T4=T3*T;
+  let jde=2451550.09766+29.530588861*k+0.00015437*T2-0.000000150*T3+0.00000000073*T4;
+  const E=1-0.002516*T-0.0000074*T2;
+  const M=norm(2.5534+29.10535670*k-0.0000014*T2-0.00000011*T3);
+  const Mp=norm(201.5643+385.81693528*k+0.0107582*T2+0.00001238*T3-0.000000058*T4);
+  const F=norm(160.7108+390.67050284*k-0.0016118*T2-0.00000227*T3+0.000000011*T4);
+  const O=norm(124.7746-1.56375588*k+0.0020672*T2+0.00000215*T3);
+  const f=k-Math.floor(k); let c=0;
+  if(f<0.01||f>0.99||Math.abs(f-0.5)<0.01){
+    const full=Math.abs(f-0.5)<0.01;
+    c = (full?-0.40614:-0.40720)*sin(Mp) + (full?0.17302:0.17241)*E*sin(M) + (full?0.01614:0.01608)*sin(2*Mp)
+      + (full?0.01043:0.01039)*sin(2*F) + (full?0.00734:0.00739)*E*sin(Mp-M) - (full?0.00515:0.00514)*E*sin(Mp+M)
+      + (full?0.00209:0.00208)*E*E*sin(2*M) - 0.00111*sin(Mp-2*F) - 0.00057*sin(Mp+2*F) + 0.00056*E*sin(2*Mp+M)
+      - 0.00042*sin(3*Mp) + 0.00042*E*sin(M+2*F) + 0.00038*E*sin(M-2*F) - 0.00024*E*sin(2*Mp-M) - 0.00017*sin(O)
+      - 0.00007*sin(Mp+2*M) + 0.00004*sin(2*Mp-2*F) + 0.00004*sin(3*M) + 0.00003*sin(Mp+M-2*F) + 0.00003*sin(2*Mp+2*F)
+      - 0.00003*sin(Mp+M+2*F) + 0.00003*sin(Mp-M+2*F) - 0.00002*sin(Mp-M-2*F) - 0.00002*sin(3*Mp+M) + 0.00002*sin(4*Mp);
+  } else {
+    c = -0.62801*sin(Mp) + 0.17172*E*sin(M) - 0.01183*E*sin(Mp+M) + 0.00862*sin(2*Mp) + 0.00804*sin(2*F)
+      + 0.00454*E*sin(Mp-M) + 0.00204*E*E*sin(2*M) - 0.00180*sin(Mp-2*F) - 0.00070*sin(Mp+2*F) - 0.00040*sin(3*Mp)
+      - 0.00034*E*sin(2*Mp-M) + 0.00032*E*sin(M+2*F) + 0.00032*E*sin(M-2*F) - 0.00028*E*E*sin(Mp+2*M) + 0.00027*E*sin(2*Mp+M)
+      - 0.00017*sin(O) - 0.00005*sin(Mp-M-2*F) + 0.00004*sin(2*Mp+2*F) - 0.00004*sin(Mp+M+2*F) + 0.00004*sin(Mp-2*M)
+      + 0.00003*sin(Mp+M-2*F) + 0.00003*sin(3*M) + 0.00002*sin(2*Mp-2*F) + 0.00002*sin(Mp-M+2*F) - 0.00002*sin(3*Mp+M);
+    const W=0.00306-0.00038*E*cos(M)+0.00026*cos(Mp)-0.00002*cos(Mp-M)+0.00002*cos(Mp+M)+0.00002*cos(2*F);
+    c += (Math.abs(f-0.25)<0.01)? W : -W;
+  }
+  const A=[299.77+0.107408*k-0.009173*T2,251.88+0.016321*k,251.83+26.651886*k,349.42+36.412478*k,84.66+18.206239*k,141.74+53.303771*k,207.14+2.453732*k,154.84+7.306860*k,34.52+27.261239*k,207.19+0.121824*k,291.34+1.844379*k,161.72+24.198154*k,239.56+25.513099*k,331.55+3.592518*k];
+  const AC=[0.000325,0.000165,0.000164,0.000126,0.000110,0.000062,0.000060,0.000056,0.000047,0.000042,0.000040,0.000037,0.000035,0.000023];
+  let add=0; for(let i=0;i<14;i++) add+=AC[i]*sin(A[i]);
+  return jde+c+add;
+}
+// ---------- Meeus ch.47/48: fundamental arguments, distance, phase angle ----------
+function args(jde){
+  const T=(jde-2451545)/36525, T2=T*T, T3=T2*T, T4=T3*T;
+  return {T,
+    D:norm(297.8501921+445267.1114034*T-0.0018819*T2+T3/545868-T4/113065000),
+    M:norm(357.5291092+35999.0502909*T-0.0001536*T2+T3/24490000),
+    Mp:norm(134.9633964+477198.8675055*T+0.0087414*T2+T3/69699-T4/14712000),
+    F:norm(93.2720950+483202.0175233*T-0.0036539*T2-T3/3526000+T4/863310000),
+    E:1-0.002516*T-0.0000074*T2};
+}
+const RT=[[0,0,1,0,-20905355],[2,0,-1,0,-3699111],[2,0,0,0,-2955968],[0,0,2,0,-569925],[0,1,0,0,48888],[0,0,0,2,-3149],[2,0,-2,0,246158],[2,-1,-1,0,-152138],[2,0,1,0,-170733],[2,-1,0,0,-204586],[0,1,-1,0,-129620],[1,0,0,0,108743],[0,1,1,0,104755],[2,0,0,-2,10321],[0,0,1,-2,79661],[4,0,-1,0,-34782],[0,0,3,0,-23210],[4,0,-2,0,-21636],[2,1,-1,0,24208],[2,1,0,0,30824],[1,0,-1,0,-8379],[1,1,0,0,-16675],[2,-1,1,0,-12831],[2,0,2,0,-10445],[4,0,0,0,-11650],[2,0,-3,0,14403],[0,1,-2,0,-7003],[2,-1,-2,0,10056],[1,0,1,0,6322],[2,-2,0,0,-9884],[0,1,2,0,5751],[2,-2,-1,0,-4950],[2,0,1,-2,4130],[4,-1,-1,0,-3958],[3,0,-1,0,3258],[2,1,1,0,2616],[4,-1,-2,0,-1897],[0,2,-1,0,-2117],[2,2,-1,0,2354],[2,1,-2,0,0]];
+function distance(jde){
+  const a=args(jde); let s=0;
+  for(const [d,m,mp,f,c] of RT){ if(!c) continue; const e=Math.abs(m)===1?a.E:Math.abs(m)===2?a.E*a.E:1; s+=c*e*cos(d*a.D+m*a.M+mp*a.Mp+f*a.F); }
+  return 385000.56+s/1000;
+}
+function illum(jde){
+  const a=args(jde);
+  const i=180-a.D-6.289*sin(a.Mp)+2.100*sin(a.M)-1.274*sin(2*a.D-a.Mp)-0.658*sin(2*a.D)-0.214*sin(2*a.Mp)-0.110*sin(a.D);
+  return {k:(1+cos(i))/2, waxing: norm(a.D)<180, D:a.D};
+}
+
+// ---------- phases list for 2026 (+ neighbours) ----------
+const PH=[];
+const k0=Math.floor((2025.9-2000)*12.3685);
+for(let k=k0;k<k0+16;k++){ for(const q of [0,.25,.5,.75]){ const jde=phaseJDE(k+q); PH.push({q,jde,jd:jde-DT,date:dateFromJD(jde-DT)}); } }
+PH.sort((a,b)=>a.jd-b.jd);
+window.__phases=PH; // exposed for checking
+
+// ---------- UK formatting ----------
+const fmtUK=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false,timeZoneName:'short'});
+const fmtUKd=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'});
+const fmtUKt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit',hour12:false,timeZoneName:'short'});
+const ukKey=d=>fmtUKd.format(d).split('/').reverse().join('-'); // yyyy-mm-dd
+function ukParts(d){const p={};fmtUK.formatToParts(d).forEach(x=>p[x.type]=x.value);return p}
+const QN=['New moon','First quarter','Full moon','Last quarter'];
+const QS=['●','◐','○','◑'];
+
+// ---------- moon drawing ----------
+let uid=0;
+function moonSVG(k,waxing,r,opts={}){
+  const id='m'+(uid++);
+  const p=1-2*k, rx=Math.abs(p)*r;
+  const sweep = k<0.5 ? 0 : 1;
+  const lit = k<0.005 ? '' : k>0.995 ? `<circle r="${r}" fill="url(#g${id})"/>`
+    : `<path d="M0 ${-r} A${r} ${r} 0 0 1 0 ${r} A${rx.toFixed(3)} ${r} 0 0 ${sweep} 0 ${-r}Z" fill="url(#g${id})" ${waxing?'':'transform="scale(-1 1)"'}/>`;
+  const maria = opts.detail ? `<g clip-path="url(#c${id})" opacity=".13" fill="#2b2f4a"><ellipse cx="-${r*.25}" cy="-${r*.3}" rx="${r*.28}" ry="${r*.2}"/><ellipse cx="${r*.2}" cy="-${r*.15}" rx="${r*.2}" ry="${r*.16}"/><ellipse cx="-${r*.05}" cy="${r*.25}" rx="${r*.16}" ry="${r*.12}"/><ellipse cx="${r*.38}" cy="${r*.25}" rx="${r*.1}" ry="${r*.14}"/><circle cx="-${r*.1}" cy="${r*.62}" r="${r*.06}" opacity=".6"/></g>` : '';
+  return `<defs><radialGradient id="g${id}" cx="40%" cy="38%" r="75%"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f4f2ea"/><stop offset="1" stop-color="#d9d6cc"/></radialGradient><clipPath id="c${id}"><circle r="${r}"/></clipPath></defs>
+    <circle r="${r}" fill="${opts.dark||'#232741'}"/>${lit}${maria}${opts.ring?`<circle r="${r+0.6}" fill="none" stroke="${opts.ring}" stroke-width="1.2"/>`:''}`;
+}
+
+// ---------- tonight ----------
+function tonight(){
+  const now=new Date(), jd=jdFromDate(now), jde=jd+DT;
+  const {k,waxing}=illum(jde);
+  document.getElementById('bigMoon').innerHTML=`<circle r="108" fill="none" stroke="#b9bcc6" stroke-dasharray="1 4"/>`+moonSVG(k,waxing,96,{detail:true});
+  const prevNew=[...PH].reverse().find(p=>p.q===0 && p.jd<=jd);
+  const age=prevNew? jd-prevNew.jd : 0;
+  let name;
+  if(k<0.02) name='New moon'; else if(k>0.98) name='Full moon';
+  else if(Math.abs(k-0.5)<0.04) name=waxing?'First quarter':'Last quarter';
+  else name=(waxing?'Waxing ':'Waning ')+(k<0.5?'crescent':'gibbous');
+  document.getElementById('phName').textContent=name;
+  document.getElementById('phDate').textContent='As of '+fmtUK.format(now);
+  document.getElementById('illum').textContent=(k*100).toFixed(0)+' %';
+  document.getElementById('age').textContent=age.toFixed(1)+' d';
+  document.getElementById('dist').textContent=Math.round(distance(jde)).toLocaleString('en-GB')+' km';
+  document.getElementById('bigMoon').setAttribute('aria-label',`${name}, ${(k*100).toFixed(0)} percent illuminated`);
+  // next four phases
+  const up=PH.filter(p=>p.jd>jd).slice(0,4);
+  document.getElementById('next').innerHTML=up.map(p=>{
+    const dd=p.jd-jd, d=Math.floor(dd), h=Math.round((dd-d)*24);
+    const qi=[0,.25,.5,.75].indexOf(p.q), ill=[0,.5,1,.5][qi];
+    return `<div><div class="k"><svg viewBox="-12 -12 24 24" width="18" height="18" aria-hidden="true">${moonSVG(ill,p.q<=.5,11)}</svg>Next ${QN[qi].toLowerCase()}</div><div class="v">${fmtUK.format(p.date).replace(/,/g,'')}</div><div class="c">in ${d} day${d===1?'':'s'} ${h} h</div></div>`;
+  }).join('');
+}
+
+// ---------- calendar ----------
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const phaseByDay={}; PH.forEach(p=>{ (phaseByDay[ukKey(p.date)] ||= []).push(p); });
+const todayKey=ukKey(new Date());
+const EXTRA={ '2026-02-17':'Annular solar eclipse (Antarctica)','2026-03-03':'Total lunar eclipse','2026-08-12':'Total solar eclipse — Greenland, Iceland, Spain; deep partial in the UK','2026-08-28':'Partial lunar eclipse'};
+function months(){
+  const host=document.getElementById('months'); let html='';
+  for(let m=0;m<12;m++){
+    const first=new Date(Date.UTC(2026,m,1)), days=new Date(Date.UTC(2026,m+1,0)).getUTCDate();
+    const lead=(first.getUTCDay()+6)%7;
+    let cells=''; for(let i=0;i<lead;i++) cells+='<div></div>';
+    const evs=[];
+    for(let d=1;d<=days;d++){
+      const key=`2026-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      // 21:00 UK ≈ 20:00 UTC in BST, 21:00 UTC in GMT: evaluate at 20:30 UTC
+      const jde=jdFromDate(new Date(Date.UTC(2026,m,d,20,30)))+DT;
+      const {k,waxing}=illum(jde);
+      const ph=phaseByDay[key];
+      const label=ph?ph.map(p=>`${QN[[0,.25,.5,.75].indexOf(p.q)]} ${fmtUKt.format(p.date)}`).join('; '):'';
+      cells+=`<div class="day${ph?' key':''}${key===todayKey?' today':''}" tabindex="0" data-tip="${d} ${MONTHS[m]} · ${(k*100).toFixed(0)}% lit${label?' · '+label:''}" aria-label="${d} ${MONTHS[m]}, ${(k*100).toFixed(0)} percent illuminated${label?', '+label:''}">
+        ${ph?`<span class="tag">${ph.map(p=>QS[[0,.25,.5,.75].indexOf(p.q)]).join('')}</span>`:''}<svg viewBox="-13 -13 26 26" aria-hidden="true">${moonSVG(k,waxing,12)}</svg><span class="n">${d}</span></div>`;
+      if(ph) ph.forEach(p=>{ const qi=[0,.25,.5,.75].indexOf(p.q); evs.push(`${QS[qi]} <b>${QN[qi]}</b> ${ukParts(p.date).day} ${fmtUKt.format(p.date)}`); });
+      if(EXTRA[key]) evs.push(`✶ <b>${EXTRA[key]}</b> ${d}`);
+    }
+    html+=`<section class="month" aria-label="${MONTHS[m]} 2026"><h3>${MONTHS[m]}<small>${evs.filter(e=>e.includes('Full')).length>1?'two full moons':''}</small></h3>
+      <div class="dow">${['Mo','Tu','We','Th','Fr','Sa','Su'].map(x=>`<span>${x}</span>`).join('')}</div><div class="days">${cells}</div><div class="events">${evs.join('<br>')}</div></section>`;
+  }
+  host.innerHTML=html;
+}
+
+// ---------- full moons ----------
+const NAMES=['Wolf Moon','Snow Moon','Worm Moon','Pink Moon','Flower Moon','Strawberry Moon','Buck Moon','Sturgeon Moon','Harvest Moon',"Hunter’s Moon",'Beaver Moon','Cold Moon'];
+const NOTES={0:'Named for wolves heard howling in midwinter.',1:'The month of heaviest snow in much of the north.',2:'Earthworm casts appear as the ground thaws. <em>Total lunar eclipse</em> — the Moon turns copper-red, though it sets during the eclipse as seen from the UK.',3:'After the early pink phlox, not the Moon’s colour.',4:'Spring flowers in full bloom.',5:'Strawberry harvest; also called the Rose Moon in Europe.',6:'Male deer regrow their antlers.',7:'Sturgeon were easiest to catch in late summer. <em>Partial lunar eclipse</em> before dawn, visible low in the west from the UK.',8:'Closest full moon to the equinox; for several nights it rises soon after sunset, lighting late harvests.',9:'Moonlight for hunting on the stubble fields.',10:'Beavers finish their winter dams.',11:'The long, cold nights of midwinter.'};
+function fulls(){
+  const fm=PH.filter(p=>p.q===0.5 && p.date.getUTCFullYear()===2026);
+  const ds=fm.map(p=>distance(p.jde)); const dmin=Math.min(...ds), dmax=Math.max(...ds);
+  const nowJD=jdFromDate(new Date());
+  let mayCount=0;
+  document.getElementById('fulls').innerHTML=fm.map((p,i)=>{
+    const month=+ukKey(p.date).slice(5,7)-1;
+    let name=NAMES[month], note=NOTES[month]||'';
+    if(month===4){ mayCount++; if(mayCount===2){ name='Blue Moon'; note='The second full moon in a calendar month — the next one comes in December 2028.'; } }
+    if(month===8 && ukKey(p.date)<'2026-09-08'){ name='Corn Moon'; }
+    const d=ds[i];
+    const tag = d===dmin?' · <em>closest of the year</em>': d===dmax?' · <em>farthest of the year</em>':'';
+    return `<div class="fm${p.jd<nowJD?' past':''}"><svg viewBox="-31 -31 62 62" aria-hidden="true">${moonSVG(1,true,29,{detail:true})}</svg>
+      <div class="nm">${name}<small>${ukParts(p.date).weekday} ${ukParts(p.date).day} ${MONTHS[month]}</small></div>
+      <div class="when"><b>${fmtUKt.format(p.date)}</b>UK time</div>
+      <div class="dist">${Math.round(d).toLocaleString('en-GB')} km${tag}<i><b style="width:${((dmax-d)/(dmax-dmin)*100).toFixed(0)}%"></b></i></div>
+      <div class="note">${note}</div></div>`;
+  }).join('');
+}
+
+// tooltip
+const tip=document.getElementById('tip');
+function showTip(el){const r=el.getBoundingClientRect(); tip.textContent=el.dataset.tip; tip.style.opacity=1; const w=tip.offsetWidth; tip.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px'; tip.style.top=(r.top-34)+'px';}
+document.addEventListener('mouseover',e=>{const d=e.target.closest('.day[data-tip]'); if(d) showTip(d); else tip.style.opacity=0;});
+document.addEventListener('focusin',e=>{const d=e.target.closest('.day[data-tip]'); if(d) showTip(d);});
+document.addEventListener('focusout',()=>tip.style.opacity=0);
+addEventListener('scroll',()=>tip.style.opacity=0,{passive:true});
+
+tonight(); months(); fulls();
+setInterval(tonight,60000);
+})();
+</script>
+</body>
+</html>

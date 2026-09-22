@@ -406,11 +406,12 @@ $('clearBtn').addEventListener('click', clearDish);
 try { const s = localStorage.getItem('morphogen.stain'); const f = STAINS.find(x => x.id === s); if (f) stain = f; } catch (e) {}
 $('grid').textContent = SIM + '²';
 
-let raf = 0, lastGenShown = -1;
+let raf = 0, lastGenShown = -1, warm = reduce.matches ? 0 : 90;
 function frame() {
   raf = 0;
   if (document.hidden) return;
-  if (running) stepSim(speed);
+  if (running) stepSim(speed + (warm > 0 ? 36 : 0));
+  if (warm > 0) warm--;
   else if (brush) stepSim(1);
   draw();
   if (gen !== lastGenShown) { $('gen').textContent = gen.toLocaleString('en-US'); lastGenShown = gen; }
@@ -423,7 +424,7 @@ new ResizeObserver(() => { resize(); if (A) draw(); }).observe(canvas);
 resize();
 choose(PRESETS[0]);
 if (!replate()) return;
-stepSim(5000); // pre-grow so the plate is already alive at rest
+stepSim(700); // pre-grow so the plate is already alive at rest; the rest grows over the first seconds
 draw();
 kick();
 })();

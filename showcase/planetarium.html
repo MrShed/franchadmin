@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brass Dome Planetarium</title>
+<meta name="description" content="A live night-sky planetarium: nearly three hundred real bright stars, constellation figures, the Milky Way, Sun and Moon computed for the current time and your chosen city, drag to look around and hover for names.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Spectral:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#02040c;
+  --brass:#c8a25a;
+  --brass2:#8a6a2e;
+  --parch:#efe4c8;
+  --dim:#8f8a78;
+  --line:rgba(200,162,90,.28);
+  --panel:rgba(8,9,16,.78);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--sky);color:var(--parch);font-family:Spectral,"Iowan Old Style",Georgia,serif;font-weight:300;overflow:hidden}
+#sky{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#sky.drag{cursor:grabbing}
+.title{position:fixed;left:max(20px,env(safe-area-inset-left));top:max(16px,env(safe-area-inset-top));z-index:2;pointer-events:none}
+.title h1{font-family:Cinzel,"Trajan Pro",Georgia,serif;font-weight:600;font-size:clamp(20px,2.6vw,32px);letter-spacing:.18em;margin:0;color:var(--brass);text-shadow:0 1px 0 #000}
+.title p{margin:6px 0 0;font-size:14px;font-style:italic;color:var(--dim)}
+.title p b{font-style:normal;font-weight:400;color:var(--parch)}
+.back{position:fixed;right:max(20px,env(safe-area-inset-right));top:max(18px,env(safe-area-inset-top));z-index:3;font-family:Cinzel,Georgia,serif;font-size:12px;letter-spacing:.2em;color:var(--brass);text-decoration:none;border:1px solid var(--line);padding:6px 12px;background:var(--panel)}
+.back:hover,.back:focus-visible{background:var(--brass);color:#120c02;outline:none}
+.console{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);z-index:3;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);box-shadow:0 0 0 4px rgba(0,0,0,.4),inset 0 1px 0 rgba(200,162,90,.2);padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:center;font-size:14px}
+.grp{display:flex;gap:6px;align-items:center}
+.lbl{font-family:Cinzel,serif;font-size:10px;letter-spacing:.2em;color:var(--brass);text-transform:uppercase}
+select,input[type=datetime-local],input[type=number]{background:#0c0d16;color:var(--parch);border:1px solid var(--line);font:inherit;font-size:14px;padding:4px 6px;color-scheme:dark}
+input[type=number]{width:74px}
+.b{background:transparent;border:1px solid var(--line);color:var(--parch);font-family:Cinzel,serif;font-size:11px;letter-spacing:.14em;padding:6px 10px;cursor:pointer}
+.b:hover{border-color:var(--brass);color:var(--brass)}
+.b[aria-pressed=true]{background:var(--brass);color:#120c02;border-color:var(--brass)}
+.b:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.tip{position:fixed;z-index:4;pointer-events:none;background:rgba(8,9,16,.92);border:1px solid var(--line);padding:8px 12px;font-size:13px;line-height:1.45;opacity:0;transition:opacity .15s;min-width:170px}
+.tip h3{font-family:Cinzel,serif;font-weight:600;font-size:14px;letter-spacing:.08em;margin:0 0 2px;color:var(--brass)}
+.tip small{color:var(--dim);font-size:12px}
+.compass{position:fixed;right:max(20px,env(safe-area-inset-right));top:max(60px,calc(env(safe-area-inset-top) + 48px));z-index:2;text-align:right;font-family:Cinzel,serif;font-size:11px;letter-spacing:.16em;color:var(--dim);pointer-events:none;line-height:1.9}
+.compass b{color:var(--parch);font-weight:400}
+.custom{display:none;gap:6px;align-items:center}
+.custom.on{display:flex}
+@media (max-width:760px){
+  .console{gap:8px 10px;font-size:13px;padding:8px 10px}
+  .title p{display:none}
+  .compass{display:none}
+  .hideS{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="sky" aria-label="Sky map. Drag to look around, scroll or pinch to zoom, hover a star for its name."></canvas>
+<div class="title"><h1>Brass Dome</h1><p>Looking <b id="facing">south</b> from <b id="where">London</b> · <b id="when">now</b></p></div>
+<a class="back" href="index.html">← Showcase</a>
+<div class="compass" aria-live="polite"><div>Azimuth <b id="cAz">180°</b></div><div>Altitude <b id="cAlt">35°</b></div><div>Field <b id="cFov">100°</b></div><div>Sidereal <b id="cLst">--</b></div></div>
+<div class="tip" id="tip" role="status"></div>
+
+<div class="console" role="toolbar" aria-label="Planetarium controls">
+  <div class="grp"><label class="lbl" for="city">Place</label>
+    <select id="city">
+      <option value="51.5074,-0.1278,London">London</option>
+      <option value="55.9533,-3.1883,Edinburgh">Edinburgh</option>
+      <option value="64.1466,-21.9426,Reykjavík">Reykjavík</option>
+      <option value="40.7128,-74.0060,New York">New York</option>
+      <option value="19.8207,-155.4681,Mauna Kea">Mauna Kea</option>
+      <option value="-0.1807,-78.4678,Quito">Quito</option>
+      <option value="-24.6272,-70.4042,Atacama">Atacama</option>
+      <option value="-33.9249,18.4241,Cape Town">Cape Town</option>
+      <option value="-33.8688,151.2093,Sydney">Sydney</option>
+      <option value="35.6762,139.6503,Tokyo">Tokyo</option>
+      <option value="custom">Custom…</option>
+    </select></div>
+  <div class="custom" id="customBox"><label class="lbl" for="lat">Lat</label><input id="lat" type="number" step="0.1" min="-90" max="90" value="51.5"><label class="lbl" for="lon">Lon</label><input id="lon" type="number" step="0.1" min="-180" max="180" value="-0.1"></div>
+  <div class="grp"><label class="lbl" for="dt">Time</label><input id="dt" type="datetime-local"><button class="b" id="btnNow">Now</button></div>
+  <div class="grp" role="group" aria-label="Clock speed"><span class="lbl hideS">Clock</span>
+    <button class="b" id="sp0" aria-pressed="false" data-s="0">❚❚</button>
+    <button class="b" id="sp1" aria-pressed="true" data-s="1">1×</button>
+    <button class="b" id="sp2" aria-pressed="false" data-s="600">10 min/s</button>
+    <button class="b hideS" id="sp3" aria-pressed="false" data-s="7200">2 h/s</button>
+  </div>
+  <div class="grp" role="group" aria-label="Layers">
+    <button class="b" id="lyLines" aria-pressed="true">Figures</button>
+    <button class="b" id="lyNames" aria-pressed="true">Names</button>
+    <button class="b" id="lyGrid" aria-pressed="false">Grid</button>
+    <button class="b hideS" id="lyMW" aria-pressed="true">Milky Way</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const D2R=Math.PI/180,R2D=180/Math.PI;
+// [name, RA hours, Dec degrees, magnitude, constellation, colour hint]
+const S=[
+['Sirius',6.752,-16.716,-1.46,'CMa','w'],['Canopus',6.399,-52.696,-0.74,'Car','w'],['Rigil Kentaurus',14.660,-60.834,-0.27,'Cen','y'],['Arcturus',14.261,19.182,-0.05,'Boo','o'],
+['Vega',18.616,38.784,0.03,'Lyr','b'],['Capella',5.278,45.998,0.08,'Aur','y'],['Rigel',5.242,-8.202,0.13,'Ori','b'],['Procyon',7.655,5.225,0.34,'CMi','w'],
+['Achernar',1.629,-57.237,0.46,'Eri','b'],['Betelgeuse',5.919,7.407,0.50,'Ori','r'],['Hadar',14.064,-60.373,0.61,'Cen','b'],['Altair',19.846,8.868,0.77,'Aql','w'],
+['Acrux',12.443,-63.099,0.76,'Cru','b'],['Aldebaran',4.599,16.509,0.87,'Tau','o'],['Antares',16.490,-26.432,1.06,'Sco','r'],['Spica',13.420,-11.161,0.97,'Vir','b'],
+['Pollux',7.755,28.026,1.14,'Gem','o'],['Fomalhaut',22.961,-29.622,1.16,'PsA','w'],['Deneb',20.690,45.280,1.25,'Cyg','w'],['Mimosa',12.795,-59.689,1.25,'Cru','b'],
+['Regulus',10.140,11.967,1.35,'Leo','b'],['Adhara',6.977,-28.972,1.50,'CMa','b'],['Castor',7.577,31.888,1.58,'Gem','w'],['Shaula',17.560,-37.104,1.62,'Sco','b'],
+['Gacrux',12.519,-57.113,1.63,'Cru','r'],['Bellatrix',5.419,6.350,1.64,'Ori','b'],['Elnath',5.438,28.608,1.65,'Tau','b'],['Miaplacidus',9.220,-69.717,1.67,'Car','w'],
+['Alnilam',5.604,-1.202,1.69,'Ori','b'],['Alnair',22.137,-46.961,1.74,'Gru','b'],['Alnitak',5.679,-1.943,1.77,'Ori','b'],['Alioth',12.900,55.960,1.77,'UMa','w'],
+['Dubhe',11.062,61.751,1.79,'UMa','o'],['Mirfak',3.405,49.861,1.79,'Per','y'],['Kaus Australis',18.403,-34.385,1.79,'Sgr','w'],['Wezen',7.140,-26.393,1.84,'CMa','y'],
+['Avior',8.375,-59.510,1.86,'Car','o'],['Alkaid',13.792,49.313,1.86,'UMa','b'],['Sargas',17.622,-42.998,1.86,'Sco','y'],['Menkalinan',5.992,44.948,1.90,'Aur','w'],
+['Atria',16.811,-69.028,1.91,'TrA','o'],['Alhena',6.629,16.399,1.93,'Gem','w'],['Peacock',20.427,-56.735,1.94,'Pav','b'],['Delta Velorum',8.745,-54.709,1.96,'Vel','w'],
+['Mirzam',6.378,-17.956,1.98,'CMa','b'],['Polaris',2.530,89.264,1.98,'UMi','y'],['Alphard',9.460,-8.659,1.98,'Hya','o'],['Regor',8.159,-47.337,1.83,'Vel','b'],
+['Hamal',2.120,23.462,2.00,'Ari','o'],['Diphda',0.727,-17.987,2.04,'Cet','y'],['Nunki',18.921,-26.297,2.05,'Sgr','b'],['Menkent',14.111,-36.370,2.06,'Cen','o'],
+['Alpheratz',0.140,29.091,2.06,'And','b'],['Mirach',1.162,35.621,2.05,'And','r'],['Saiph',5.796,-9.670,2.09,'Ori','b'],['Kochab',14.845,74.156,2.08,'UMi','o'],
+['Rasalhague',17.582,12.560,2.08,'Oph','w'],['Algol',3.136,40.956,2.10,'Per','b'],['Almach',2.065,42.330,2.10,'And','o'],['Denebola',11.818,14.572,2.14,'Leo','w'],
+['Navi',0.945,60.717,2.15,'Cas','b'],['Gamma Centauri',12.692,-48.960,2.20,'Cen','w'],['Naos',8.060,-40.003,2.21,'Pup','b'],['Aspidiske',9.285,-59.275,2.21,'Car','w'],
+['Suhail',9.133,-43.433,2.21,'Vel','o'],['Alphecca',15.578,26.715,2.23,'CrB','w'],['Mintaka',5.533,-0.299,2.23,'Ori','b'],['Sadr',20.370,40.257,2.23,'Cyg','y'],
+['Eltanin',17.943,51.489,2.23,'Dra','o'],['Schedar',0.675,56.537,2.24,'Cas','o'],['Caph',0.153,59.150,2.28,'Cas','w'],['Dschubba',16.006,-22.622,2.29,'Sco','b'],
+['Larawag',16.836,-34.293,2.29,'Sco','o'],['Epsilon Centauri',13.665,-53.466,2.30,'Cen','b'],['Alpha Lupi',14.699,-47.388,2.30,'Lup','b'],['Eta Centauri',14.592,-42.158,2.33,'Cen','b'],
+['Merak',11.031,56.382,2.37,'UMa','w'],['Izar',14.750,27.074,2.37,'Boo','o'],['Enif',21.736,9.875,2.39,'Peg','o'],['Kappa Scorpii',17.708,-39.030,2.41,'Sco','b'],
+['Ankaa',0.438,-42.306,2.40,'Phe','o'],['Phecda',11.897,53.695,2.44,'UMa','w'],['Sabik',17.173,-15.725,2.43,'Oph','w'],['Scheat',23.063,28.083,2.42,'Peg','r'],
+['Alderamin',21.310,62.585,2.45,'Cep','w'],['Aludra',7.402,-29.303,2.45,'CMa','b'],['Markeb',9.368,-55.011,2.47,'Vel','b'],['Gienah',20.770,33.970,2.48,'Cyg','o'],
+['Markab',23.079,15.205,2.48,'Peg','b'],['Menkar',3.038,4.090,2.54,'Cet','r'],['Zeta Ophiuchi',16.619,-10.567,2.54,'Oph','b'],['Zeta Centauri',13.926,-47.288,2.55,'Cen','b'],
+['Zosma',11.235,20.524,2.56,'Leo','w'],['Acrab',16.091,-19.806,2.56,'Sco','b'],['Arneb',5.546,-17.822,2.58,'Lep','y'],['Gienah Corvi',12.263,-17.542,2.59,'Crv','b'],
+['Ascella',19.044,-29.880,2.60,'Sgr','w'],['Zubeneschamali',15.283,-9.383,2.61,'Lib','b'],['Unukalhai',15.738,6.426,2.63,'Ser','o'],['Sheratan',1.911,20.808,2.64,'Ari','w'],
+['Phact',5.661,-34.074,2.64,'Col','b'],['Kraz',12.573,-23.397,2.65,'Crv','y'],['Mahasim',5.995,37.213,2.62,'Aur','w'],['Ruchbah',1.430,60.235,2.66,'Cas','w'],
+['Muphrid',13.911,18.398,2.68,'Boo','y'],['Hassaleh',4.950,33.166,2.69,'Aur','o'],['Lesath',17.513,-37.296,2.69,'Sco','b'],['Alpha Muscae',12.620,-69.136,2.69,'Mus','b'],
+['Kaus Media',18.350,-29.828,2.70,'Sgr','o'],['Pi Puppis',7.286,-37.097,2.70,'Pup','o'],['Tarazed',19.771,10.613,2.72,'Aql','o'],['Athebyne',16.400,61.514,2.73,'Dra','y'],
+['Yed Prior',16.239,-3.694,2.74,'Oph','r'],['Porrima',12.694,-1.449,2.74,'Vir','w'],['Zubenelgenubi',14.848,-16.042,2.75,'Lib','w'],['Theta Carinae',10.716,-64.394,2.76,'Car','b'],
+['Hatysa',5.590,-5.910,2.77,'Ori','b'],['Kornephoros',16.504,21.490,2.77,'Her','y'],['Cebalrai',17.725,4.567,2.77,'Oph','o'],['Cursa',5.131,-5.086,2.78,'Eri','w'],
+['Tureis',8.126,-24.304,2.78,'Pup','w'],['Rastaban',17.507,52.301,2.79,'Dra','y'],['Imai',12.252,-58.749,2.79,'Cru','b'],['Kaus Borealis',18.466,-25.422,2.81,'Sgr','o'],
+['Zeta Herculis',16.688,31.603,2.81,'Her','y'],['Tau Scorpii',16.598,-28.216,2.82,'Sco','b'],['Beta Hydri',0.429,-77.254,2.82,'Hyi','y'],['Beta Trianguli Australis',15.919,-63.430,2.83,'TrA','w'],
+['Algenib',0.221,15.184,2.83,'Peg','b'],['Vindemiatrix',13.036,10.959,2.83,'Vir','y'],['Nihal',5.471,-20.759,2.84,'Lep','y'],['Beta Arae',17.422,-55.530,2.84,'Ara','o'],
+['Alpha Arae',17.531,-49.876,2.84,'Ara','b'],['Tianguan',5.627,21.143,3.00,'Tau','b'],['Deneb Algedi',21.784,-16.127,2.85,'Cap','w'],['Epsilon Persei',3.964,40.010,2.88,'Per','b'],
+['Zeta Persei',3.902,31.884,2.85,'Per','b'],['Alcyone',3.791,24.105,2.87,'Tau','b'],['Sadalsuud',21.526,-5.571,2.87,'Aqr','y'],['Gamma Trianguli Australis',15.315,-68.679,2.87,'TrA','w'],
+['Tejat',6.383,22.514,2.87,'Gem','r'],['Alpha Tucanae',22.308,-60.259,2.86,'Tuc','o'],['Alpha Hydri',1.980,-61.570,2.86,'Hyi','w'],['Acamar',2.971,-40.305,2.88,'Eri','w'],
+['Fawaris',19.750,45.131,2.87,'Cyg','w'],['Pi Scorpii',15.981,-26.114,2.89,'Sco','b'],['Gomeisa',7.453,8.289,2.89,'CMi','b'],['Cor Caroli',12.934,38.318,2.90,'CVn','w'],
+['Sigma Scorpii',16.353,-25.593,2.90,'Sco','b'],['Upsilon Carinae',9.785,-65.072,2.92,'Car','w'],['Gamma Persei',3.080,53.506,2.93,'Per','y'],['Tau Puppis',6.832,-50.615,2.93,'Pup','o'],
+['Sadalmelik',22.096,-0.320,2.94,'Aqr','y'],['Matar',22.717,30.221,2.94,'Peg','y'],['Algorab',12.498,-16.515,2.95,'Crv','w'],['Zaurak',3.967,-13.509,2.95,'Eri','r'],
+['Epsilon Leonis',9.764,23.774,2.98,'Leo','y'],['Mebsuta',6.732,25.131,2.98,'Gem','y'],['Alnasl',18.097,-30.424,2.99,'Sgr','o'],['Almaaz',5.033,43.823,2.99,'Aur','w'],
+['Okab',19.090,13.863,2.99,'Aql','w'],['Iota Scorpii',17.793,-40.127,2.99,'Sco','w'],['Mira',2.322,-2.978,3.00,'Cet','r'],['Minkar',12.169,-22.620,3.00,'Crv','o'],
+['Pherkad',15.345,71.834,3.00,'UMi','w'],['Gamma Hydrae',13.315,-23.171,3.00,'Hya','y'],['Mu Scorpii',16.864,-38.047,3.00,'Sco','b'],['Beta Trianguli',2.159,34.987,3.00,'Tri','w'],
+['Psi Ursae Majoris',11.161,44.498,3.01,'UMa','o'],['Delta Persei',3.715,47.788,3.01,'Per','b'],['Furud',6.338,-30.063,3.02,'CMa','b'],['Omicron² Canis Majoris',7.050,-23.833,3.02,'CMa','b'],
+['Seginus',14.535,38.308,3.03,'Boo','w'],['Mu Centauri',13.827,-42.474,3.04,'Cen','b'],['Tania Australis',10.372,41.499,3.05,'UMa','r'],['Dabih',20.350,-14.781,3.05,'Cap','y'],
+['Altais',19.209,67.662,3.07,'Dra','y'],['Albireo',19.512,27.960,3.08,'Cyg','o'],['Algieba',10.333,19.842,2.08,'Leo','o'],['Zeta Hydrae',8.923,5.946,3.11,'Hya','o'],
+['Nu Hydrae',10.827,-16.194,3.11,'Hya','o'],['Eta Sagittarii',18.294,-36.761,3.11,'Sgr','r'],['Wazn',5.849,-35.768,3.12,'Col','o'],['Kappa Centauri',14.986,-42.104,3.13,'Cen','b'],
+['Talitha',8.987,48.042,3.14,'UMa','w'],['Sarin',17.251,24.839,3.14,'Her','w'],['Alpha Lyncis',9.351,34.393,3.14,'Lyn','r'],['Pi Herculis',17.251,36.809,3.16,'Her','o'],
+['Theta Ursae Majoris',9.548,51.678,3.17,'UMa','w'],['Aldhibah',17.146,65.715,3.17,'Dra','b'],['Haedus',5.109,41.234,3.17,'Aur','b'],['Phi Sagittarii',18.761,-26.991,3.17,'Sgr','b'],
+['Nu Puppis',6.629,-43.196,3.17,'Pup','b'],['Pi³ Orionis',4.830,6.961,3.19,'Ori','w'],['Epsilon Leporis',5.091,-22.371,3.19,'Lep','o'],['Zeta Cygni',21.216,30.227,3.20,'Cyg','y'],
+['Kappa Ophiuchi',16.961,9.375,3.20,'Oph','o'],['Errai',23.656,77.632,3.21,'Cep','o'],['Alfirk',21.478,70.561,3.23,'Cep','b'],['Theta Aquilae',20.188,-0.821,3.23,'Aql','b'],
+['Yed Posterior',16.305,-4.693,3.24,'Oph','y'],['Pi Hydrae',14.106,-26.682,3.25,'Hya','o'],['Sulafat',18.982,32.690,3.25,'Lyr','b'],['Skat',22.911,-15.821,3.27,'Aqr','w'],
+['Delta Andromedae',0.655,30.861,3.27,'And','o'],['Theta Ophiuchi',17.366,-24.999,3.27,'Oph','b'],['Brachium',15.068,-25.282,3.29,'Lib','r'],['Edasich',15.415,58.966,3.29,'Dra','o'],
+['Megrez',12.257,57.033,3.31,'UMa','w'],['Mu Leporis',5.216,-16.206,3.31,'Lep','b'],['Tau Sagittarii',19.116,-27.671,3.32,'Sgr','o'],['Chertan',11.237,15.430,3.33,'Leo','w'],
+['Eta Scorpii',17.203,-43.239,3.33,'Sco','w'],['Nu Ophiuchi',17.984,-9.774,3.34,'Oph','y'],['Segin',1.907,63.670,3.35,'Cas','b'],['Zeta Cephei',22.181,58.201,3.35,'Cep','o'],
+['Alzirr',6.755,12.896,3.35,'Gem','w'],['Muscida',8.504,60.718,3.36,'UMa','y'],['Delta Aquilae',19.425,3.115,3.36,'Aql','w'],['Heze',13.578,-0.596,3.37,'Vir','w'],
+['Auva',12.927,3.397,3.38,'Vir','r'],['Epsilon Hydrae',8.779,6.419,3.38,'Hya','y'],['Meissa',5.585,9.934,3.39,'Ori','b'],['Rho Persei',3.086,38.840,3.39,'Per','r'],
+['Homam',22.691,10.831,3.40,'Peg','b'],['Theta² Tauri',4.478,15.871,3.40,'Tau','w'],['Nu Centauri',13.825,-41.688,3.41,'Cen','b'],['Mu Herculis',17.774,27.720,3.42,'Her','y'],
+['Alpha Trianguli',1.885,29.579,3.42,'Tri','w'],['Lambda Aquilae',19.104,-4.882,3.43,'Aql','b'],['Eta Cephei',20.755,61.839,3.43,'Cep','o'],['Adhafera',10.278,23.417,3.44,'Leo','w'],
+['Tania Borealis',10.284,42.914,3.45,'UMa','w'],['Eta Ceti',1.143,-10.182,3.45,'Cet','o'],['Lambda Tauri',4.011,12.490,3.47,'Tau','b'],['Delta Boötis',15.258,33.315,3.47,'Boo','y'],
+['Gamma Ceti',2.722,3.236,3.47,'Cet','w'],['Rasalgethi',17.244,14.390,3.48,'Her','r'],['Mu Pegasi',22.833,24.602,3.48,'Peg','y'],['Alula Borealis',11.308,33.094,3.48,'UMa','o'],
+['Eta Leonis',10.122,16.763,3.49,'Leo','w'],['Tau Ceti',1.734,-15.938,3.50,'Cet','y'],['Nekkar',15.032,40.390,3.50,'Boo','y'],['Tarf',8.275,9.186,3.52,'Cnc','o'],
+['Sheliak',18.835,33.363,3.52,'Lyr','w'],['Iota Pegasi',22.117,25.345,3.77,'Peg','w'],['Biham',22.170,6.198,3.53,'Peg','w'],['Wasat',7.335,21.982,3.53,'Gem','w'],
+['Ain',4.477,19.180,3.53,'Tau','o'],['Eta Herculis',16.715,38.922,3.53,'Her','y'],['Xi Hydrae',11.550,-31.858,3.54,'Hya','y'],['Zeta Leporis',5.783,-14.822,3.55,'Lep','w'],
+['Iota Ceti',0.324,-8.824,3.56,'Cet','o'],['Kappa Geminorum',7.740,24.398,3.57,'Gem','y'],['Chi Draconis',18.351,72.733,3.57,'Dra','w'],['Lambda Geminorum',7.301,16.540,3.58,'Gem','w'],
+['Rho Boötis',14.530,30.371,3.58,'Boo','o'],['Upsilon Librae',15.617,-28.135,3.58,'Lib','o'],['Epsilon Crucis',12.356,-60.401,3.59,'Cru','o'],['Gamma Leporis',5.741,-22.448,3.59,'Lep','y'],
+['Theta Ceti',1.400,-8.183,3.60,'Cet','o'],['Kappa Ursae Majoris',9.060,47.157,3.60,'UMa','w'],['Bharani',2.833,27.260,3.61,'Ari','b'],['Zavijava',11.845,1.765,3.61,'Vir','w'],
+['Lambda Hydrae',10.176,-12.354,3.61,'Hya','o'],['Atlas',3.819,24.053,3.62,'Tau','b'],['Zeta Lyrae',18.746,37.605,4.36,'Lyr','w'],['Rotanev',20.626,14.595,3.63,'Del','w'],
+['Thuban',14.073,64.376,3.65,'Dra','w'],['Zeta Aquarii',22.481,-0.020,3.65,'Aqr','w'],['Gamma Tauri',4.330,15.628,3.65,'Tau','o'],['Tau Librae',15.644,-29.778,3.66,'Lib','b'],
+['Nusakan',15.464,29.106,3.66,'CrB','w'],['23 Ursae Majoris',9.525,63.062,3.67,'UMa','w'],['Nashira',21.668,-16.662,3.68,'Cap','w'],['Muliphein',7.063,-15.633,4.10,'CMa','b'],
+['Pi⁴ Orionis',4.853,5.605,3.69,'Ori','b'],['Electra',3.747,24.113,3.70,'Tau','b'],['Alshain',19.922,6.407,3.71,'Aql','y'],['Pi⁵ Orionis',4.904,2.441,3.72,'Ori','b'],
+['Chi Ursae Majoris',11.767,47.779,3.71,'UMa','o'],['Zeta Ceti',1.858,-10.335,3.73,'Cet','o'],['Zeta Capricorni',21.444,-22.411,3.74,'Cap','y'],['Lambda Aquarii',22.877,-7.580,3.74,'Aqr','r'],
+['Grumium',17.892,56.873,3.75,'Dra','o'],['Eta Persei',2.845,55.896,3.76,'Per','o'],['Delta¹ Tauri',4.382,17.543,3.76,'Tau','o'],['Nu Persei',3.753,42.579,3.77,'Per','y'],
+['Sualocin',20.661,15.912,3.77,'Del','b'],['Albali',20.795,-9.496,3.77,'Aqr','w'],['Zeta Boötis',14.686,13.728,3.78,'Boo','w'],['Alula Australis',11.303,31.529,3.79,'UMa','y'],
+['Iota Geminorum',7.429,27.798,3.79,'Gem','y'],['Iota Herculis',17.657,46.006,3.80,'Her','b'],['Upsilon Ursae Majoris',9.849,59.039,3.80,'UMa','w'],['Gamma Coronae Borealis',15.712,26.296,3.81,'CrB','w'],
+['Delta Leporis',5.940,-20.879,3.81,'Lep','y'],['Mu Hydrae',10.434,-16.836,3.81,'Hya','o'],['Atik',3.738,32.288,3.83,'Per','b'],['Epsilon Draconis',19.803,70.268,3.83,'Dra','y'],
+['Sadachbia',22.361,-1.387,3.84,'Aqr','w'],['Giausar',11.523,69.331,3.84,'Dra','r'],['Theta Herculis',17.937,37.250,3.86,'Her','o'],['Maia',3.764,24.368,3.87,'Tau','b'],
+['Mu Andromedae',0.946,38.500,3.87,'And','w'],['Eta Aquilae',19.874,1.006,3.87,'Aql','y'],['Mu Virginis',14.718,-5.658,3.87,'Vir','w'],['Kappa Draconis',12.558,69.788,3.87,'Dra','b'],
+['Theta Hydrae',9.239,2.314,3.88,'Hya','w'],['Mesarthim',1.892,19.294,3.88,'Ari','w'],['Zaniah',12.332,-0.667,3.89,'Vir','w'],['Iota Hydrae',9.664,-1.143,3.91,'Hya','o'],
+['Epsilon Herculis',17.005,30.926,3.92,'Her','w'],['Gamma Librae',15.592,-14.789,3.91,'Lib','o'],['Asellus Australis',8.745,18.154,3.94,'Cnc','o'],['Lambda Pegasi',22.775,23.566,3.95,'Peg','y'],
+['Eta Aquarii',22.589,-0.117,4.02,'Aqr','b'],['Iota Cancri',8.778,28.760,4.02,'Cnc','y'],['Alchiba',12.140,-24.729,4.02,'Crv','w'],['Epsilon Delphini',20.554,11.303,4.03,'Del','b'],
+['Menkib',3.983,35.791,4.04,'Per','b'],['Theta Draconis',16.031,58.565,4.01,'Dra','w'],['Delta Cephei',22.486,58.415,4.07,'Cep','y'],['Delta Ceti',2.658,0.329,4.07,'Cet','b'],
+['Theta Capricorni',21.099,-17.233,4.07,'Cap','w'],['Iota Virginis',14.267,-6.000,4.08,'Vir','w'],['Omega Capricorni',20.864,-26.919,4.11,'Cap','r'],['Kappa Pegasi',21.745,25.645,4.13,'Peg','w'],
+['Upsilon¹ Hydrae',9.858,-14.846,4.12,'Hya','y'],['Delta Hydrae',8.628,5.704,4.14,'Hya','w'],['Theta Coronae Borealis',15.549,31.359,4.14,'CrB','b'],['Psi Capricorni',20.768,-25.271,4.14,'Cap','w'],
+['Epsilon Coronae Borealis',15.960,26.878,4.15,'CrB','o'],['Nu Geminorum',6.483,20.212,4.15,'Gem','b'],['Merope',3.772,23.948,4.18,'Tau','b'],['Epsilon Ursae Minoris',16.766,82.037,4.21,'UMi','y'],
+['Acubens',8.975,11.858,4.25,'Cnc','w'],['Beta Comae Berenices',13.198,27.878,4.26,'Com','y'],['Chara',12.562,41.357,4.26,'CVn','y'],['Gamma² Delphini',20.777,16.124,4.27,'Del','y'],
+['Zeta Ursae Minoris',15.734,77.795,4.29,'UMi','w'],['Taygeta',3.754,24.467,4.30,'Tau','b'],['Delta² Lyrae',18.908,36.899,4.30,'Lyr','r'],['Pi² Orionis',4.843,8.900,4.35,'Ori','w'],
+['Yildun',17.537,86.586,4.35,'UMi','w'],['Tau Geminorum',7.186,30.245,4.41,'Gem','o'],['Lambda Herculis',17.513,26.110,4.41,'Her','o'],['Delta Delphini',20.724,15.075,4.43,'Del','w'],
+['Xi Orionis',6.199,14.209,4.45,'Ori','b'],['Mu Orionis',6.040,9.648,4.12,'Ori','w'],['Chi¹ Orionis',5.906,20.276,4.39,'Ori','y'],['Nu Orionis',6.126,14.768,4.42,'Ori','b'],
+['Nu Andromedae',0.830,41.079,4.53,'And','b'],['Epsilon Lyrae',18.739,39.670,4.60,'Lyr','w'],['Delta Coronae Borealis',15.826,26.068,4.63,'CrB','y'],['Asellus Borealis',8.722,21.469,4.66,'Cnc','w'],
+['Eta Ursae Minoris',16.292,75.755,4.95,'UMi','w'],['Iota Coronae Borealis',16.024,29.851,4.98,'CrB','w'],['Mekbuda',7.068,20.570,3.90,'Gem','y'],['Propus',6.248,22.507,3.30,'Gem','r'],
+['Beta Lupi',14.976,-43.134,2.68,'Lup','b'],['Mu Velorum',10.779,-49.420,2.69,'Vel','y'],['Iota Centauri',13.343,-36.712,2.75,'Cen','w'],['Delta Centauri',12.139,-50.722,2.52,'Cen','b'],
+['Tiaki',22.711,-46.885,2.07,'Gru','r'],['Sigma Octantis',21.146,-88.956,5.40,'Oct','w'],['Delta Capricorni',21.784,-16.127,2.85,'Cap','w']
+];
+const CON={Ori:'Orion',UMa:'Ursa Major',UMi:'Ursa Minor',Cas:'Cassiopeia',Cyg:'Cygnus',Lyr:'Lyra',Aql:'Aquila',Sco:'Scorpius',Sgr:'Sagittarius',Leo:'Leo',Gem:'Gemini',Tau:'Taurus',CMa:'Canis Major',CMi:'Canis Minor',Aur:'Auriga',Per:'Perseus',And:'Andromeda',Peg:'Pegasus',Boo:'Boötes',CrB:'Corona Borealis',Her:'Hercules',Vir:'Virgo',Cru:'Crux',Cen:'Centaurus',Dra:'Draco',Cep:'Cepheus',Ari:'Aries',Lib:'Libra',Cap:'Capricornus',Aqr:'Aquarius',PsA:'Piscis Austrinus',Gru:'Grus',Eri:'Eridanus',Car:'Carina',Vel:'Vela',Pup:'Puppis',Col:'Columba',Lep:'Lepus',Hya:'Hydra',Crv:'Corvus',Oph:'Ophiuchus',Ser:'Serpens',Del:'Delphinus',Tri:'Triangulum',Cet:'Cetus',TrA:'Triangulum Australe',Pav:'Pavo',Ara:'Ara',Lup:'Lupus',Mus:'Musca',Hyi:'Hydrus',Phe:'Phoenix',Tuc:'Tucana',Lyn:'Lynx',CVn:'Canes Venatici',Com:'Coma Berenices',Cnc:'Cancer',Oct:'Octans'};
+const FIG={
+Ori:[['Betelgeuse','Bellatrix'],['Bellatrix','Mintaka'],['Betelgeuse','Alnitak'],['Mintaka','Alnilam'],['Alnilam','Alnitak'],['Alnitak','Saiph'],['Mintaka','Rigel'],['Meissa','Betelgeuse'],['Meissa','Bellatrix'],['Bellatrix','Pi³ Orionis'],['Pi³ Orionis','Pi² Orionis'],['Pi³ Orionis','Pi⁴ Orionis'],['Pi⁴ Orionis','Pi⁵ Orionis'],['Betelgeuse','Mu Orionis'],['Mu Orionis','Xi Orionis'],['Xi Orionis','Chi¹ Orionis'],['Xi Orionis','Nu Orionis']],
+UMa:[['Alkaid','Mizar'],['Mizar','Alioth'],['Alioth','Megrez'],['Megrez','Phecda'],['Phecda','Merak'],['Merak','Dubhe'],['Dubhe','Megrez'],['Dubhe','23 Ursae Majoris'],['23 Ursae Majoris','Muscida'],['23 Ursae Majoris','Upsilon Ursae Majoris'],['Upsilon Ursae Majoris','Theta Ursae Majoris'],['Theta Ursae Majoris','Talitha'],['Talitha','Kappa Ursae Majoris'],['Phecda','Chi Ursae Majoris'],['Chi Ursae Majoris','Psi Ursae Majoris'],['Psi Ursae Majoris','Tania Borealis'],['Tania Borealis','Tania Australis'],['Chi Ursae Majoris','Alula Borealis'],['Alula Borealis','Alula Australis']],
+UMi:[['Polaris','Yildun'],['Yildun','Epsilon Ursae Minoris'],['Epsilon Ursae Minoris','Zeta Ursae Minoris'],['Zeta Ursae Minoris','Kochab'],['Kochab','Pherkad'],['Pherkad','Eta Ursae Minoris'],['Eta Ursae Minoris','Zeta Ursae Minoris']],
+Cas:[['Caph','Schedar'],['Schedar','Navi'],['Navi','Ruchbah'],['Ruchbah','Segin']],
+Cyg:[['Deneb','Sadr'],['Sadr','Albireo'],['Fawaris','Sadr'],['Sadr','Gienah'],['Gienah','Zeta Cygni']],
+Lyr:[['Vega','Zeta Lyrae'],['Zeta Lyrae','Sheliak'],['Sheliak','Sulafat'],['Sulafat','Delta² Lyrae'],['Delta² Lyrae','Zeta Lyrae'],['Vega','Epsilon Lyrae']],
+Aql:[['Tarazed','Altair'],['Altair','Alshain'],['Altair','Delta Aquilae'],['Delta Aquilae','Lambda Aquilae'],['Delta Aquilae','Eta Aquilae'],['Eta Aquilae','Theta Aquilae'],['Okab','Tarazed']],
+Sco:[['Acrab','Dschubba'],['Dschubba','Pi Scorpii'],['Dschubba','Sigma Scorpii'],['Sigma Scorpii','Antares'],['Antares','Tau Scorpii'],['Tau Scorpii','Larawag'],['Larawag','Mu Scorpii'],['Mu Scorpii','Eta Scorpii'],['Eta Scorpii','Sargas'],['Sargas','Iota Scorpii'],['Iota Scorpii','Kappa Scorpii'],['Kappa Scorpii','Shaula'],['Shaula','Lesath']],
+Sgr:[['Alnasl','Kaus Media'],['Kaus Media','Kaus Australis'],['Alnasl','Kaus Australis'],['Kaus Media','Phi Sagittarii'],['Kaus Media','Kaus Borealis'],['Kaus Borealis','Phi Sagittarii'],['Phi Sagittarii','Nunki'],['Nunki','Tau Sagittarii'],['Tau Sagittarii','Ascella'],['Ascella','Phi Sagittarii'],['Ascella','Kaus Australis'],['Kaus Australis','Eta Sagittarii']],
+Leo:[['Regulus','Eta Leonis'],['Eta Leonis','Algieba'],['Algieba','Adhafera'],['Adhafera','Rasalas'],['Algieba','Zosma'],['Zosma','Denebola'],['Denebola','Chertan'],['Chertan','Regulus'],['Zosma','Chertan'],['Adhafera','Epsilon Leonis']],
+Gem:[['Castor','Tau Geminorum'],['Tau Geminorum','Mebsuta'],['Mebsuta','Tejat'],['Tejat','Propus'],['Tejat','Nu Geminorum'],['Pollux','Iota Geminorum'],['Iota Geminorum','Tau Geminorum'],['Pollux','Kappa Geminorum'],['Pollux','Wasat'],['Wasat','Mekbuda'],['Mekbuda','Alhena'],['Wasat','Lambda Geminorum'],['Lambda Geminorum','Alzirr']],
+Tau:[['Elnath','Ain'],['Ain','Delta¹ Tauri'],['Delta¹ Tauri','Gamma Tauri'],['Gamma Tauri','Theta² Tauri'],['Theta² Tauri','Aldebaran'],['Aldebaran','Tianguan'],['Gamma Tauri','Lambda Tauri']],
+CMa:[['Sirius','Mirzam'],['Sirius','Omicron² Canis Majoris'],['Omicron² Canis Majoris','Wezen'],['Wezen','Aludra'],['Wezen','Adhara'],['Adhara','Furud'],['Sirius','Muliphein']],
+CMi:[['Procyon','Gomeisa']],
+Aur:[['Capella','Menkalinan'],['Menkalinan','Mahasim'],['Mahasim','Elnath'],['Elnath','Hassaleh'],['Hassaleh','Capella'],['Capella','Almaaz'],['Almaaz','Haedus']],
+Per:[['Eta Persei','Gamma Persei'],['Gamma Persei','Mirfak'],['Mirfak','Delta Persei'],['Delta Persei','Nu Persei'],['Nu Persei','Epsilon Persei'],['Epsilon Persei','Menkib'],['Menkib','Zeta Persei'],['Zeta Persei','Atik'],['Mirfak','Algol'],['Algol','Rho Persei']],
+And:[['Alpheratz','Delta Andromedae'],['Delta Andromedae','Mirach'],['Mirach','Almach'],['Mirach','Mu Andromedae'],['Mu Andromedae','Nu Andromedae']],
+Peg:[['Markab','Scheat'],['Scheat','Alpheratz'],['Alpheratz','Algenib'],['Algenib','Markab'],['Markab','Homam'],['Homam','Biham'],['Biham','Enif'],['Scheat','Matar'],['Scheat','Mu Pegasi'],['Mu Pegasi','Lambda Pegasi'],['Lambda Pegasi','Iota Pegasi'],['Iota Pegasi','Kappa Pegasi']],
+Boo:[['Arcturus','Izar'],['Izar','Delta Boötis'],['Delta Boötis','Nekkar'],['Nekkar','Seginus'],['Seginus','Rho Boötis'],['Rho Boötis','Arcturus'],['Arcturus','Muphrid'],['Arcturus','Zeta Boötis']],
+CrB:[['Theta Coronae Borealis','Nusakan'],['Nusakan','Alphecca'],['Alphecca','Gamma Coronae Borealis'],['Gamma Coronae Borealis','Delta Coronae Borealis'],['Delta Coronae Borealis','Epsilon Coronae Borealis'],['Epsilon Coronae Borealis','Iota Coronae Borealis']],
+Her:[['Zeta Herculis','Epsilon Herculis'],['Epsilon Herculis','Pi Herculis'],['Pi Herculis','Eta Herculis'],['Eta Herculis','Zeta Herculis'],['Zeta Herculis','Kornephoros'],['Rasalgethi','Sarin'],['Sarin','Epsilon Herculis'],['Sarin','Lambda Herculis'],['Lambda Herculis','Mu Herculis'],['Pi Herculis','Theta Herculis'],['Theta Herculis','Iota Herculis']],
+Vir:[['Zavijava','Zaniah'],['Zaniah','Porrima'],['Porrima','Auva'],['Auva','Vindemiatrix'],['Porrima','Spica'],['Auva','Heze'],['Heze','Spica'],['Heze','Iota Virginis'],['Iota Virginis','Mu Virginis']],
+Cru:[['Acrux','Gacrux'],['Mimosa','Imai']],
+Cen:[['Rigil Kentaurus','Hadar'],['Hadar','Epsilon Centauri'],['Epsilon Centauri','Gamma Centauri'],['Gamma Centauri','Delta Centauri'],['Epsilon Centauri','Zeta Centauri'],['Zeta Centauri','Eta Centauri'],['Eta Centauri','Kappa Centauri'],['Zeta Centauri','Mu Centauri'],['Mu Centauri','Nu Centauri'],['Nu Centauri','Menkent'],['Nu Centauri','Iota Centauri']],
+Dra:[['Eltanin','Rastaban'],['Rastaban','Grumium'],['Grumium','Eltanin'],['Grumium','Altais'],['Altais','Epsilon Draconis'],['Altais','Chi Draconis'],['Chi Draconis','Aldhibah'],['Aldhibah','Athebyne'],['Athebyne','Theta Draconis'],['Theta Draconis','Edasich'],['Edasich','Thuban'],['Thuban','Kappa Draconis'],['Kappa Draconis','Giausar']],
+Cep:[['Alderamin','Alfirk'],['Alfirk','Errai'],['Errai','Iota Cephei'],['Alfirk','Zeta Cephei'],['Zeta Cephei','Alderamin'],['Zeta Cephei','Delta Cephei'],['Eta Cephei','Alderamin']],
+Ari:[['Bharani','Hamal'],['Hamal','Sheratan'],['Sheratan','Mesarthim']],
+Lib:[['Zubenelgenubi','Zubeneschamali'],['Zubeneschamali','Gamma Librae'],['Gamma Librae','Upsilon Librae'],['Upsilon Librae','Tau Librae'],['Zubenelgenubi','Brachium']],
+Cap:[['Dabih','Psi Capricorni'],['Psi Capricorni','Omega Capricorni'],['Omega Capricorni','Zeta Capricorni'],['Zeta Capricorni','Deneb Algedi'],['Deneb Algedi','Nashira'],['Nashira','Theta Capricorni'],['Theta Capricorni','Dabih']],
+Aqr:[['Albali','Sadalsuud'],['Sadalsuud','Sadalmelik'],['Sadalmelik','Sadachbia'],['Sadachbia','Zeta Aquarii'],['Zeta Aquarii','Eta Aquarii'],['Zeta Aquarii','Lambda Aquarii'],['Lambda Aquarii','Skat']],
+Lep:[['Epsilon Leporis','Nihal'],['Nihal','Arneb'],['Arneb','Mu Leporis'],['Nihal','Gamma Leporis'],['Gamma Leporis','Delta Leporis'],['Arneb','Zeta Leporis']],
+Hya:[['Delta Hydrae','Epsilon Hydrae'],['Epsilon Hydrae','Zeta Hydrae'],['Zeta Hydrae','Theta Hydrae'],['Theta Hydrae','Iota Hydrae'],['Iota Hydrae','Alphard'],['Alphard','Upsilon¹ Hydrae'],['Upsilon¹ Hydrae','Lambda Hydrae'],['Lambda Hydrae','Mu Hydrae'],['Mu Hydrae','Nu Hydrae'],['Nu Hydrae','Xi Hydrae'],['Xi Hydrae','Gamma Hydrae'],['Gamma Hydrae','Pi Hydrae']],
+Crv:[['Gienah Corvi','Algorab'],['Algorab','Kraz'],['Kraz','Minkar'],['Minkar','Gienah Corvi'],['Minkar','Alchiba']],
+Oph:[['Rasalhague','Kappa Ophiuchi'],['Kappa Ophiuchi','Yed Prior'],['Yed Prior','Yed Posterior'],['Yed Posterior','Zeta Ophiuchi'],['Zeta Ophiuchi','Sabik'],['Sabik','Nu Ophiuchi'],['Nu Ophiuchi','Cebalrai'],['Cebalrai','Rasalhague'],['Sabik','Theta Ophiuchi']],
+Del:[['Epsilon Delphini','Rotanev'],['Rotanev','Delta Delphini'],['Delta Delphini','Gamma² Delphini'],['Gamma² Delphini','Sualocin'],['Sualocin','Rotanev']],
+Tri:[['Alpha Trianguli','Beta Trianguli']],
+Cet:[['Diphda','Tau Ceti'],['Tau Ceti','Zeta Ceti'],['Zeta Ceti','Theta Ceti'],['Theta Ceti','Eta Ceti'],['Eta Ceti','Diphda'],['Diphda','Iota Ceti'],['Zeta Ceti','Mira'],['Mira','Delta Ceti'],['Delta Ceti','Gamma Ceti'],['Gamma Ceti','Menkar']],
+TrA:[['Atria','Beta Trianguli Australis'],['Beta Trianguli Australis','Gamma Trianguli Australis'],['Gamma Trianguli Australis','Atria']],
+Car:[['Canopus','Avior'],['Avior','Aspidiske'],['Aspidiske','Theta Carinae'],['Theta Carinae','Upsilon Carinae'],['Upsilon Carinae','Miaplacidus']],
+Vel:[['Regor','Delta Velorum'],['Delta Velorum','Markeb'],['Markeb','Mu Velorum'],['Regor','Suhail'],['Suhail','Mu Velorum']],
+Pup:[['Naos','Tureis'],['Naos','Pi Puppis'],['Pi Puppis','Nu Puppis'],['Nu Puppis','Tau Puppis']],
+Col:[['Phact','Wazn']],CVn:[['Cor Caroli','Chara']],Gru:[['Alnair','Tiaki']],Lup:[['Alpha Lupi','Beta Lupi']],Ara:[['Alpha Arae','Beta Arae']],
+Cnc:[['Tarf','Asellus Australis'],['Asellus Australis','Asellus Borealis'],['Asellus Borealis','Iota Cancri'],['Asellus Australis','Acubens']]
+};
+// add a couple of named stars that figures reference but are missing above
+S.push(['Mizar',13.399,54.925,2.27,'UMa','w'],['Rasalas',9.879,26.007,3.88,'Leo','o'],['Iota Cephei',22.828,66.201,3.52,'Cep','o']);
+const COLORS={b:[170,195,255],w:[245,246,255],y:[255,240,200],o:[255,205,150],r:[255,160,120]};
+const byName={};S.forEach(s=>byName[s[0]]=s);
+const stars=S.map(s=>({name:s[0],ra:s[1]*15*D2R,dec:s[2]*D2R,mag:s[3],con:s[4],col:COLORS[s[5]]||COLORS.w,tw:Math.random()*6.28}));
+const starBy={};stars.forEach(s=>starBy[s.name]=s);
+const lines=[];for(const c in FIG)for(const [a,b] of FIG[c]){if(starBy[a]&&starBy[b])lines.push([starBy[a],starBy[b],c]);}
+
+// Milky Way sample points along the galactic plane (converted to RA/Dec)
+const MW=[];(function(){const raP=192.859*D2R,decP=27.128*D2R,lNCP=122.932*D2R;let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  for(let i=0;i<2600;i++){const l=rnd()*Math.PI*2;const spread=(rnd()+rnd()+rnd()-1.5)*(10+8*Math.cos(l))*D2R;const b=spread;
+    const bright=(.35+.65*Math.pow(Math.cos((l)/2),2))*(1-Math.abs(b)/(24*D2R));
+    const sd=Math.sin(decP)*Math.sin(b)+Math.cos(decP)*Math.cos(b)*Math.cos(lNCP-l);const dec=Math.asin(sd);
+    const y=Math.cos(b)*Math.sin(lNCP-l),x=Math.cos(decP)*Math.sin(b)-Math.sin(decP)*Math.cos(b)*Math.cos(lNCP-l);const ra=raP+Math.atan2(y,x);
+    MW.push({ra,dec,a:Math.max(0,bright),r:6+rnd()*14});}})();
+
+// ---------- astronomy ----------
+function jd(date){return date.getTime()/86400000+2440587.5;}
+function lstRad(date,lon){const d=jd(date)-2451545.0;let g=18.697374558+24.06570982441908*d;g=((g%24)+24)%24;return((g+lon/15)%24+24)%24*15*D2R;}
+function altAz(ra,dec,lst,lat){const H=lst-ra;const sa=Math.sin(dec)*Math.sin(lat)+Math.cos(dec)*Math.cos(lat)*Math.cos(H);const alt=Math.asin(sa);
+  const az=Math.atan2(-Math.cos(dec)*Math.sin(H),Math.sin(dec)*Math.cos(lat)-Math.cos(dec)*Math.sin(lat)*Math.cos(H));return[alt,(az+2*Math.PI)%(2*Math.PI)];}
+function sunPos(date){const n=jd(date)-2451545.0;const L=(280.460+.9856474*n)*D2R,g=(357.528+.9856003*n)*D2R;const lam=L+(1.915*Math.sin(g)+.020*Math.sin(2*g))*D2R;const eps=(23.439-.0000004*n)*D2R;
+  return{ra:Math.atan2(Math.cos(eps)*Math.sin(lam),Math.cos(lam)),dec:Math.asin(Math.sin(eps)*Math.sin(lam)),lam};}
+function moonPos(date){const d=jd(date)-2451545.0;const L=(218.316+13.176396*d)*D2R,M=(134.963+13.064993*d)*D2R,F=(93.272+13.229350*d)*D2R;
+  const lam=L+6.289*D2R*Math.sin(M),bet=5.128*D2R*Math.sin(F);const eps=23.439*D2R;
+  const ra=Math.atan2(Math.sin(lam)*Math.cos(eps)-Math.tan(bet)*Math.sin(eps),Math.cos(lam));const dec=Math.asin(Math.sin(bet)*Math.cos(eps)+Math.cos(bet)*Math.sin(eps)*Math.sin(lam));return{ra,dec,lam};}
+
+// ---------- view ----------
+const cv=document.getElementById('sky'),g=cv.getContext('2d');let W=0,H=0,dpr=1;
+const view={az:180*D2R,alt:35*D2R,fov:100*D2R};
+let loc={lat:51.5074,lon:-0.1278,name:'London'};
+let simTime=Date.now(),speed=1,lastReal=performance.now();
+const layers={lines:true,names:true,grid:false,mw:true};
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);if(W<640&&view.fov>1.6)view.fov=110*D2R;}
+function vec(alt,az){const c=Math.cos(alt);return[c*Math.sin(az),c*Math.cos(az),Math.sin(alt)];}
+let basis=null,scale=1;
+function setBasis(){const f=vec(view.alt,view.az);const r=[Math.cos(view.az),-Math.sin(view.az),0];const u=[r[1]*f[2]-r[2]*f[1],r[2]*f[0]-r[0]*f[2],r[0]*f[1]-r[1]*f[0]];basis={f,r,u};
+  scale=Math.max(W,H)/2/(2*Math.tan(view.fov/4));}
+function project(alt,az){const v=vec(alt,az);const cz=v[0]*basis.f[0]+v[1]*basis.f[1]+v[2]*basis.f[2];if(cz<-.35)return null;
+  const cx=v[0]*basis.r[0]+v[1]*basis.r[1]+v[2]*basis.r[2],cy=v[0]*basis.u[0]+v[1]*basis.u[1]+v[2]*basis.u[2];const k=2/(1+cz);return[W/2+cx*k*scale,H/2-cy*k*scale,cz];}
+
+let projected=[];
+function draw(t){
+  const date=new Date(simTime);const lat=loc.lat*D2R;const lst=lstRad(date,loc.lon);setBasis();
+  const sun=sunPos(date);const [sAlt,sAz]=altAz(sun.ra,sun.dec,lst,lat);
+  // sky colour by solar altitude
+  const sa=sAlt*R2D;const day=Math.max(0,Math.min(1,(sa+12)/18));
+  g.setTransform(dpr,0,0,dpr,0,0);
+  const top=mix([2,4,12],[40,90,170],day),hor=mix([10,14,30],[150,190,230],day);
+  const hp=project(0,view.az);const hy=hp?hp[1]:H;
+  const sky=g.createLinearGradient(0,0,0,Math.max(10,hy));sky.addColorStop(0,rgb(top));sky.addColorStop(1,rgb(mix(hor,[255,140,80],Math.max(0,1-Math.abs(sa+3)/9)*.6)));
+  g.fillStyle=sky;g.fillRect(0,0,W,H);
+  const starVis=Math.max(0,Math.min(1,(-sa-2)/10));
+  // milky way
+  if(layers.mw&&starVis>0){g.globalCompositeOperation='lighter';for(const p of MW){const [a,z]=altAz(p.ra,p.dec,lst,lat);if(a<-.05)continue;const q=project(a,z);if(!q)continue;
+      const r=p.r*scale/500;const gr=g.createRadialGradient(q[0],q[1],0,q[0],q[1],r);gr.addColorStop(0,`rgba(150,160,210,${.05*p.a*starVis})`);gr.addColorStop(1,'rgba(150,160,210,0)');g.fillStyle=gr;g.fillRect(q[0]-r,q[1]-r,r*2,r*2);}g.globalCompositeOperation='source-over';}
+  // grid
+  if(layers.grid){g.strokeStyle='rgba(200,162,90,.18)';g.lineWidth=1;
+    for(let a=0;a<90;a+=15){g.beginPath();let pen=false;for(let z=0;z<=360;z+=3){const q=project(a*D2R,z*D2R);if(!q){pen=false;continue;}pen?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]);pen=true;}g.stroke();}
+    for(let z=0;z<360;z+=15){g.beginPath();let pen=false;for(let a=0;a<=90;a+=3){const q=project(a*D2R,z*D2R);if(!q){pen=false;continue;}pen?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]);pen=true;}g.stroke();}}
+  // stars
+  projected=[];const conCenters={};
+  for(const s of stars){const [a,z]=altAz(s.ra,s.dec,lst,lat);s.alt=a;s.az=z;if(a<-.02){s.p=null;continue;}const q=project(a,z);s.p=q;if(!q)continue;
+    if(q[0]<-40||q[0]>W+40||q[1]<-40||q[1]>H+40)continue;projected.push(s);
+    if(!conCenters[s.con])conCenters[s.con]={x:0,y:0,n:0};const cc=conCenters[s.con];cc.x+=q[0];cc.y+=q[1];cc.n++;}
+  if(layers.lines&&starVis>0){g.strokeStyle=`rgba(200,162,90,${.45*starVis})`;g.lineWidth=1;g.beginPath();
+    for(const [a,b] of lines){if(!a.p||!b.p)continue;const dx=b.p[0]-a.p[0],dy=b.p[1]-a.p[1],d=Math.hypot(dx,dy);if(d>W*.9)continue;const ra=Math.min(6,d*.2)/d;
+      g.moveTo(a.p[0]+dx*ra,a.p[1]+dy*ra);g.lineTo(b.p[0]-dx*ra,b.p[1]-dy*ra);}g.stroke();}
+  const zoom=100*D2R/view.fov;
+  for(const s of projected){const q=s.p;const r=Math.max(.6,(4.6-s.mag)*.72*Math.pow(zoom,.35));const tw=reduce?1:.82+.18*Math.sin(t*3+s.tw)*(s.alt<.35?1.6:.6);
+    const al=Math.min(1,(1.1-s.mag*.12))*starVis*tw*Math.min(1,.3+s.alt*3);if(al<=.01)continue;const [cr,cg2,cb]=s.col;
+    if(s.mag<1.6){const gr=g.createRadialGradient(q[0],q[1],0,q[0],q[1],r*4.5);gr.addColorStop(0,`rgba(${cr},${cg2},${cb},${.35*al})`);gr.addColorStop(1,`rgba(${cr},${cg2},${cb},0)`);g.fillStyle=gr;g.fillRect(q[0]-r*4.5,q[1]-r*4.5,r*9,r*9);}
+    g.fillStyle=`rgba(${cr},${cg2},${cb},${al})`;g.beginPath();g.arc(q[0],q[1],r,0,6.283);g.fill();}
+  if(layers.names&&starVis>0){g.font='12px Spectral, Georgia, serif';g.fillStyle=`rgba(239,228,200,${.7*starVis})`;g.textBaseline='middle';
+    const lim=1.6+Math.max(0,(zoom-1))*1.8;for(const s of projected){if(s.mag>lim||/^[A-Z][a-z]+ [A-Z]/.test(s.name)&&s.mag>1.8)continue;g.fillText(s.name,s.p[0]+6,s.p[1]-7);}
+    g.font='600 11px Cinzel, Georgia, serif';g.fillStyle=`rgba(200,162,90,${.55*starVis})`;g.textAlign='center';
+    for(const c in conCenters){const cc=conCenters[c];if(cc.n<3||!CON[c])continue;g.fillText(CON[c].toUpperCase(),cc.x/cc.n,cc.y/cc.n+22);}g.textAlign='left';}
+  // moon & sun
+  const moon=moonPos(date);const [mAlt,mAz]=altAz(moon.ra,moon.dec,lst,lat);const mq=mAlt>-.02?project(mAlt,mAz):null;
+  if(mq){const r=Math.max(7,.26*D2R*scale*2);const phase=((moon.lam-sun.lam)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);drawMoon(mq[0],mq[1],r,phase);
+    if(layers.names){g.font='italic 13px Spectral, Georgia, serif';g.fillStyle='rgba(239,228,200,.85)';g.fillText('Moon · '+phaseName(phase),mq[0]+r+6,mq[1]);}}
+  if(sAlt>-.02){const sq=project(sAlt,sAz);if(sq){const r=Math.max(9,.27*D2R*scale*2);const gr=g.createRadialGradient(sq[0],sq[1],0,sq[0],sq[1],r*8);gr.addColorStop(0,'rgba(255,245,210,1)');gr.addColorStop(.12,'rgba(255,230,160,.9)');gr.addColorStop(1,'rgba(255,200,120,0)');g.fillStyle=gr;g.fillRect(sq[0]-r*8,sq[1]-r*8,r*16,r*16);}}
+  // ground
+  drawGround(day);
+  // cardinal points
+  g.font='600 14px Cinzel, Georgia, serif';g.textAlign='center';
+  const card=[['N',0],['NE',45],['E',90],['SE',135],['S',180],['SW',225],['W',270],['NW',315]];
+  for(const [n,z] of card){const q=project(0,z*D2R);if(!q)continue;g.fillStyle=n.length===1?'#c8a25a':'rgba(200,162,90,.6)';g.fillText(n,q[0],q[1]+20);}
+  g.textAlign='left';
+  // compass readouts
+  if((t*4|0)!==draw._k){draw._k=t*4|0;
+    document.getElementById('cAz').textContent=(view.az*R2D).toFixed(0)+'°';document.getElementById('cAlt').textContent=(view.alt*R2D).toFixed(0)+'°';document.getElementById('cFov').textContent=(view.fov*R2D).toFixed(0)+'°';
+    const lh=lst*R2D/15;document.getElementById('cLst').textContent=String(Math.floor(lh)).padStart(2,'0')+'h '+String(Math.floor(lh%1*60)).padStart(2,'0')+'m';
+    const dirs=['north','north-east','east','south-east','south','south-west','west','north-west'];document.getElementById('facing').textContent=dirs[Math.round(view.az*R2D/45)%8];
+    document.getElementById('where').textContent=loc.name;document.getElementById('when').textContent=date.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}
+}
+function drawGround(day){
+  const col=mix([8,10,8],[40,52,36],day);g.fillStyle=rgb(col);g.strokeStyle=rgb(col);g.lineWidth=1;
+  for(let a=0;a>-90;a-=10)for(let z=0;z<360;z+=10){const p1=project(a*D2R,z*D2R),p2=project(a*D2R,(z+10)*D2R),p3=project((a-10)*D2R,(z+10)*D2R),p4=project((a-10)*D2R,z*D2R);
+    if(!p1||!p2||!p3||!p4)continue;g.beginPath();g.moveTo(p1[0],p1[1]);g.lineTo(p2[0],p2[1]);g.lineTo(p3[0],p3[1]);g.lineTo(p4[0],p4[1]);g.closePath();g.fill();g.stroke();}
+  // skyline silhouette and horizon glow
+  g.beginPath();let first=true;for(let z=0;z<=360;z+=1){const h=(Math.sin(z*.9)*.5+Math.sin(z*2.3)*.3+Math.sin(z*.17)*.8+1.4)*.9+(Math.sin(z*7.1)>.6?1.6:0);const q=project(h*D2R,z*D2R);if(!q){first=true;continue;}first?g.moveTo(q[0],q[1]):g.lineTo(q[0],q[1]);first=false;}
+  for(let z=360;z>=0;z-=1){const q=project(-.5*D2R,z*D2R);if(q)g.lineTo(q[0],q[1]);}g.closePath();g.fill();
+  g.strokeStyle='rgba(200,162,90,.35)';g.beginPath();first=true;for(let z=0;z<=360;z+=2){const q=project(0,z*D2R);if(!q){first=true;continue;}first?g.moveTo(q[0],q[1]):g.lineTo(q[0],q[1]);first=false;}g.stroke();
+}
+function drawMoon(x,y,r,phase){
+  g.save();g.fillStyle='rgba(40,40,50,.9)';g.beginPath();g.arc(x,y,r,0,6.283);g.fill();
+  const lit=(1-Math.cos(phase))/2;const waxing=phase<Math.PI;
+  g.fillStyle='#f4efdc';g.beginPath();
+  g.arc(x,y,r,-Math.PI/2,Math.PI/2,!waxing);
+  const k=Math.cos(phase);g.ellipse(x,y,Math.abs(k)*r,r,0,Math.PI/2,-Math.PI/2,(k<0)!==waxing?false:true);
+  g.fill();g.shadowBlur=0;
+  const gl=g.createRadialGradient(x,y,r,x,y,r*3);gl.addColorStop(0,`rgba(244,239,220,${.18*lit})`);gl.addColorStop(1,'rgba(244,239,220,0)');g.fillStyle=gl;g.beginPath();g.arc(x,y,r*3,0,6.283);g.fill();
+  g.restore();
+}
+function phaseName(p){const d=p*R2D;return d<10||d>350?'new':d<80?'waxing crescent':d<100?'first quarter':d<170?'waxing gibbous':d<190?'full':d<260?'waning gibbous':d<280?'last quarter':'waning crescent';}
+function mix(a,b,t){return a.map((v,i)=>v+(b[i]-v)*t);}function rgb(c){return`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;}
+
+// ---------- interaction ----------
+const pts=new Map();let pinch0=0,dragging=false,lx=0,ly=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);if(pts.size===1){dragging=true;lx=e.clientX;ly=e.clientY;cv.classList.add('drag');}else{const a=[...pts.values()];pinch0=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);}});
+cv.addEventListener('pointermove',e=>{
+  if(pts.has(e.pointerId))pts.set(e.pointerId,[e.clientX,e.clientY]);
+  if(pts.size===2){const a=[...pts.values()];const d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);if(pinch0)zoomBy(pinch0/d);pinch0=d;return;}
+  if(dragging){const k=view.fov/Math.max(W,H)*1.3;view.az=((view.az-(e.clientX-lx)*k)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);view.alt=Math.max(-10*D2R,Math.min(89.5*D2R,view.alt+(e.clientY-ly)*k));lx=e.clientX;ly=e.clientY;hideTip();return;}
+  hover(e.clientX,e.clientY);});
+function up(e){pts.delete(e.pointerId);if(!pts.size){dragging=false;cv.classList.remove('drag');}pinch0=0;}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);cv.addEventListener('pointerleave',hideTip);
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomBy(Math.exp(e.deltaY*.001));},{passive:false});
+function zoomBy(f){view.fov=Math.max(15*D2R,Math.min(160*D2R,view.fov*f));}
+const tip=document.getElementById('tip');
+function hover(x,y){let best=null,bd=14*14;for(const s of projected){const dx=s.p[0]-x,dy=s.p[1]-y,d=dx*dx+dy*dy;if(d<bd){bd=d;best=s;}}
+  if(!best){hideTip();return;}
+  const raH=best.ra*R2D/15,dec=best.dec*R2D;
+  tip.innerHTML=`<h3>${best.name}</h3>${CON[best.con]||best.con} · magnitude ${best.mag.toFixed(2)}<br><small>RA ${Math.floor(raH)}h ${String(Math.round(raH%1*60)).padStart(2,'0')}m · Dec ${dec>=0?'+':'−'}${Math.abs(dec).toFixed(1)}°<br>Alt ${(best.alt*R2D).toFixed(1)}° · Az ${(best.az*R2D).toFixed(1)}°</small>`;
+  tip.style.opacity='1';tip.style.left=Math.min(W-200,x+16)+'px';tip.style.top=Math.min(H-110,y+16)+'px';}
+function hideTip(){tip.style.opacity='0';}
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;const st=5*D2R;
+  if(e.key==='ArrowLeft')view.az=(view.az-st+2*Math.PI)%(2*Math.PI);if(e.key==='ArrowRight')view.az=(view.az+st)%(2*Math.PI);
+  if(e.key==='ArrowUp')view.alt=Math.min(89.5*D2R,view.alt+st);if(e.key==='ArrowDown')view.alt=Math.max(-10*D2R,view.alt-st);
+  if(e.key==='+'||e.key==='=')zoomBy(.85);if(e.key==='-')zoomBy(1.18);});
+
+// controls
+const dtEl=document.getElementById('dt');
+function toLocalInput(ms){const d=new Date(ms);const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
+dtEl.value=toLocalInput(simTime);
+dtEl.addEventListener('change',()=>{const v=new Date(dtEl.value);if(!isNaN(v))simTime=v.getTime();});
+document.getElementById('btnNow').addEventListener('click',()=>{simTime=Date.now();setSpeed(1);dtEl.value=toLocalInput(simTime);});
+function setSpeed(s){speed=s;document.querySelectorAll('[data-s]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.s===s)));}
+document.querySelectorAll('[data-s]').forEach(b=>b.addEventListener('click',()=>setSpeed(+b.dataset.s)));
+document.getElementById('city').addEventListener('change',e=>{const v=e.target.value;const box=document.getElementById('customBox');
+  if(v==='custom'){box.classList.add('on');applyCustom();return;}box.classList.remove('on');const [la,lo,n]=v.split(',');loc={lat:+la,lon:+lo,name:n};
+  document.getElementById('lat').value=(+la).toFixed(1);document.getElementById('lon').value=(+lo).toFixed(1);
+  // face the celestial equator by default: south in the north, north in the south
+  view.az=(+la>=0?180:0)*D2R;});
+function applyCustom(){const la=Math.max(-90,Math.min(90,+document.getElementById('lat').value||0)),lo=Math.max(-180,Math.min(180,+document.getElementById('lon').value||0));loc={lat:la,lon:lo,name:`${Math.abs(la).toFixed(1)}°${la>=0?'N':'S'}, ${Math.abs(lo).toFixed(1)}°${lo>=0?'E':'W'}`};}
+document.getElementById('lat').addEventListener('change',applyCustom);document.getElementById('lon').addEventListener('change',applyCustom);
+function tog(id,key){const b=document.getElementById(id);b.addEventListener('click',()=>{layers[key]=!layers[key];b.setAttribute('aria-pressed',String(layers[key]));});}
+tog('lyLines','lines');tog('lyNames','names');tog('lyGrid','grid');tog('lyMW','mw');
+
+// if it's daytime in London right now, open on tonight at 22:00 so the sky shows stars
+(function(){const d=new Date();const s=sunPos(d);const [a]=altAz(s.ra,s.dec,lstRad(d,loc.lon),loc.lat*D2R);if(a>-8*D2R){const n=new Date(d);n.setHours(22,0,0,0);if(n<d)n.setDate(n.getDate()+1);simTime=n.getTime();dtEl.value=toLocalInput(simTime);}})();
+
+let dtT=0;
+function loop(now){const dt=(now-lastReal)/1000;lastReal=now;simTime+=dt*1000*speed;
+  if(speed!==1&&(dtT+=dt)>.5){dtT=0;dtEl.value=toLocalInput(simTime);}
+  draw(now/1000);requestAnimationFrame(loop);}
+addEventListener('resize',resize);resize();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
