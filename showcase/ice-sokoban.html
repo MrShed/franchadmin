@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glacier Kick</title>
+<meta name="description" content="A pixel-art Sokoban on slippery ice: kicked blocks slide until they hit rock, another block or a snowdrift, across ten handcrafted cavern puzzles with undo, par scores and stars.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#0b1030;
+  --deep:#141b4a;
+  --ice:#8fe3ff;
+  --ice2:#c8f4ff;
+  --snow:#f2f7ff;
+  --aur1:#3cf0b4;
+  --aur2:#7b5cff;
+  --gold:#ffd166;
+  --txt:#dfe9ff;
+  --dim:#8ea0d6;
+  --px:4px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:
+    linear-gradient(180deg, transparent 0 60%, rgba(0,0,0,.35)),
+    radial-gradient(120% 60% at 50% 0%, #1d2a6b 0%, var(--night) 65%),
+    var(--night);
+  color:var(--txt);
+  font-family:"DotGothic16", "Courier New", ui-monospace, monospace;
+  min-height:100vh; overflow-x:hidden;
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left));
+}
+.aurora{position:fixed; inset:0 0 auto 0; height:320px; pointer-events:none; z-index:0; opacity:.55;
+  background:
+    linear-gradient(100deg, transparent 10%, rgba(60,240,180,.35) 30%, transparent 45%, rgba(123,92,255,.3) 65%, transparent 85%);
+  filter:blur(24px); animation:aur 14s ease-in-out infinite alternate; mask:linear-gradient(#000, transparent); -webkit-mask:linear-gradient(#000, transparent)}
+@keyframes aur{from{transform:translateX(-8%) skewY(-3deg)} to{transform:translateX(8%) skewY(2deg)}}
+#snow{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:0}
+a.back{position:absolute; top:12px; left:16px; z-index:3; font-family:"Pixelify Sans",monospace; color:var(--ice); text-decoration:none; font-size:15px}
+a.back:hover{color:#fff}
+:focus-visible{outline:3px solid var(--gold); outline-offset:2px}
+.wrap{position:relative; z-index:1; max-width:1100px; margin:26px auto 0; display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:28px; align-items:start}
+header{grid-column:1/-1; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap}
+h1{font-family:"Pixelify Sans", monospace; font-weight:700; font-size:clamp(40px,7vw,78px); line-height:.9; margin:0; color:var(--ice2);
+  text-shadow:var(--px) var(--px) 0 #2b5bd7, calc(var(--px)*2) calc(var(--px)*2) 0 #0b1030; letter-spacing:.02em}
+header p{margin:0; max-width:48ch; color:var(--dim); font-size:15px; line-height:1.6}
+.stagebox{position:relative; background:#050818; padding:12px; border:var(--px) solid #2b3a8a; box-shadow:0 0 0 var(--px) #0b1030, 0 0 60px rgba(143,227,255,.12); image-rendering:pixelated}
+.hud{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; font-family:"Pixelify Sans",monospace; flex-wrap:wrap}
+.hud .lv{font-size:22px; color:var(--ice2)}
+.hud .lv small{display:block; font-size:12px; color:var(--dim); font-family:"DotGothic16",monospace}
+.counters{display:flex; gap:14px}
+.counters div{text-align:right}
+.counters span{display:block; font-size:11px; color:var(--dim)}
+.counters b{font-size:22px; font-weight:600}
+#game{display:block; margin:0 auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none; max-width:100%}
+.bar{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; justify-content:center}
+.pbtn{font-family:"Pixelify Sans",monospace; font-size:15px; font-weight:600; color:#0b1030; background:var(--ice); border:0; padding:9px 14px; min-height:42px; cursor:pointer;
+  box-shadow:inset calc(var(--px)*-1) calc(var(--px)*-1) 0 #4aa6d6, inset var(--px) var(--px) 0 #e6fbff, 0 var(--px) 0 #0b1030}
+.pbtn:active{transform:translateY(2px)}
+.pbtn.dark{background:#2b3a8a; color:var(--txt); box-shadow:inset calc(var(--px)*-1) calc(var(--px)*-1) 0 #1b2566, inset var(--px) var(--px) 0 #4c5fc2, 0 var(--px) 0 #0b1030}
+.pbtn[aria-pressed="true"]{background:#56608a; color:#c7cde6}
+.dpad{display:none; grid-template-columns:repeat(3,56px); grid-template-rows:repeat(2,50px); gap:6px; justify-content:center; margin:14px auto 0}
+.dpad button{font-size:22px}
+#d-up{grid-column:2; grid-row:1} #d-left{grid-column:1; grid-row:2} #d-down{grid-column:2; grid-row:2} #d-right{grid-column:3; grid-row:2}
+@media (pointer:coarse){ .dpad{display:grid} }
+
+aside h2{font-family:"Pixelify Sans",monospace; font-size:18px; margin:0 0 10px; color:var(--gold); font-weight:600}
+.levels{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:22px}
+.lvbtn{font-family:"Pixelify Sans",monospace; aspect-ratio:1; font-size:18px; font-weight:700; border:0; cursor:pointer; position:relative; color:#0b1030; background:var(--ice2);
+  box-shadow:inset -3px -3px 0 #7fcbe8, inset 3px 3px 0 #fff, 0 3px 0 #0b1030; padding:0}
+.lvbtn .st{position:absolute; bottom:2px; left:0; right:0; font-size:9px; letter-spacing:-1px; color:#b58400}
+.lvbtn[aria-current="true"]{background:var(--gold); box-shadow:inset -3px -3px 0 #c48d18, inset 3px 3px 0 #fff3c4, 0 3px 0 #0b1030}
+.lvbtn:disabled{background:#26306a; color:#4d5aa0; box-shadow:inset -3px -3px 0 #1a2256, 0 3px 0 #0b1030; cursor:not-allowed}
+.rules{font-size:14px; line-height:1.7; color:var(--txt)}
+.rules li{margin-bottom:6px}
+.rules ul{padding-left:18px; margin:0 0 18px}
+.legend{display:grid; grid-template-columns:32px 1fr; gap:8px 10px; align-items:center; font-size:13px; color:var(--dim)}
+.legend canvas{width:32px; height:32px; image-rendering:pixelated}
+.total{margin-top:18px; font-family:"Pixelify Sans",monospace; font-size:16px; border-top:2px dashed #2b3a8a; padding-top:12px}
+.total b{color:var(--gold)}
+
+.win{position:absolute; inset:0; display:none; place-items:center; background:rgba(5,8,24,.82); z-index:2; text-align:center; padding:16px}
+.win.show{display:grid}
+.win h3{font-family:"Pixelify Sans",monospace; font-size:clamp(28px,5vw,44px); margin:0; color:var(--gold); text-shadow:3px 3px 0 #7a4a00}
+.win .stars{font-size:36px; letter-spacing:6px; color:var(--gold); margin:8px 0}
+.win .stars i{font-style:normal; color:#39417a}
+.win p{margin:4px 0 14px; color:var(--txt)}
+@media (max-width:860px){ .wrap{grid-template-columns:1fr} }
+@media (max-width:480px){ :root{--px:3px} .stagebox{padding:8px} }
+@media (prefers-reduced-motion:reduce){ .aurora{animation:none} }
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"></div>
+<canvas id="snow" aria-hidden="true"></canvas>
+<a class="back" href="index.html">« Showcase</a>
+<div class="wrap">
+  <header>
+    <h1>Glacier<br>Kick</h1>
+    <p>Pip the penguin has to get every ice block onto a glowing rune. On this ice a kicked block keeps sliding until it hits rock, another block or a snowdrift, so think before you kick.</p>
+  </header>
+
+  <section aria-label="Game">
+    <div class="stagebox">
+      <div class="hud">
+        <div class="lv" id="lv-name">1 · First Frost<small id="lv-sub">Par 1 move</small></div>
+        <div class="counters">
+          <div><span>MOVES</span><b id="moves">0</b></div>
+          <div><span>BEST</span><b id="best">–</b></div>
+        </div>
+      </div>
+      <canvas id="game" width="160" height="96" aria-label="Ice cave puzzle board. Arrow keys or WASD to move, Z to undo, R to restart." tabindex="0"></canvas>
+      <div class="win" id="win" role="dialog" aria-labelledby="win-t"><div>
+        <h3 id="win-t">Cavern cleared!</h3>
+        <div class="stars" id="win-stars">★★★</div>
+        <p id="win-text"></p>
+        <button class="pbtn" id="next">Next cavern ▸</button>
+        <button class="pbtn dark" id="replay">Replay</button>
+      </div></div>
+    </div>
+    <div class="bar">
+      <button class="pbtn" id="undo">↶ Undo</button>
+      <button class="pbtn" id="restart">⟲ Restart</button>
+      <button class="pbtn dark" id="prev">◂ Prev</button>
+      <button class="pbtn dark" id="skip">Next ▸</button>
+      <button class="pbtn dark" id="mute" aria-pressed="false">♪ Sound</button>
+    </div>
+    <div class="dpad" aria-label="Direction pad">
+      <button class="pbtn" id="d-up" aria-label="Up">▲</button>
+      <button class="pbtn" id="d-left" aria-label="Left">◀</button>
+      <button class="pbtn" id="d-down" aria-label="Down">▼</button>
+      <button class="pbtn" id="d-right" aria-label="Right">▶</button>
+    </div>
+  </section>
+
+  <aside aria-label="Caverns and rules">
+    <h2>Caverns</h2>
+    <div class="levels" id="levels"></div>
+    <h2>How the ice works</h2>
+    <ul class="rules">
+      <li>Walk with the arrow keys, WASD, the pad or a swipe.</li>
+      <li>Walk into a block to kick it. It slides until something stops it. Pip stays put.</li>
+      <li>Snowdrifts stop a sliding block dead.</li>
+      <li>Undo with Z or U, restart with R.</li>
+    </ul>
+    <div class="legend" id="legend"></div>
+    <div class="total" id="total"></div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  const LEVELS = [{"name": "First Frost", "par": 1, "map": ["#######", "#     #", "# @$ .#", "#     #", "#######"]}, {"name": "Snowbank", "par": 1, "map": ["#########", "#       #", "# @$  % #", "#       #", "#########"]}, {"name": "Frozen Cross", "par": 7, "map": ["#########", "#  #.#  #", "#   $   #", "#.$ @ $.#", "#   $   #", "#  #.#  #", "#########"]}, {"name": "Backstop", "par": 15, "map": ["########", "#   .  #", "#      #", "# $  $ #", "#  #   #", "#  @ . #", "########"]}, {"name": "Corner Pocket", "par": 17, "map": ["#########", "#.   #  #", "#       #", "#  $ $  #", "#   @  ~#", "#.  #   #", "#########"]}, {"name": "Ice Mill", "par": 17, "map": ["#########", "#.  #  .#", "#       #", "# $ @ $ #", "#   ~   #", "##  $  ##", "#   .   #", "#########"]}, {"name": "Hoarfrost", "par": 22, "map": ["#########", "##   @  #", "##   #  #", "#  $~   #", "#~      #", "#~  $  .#", "#     #.#", "#########"]}, {"name": "Glacier Gate", "par": 26, "map": ["##########", "#.   #   #", "# #  $ ~ #", "#   @  # #", "# $  #   #", "#  #  $ .#", "#.       #", "##########"]}, {"name": "Crevasse", "par": 28, "map": ["##########", "# $ .### #", "#     .#~#", "#       .#", "## $  $  #", "#        #", "##  @    #", "##  #  # #", "##########"]}, {"name": "Deep Freeze", "par": 29, "map": ["##########", "#.#     ##", "#  #   # #", "# @$   $~#", "#        #", "# # ~ #  #", "#        #", "#.$ .~ # #", "##########"]}];
+  const $ = id => document.getElementById(id);
+  const store = { get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v);}catch(e){return d;} }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const T = 16;
+
+  // ---------------- palette & sprites ----------------
+  const C = { k:'#1a1c2c', w:'#f4f4f4', o:'#ef7d57', y:'#ffcd75', b:'#29366f', g:'#94b0c2', s:'#566c86' };
+  const PENG = [
+    "................",
+    "......kkkk......",
+    ".....kkkkkk.....",
+    "....kkkkkwkk....",
+    "....kkkkwkkoo...",
+    "....kkkwwwkoo...",
+    "...kkkwwwwwk....",
+    "...kkwwwwwwk....",
+    "..kkkwwwwwwkk...",
+    "..kk.wwwwwwk.k..",
+    "..k..wwwwwwk..k.",
+    "....kwwwwwwk....",
+    "....kkwwwwkk....",
+    ".....kkkkkk.....",
+    ".....oo..oo.....",
+    "................"];
+  const PENG_BLINK = PENG.map((r,i)=> i===3 ? "....kkkkkkkk...." : r);
+  function sprite(rows, flip){
+    const c=document.createElement('canvas'); c.width=T; c.height=T; const x=c.getContext('2d');
+    rows.forEach((r,y)=>[...r].forEach((ch,i)=>{ if(ch!=='.'){ x.fillStyle=C[ch]; x.fillRect(flip?T-1-i:i,y,1,1); } }));
+    return c;
+  }
+  const SPR = { r:sprite(PENG,false), l:sprite(PENG,true), rb:sprite(PENG_BLINK,false), lb:sprite(PENG_BLINK,true) };
+
+  // seeded hash for per-tile variation
+  const hash = (x,y,s=0) => { let h = (x*374761393 + y*668265263 + s*982451653) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  function px(c,x,y,col,w=1,h=1){ c.fillStyle=col; c.fillRect(x,y,w,h); }
+  function drawWall(c,X,Y,gx,gy,g){
+    const ox=X, oy=Y;
+    px(c,ox,oy,'#1c2458',T,T);
+    for (let i=0;i<5;i++){ const rx=Math.floor(hash(gx,gy,i)*12), ry=Math.floor(hash(gx,gy,i+9)*12); px(c,ox+rx,oy+ry,'#27316e',4,3); px(c,ox+rx,oy+ry,'#343f86',3,1); }
+    // frost cap if open space below / above
+    const open = (x,y) => g[y] && g[y][x] && g[y][x] !== '#';
+    if (open(gx,gy+1)){ // icicles
+      for (let i=0;i<T;i+=3){ const l=1+Math.floor(hash(gx,gy,i)*4); px(c,ox+i,oy+T-2,'#bfefff',2,2); px(c,ox+i,oy+T-2+2,'#8fe3ff',1,l); }
+    }
+    if (open(gx,gy-1)){ px(c,ox,oy,'#dff8ff',T,2); px(c,ox,oy+2,'#8fe3ff',T,1); }
+    if (open(gx-1,gy)) px(c,ox,oy,'#3b4a9e',1,T);
+    if (open(gx+1,gy)) px(c,ox+T-1,oy,'#101640',1,T);
+  }
+  function drawIce(c,X,Y,gx,gy){
+    px(c,X,Y,'#7fd6f4',T,T);
+    px(c,X,Y,'#92e0fa',T,1); px(c,X,Y,'#92e0fa',1,T);
+    const h=hash(gx,gy,3);
+    if (h<.55){ for (let i=0;i<4;i++) px(c,X+3+i+Math.floor(h*6),Y+10-i,'#c8f4ff'); }
+    if (h>.8){ px(c,X+4,Y+4,'#bdefff'); px(c,X+5,Y+5,'#6cc5e6',3,1); px(c,X+8,Y+6,'#6cc5e6',1,2); }
+    px(c,X+T-1,Y,'#6cc3e3',1,T); px(c,X,Y+T-1,'#6cc3e3',T,1);
+  }
+  function drawSnow(c,X,Y,gx,gy){
+    px(c,X,Y,'#e9f2ff',T,T);
+    for (let i=0;i<10;i++){ px(c,X+Math.floor(hash(gx,gy,i)*T),Y+Math.floor(hash(gx,gy,i+20)*T),'#c5d5f2'); }
+    px(c,X,Y,'#ffffff',T,2); px(c,X,Y+T-2,'#b9c9ea',T,2);
+    px(c,X+3,Y+5,'#ffffff',3,1); px(c,X+9,Y+9,'#ffffff',4,1);
+  }
+  function drawRune(c,X,Y,t,lit){
+    const a = lit ? 1 : .55 + .45*Math.sin(t*3);
+    c.globalAlpha=a;
+    const col = lit ? '#ffd166' : '#3cf0b4';
+    px(c,X+5,Y+3,col,6,1); px(c,X+5,Y+12,col,6,1); px(c,X+3,Y+5,col,1,6); px(c,X+12,Y+5,col,1,6);
+    px(c,X+4,Y+4,col); px(c,X+11,Y+4,col); px(c,X+4,Y+11,col); px(c,X+11,Y+11,col);
+    px(c,X+7,Y+6,col,2,4); px(c,X+6,Y+7,col,4,2);
+    c.globalAlpha=1;
+  }
+  function drawBlock(c,X,Y,on){
+    X=Math.round(X); Y=Math.round(Y);
+    px(c,X+1,Y+2,'rgba(10,20,60,.35)',T-1,T-1);
+    px(c,X+1,Y+1,on?'#fff1b8':'#bdf0ff',T-2,T-2);
+    px(c,X+1,Y+1,on?'#ffffff':'#eafcff',T-2,2); px(c,X+1,Y+1,on?'#ffffff':'#eafcff',2,T-2);
+    px(c,X+T-3,Y+1,on?'#e9b949':'#6cc5e6',2,T-2); px(c,X+1,Y+T-3,on?'#e9b949':'#6cc5e6',T-2,2);
+    px(c,X+4,Y+4,on?'#ffe08a':'#9fe6ff',8,8);
+    px(c,X+5,Y+5,on?'#fff6d6':'#dcf8ff',3,1); px(c,X+5,Y+5,on?'#fff6d6':'#dcf8ff',1,3);
+    px(c,X,Y,'#1a1c2c',T,1); px(c,X,Y+T-1,'#1a1c2c',T,1); px(c,X,Y,'#1a1c2c',1,T); px(c,X+T-1,Y,'#1a1c2c',1,T);
+  }
+
+  // ---------------- audio ----------------
+  let ac=null, muted=store.get('gk.muted',false);
+  function A(){ if(muted) return null; if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){return null;} } if(ac.state==='suspended') ac.resume(); return ac; }
+  function beep(f,d,type='square',v=.05,w=0,slide=0){ const a=A(); if(!a) return; const t=a.currentTime+w; const o=a.createOscillator(), g=a.createGain(); o.type=type; o.frequency.setValueAtTime(f,t); if(slide) o.frequency.exponentialRampToValueAtTime(f*slide,t+d); g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g).connect(a.destination); o.start(t); o.stop(t+d+.02); }
+  function scrape(dur){ const a=A(); if(!a) return; const t=a.currentTime; const n=Math.floor(a.sampleRate*dur); const b=a.createBuffer(1,n,a.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
+    const s=a.createBufferSource(); s.buffer=b; const f=a.createBiquadFilter(); f.type='bandpass'; f.Q.value=4; f.frequency.setValueAtTime(3200,t); f.frequency.exponentialRampToValueAtTime(900,t+dur);
+    const g=a.createGain(); g.gain.setValueAtTime(.12,t); g.gain.linearRampToValueAtTime(.05,t+dur); s.connect(f).connect(g).connect(a.destination); s.start(t); }
+  const SFX = {
+    step(){ beep(420+Math.random()*60,.04,'triangle',.05); },
+    bump(){ beep(110,.08,'square',.04); },
+    kick(n){ beep(260,.05,'square',.05); scrape(Math.max(.08,n*.05)); },
+    thud(){ beep(90,.12,'triangle',.12,0,.6); },
+    rune(){ [0,7,12].forEach((s,i)=>beep(880*Math.pow(2,s/12),.18,'triangle',.05,i*.06)); },
+    win(){ [0,4,7,12,16,19,24].forEach((s,i)=>beep(523*Math.pow(2,s/12),.16,'square',.04,i*.08)); },
+    undo(){ beep(600,.05,'triangle',.05,0,.6); }
+  };
+  const muteBtn=$('mute');
+  function paintMute(){ muteBtn.setAttribute('aria-pressed',String(muted)); muteBtn.textContent = muted?'♪ Muted':'♪ Sound'; }
+  paintMute();
+  muteBtn.addEventListener('click',()=>{ muted=!muted; store.set('gk.muted',muted); paintMute(); if(!muted) SFX.rune(); });
+
+  // ---------------- state ----------------
+  let li = Math.min(store.get('gk.level',0), LEVELS.length-1);
+  let progress = store.get('gk.best', {}); // index -> best moves
+  let W,H,grid,player,blocks,targets,snow,moves,history,facing='r',anim=null,won=false;
+  const cvs=$('game'), ctx=cvs.getContext('2d');
+  const board=document.createElement('canvas'), bctx=board.getContext('2d');
+  let scale=4;
+
+  function load(i){
+    li=i; store.set('gk.level',li);
+    const L=LEVELS[i]; H=L.map.length; W=Math.max(...L.map.map(r=>r.length));
+    grid=[]; blocks=[]; targets=[]; snow=new Set(); player=null;
+    L.map.forEach((row,y)=>{ grid.push([]); for (let x=0;x<W;x++){ const ch=row[x]||'#';
+      grid[y].push(ch==='#'?'#':(ch==='~'||ch==='%')?'~':' ');
+      if ('~%'.includes(ch)) snow.add(x+','+y);
+      if ('.*+%'.includes(ch)) targets.push({x,y});
+      if ('$*'.includes(ch)) blocks.push({x,y,dx:x,dy:y});
+      if ('@+'.includes(ch)) player={x,y,dx:x,dy:y};
+    }});
+    moves=0; history=[]; won=false; anim=null;
+    $('win').classList.remove('show');
+    board.width=W*T; board.height=H*T; drawBoard();
+    fit(); hud(); paintLevels();
+  }
+  function drawBoard(){
+    bctx.clearRect(0,0,board.width,board.height);
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+      const X=x*T, Y=y*T, g=grid[y][x];
+      if (g==='#') drawWall(bctx,X,Y,x,y,grid); else if (g==='~') drawSnow(bctx,X,Y,x,y); else drawIce(bctx,X,Y,x,y);
+    }
+  }
+  function fit(){
+    const box=$('game').parentElement; const avail=box.clientWidth-24;
+    const maxH = Math.max(220, window.innerHeight*0.62);
+    scale=Math.max(1, Math.floor(Math.min(avail/(W*T), maxH/(H*T))));
+    if (avail/(W*T) < 1) scale = avail/(W*T);
+    const dpr=Math.min(2, window.devicePixelRatio||1);
+    cvs.style.width=(W*T*scale)+'px'; cvs.style.height=(H*T*scale)+'px';
+    cvs.width=Math.round(W*T*scale*dpr); cvs.height=Math.round(H*T*scale*dpr);
+    ctx.imageSmoothingEnabled=false;
+  }
+  function hud(){
+    const L=LEVELS[li];
+    $('lv-name').innerHTML = `${li+1} · ${L.name}<small id="lv-sub">Par ${L.par} move${L.par>1?'s':''} · ${blocks.length} block${blocks.length>1?'s':''}</small>`;
+    $('moves').textContent=moves;
+    $('best').textContent = progress[li] ?? '–';
+    $('prev').disabled = li===0; $('skip').disabled = li===LEVELS.length-1 || !(li in progress) && li>=unlocked();
+  }
+  function unlocked(){ let u=0; while (u in progress) u++; return u; }
+  function stars(i){ const b=progress[i]; if (b==null) return 0; const p=LEVELS[i].par; return b<=p?3 : b<=Math.ceil(p*1.5)?2 : 1; }
+  function paintLevels(){
+    const el=$('levels'); el.innerHTML='';
+    const u=unlocked();
+    LEVELS.forEach((L,i)=>{ const b=document.createElement('button'); b.className='lvbtn'; b.id='lv-'+(i+1); b.textContent=i+1; b.title=L.name;
+      b.disabled = i>u; if (i===li) b.setAttribute('aria-current','true');
+      const s=stars(i); if (s) b.insertAdjacentHTML('beforeend', `<span class="st">${'★'.repeat(s)}</span>`);
+      b.setAttribute('aria-label', `Cavern ${i+1}, ${L.name}${b.disabled?', locked':''}${s?', '+s+' stars':''}`);
+      b.addEventListener('click', ()=>load(i)); el.appendChild(b); });
+    const tot = LEVELS.reduce((a,_,i)=>a+stars(i),0);
+    $('total').innerHTML = `Stars collected: <b>${tot}</b> / ${LEVELS.length*3} · Caverns cleared: <b>${Object.keys(progress).length}</b>`;
+  }
+
+  // ---------------- rules ----------------
+  const blockAt=(x,y)=>blocks.find(b=>b.x===x&&b.y===y);
+  const solid=(x,y)=> y<0||y>=H||x<0||x>=W||grid[y][x]==='#';
+  function tryMove(dx,dy){
+    if (won || anim) return;
+    if (dx) facing = dx>0?'r':'l';
+    const nx=player.x+dx, ny=player.y+dy;
+    if (solid(nx,ny)){ SFX.bump(); nudge(dx,dy); return; }
+    const b=blockAt(nx,ny);
+    if (b){
+      let bx=b.x, by=b.y, moved=false;
+      for(;;){
+        if (moved && snow.has(bx+','+by)) break;
+        const tx=bx+dx, ty=by+dy;
+        if (solid(tx,ty) || blockAt(tx,ty)) break;
+        bx=tx; by=ty; moved=true;
+      }
+      if (!moved){ SFX.bump(); nudge(dx,dy); return; }
+      snapshot();
+      const dist=Math.abs(bx-b.x)+Math.abs(by-b.y);
+      const from={x:b.x,y:b.y}; b.x=bx; b.y=by; moves++;
+      SFX.kick(dist);
+      anim={type:'slide', b, from, to:{x:bx,y:by}, t:0, dur: reduced?.01: Math.min(.5, .05*dist+.04), kick:{dx,dy}};
+    } else {
+      snapshot();
+      const from={x:player.x,y:player.y}; player.x=nx; player.y=ny; moves++;
+      SFX.step();
+      anim={type:'walk', from, to:{x:nx,y:ny}, t:0, dur: reduced?.01:.09};
+    }
+    hud();
+  }
+  let bumpT=0, bumpD=[0,0];
+  function nudge(dx,dy){ bumpT=.12; bumpD=[dx,dy]; }
+  function snapshot(){ history.push({p:{x:player.x,y:player.y}, b:blocks.map(b=>({x:b.x,y:b.y})), moves, facing}); if (history.length>500) history.shift(); }
+  function undo(){
+    if (!history.length || anim) return; const s=history.pop();
+    player.x=player.dx=s.p.x; player.y=player.dy=s.p.y; blocks=s.b.map(b=>({x:b.x,y:b.y,dx:b.x,dy:b.y})); moves=s.moves; facing=s.facing; won=false; $('win').classList.remove('show');
+    SFX.undo(); hud();
+  }
+  function checkWin(){
+    const onT = t => blocks.some(b=>b.x===t.x&&b.y===t.y);
+    if (targets.every(onT)){
+      won=true; SFX.win();
+      const prev=progress[li]; if (prev==null || moves<prev){ progress[li]=moves; store.set('gk.best', progress); }
+      const s = moves<=LEVELS[li].par?3 : moves<=Math.ceil(LEVELS[li].par*1.5)?2 : 1;
+      $('win-stars').innerHTML = '★'.repeat(s) + `<i>${'★'.repeat(3-s)}</i>`;
+      $('win-text').textContent = `${moves} moves · par ${LEVELS[li].par}${prev!=null && moves<prev ? ' · new best!' : ''}`;
+      $('next').style.display = li<LEVELS.length-1 ? '' : 'none';
+      if (li===LEVELS.length-1) $('win-t').textContent='The glacier is yours!'; else $('win-t').textContent='Cavern cleared!';
+      setTimeout(()=>{ $('win').classList.add('show'); (li<LEVELS.length-1?$('next'):$('replay')).focus(); }, reduced?0:450);
+      hud(); paintLevels();
+    }
+  }
+
+  // ---------------- particles ----------------
+  let parts=[];
+  function sparkle(x,y,col,n=10){ for(let i=0;i<n;i++){ const a=Math.random()*Math.PI*2, s=20+Math.random()*50; parts.push({x:x*T+8,y:y*T+8,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:.5+Math.random()*.4,col}); } }
+
+  // ---------------- render ----------------
+  let last=performance.now(), time=0;
+  function frame(now){
+    const dt=Math.min(.05,(now-last)/1000); last=now; time+=dt;
+    if (anim){
+      anim.t+=dt; const k=Math.min(1, anim.t/anim.dur);
+      if (anim.type==='walk'){ const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; player.dx=anim.from.x+(anim.to.x-anim.from.x)*e; player.dy=anim.from.y+(anim.to.y-anim.from.y)*e; }
+      else { const e=k; anim.b.dx=anim.from.x+(anim.to.x-anim.from.x)*e; anim.b.dy=anim.from.y+(anim.to.y-anim.from.y)*e;
+        if (!reduced && Math.random()<.6) parts.push({x:anim.b.dx*T+8-anim.kick.dx*8,y:anim.b.dy*T+8-anim.kick.dy*8,vx:(Math.random()-.5)*20,vy:(Math.random()-.5)*20,l:.35,col:'#e6fbff'}); }
+      if (k>=1){
+        if (anim.type==='slide'){
+          const b=anim.b; b.dx=b.x; b.dy=b.y; SFX.thud();
+          if (targets.some(t=>t.x===b.x&&t.y===b.y)){ SFX.rune(); sparkle(b.x,b.y,'#ffd166',16); } else sparkle(b.x,b.y,'#c8f4ff',6);
+        } else { player.dx=player.x; player.dy=player.y; }
+        anim=null; checkWin();
+      }
+    }
+    if (bumpT>0) bumpT-=dt;
+    parts.forEach(p=>{ p.x+=p.vx*dt; p.y+=p.vy*dt; p.l-=dt; }); parts=parts.filter(p=>p.l>0);
+
+    // compose at native pixel size then scale
+    const s = cvs.width/(W*T);
+    ctx.setTransform(1,0,0,1,0,0); ctx.imageSmoothingEnabled=false;
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    ctx.setTransform(s,0,0,s,0,0);
+    ctx.drawImage(board,0,0);
+    targets.forEach(t=>drawRune(ctx,t.x*T,t.y*T,time,blocks.some(b=>b.x===t.x&&b.y===t.y)));
+    // shadows & blocks sorted by y
+    blocks.slice().sort((a,b)=>a.dy-b.dy).forEach(b=>drawBlock(ctx,b.dx*T,b.dy*T, !anim || anim.b!==b ? targets.some(t=>t.x===b.x&&t.y===b.y) : false));
+    // penguin
+    const bob = anim && anim.type==='walk' ? -Math.sin(anim.t/anim.dur*Math.PI)*2 : 0;
+    const bx = bumpT>0 ? bumpD[0]*Math.sin(bumpT/.12*Math.PI)*2 : 0, by = bumpT>0 ? bumpD[1]*Math.sin(bumpT/.12*Math.PI)*2 : 0;
+    const blink = (time%3.2)<.12;
+    ctx.fillStyle='rgba(10,20,60,.3)'; ctx.fillRect(Math.round(player.dx*T+4+bx), Math.round(player.dy*T+14+by), 8, 2);
+    ctx.drawImage(SPR[facing+(blink?'b':'')], Math.round(player.dx*T+bx), Math.round(player.dy*T+bob+by));
+    parts.forEach(p=>{ ctx.globalAlpha=Math.min(1,p.l*2); ctx.fillStyle=p.col; ctx.fillRect(Math.round(p.x),Math.round(p.y),1,1); }); ctx.globalAlpha=1;
+    requestAnimationFrame(frame);
+  }
+
+  // ---------------- snow backdrop ----------------
+  const sc=$('snow'), sx=sc.getContext('2d'); let flakes=[];
+  function sizeSnow(){ sc.width=innerWidth; sc.height=innerHeight; flakes=Array.from({length:Math.min(140, Math.floor(innerWidth/9))},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,s:1+Math.floor(Math.random()*3),v:10+Math.random()*30,w:Math.random()*6})); }
+  let slast=performance.now();
+  function snowLoop(now){ const dt=Math.min(.05,(now-slast)/1000); slast=now; sx.clearRect(0,0,sc.width,sc.height);
+    flakes.forEach(f=>{ if (!reduced){ f.y+=f.v*dt; f.x+=Math.sin(now/1000+f.w)*8*dt; } if (f.y>sc.height){ f.y=-4; f.x=Math.random()*sc.width; } sx.fillStyle=`rgba(220,236,255,${.25+f.s*.15})`; sx.fillRect(Math.round(f.x),Math.round(f.y),f.s*2,f.s*2); });
+    requestAnimationFrame(snowLoop); }
+
+  // legend tiles
+  (function(){
+    const items=[['wall','Cavern rock stops everything'],['ice','Ice: blocks slide across it'],['snow','Snowdrift: blocks stop on it'],['rune','Rune: park a block here'],['block','Ice block']];
+    const el=$('legend');
+    items.forEach(([k,txt])=>{ const c=document.createElement('canvas'); c.width=T; c.height=T; const x=c.getContext('2d');
+      if (k==='wall') drawWall(x,0,0,0,1,[[' '],['#'],[' ']]); if (k==='ice'||k==='rune'||k==='block') drawIce(x,0,0,2,3); if (k==='snow') drawSnow(x,0,0,1,1); if (k==='rune') drawRune(x,0,0,0,false); if (k==='block') drawBlock(x,0,0,false);
+      el.appendChild(c); const s=document.createElement('span'); s.textContent=txt; el.appendChild(s); });
+  })();
+
+  // ---------------- input ----------------
+  const DIRS={arrowup:[0,-1],w:[0,-1],arrowdown:[0,1],s:[0,1],arrowleft:[-1,0],a:[-1,0],arrowright:[1,0],d:[1,0]};
+  window.addEventListener('keydown', e=>{
+    if (e.ctrlKey||e.metaKey||e.altKey) return;
+    const k=e.key.toLowerCase();
+    if (DIRS[k]){ e.preventDefault(); if ($('win').classList.contains('show')) return; tryMove(...DIRS[k]); }
+    else if (k==='z'||k==='u'||k==='backspace'){ e.preventDefault(); undo(); }
+    else if (k==='r'){ load(li); }
+    else if (k==='m'){ muteBtn.click(); }
+    else if (k==='n' && $('win').classList.contains('show')){ $('next').click(); }
+  });
+  [['d-up',0,-1],['d-down',0,1],['d-left',-1,0],['d-right',1,0]].forEach(([id,dx,dy])=>{
+    const b=$(id); let rep=null;
+    b.addEventListener('pointerdown', e=>{ e.preventDefault(); tryMove(dx,dy); rep=setInterval(()=>tryMove(dx,dy), 190); });
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev, ()=>clearInterval(rep)));
+    b.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); tryMove(dx,dy); } });
+  });
+  let sw=null;
+  cvs.addEventListener('pointerdown', e=>{ sw={x:e.clientX,y:e.clientY}; cvs.focus({preventScroll:true}); });
+  cvs.addEventListener('pointerup', e=>{ if(!sw) return; const dx=e.clientX-sw.x, dy=e.clientY-sw.y; sw=null; if (Math.max(Math.abs(dx),Math.abs(dy))<20) return; if (Math.abs(dx)>Math.abs(dy)) tryMove(Math.sign(dx),0); else tryMove(0,Math.sign(dy)); });
+  $('undo').addEventListener('click', undo);
+  $('restart').addEventListener('click', ()=>load(li));
+  $('prev').addEventListener('click', ()=>{ if (li>0) load(li-1); });
+  $('skip').addEventListener('click', ()=>{ if (li<LEVELS.length-1) load(li+1); });
+  $('next').addEventListener('click', ()=>{ if (li<LEVELS.length-1) load(li+1); cvs.focus({preventScroll:true}); });
+  $('replay').addEventListener('click', ()=>load(li));
+  window.addEventListener('resize', ()=>{ fit(); sizeSnow(); });
+
+  sizeSnow(); load(li < unlocked()+1 ? li : 0);
+  requestAnimationFrame(frame); requestAnimationFrame(snowLoop);
+})();
+</script>
+</body>
+</html>
