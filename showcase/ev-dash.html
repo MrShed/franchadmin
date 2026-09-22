@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Halden E7 Cockpit</title>
+<meta name="description" content="An electric car instrument cluster and centre display you can drive: power and regen meter, live range estimate, battery, a perspective navigation arc, and four drive modes that re-theme the whole cabin.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:ital,wght@0,300;0,400;0,500;0,700;0,900;1,700&family=Red+Hat+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@property --bg{syntax:'<color>'; inherits:true; initial-value:#061413}
+@property --bg2{syntax:'<color>'; inherits:true; initial-value:#0b201e}
+@property --fg{syntax:'<color>'; inherits:true; initial-value:#e6fff8}
+@property --dim{syntax:'<color>'; inherits:true; initial-value:#5f8c84}
+@property --acc{syntax:'<color>'; inherits:true; initial-value:#3cf2c0}
+@property --acc2{syntax:'<color>'; inherits:true; initial-value:#1c8c7a}
+@property --line{syntax:'<color>'; inherits:true; initial-value:#16312d}
+:root{ --disp:"Red Hat Display","Avenir Next","Segoe UI",system-ui,sans-serif; --mono:"Red Hat Mono",ui-monospace,Menlo,monospace; }
+body[data-mode="eco"]{--bg:#061413; --bg2:#0b201e; --fg:#e6fff8; --dim:#5f8c84; --acc:#3cf2c0; --acc2:#1c8c7a; --line:#16312d}
+body[data-mode="comfort"]{--bg:#141210; --bg2:#1e1b17; --fg:#f6efe4; --dim:#8a7f70; --acc:#ffc98a; --acc2:#b8864f; --line:#2c2722}
+body[data-mode="sport"]{--bg:#0a0506; --bg2:#170a0c; --fg:#ffffff; --dim:#8b6a6e; --acc:#ff2b3a; --acc2:#a3121d; --line:#2d1216}
+body[data-mode="snow"]{--bg:#e9f1f7; --bg2:#ffffff; --fg:#0c2238; --dim:#6f8aa3; --acc:#2a7fff; --acc2:#8fbaf5; --line:#cfdeea}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg); color:var(--fg); font-family:var(--disp); min-height:100vh; overflow-x:hidden; transition:--bg .8s, --bg2 .8s, --fg .8s, --dim .8s, --acc .8s, --acc2 .8s, --line .8s}
+:focus-visible{outline:2px solid var(--acc); outline-offset:3px}
+.wrap{max-width:1280px; margin:0 auto; padding:18px max(16px,3vw) 36px}
+.top{display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:14px}
+.brand{font-weight:900; letter-spacing:.34em; font-size:13px}
+.brand span{font-weight:300; letter-spacing:.2em; color:var(--dim)}
+.back{color:var(--fg); text-decoration:none; font-size:12px; letter-spacing:.2em; font-weight:500; border:1px solid var(--line); padding:7px 12px; border-radius:20px}
+.back:hover{border-color:var(--acc); color:var(--acc)}
+
+/* cluster */
+.cluster{position:relative; border-radius:34px; background:radial-gradient(120% 140% at 50% 0%, var(--bg2), var(--bg) 70%); border:1px solid var(--line);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 40px 80px -40px rgba(0,0,0,.7); padding:18px 26px 22px; overflow:hidden}
+.cluster::after{content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(170deg, rgba(255,255,255,.07), transparent 30%)}
+.tele{display:flex; justify-content:space-between; align-items:center; font:500 13px var(--mono); color:var(--dim); gap:10px}
+.tele .ic{display:flex; gap:14px; align-items:center}
+.tl{width:18px; height:18px; opacity:.25; transition:opacity .3s}
+.tl.on{opacity:1}
+.cgrid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1fr); gap:12px; align-items:center; margin-top:4px}
+.gauge{width:100%; max-width:330px; justify-self:center; display:block}
+.center{display:flex; flex-direction:column; align-items:center; text-align:center; position:relative}
+.speed{font-weight:300; font-size:clamp(84px,11vw,150px); line-height:.85; letter-spacing:-.05em; font-variant-numeric:tabular-nums; transition:font-weight .6s}
+body[data-mode="sport"] .speed{font-weight:900; font-style:italic}
+.unit{font:500 12px var(--mono); letter-spacing:.3em; color:var(--dim); margin-top:6px}
+.gear{display:flex; gap:14px; font:700 16px var(--disp); color:var(--dim); margin-top:10px; letter-spacing:.1em}
+.gear b{color:var(--acc)}
+.modebadge{position:absolute; top:-2px; right:0; font:700 11px var(--disp); letter-spacing:.3em; color:var(--acc); border:1px solid var(--acc); padding:4px 8px; border-radius:4px}
+#road{width:100%; max-width:440px; height:auto; display:block; margin-top:8px}
+.nav-line{font:500 14px var(--disp); color:var(--fg); margin-top:2px; display:flex; gap:10px; align-items:center; justify-content:center}
+.nav-line b{font-weight:900; color:var(--acc); font-size:18px}
+.readout{font:500 12px var(--mono); color:var(--dim); text-align:center; margin-top:-6px; letter-spacing:.08em}
+.readout b{display:block; font:300 40px var(--disp); color:var(--fg); letter-spacing:-.02em}
+.demo{position:absolute; left:26px; bottom:18px; font:500 11px var(--mono); letter-spacing:.2em; color:var(--acc); opacity:.8}
+.demo[hidden]{display:none}
+
+/* console */
+.console{display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:16px; margin-top:16px}
+.panel{background:var(--bg2); border:1px solid var(--line); border-radius:24px; padding:18px; position:relative; overflow:hidden}
+.panel h2{margin:0 0 12px; font:700 12px var(--disp); letter-spacing:.26em; text-transform:uppercase; color:var(--dim); display:flex; justify-content:space-between}
+.panel h2 span{color:var(--fg); letter-spacing:.06em; font-weight:500; text-transform:none; font-size:13px}
+#map{width:100%; height:auto; display:block; border-radius:14px; background:var(--bg)}
+.trip{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px}
+.trip div{border-top:1px solid var(--line); padding-top:8px}
+.trip small{display:block; font:500 11px var(--mono); color:var(--dim); letter-spacing:.1em}
+.trip b{font-weight:500; font-size:22px}
+.modes{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+.mode{border:1px solid var(--line); background:none; color:var(--fg); border-radius:16px; padding:14px 6px 12px; cursor:pointer; font:700 12px var(--disp); letter-spacing:.18em; text-transform:uppercase; transition:background .3s, border-color .3s}
+.mode small{display:block; font:400 11px var(--mono); letter-spacing:0; text-transform:none; color:var(--dim); margin-top:4px}
+.mode[aria-pressed="true"]{border-color:var(--acc); background:color-mix(in srgb, var(--acc) 14%, transparent); color:var(--acc)}
+.drive{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px}
+.pedal{border:1px solid var(--line); background:linear-gradient(var(--bg2), var(--bg)); color:var(--fg); border-radius:18px; height:84px; cursor:pointer; font:700 13px var(--disp); letter-spacing:.2em; touch-action:none; user-select:none; -webkit-user-select:none; position:relative; overflow:hidden}
+.pedal::before{content:""; position:absolute; left:0; right:0; bottom:0; height:var(--p,0%); background:color-mix(in srgb, var(--acc) 30%, transparent); transition:height .1s}
+.pedal.brake::before{background:rgba(255,80,80,.3)}
+.pedal span{position:relative}
+.pedal small{display:block; font:400 11px var(--mono); letter-spacing:.06em; color:var(--dim); margin-top:4px; position:relative}
+.regen{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; margin-top:14px}
+.regen button{width:48px; height:40px; border-radius:12px; border:1px solid var(--line); background:none; color:var(--fg); font:700 18px var(--disp); cursor:pointer}
+.rlv{display:grid; grid-template-columns:repeat(4,1fr); gap:5px}
+.rlv i{height:8px; border-radius:4px; background:var(--line); transition:background .3s}
+.rlv i.on{background:var(--acc)}
+.rlab{grid-column:1/-1; font:500 11px var(--mono); color:var(--dim); text-align:center; margin-top:-4px}
+#cons{width:100%; height:90px; display:block; margin-top:6px}
+.clim{display:flex; justify-content:space-between; align-items:center; margin-top:14px; border-top:1px solid var(--line); padding-top:12px}
+.clim button{width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:none; color:var(--fg); font-size:18px; cursor:pointer}
+.clim b{font-weight:300; font-size:30px}
+.clim small{font:500 11px var(--mono); color:var(--dim); display:block}
+.keys{font:500 11.5px var(--mono); color:var(--dim); margin-top:14px; line-height:1.7}
+.keys kbd{border:1px solid var(--line); border-radius:4px; padding:0 5px; font-family:var(--mono); color:var(--fg)}
+@media (max-width:980px){
+  .cgrid{grid-template-columns:1fr 1fr; grid-template-areas:"c c" "l r"}
+  .center{grid-area:c} .gl{grid-area:l} .gr{grid-area:r}
+  .console{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:520px){
+  .cluster{padding:14px 14px 16px; border-radius:22px}
+  .tele{font-size:11px} .tele .ic{gap:8px}
+  .modes{grid-template-columns:repeat(2,1fr)}
+  .trip b{font-size:18px}
+  .readout b{font-size:30px}
+  .demo{left:14px; bottom:10px}
+}
+@media (prefers-reduced-motion:reduce){ body{transition:none} }
+</style>
+</head>
+<body data-mode="eco">
+<div class="wrap">
+  <div class="top"><div class="brand">HALDEN <span>E7 · LONG RANGE</span></div><a class="back" id="backLink" href="index.html">← SHOWCASE</a></div>
+
+  <section class="cluster" aria-label="Instrument cluster">
+    <div class="tele">
+      <span id="clock">08:14</span>
+      <span class="ic" aria-hidden="true">
+        <svg class="tl on" id="tlReady" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10v4M8 12h6M11 9l-2 3h4l-2 3"/></svg>
+        <svg class="tl" id="tlRegen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 14-5M20 12a8 8 0 0 1-14 5M18 3v4h-4M6 21v-4h4"/></svg>
+        <svg class="tl" id="tlBrake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="6"/><path d="M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14M12 9v3"/></svg>
+        <svg class="tl on" id="tlLights" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 6c-4 0-6 2.5-6 6s2 6 6 6V6zM15 8h6M15 12h6M15 16h6"/></svg>
+      </span>
+      <span id="outTemp">11°C · A90</span>
+    </div>
+    <div class="cgrid">
+      <div class="gl"><svg class="gauge" id="powerG" viewBox="-160 -150 320 250" aria-label="Power meter"></svg><div class="readout"><b id="kw">0</b>kW <span id="kwLab">COAST</span></div></div>
+      <div class="center">
+        <span class="modebadge" id="modeBadge">ECO</span>
+        <div class="speed" id="speed" aria-live="off">0</div>
+        <div class="unit">KM/H · LIMIT <span id="limit">70</span></div>
+        <div class="gear" aria-label="Gear"><span>P</span><span>R</span><span>N</span><b>D</b></div>
+        <svg id="road" viewBox="0 0 440 150" aria-label="Navigation arc"></svg>
+        <div class="nav-line"><b id="navDist">2.4 km</b><span id="navTxt">Keep left onto the M90 for Perth</span></div>
+      </div>
+      <div class="gr"><svg class="gauge" id="battG" viewBox="-160 -150 320 250" aria-label="Battery gauge"></svg><div class="readout"><b id="range">312</b>km RANGE · <span id="soc">68%</span></div></div>
+    </div>
+    <div class="demo" id="demo">● DEMO DRIVE · PRESS ↑ TO TAKE OVER</div>
+  </section>
+
+  <section class="console">
+    <div class="panel">
+      <h2>Navigation <span id="dest">Edinburgh → Inverness · via A9</span></h2>
+      <svg id="map" viewBox="0 0 600 300" aria-label="Route map"></svg>
+      <div class="trip"><div><small>ARRIVAL</small><b id="eta">11:02</b></div><div><small>REMAINING</small><b id="remain">249 km</b></div><div><small>ARRIVE WITH</small><b id="arrSoc">21%</b></div></div>
+    </div>
+    <div class="panel">
+      <h2>Drive <span id="modeDesc">Gentle throttle, max regen</span></h2>
+      <div class="modes" role="group" aria-label="Drive mode">
+        <button class="mode" id="mEco" aria-pressed="true">Eco<small>+8% range</small></button>
+        <button class="mode" id="mComfort" aria-pressed="false">Comfort<small>balanced</small></button>
+        <button class="mode" id="mSport" aria-pressed="false">Sport<small>320 kW</small></button>
+        <button class="mode" id="mSnow" aria-pressed="false">Snow<small>low grip</small></button>
+      </div>
+      <div class="drive">
+        <button class="pedal brake" id="brake"><span>BRAKE</span><small>hold · ↓</small></button>
+        <button class="pedal" id="accel"><span>ACCELERATE</span><small>hold · ↑</small></button>
+      </div>
+      <div class="regen"><button id="regenDown" aria-label="Less regeneration">−</button><div class="rlv" id="rlv"><i></i><i></i><i></i><i></i><div class="rlab" id="rlab">REGEN 2 · ONE-PEDAL OFF</div></div><button id="regenUp" aria-label="More regeneration">+</button></div>
+      <svg id="cons" preserveAspectRatio="none" aria-label="Consumption, last 20 km"></svg>
+      <div class="clim"><button id="tDown" aria-label="Cooler">−</button><div style="text-align:center"><small>CABIN</small><b id="cabin">20.5°</b></div><button id="tUp" aria-label="Warmer">+</button></div>
+      <div class="keys"><kbd>↑</kbd> accelerate <kbd>↓</kbd> brake <kbd>Q</kbd>/<kbd>E</kbd> regen <kbd>1</kbd>–<kbd>4</kbd> modes</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+function fixVars(root){ root.querySelectorAll('[fill*="var("],[stroke*="var("],[stop-color*="var("]').forEach(el => { ['fill','stroke','stop-color'].forEach(a => { const v = el.getAttribute(a); if (v && v.includes('var(')){ el.style.setProperty(a, v); el.removeAttribute(a); } }); }); }
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MODES = {
+  eco:    {name:'ECO', acc:2.4, vmax:150, kw:150, eff:.9, desc:'Gentle throttle, max regen', regen:3},
+  comfort:{name:'COMFORT', acc:3.4, vmax:180, kw:220, eff:1, desc:'Balanced response, soft ride', regen:2},
+  sport:  {name:'SPORT', acc:5.6, vmax:220, kw:320, eff:1.14, desc:'Full 320 kW, sharp steering', regen:1},
+  snow:   {name:'SNOW', acc:1.7, vmax:130, kw:110, eff:1.04, desc:'Soft torque, traction first', regen:1}
+};
+const S = { mode:'eco', v:0, thr:0, brk:0, regen:3, soc:68.0, cap:82, cons:168, kw:0, dist:0, navLeft:2.4, total:249, cabin:20.5, curve:0, curveT:0, demo:true, lastInput:-99, keys:{} };
+
+/* ---------- gauges ---------- */
+const P = (a, r) => [Math.cos(a)*r, Math.sin(a)*r];
+const A0 = Math.PI*.8, A1 = Math.PI*2.2; // 144° to 396°
+function arcD(a0, a1, r){ const [x0,y0] = P(a0,r), [x1,y1] = P(a1,r); return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${a1-a0 > Math.PI ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; }
+function buildGauge(svg, ticks, labels){
+  let o = `<path d="${arcD(A0, A1, 118)}" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round"/>`;
+  ticks.forEach(t => { const a = A0 + (A1-A0)*t.f; const [x1,y1] = P(a, 136), [x2,y2] = P(a, t.big ? 146 : 141); o += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--dim)" stroke-width="${t.big?2:1}"/>`;
+    if (t.l !== undefined){ const [tx,ty] = P(a, 100); o += `<text x="${tx}" y="${ty+4}" text-anchor="middle" font-family="Red Hat Mono,monospace" font-size="11" fill="var(--dim)">${t.l}</text>`; } });
+  o += labels;
+  svg.innerHTML = o; fixVars(svg);
+}
+// power: -80 .. 320 kW
+const PMIN = -80, PMAX = 320; const pf = kw => (kw - PMIN)/(PMAX - PMIN);
+buildGauge($('#powerG'), [-80,-40,0,40,80,120,160,200,240,280,320].map(k => ({f:pf(k), big:k%80===0, l:k%80===0 ? k : undefined})),
+  `<path id="pArc" fill="none" stroke="var(--acc)" stroke-width="14" stroke-linecap="round"/><path id="rArc" fill="none" stroke="#40d98a" stroke-width="14" stroke-linecap="round"/>
+   <path id="pLimit" fill="none" stroke="var(--acc2)" stroke-width="3" stroke-dasharray="2 5"/>
+   <g id="pNeedle"><line x1="0" y1="0" x2="128" y2="0" stroke="var(--fg)" stroke-width="3" stroke-linecap="round"/></g><circle r="7" fill="var(--fg)"/>
+   <text x="0" y="60" text-anchor="middle" font-family="Red Hat Display,sans-serif" font-weight="700" font-size="12" letter-spacing="3" fill="var(--dim)">POWER</text>`);
+buildGauge($('#battG'), [0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1].map((f,i) => ({f, big:i%5===0, l:i%5===0 ? (i*10)+'%' : undefined})),
+  `<path id="bArc" fill="none" stroke="var(--acc)" stroke-width="14" stroke-linecap="round"/>
+   <g id="bSegs"></g>
+   <text x="0" y="-8" text-anchor="middle" font-family="Red Hat Display,sans-serif" font-weight="300" font-size="44" fill="var(--fg)" id="bPct">68</text>
+   <text x="0" y="14" text-anchor="middle" font-family="Red Hat Mono,monospace" font-size="11" fill="var(--dim)" id="bTemp">PACK 24°C</text>
+   <text x="0" y="60" text-anchor="middle" font-family="Red Hat Display,sans-serif" font-weight="700" font-size="12" letter-spacing="3" fill="var(--dim)">BATTERY</text>`);
+
+/* ---------- road arc ---------- */
+const road = $('#road'); let dashOff = 0;
+function drawRoad(){
+  const W = 440, H = 150, hz = 18; const c = S.curve; // -1..1
+  const pt = (t, side) => { // t: 0 near .. 1 far
+    const y = H - (H-hz)*Math.pow(t, .75); const w = 150*(1-t)+8; const cx = W/2 + c*Math.pow(t,2)*180;
+    return [cx + side*w, y]; };
+  let L = '', R = '', C = '';
+  for (let i=0;i<=24;i++){ const t = i/24; const l = pt(t,-1), r = pt(t,1), m = pt(t,0); L += (i?'L':'M') + l[0].toFixed(1)+' '+l[1].toFixed(1); R += (i?'L':'M') + r[0].toFixed(1)+' '+r[1].toFixed(1); C += (i?'L':'M') + m[0].toFixed(1)+' '+m[1].toFixed(1); }
+  let fill = L; for (let i=24;i>=0;i--){ const r = pt(i/24,1); fill += 'L'+r[0].toFixed(1)+' '+r[1].toFixed(1); }
+  let chev = ''; const n = 7; const off = (dashOff % 1 + 1) % 1;
+  for (let k=0;k<n;k++){ const t = (k + 1 - off)/n*.8; if (t < .02) continue; const m = pt(t,0), a = pt(t+.02,0); const s = 16*(1-t) + 3; const ang = Math.atan2(a[1]-m[1], a[0]-m[0]);
+    const op = Math.min(1, (1-t)*1.4)*.9; const p1 = [m[0] + Math.cos(ang+2.5)*s, m[1] + Math.sin(ang+2.5)*s], p2 = [m[0] + Math.cos(ang-2.5)*s, m[1] + Math.sin(ang-2.5)*s];
+    chev += `<path d="M${p1[0].toFixed(1)} ${p1[1].toFixed(1)} L${m[0].toFixed(1)} ${m[1].toFixed(1)} L${p2[0].toFixed(1)} ${p2[1].toFixed(1)}" fill="none" stroke="var(--acc)" stroke-width="${(3*(1-t)+1).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round" opacity="${op.toFixed(2)}"/>`; }
+  const turn = S.navLeft < .8 ? `<g transform="translate(${pt(.55,0)[0] - 90} ${pt(.55,0)[1] - 6})" opacity="${Math.min(1,(.8-S.navLeft)*3).toFixed(2)}"><path d="M60 30 L60 8 Q60 0 52 0 L30 0" fill="none" stroke="var(--acc)" stroke-width="4"/><path d="M34 -7 L24 0 L34 7" fill="none" stroke="var(--acc)" stroke-width="4"/></g>` : '';
+  road.innerHTML = `<defs><linearGradient id="rf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--acc)" stop-opacity="0"/><stop offset="1" stop-color="var(--acc)" stop-opacity=".16"/></linearGradient></defs>
+    <path d="${fill}Z" fill="url(#rf)"/><path d="${L}" fill="none" stroke="var(--dim)" stroke-width="1.5"/><path d="${R}" fill="none" stroke="var(--dim)" stroke-width="1.5"/>${chev}${turn}
+    <path d="M${W/2-12} ${H-2} L${W/2} ${H-22} L${W/2+12} ${H-2} L${W/2} ${H-8}Z" fill="var(--fg)"/>`; fixVars(road);
+}
+
+/* ---------- map ---------- */
+const route = [[60,250],[110,236],[150,214],[170,180],[210,160],[260,150],[300,130],[330,100],[370,86],[420,74],[470,56],[520,44],[555,34]];
+const ROUTE_KM = 249 + 0; let rlen = [0]; for (let i=1;i<route.length;i++) rlen.push(rlen[i-1] + Math.hypot(route[i][0]-route[i-1][0], route[i][1]-route[i-1][1]));
+function drawMapBase(){
+  let o = '<defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="var(--line)" stroke-width="1"/></pattern></defs><rect width="600" height="300" fill="url(#grid)"/>';
+  o += '<path d="M0 262 C 60 250, 120 270, 180 262 S 240 240, 290 250 L 300 300 L 0 300Z" fill="var(--acc2)" opacity=".18"/>'; // Forth
+  o += '<path d="M430 20 C 450 60, 470 70, 520 80 S 560 120, 600 110 L600 0 L 420 0Z" fill="var(--acc2)" opacity=".12"/>';
+  const pl = route.map((p,i) => (i?'L':'M') + p.join(' ')).join('');
+  o += `<path d="${pl}" fill="none" stroke="var(--line)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="${pl}" fill="none" stroke="var(--dim)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  o += `<path id="doneRoute" d="${pl}" fill="none" stroke="var(--acc)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  [['Edinburgh',60,250,'start'],['Perth',210,160,'end'],['Pitlochry',330,100,'end'],['Aviemore',470,56,'end'],['Inverness',555,34,'end']].forEach(([n,x,y,a]) => { o += `<circle cx="${x}" cy="${y}" r="4" fill="var(--fg)"/><text x="${x + (a==='start'?8:-8)}" y="${y+18}" text-anchor="${a}" font-family="Red Hat Display,sans-serif" font-size="12" font-weight="500" fill="var(--fg)">${n}</text>`; });
+  o += `<g transform="translate(300 130)"><rect x="-10" y="-26" width="20" height="16" rx="3" fill="var(--acc)"/><path d="M-3 -22 L-5 -17 L-1 -17 L-3 -12" stroke="var(--bg)" stroke-width="1.5" fill="none"/><text x="14" y="-14" font-family="Red Hat Mono,monospace" font-size="10" fill="var(--acc)">Ionity · 350 kW</text></g>`;
+  o += `<g id="car"><circle r="11" fill="var(--acc)" opacity=".25"/><path d="M0 -8 L6 7 L0 3 L-6 7Z" fill="var(--fg)"/></g>`;
+  $('#map').innerHTML = o; fixVars($('#map'));
+  const dr = $('#doneRoute'); dr.style.strokeDasharray = rlen[rlen.length-1];
+}
+function placeCar(frac){ const target = frac*rlen[rlen.length-1]; let i = 1; while (i < rlen.length-1 && rlen[i] < target) i++;
+  const f = (target - rlen[i-1])/(rlen[i]-rlen[i-1]); const a = route[i-1], b = route[i]; const x = a[0]+(b[0]-a[0])*f, y = a[1]+(b[1]-a[1])*f; const ang = Math.atan2(b[1]-a[1], b[0]-a[0])*180/Math.PI + 90;
+  $('#car').setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)})`); $('#doneRoute').style.strokeDashoffset = rlen[rlen.length-1] - target; }
+
+/* ---------- consumption chart ---------- */
+const consHist = Array.from({length:40}, (_,i) => 150 + Math.sin(i*.7)*18 + (i%7)*3); let consAcc = 0, consN = 0, consDist = 0;
+function drawCons(){ const svg = $('#cons'); const W = svg.clientWidth || 300, H = 90; svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const bw = W/consHist.length; let o = `<line x1="0" x2="${W}" y1="${H - 170/260*H}" y2="${H - 170/260*H}" stroke="var(--dim)" stroke-dasharray="3 4" stroke-width="1"/><text x="${W}" y="${H - 170/260*H - 4}" text-anchor="end" font-family="Red Hat Mono,monospace" font-size="10" fill="var(--dim)">170 Wh/km avg</text>`;
+  consHist.forEach((c,i) => { const h = Math.max(2, Math.min(H-2, c/260*H)); o += `<rect x="${(i*bw+1).toFixed(1)}" y="${(H-h).toFixed(1)}" width="${Math.max(1,bw-2).toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${c < 0 ? '#40d98a' : 'var(--acc)'}" opacity="${(.35 + .65*i/consHist.length).toFixed(2)}"/>`; });
+  svg.innerHTML = o; fixVars(svg); }
+
+/* ---------- controls ---------- */
+function setMode(m){ S.mode = m; document.body.dataset.mode = m; const M = MODES[m];
+  ['eco','comfort','sport','snow'].forEach(k => $('#m'+k[0].toUpperCase()+k.slice(1)).setAttribute('aria-pressed', k===m));
+  $('#modeBadge').textContent = M.name; $('#modeDesc').textContent = M.desc; S.regen = M.regen; renderRegen();
+  const [x0,y0] = P(A0 + (A1-A0)*pf(M.kw), 128); $('#pLimit').setAttribute('d', arcD(A0 + (A1-A0)*pf(M.kw) - .001, A0 + (A1-A0)*pf(M.kw), 128)); }
+['eco','comfort','sport','snow'].forEach((k,i) => $('#m'+k[0].toUpperCase()+k.slice(1)).addEventListener('click', () => { input(); setMode(k); }));
+function renderRegen(){ document.querySelectorAll('#rlv i').forEach((el,i) => el.classList.toggle('on', i < S.regen+1 && S.regen >= 0 && i <= S.regen));
+  $('#rlab').textContent = `REGEN ${S.regen}` + (S.regen === 3 ? ' · ONE-PEDAL' : S.regen === 0 ? ' · COAST' : ''); }
+$('#regenUp').addEventListener('click', () => { input(); S.regen = Math.min(3, S.regen+1); renderRegen(); });
+$('#regenDown').addEventListener('click', () => { input(); S.regen = Math.max(0, S.regen-1); renderRegen(); });
+function input(){ S.lastInput = performance.now()/1000; if (S.demo){ S.demo = false; $('#demo').hidden = true; } }
+function hold(el, key){ el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); input(); S.keys[key] = true; });
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev => el.addEventListener(ev, () => S.keys[key] = false));
+  el.addEventListener('keydown', e => { if (e.key===' '||e.key==='Enter'){ e.preventDefault(); input(); S.keys[key] = true; } });
+  el.addEventListener('keyup', e => { if (e.key===' '||e.key==='Enter') S.keys[key] = false; }); }
+hold($('#accel'), 'acc'); hold($('#brake'), 'brk');
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W'){ e.preventDefault(); input(); S.keys.acc = true; }
+  else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S'){ e.preventDefault(); input(); S.keys.brk = true; }
+  else if (e.key === 'q' || e.key === 'Q'){ $('#regenDown').click(); } else if (e.key === 'e' || e.key === 'E'){ $('#regenUp').click(); }
+  else if (['1','2','3','4'].includes(e.key)){ input(); setMode(['eco','comfort','sport','snow'][+e.key-1]); } });
+addEventListener('keyup', e => { if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') S.keys.acc = false; if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') S.keys.brk = false; });
+addEventListener('blur', () => { S.keys = {}; });
+$('#tUp').addEventListener('click', () => { S.cabin = Math.min(26, S.cabin + .5); $('#cabin').textContent = S.cabin.toFixed(1) + '°'; });
+$('#tDown').addEventListener('click', () => { S.cabin = Math.max(16, S.cabin - .5); $('#cabin').textContent = S.cabin.toFixed(1) + '°'; });
+
+/* ---------- sim ---------- */
+const NAV = [['Keep left onto the M90 for Perth', 2.4],['Continue on the M90 over the Queensferry Crossing', 14.2],['At Broxden roundabout take the 2nd exit onto the A9', 38.5],['Continue on the A9 through Pitlochry', 41.0],['Take the exit for Aviemore', 70.1],['Continue on the A9 to Inverness', 45.5]];
+let navI = 0; S.navLeft = NAV[0][1];
+let last = performance.now(), t = 0, uiAcc = 0, consTick = 0, speedLimit = 70;
+function step(now){
+  const dt = Math.min(.05, (now-last)/1000); last = now; t += dt; const M = MODES[S.mode];
+  if (!S.demo && now/1000 - S.lastInput > 9 && !S.keys.acc && !S.keys.brk){ S.demo = true; $('#demo').hidden = false; }
+  // inputs
+  let thrT = S.keys.acc ? 1 : 0, brkT = S.keys.brk ? 1 : 0;
+  if (S.demo){ const target = 96 + Math.sin(t*.13)*16 + Math.sin(t*.041)*10; const err = target - S.v; thrT = Math.max(0, Math.min(.8, err*.08)); brkT = err < -8 ? .3 : 0; }
+  S.thr += (thrT - S.thr)*(1 - Math.exp(-dt*(S.mode==='sport'?9:S.mode==='snow'?2:4))); S.brk += (brkT - S.brk)*(1 - Math.exp(-dt*8));
+  const vms = S.v/3.6;
+  let a = S.thr * M.acc * Math.max(0, 1 - S.v/M.vmax) * (S.v < 5 ? .8 : 1);
+  const drag = .0004*vms*vms + .12; const regenA = S.thr < .05 ? [0,.6,1.3,2.2][S.regen] * Math.min(1, S.v/20) : 0; const brakeA = S.brk*7.5;
+  a -= (vms > 0 ? drag + regenA + brakeA : 0);
+  let nv = Math.max(0, vms + a*dt); S.v = nv*3.6;
+  // power: traction positive, regen negative (regen captures ~70% of decel energy)
+  const mass = 2150; const trac = S.thr*M.acc*Math.max(0,1-S.v/M.vmax)*mass*nv/1000/.9 + drag*mass*nv/1000*.4 + (S.thr > .05 ? 4 : .6);
+  const regenKw = (regenA + Math.min(brakeA, 2.5))*mass*nv/1000*.7;
+  const kw = Math.min(M.kw, trac) - Math.min(80, regenKw);
+  S.kw += (kw - S.kw)*(1 - Math.exp(-dt*6));
+  // energy & distance (time accelerated x6 for a lively demo)
+  const ACC = 6; const dKm = S.v/3600*dt*ACC; S.dist += dKm; S.soc = Math.max(3, S.soc - S.kw*dt*ACC/3600/S.cap*100 * M.eff);
+  consAcc += S.kw*dt*ACC/3600*1000; consDist += dKm; if (consDist > .5){ consHist.push(consAcc/consDist); consHist.shift(); consAcc = 0; consDist = 0; drawCons(); }
+  S.navLeft -= dKm; if (S.navLeft <= 0){ navI = (navI+1) % NAV.length; S.navLeft = NAV[navI][1]; }
+  S.total = Math.max(0, S.total - dKm); if (S.total <= 0){ S.total = 249; S.soc = Math.max(S.soc, 72); }
+  // curvature follows a smooth pseudo-random path
+  if (!reduce) S.curveT += dKm*.7; S.curve = Math.sin(S.curveT*.9)*.6 + Math.sin(S.curveT*2.3)*.25; dashOff += (reduce ? 0 : dKm*18);
+  // instant consumption for range
+  const instCons = S.v > 3 ? Math.max(90, S.kw*1000/Math.max(S.v,10)) : 160; S.cons += (instCons*M.eff - S.cons)*(1 - Math.exp(-dt*.25));
+  render(dt); requestAnimationFrame(step);
+}
+function render(dt){
+  $('#speed').textContent = Math.round(S.v);
+  const k = S.kw; const f0 = pf(0), fk = pf(Math.max(PMIN, Math.min(PMAX, k)));
+  const a0 = A0 + (A1-A0)*f0, ak = A0 + (A1-A0)*fk;
+  $('#pArc').setAttribute('d', k > .5 ? arcD(a0, ak, 118) : ''); $('#rArc').setAttribute('d', k < -.5 ? arcD(ak, a0, 118) : '');
+  $('#pNeedle').setAttribute('transform', `rotate(${(ak*180/Math.PI).toFixed(2)})`);
+  $('#kw').textContent = Math.round(Math.abs(k)); $('#kwLab').textContent = k < -1 ? 'REGEN' : S.brk > .2 ? 'BRAKE' : k > 1 ? 'POWER' : 'COAST';
+  $('#tlRegen').classList.toggle('on', k < -1); $('#tlBrake').classList.toggle('on', S.brk > .2);
+  const soc = S.soc/100; $('#bArc').setAttribute('d', arcD(A0, A0 + (A1-A0)*Math.max(.001,soc), 118)); $('#bPct').textContent = Math.round(S.soc);
+  $('#bArc').style.stroke = soc < .15 ? '#ff5a4a' : 'var(--acc)';
+  const range = Math.round(S.soc/100*S.cap*1000/Math.max(95, S.cons)); $('#range').textContent = range; $('#soc').textContent = S.soc.toFixed(1) + '%';
+  drawRoad();
+  uiAcc += dt; if (uiAcc > .25){ uiAcc = 0;
+    $('#navDist').textContent = S.navLeft < 1 ? Math.round(S.navLeft*1000/10)*10 + ' m' : S.navLeft.toFixed(1) + ' km'; $('#navTxt').textContent = NAV[navI][0];
+    speedLimit = navI === 0 ? 70 : navI < 2 ? 70 : navI === 3 ? 60 : 70; $('#limit').textContent = speedLimit;
+    placeCar(1 - S.total/249);
+    const remain = S.total; $('#remain').textContent = Math.round(remain) + ' km';
+    const d = new Date(); const etaMin = d.getHours()*60 + d.getMinutes() + remain/Math.max(60, S.v || 80)*60; $('#eta').textContent = String(Math.floor(etaMin/60)%24).padStart(2,'0') + ':' + String(Math.floor(etaMin%60)).padStart(2,'0');
+    const arr = S.soc - remain*S.cons/1000/S.cap*100; $('#arrSoc').textContent = Math.max(0, Math.round(arr)) + '%';
+    $('#clock').textContent = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    $('#bTemp').textContent = `PACK ${Math.round(24 + Math.abs(S.kw)/40)}°C`;
+    $('#accel').style.setProperty('--p', Math.round(S.thr*100) + '%'); $('#brake').style.setProperty('--p', Math.round(S.brk*100) + '%'); }
+  else { $('#accel').style.setProperty('--p', Math.round(S.thr*100) + '%'); $('#brake').style.setProperty('--p', Math.round(S.brk*100) + '%'); }
+}
+drawMapBase(); drawCons(); setMode('eco'); S.v = 84; S.kw = 18;
+addEventListener('resize', drawCons);
+requestAnimationFrame(t0 => { last = t0; step(t0); });
+})();
+</script>
+</body>
+</html>

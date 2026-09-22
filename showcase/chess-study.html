@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Opening Book</title>
+<meta name="description" content="A chess opening explorer on a walnut and maple board: play legal moves, watch them written onto a tournament scoresheet, and follow thirty-six classic openings with ECO codes and commentary.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,800;1,400;1,600&family=Archivo+Narrow:wght@400;600;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --felt:#15291f;
+  --felt-2:#1c3528;
+  --maple:#e8cf9f;
+  --maple-2:#dcbd84;
+  --walnut:#7a4d2b;
+  --walnut-2:#5e3a1f;
+  --frame:#3b2415;
+  --sheet:#f6f5ef;
+  --sheet-line:#9db8a8;
+  --print:#2f6b4f;
+  --pencil:#23262e;
+  --hi:#f2c14e;
+  --text:#e9e4d6;
+  --muted:#a9b3a6;
+  --serif:"Crimson Pro", Georgia, serif;
+  --narrow:"Archivo Narrow", "Arial Narrow", sans-serif;
+  --hand:"Kalam", "Comic Sans MS", cursive;
+}
+*{box-sizing:border-box}
+html{background:var(--felt)}
+body{margin:0;background:var(--felt);color:var(--text);font-family:var(--serif);font-size:18px;line-height:1.5;overflow-x:hidden;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"),radial-gradient(ellipse 70% 60% at 40% 20%, #234232, transparent 70%)}
+:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+.back{position:absolute;top:14px;left:16px;font-family:var(--narrow);font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);text-decoration:none}
+.back:hover,.back:focus-visible{color:var(--hi)}
+.wrap{max-width:1260px;margin:0 auto;padding:0 16px}
+header{padding:64px 0 26px;display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap}
+header h1{font-family:var(--serif);font-weight:400;font-style:italic;font-size:clamp(46px,7vw,92px);line-height:.9;margin:0;letter-spacing:-.01em}
+header h1 b{font-style:normal;font-weight:800;display:block;font-size:.42em;letter-spacing:.24em;text-transform:uppercase;color:var(--hi);margin-bottom:10px;font-family:var(--narrow)}
+header p{max-width:30em;margin:0;color:var(--muted);font-size:17px}
+
+.desk{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:36px;align-items:start}
+/* board */
+.board-wrap{position:relative}
+.frame{background:linear-gradient(135deg,#4a2d19,#2c190c 60%,#46291a);padding:clamp(14px,2.6vw,28px);border-radius:4px;
+  box-shadow:0 40px 60px -30px #000, inset 0 0 0 2px #5b3a22, inset 0 0 0 6px #2a170b;position:relative}
+.frame::before{content:"";position:absolute;inset:0;border-radius:4px;background:repeating-linear-gradient(8deg,rgba(255,255,255,.03) 0 2px,transparent 2px 9px);pointer-events:none}
+.board{display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1;position:relative;box-shadow:0 0 0 2px #1a0e05}
+.sq{all:unset;position:relative;display:grid;place-items:center;cursor:pointer;aspect-ratio:1;user-select:none;-webkit-user-select:none}
+.sq.l{background:linear-gradient(115deg,rgba(255,255,255,.12),transparent 50%),repeating-linear-gradient(95deg,var(--maple) 0 3px,var(--maple-2) 3px 4px,var(--maple) 4px 9px);}
+.sq.d{background:linear-gradient(115deg,rgba(255,255,255,.08),transparent 50%),repeating-linear-gradient(80deg,var(--walnut) 0 4px,var(--walnut-2) 4px 5px,#6b4224 5px 11px);}
+.sq:focus-visible{outline:3px solid var(--hi);outline-offset:-3px;z-index:2}
+.sq .pc{font-size:min(8.6vw,64px);line-height:1;font-family:"DejaVu Sans","Segoe UI Symbol","Noto Sans Symbols 2",serif;pointer-events:none;transition:transform .15s}
+.sq .pc.w{color:#fbf6ea;-webkit-text-stroke:1.2px #2a1a0e;text-shadow:0 2px 2px rgba(0,0,0,.45)}
+.sq .pc.b{color:#1b120c;-webkit-text-stroke:.6px #000;text-shadow:0 2px 2px rgba(0,0,0,.35), 0 0 1px rgba(255,230,190,.5)}
+.sq.last::after{content:"";position:absolute;inset:0;background:rgba(242,193,78,.34)}
+.sq.sel::after{content:"";position:absolute;inset:0;background:rgba(242,193,78,.55)}
+.sq.chk::before{content:"";position:absolute;inset:8%;border-radius:50%;background:radial-gradient(circle,rgba(220,40,30,.8),rgba(220,40,30,0) 70%)}
+.sq .dot{position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(30,20,10,.38);pointer-events:none;z-index:1}
+.sq .ring{position:absolute;inset:4%;border-radius:50%;border:4px solid rgba(30,20,10,.4);pointer-events:none;z-index:1}
+.sq .pc{position:relative;z-index:2}
+.coord{position:absolute;font-family:var(--narrow);font-size:11px;font-weight:600;pointer-events:none;z-index:3}
+.coord.f{right:4%;bottom:2%}.coord.r{left:4%;top:2%}
+.sq.l .coord{color:var(--walnut)}.sq.d .coord{color:var(--maple)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.tools button{all:unset;cursor:pointer;font-family:var(--narrow);font-weight:600;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--text);padding:9px 14px;border:1px solid rgba(233,228,214,.3)}
+.tools button:hover,.tools button:focus-visible{border-color:var(--hi);color:var(--hi)}
+.tools label{font-family:var(--narrow);font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-left:auto;display:flex;gap:8px;align-items:center}
+.tools select{background:var(--felt-2);color:var(--text);border:1px solid rgba(233,228,214,.3);font-family:var(--narrow);padding:6px}
+.status{margin-top:12px;font-family:var(--narrow);font-size:15px;letter-spacing:.06em;color:var(--muted);min-height:1.5em}
+.status b{color:var(--hi);font-weight:600}
+
+/* scoresheet */
+.sheet{background:var(--sheet);color:var(--pencil);padding:22px 22px 18px;box-shadow:0 30px 50px -25px #000;transform:rotate(.5deg);position:relative;
+  background-image:linear-gradient(90deg,transparent 0 calc(100% - 28px),rgba(47,107,79,.06) calc(100% - 28px))}
+.sheet::after{content:"";position:absolute;top:-10px;right:34px;width:110px;height:26px;background:rgba(210,210,190,.55);transform:rotate(3deg)}
+.sheet h2{margin:0;font-family:var(--narrow);font-weight:700;font-size:15px;letter-spacing:.3em;text-transform:uppercase;color:var(--print);display:flex;justify-content:space-between;border-bottom:3px solid var(--print);padding-bottom:6px}
+.fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid var(--sheet-line);margin-bottom:10px}
+.fields div{padding:6px 6px 4px;border-right:1px solid var(--sheet-line);min-width:0}
+.fields div:last-child{border:0}
+.fields .wide2{grid-column:span 2}
+.fields div:nth-child(4){border-right:0}
+.fields span{display:block;font-family:var(--narrow);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--print)}
+.fields b{display:block;font-family:var(--hand);font-weight:400;font-size:18px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.moves{width:100%;border-collapse:collapse;table-layout:fixed}
+table.moves th{font-family:var(--narrow);font-size:11px;letter-spacing:.2em;color:var(--print);text-align:left;border-bottom:2px solid var(--print);padding:2px 6px}
+table.moves th:first-child{width:36px}
+table.moves td{border-bottom:1px solid var(--sheet-line);height:31px;padding:0 6px}
+table.moves td:first-child{font-family:var(--narrow);font-size:12px;color:var(--print);text-align:right;border-right:1px solid var(--sheet-line)}
+table.moves td+td+td{border-left:1px solid var(--sheet-line)}
+.mv{all:unset;cursor:pointer;font-family:var(--hand);font-size:20px;line-height:1;padding:2px 4px;border-radius:2px}
+.mv:hover,.mv:focus-visible{background:rgba(242,193,78,.35)}
+.mv.cur{background:var(--pencil);color:var(--sheet)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 14px}
+.sheet .sig{display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-family:var(--narrow);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--print)}
+.sheet .sig span{flex:1;border-top:1px solid var(--sheet-line);padding-top:4px}
+
+/* opening panel */
+.op{margin-top:26px;border-top:1px solid rgba(233,228,214,.2);padding-top:18px}
+.op .eco{font-family:var(--narrow);font-weight:700;letter-spacing:.2em;color:var(--hi);font-size:14px}
+.op h3{font-family:var(--serif);font-weight:600;font-size:clamp(26px,2.6vw,34px);margin:4px 0 8px;line-height:1.1}
+.op p{margin:0 0 12px;color:#d6d9cf}
+.op .line{font-family:var(--narrow);font-size:14px;color:var(--muted);letter-spacing:.04em}
+.cont{margin-top:10px}
+.cont h4{margin:0 0 8px;font-family:var(--narrow);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.cont ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.cont button{all:unset;cursor:pointer;border:1px solid rgba(233,228,214,.3);padding:6px 10px;font-size:15px;display:flex;gap:10px;align-items:baseline}
+.cont button b{font-family:var(--hand);font-weight:700;font-size:18px;color:var(--hi)}
+.cont button span{color:var(--muted);font-style:italic}
+.cont button:hover,.cont button:focus-visible{border-color:var(--hi)}
+
+/* repertoire */
+.rep{margin:80px 0 0;padding-top:30px;border-top:1px solid rgba(233,228,214,.2)}
+.rep h2{font-family:var(--serif);font-weight:400;font-style:italic;font-size:clamp(34px,4.6vw,56px);margin:0 0 6px;line-height:1}
+.rep > p{color:var(--muted);max-width:44em;margin:0 0 28px}
+.groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px}
+.group h3{font-family:var(--narrow);font-weight:700;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--hi);margin:0 0 10px;border-bottom:1px solid rgba(242,193,78,.4);padding-bottom:6px}
+.group ul{list-style:none;margin:0;padding:0}
+.group button{all:unset;cursor:pointer;display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;width:100%;padding:7px 0;border-bottom:1px dotted rgba(233,228,214,.18)}
+.group button .e{font-family:var(--narrow);font-weight:600;color:var(--muted);font-size:14px;padding-top:2px}
+.group button .n{font-size:17px;line-height:1.25}
+.group button .n small{display:block;font-family:var(--narrow);font-size:12px;color:var(--muted);letter-spacing:.03em}
+.group button:hover .n,.group button:focus-visible .n{color:var(--hi)}
+.group button[aria-current="true"] .n{color:var(--hi);font-style:italic}
+footer{margin:70px 0 0;padding:26px 0 60px;border-top:1px solid rgba(233,228,214,.15);font-family:var(--narrow);font-size:12px;letter-spacing:.14em;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;text-transform:uppercase}
+
+@media (max-width:980px){
+  .desk{grid-template-columns:minmax(0,1fr)}
+  .groups{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:520px){
+  .groups{grid-template-columns:minmax(0,1fr)}
+  .fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fields div:nth-child(2){border-right:0}
+  .cols{grid-template-columns:minmax(0,1fr)}
+  .cols table:last-child{display:none}
+  .tools label{margin-left:0}
+  .sheet{transform:none}
+}
+@media (prefers-reduced-motion:reduce){.sq .pc{transition:none}}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="wrap">
+  <header>
+    <h1><b>Hollins Road Chess Club · Study notes</b>The Opening Book</h1>
+    <p>Thirty-six openings every club player meets, set out on the club's old walnut-and-maple board. Play any legal move and it is written on the scoresheet; when you wander into a named line, the book tells you where you are and where it usually goes next.</p>
+  </header>
+
+  <div class="desk">
+    <div class="board-wrap">
+      <div class="frame"><div class="board" id="board" role="grid" aria-label="Chess board"></div></div>
+      <div class="tools">
+        <button type="button" id="start" aria-label="Go to start">⏮ Start</button>
+        <button type="button" id="prev" aria-label="Previous move">◀ Back</button>
+        <button type="button" id="next" aria-label="Next move">Forward ▶</button>
+        <button type="button" id="flip">Flip</button>
+        <button type="button" id="reset">New game</button>
+        <label for="promo">Promote to <select id="promo"><option value="q">Queen</option><option value="r">Rook</option><option value="b">Bishop</option><option value="n">Knight</option></select></label>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+    </div>
+
+    <div>
+      <div class="sheet">
+        <h2><span>Official Score Sheet</span><span>No. 0417</span></h2>
+        <div class="fields">
+          <div class="wide2"><span>Event</span><b>Club Study Evening</b></div>
+          <div><span>Round</span><b>—</b></div>
+          <div><span>Board</span><b>3</b></div>
+          <div class="wide2"><span>Opening</span><b id="fOpening">—</b></div>
+          <div><span>ECO</span><b id="fEco">—</b></div>
+          <div><span>To move</span><b id="fTurn">White</b></div>
+        </div>
+        <div class="cols">
+          <table class="moves" aria-label="Moves 1 to 12"><thead><tr><th>#</th><th>White</th><th>Black</th></tr></thead><tbody id="mv1"></tbody></table>
+          <table class="moves" aria-label="Moves 13 to 24"><thead><tr><th>#</th><th>White</th><th>Black</th></tr></thead><tbody id="mv2"></tbody></table>
+        </div>
+        <div class="sig"><span>White's signature</span><span>Black's signature</span><span>Result</span></div>
+      </div>
+      <section class="op" aria-live="polite">
+        <div class="eco" id="opEco">C84</div>
+        <h3 id="opName">Ruy Lopez, Closed</h3>
+        <p id="opText"></p>
+        <div class="line" id="opLine"></div>
+        <div class="cont"><h4 id="contH">Book continuations</h4><ul id="cont"></ul></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="rep" aria-labelledby="repTitle">
+    <h2 id="repTitle">The repertoire</h2>
+    <p>Every line in the book, grouped the way club players think of them. Select one and the board replays it for you. ECO codes follow the Encyclopaedia of Chess Openings, which sorts all openings into five volumes, A to E.</p>
+    <div class="groups" id="groups"></div>
+  </section>
+  <footer><span>Hollins Road Chess Club · study notes</span><span>Legal-move engine written by hand</span></footer>
+</div>
+
+<script>
+(function(){
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=id=>document.getElementById(id);
+
+/* =================== CHESS ENGINE =================== */
+// index 0 = a8, 63 = h1
+const FILES='abcdefgh';
+const sqName=i=>FILES[i%8]+(8-Math.floor(i/8));
+const isW=p=>p&&p===p.toUpperCase();
+const colorOf=p=>p?(isW(p)?'w':'b'):null;
+function initial(){
+  const rows=['rnbqkbnr','pppppppp','........','........','........','........','PPPPPPPP','RNBQKBNR'];
+  const b=[];rows.forEach(r=>[...r].forEach(c=>b.push(c==='.'?null:c)));
+  return {b,turn:'w',castle:{K:true,Q:true,k:true,q:true},ep:-1};
+}
+const N_OFF=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const K_OFF=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const R_DIR=[[-1,0],[1,0],[0,-1],[0,1]],B_DIR=[[-1,-1],[-1,1],[1,-1],[1,1]];
+const on=(r,f)=>r>=0&&r<8&&f>=0&&f<8;
+function attacked(s,sq,by){
+  const r=Math.floor(sq/8),f=sq%8,b=s.b;
+  // pawns
+  const pr=by==='w'?r+1:r-1,P=by==='w'?'P':'p';
+  for(const df of[-1,1]){if(on(pr,f+df)&&b[pr*8+f+df]===P)return true;}
+  const Nn=by==='w'?'N':'n';for(const[dr,df]of N_OFF){if(on(r+dr,f+df)&&b[(r+dr)*8+f+df]===Nn)return true;}
+  const Kk=by==='w'?'K':'k';for(const[dr,df]of K_OFF){if(on(r+dr,f+df)&&b[(r+dr)*8+f+df]===Kk)return true;}
+  const RQ=by==='w'?['R','Q']:['r','q'],BQ=by==='w'?['B','Q']:['b','q'];
+  for(const[dr,df]of R_DIR){let rr=r+dr,ff=f+df;while(on(rr,ff)){const p=b[rr*8+ff];if(p){if(RQ.includes(p))return true;break;}rr+=dr;ff+=df;}}
+  for(const[dr,df]of B_DIR){let rr=r+dr,ff=f+df;while(on(rr,ff)){const p=b[rr*8+ff];if(p){if(BQ.includes(p))return true;break;}rr+=dr;ff+=df;}}
+  return false;
+}
+function kingSq(s,c){const K=c==='w'?'K':'k';return s.b.indexOf(K);}
+function inCheck(s,c){return attacked(s,kingSq(s,c),c==='w'?'b':'w');}
+function pseudo(s){
+  const out=[],b=s.b,c=s.turn,opp=c==='w'?'b':'w';
+  const add=(from,to,extra={})=>out.push({from,to,...extra});
+  for(let i=0;i<64;i++){const p=b[i];if(!p||colorOf(p)!==c)continue;const r=Math.floor(i/8),f=i%8,t=p.toLowerCase();
+    if(t==='p'){const dir=c==='w'?-1:1,start=c==='w'?6:1,last=c==='w'?0:7;
+      const push=(to,cap)=>{if(Math.floor(to/8)===last){for(const pr of['q','r','b','n'])add(i,to,{promo:pr,cap});}else add(i,to,{cap});};
+      const one=(r+dir)*8+f;if(on(r+dir,f)&&!b[one]){push(one,false);const two=(r+2*dir)*8+f;if(r===start&&!b[two])add(i,two,{dbl:true});}
+      for(const df of[-1,1]){if(!on(r+dir,f+df))continue;const to=(r+dir)*8+f+df;if(b[to]&&colorOf(b[to])===opp)push(to,true);else if(to===s.ep)add(i,to,{ep:true,cap:true});}}
+    else if(t==='n'||t==='k'){for(const[dr,df]of(t==='n'?N_OFF:K_OFF)){if(!on(r+dr,f+df))continue;const to=(r+dr)*8+f+df;if(!b[to]||colorOf(b[to])===opp)add(i,to,{cap:!!b[to]});}
+      if(t==='k'){const home=c==='w'?60:4;if(i===home&&!attacked(s,home,opp)){
+        if(s.castle[c==='w'?'K':'k']&&!b[home+1]&&!b[home+2]&&b[home+3]===(c==='w'?'R':'r')&&!attacked(s,home+1,opp)&&!attacked(s,home+2,opp))add(i,home+2,{castle:'K'});
+        if(s.castle[c==='w'?'Q':'q']&&!b[home-1]&&!b[home-2]&&!b[home-3]&&b[home-4]===(c==='w'?'R':'r')&&!attacked(s,home-1,opp)&&!attacked(s,home-2,opp))add(i,home-2,{castle:'Q'});}}}
+    else{const dirs=t==='r'?R_DIR:t==='b'?B_DIR:R_DIR.concat(B_DIR);
+      for(const[dr,df]of dirs){let rr=r+dr,ff=f+df;while(on(rr,ff)){const to=rr*8+ff;if(b[to]){if(colorOf(b[to])===opp)add(i,to,{cap:true});break;}add(i,to,{cap:false});rr+=dr;ff+=df;}}}
+  }
+  return out;
+}
+function make(s,m){
+  const b=s.b.slice(),p=b[m.from],c=s.turn;const castle={...s.castle};
+  b[m.to]=m.promo?(c==='w'?m.promo.toUpperCase():m.promo):p;b[m.from]=null;
+  if(m.ep){b[m.to+(c==='w'?8:-8)]=null;}
+  if(m.castle==='K'){b[m.to-1]=b[m.to+1];b[m.to+1]=null;}
+  if(m.castle==='Q'){b[m.to+1]=b[m.to-2];b[m.to-2]=null;}
+  if(p==='K'){castle.K=castle.Q=false;}if(p==='k'){castle.k=castle.q=false;}
+  const touch=sq=>{if(sq===63)castle.K=false;if(sq===56)castle.Q=false;if(sq===7)castle.k=false;if(sq===0)castle.q=false;};touch(m.from);touch(m.to);
+  return {b,turn:c==='w'?'b':'w',castle,ep:m.dbl?(m.from+m.to)/2:-1};
+}
+function legal(s){return pseudo(s).filter(m=>!inCheck(make(s,m),s.turn));}
+function san(s,m,moves){
+  const p=s.b[m.from],t=p.toLowerCase();let str='';
+  if(m.castle)str=m.castle==='K'?'O-O':'O-O-O';
+  else{
+    if(t==='p'){if(m.cap)str=FILES[m.from%8]+'x';str+=sqName(m.to);if(m.promo)str+='='+m.promo.toUpperCase();}
+    else{str=t.toUpperCase();
+      const amb=(moves||legal(s)).filter(o=>o.to===m.to&&o.from!==m.from&&s.b[o.from]===p);
+      if(amb.length){const sameF=amb.some(o=>o.from%8===m.from%8),sameR=amb.some(o=>Math.floor(o.from/8)===Math.floor(m.from/8));
+        if(!sameF)str+=FILES[m.from%8];else if(!sameR)str+=8-Math.floor(m.from/8);else str+=sqName(m.from);}
+      if(m.cap)str+='x';str+=sqName(m.to);}
+  }
+  const ns=make(s,m);if(inCheck(ns,ns.turn))str+=legal(ns).length?'+':'#';
+  return str;
+}
+const clean=x=>x.replace(/[+#!?]/g,'');
+function fromSAN(s,str){const ms=legal(s);return ms.find(m=>clean(san(s,m,ms))===clean(str))||null;}
+
+/* =================== OPENING BOOK =================== */
+const OPEN=[
+ // group, eco, name, line, note
+ ['1.e4 e5','C60','Ruy Lopez','e4 e5 Nf3 Nc6 Bb5','The Spanish Game: White attacks the knight that defends e5, beginning a slow, strategic squeeze that has been a mainstay of world championships for 150 years.'],
+ ['1.e4 e5','C65','Ruy Lopez, Berlin Defence','e4 e5 Nf3 Nc6 Bb5 Nf6','The “Berlin Wall”. Kramnik used it to take the world title from Kasparov in 2000; it often leads to a queenless middlegame that is far harder to break than it looks.'],
+ ['1.e4 e5','C70','Ruy Lopez, Morphy Defence','e4 e5 Nf3 Nc6 Bb5 a6 Ba4','Black asks the bishop what it intends. Retreating to a4 keeps the pin in reserve — the most popular choice by far.'],
+ ['1.e4 e5','C84','Ruy Lopez, Closed','e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7','The heartland of classical chess. Both sides castle, White prepares Re1, c3 and d4, and a manoeuvring battle begins that can last fifty moves.'],
+ ['1.e4 e5','C50','Italian Game','e4 e5 Nf3 Nc6 Bc4','The bishop aims straight at f7, the weakest point in Black’s camp. One of the oldest openings in the book, analysed by Greco in the 1600s.'],
+ ['1.e4 e5','C53','Giuoco Piano','e4 e5 Nf3 Nc6 Bc4 Bc5 c3','The “quiet game” — though White’s c3 prepares d4 and a strong centre. Modern grandmasters play it slowly with d3, and it has enjoyed a great revival.'],
+ ['1.e4 e5','C51','Evans Gambit','e4 e5 Nf3 Nc6 Bc4 Bc5 b4','Captain William Evans’s pawn sacrifice from the 1820s: give up the b-pawn to gain time for c3 and d4. Romantic, dangerous, and still sound.'],
+ ['1.e4 e5','C55','Two Knights Defence','e4 e5 Nf3 Nc6 Bc4 Nf6','Black counter-attacks e4 instead of guarding f7. After 4.Ng5 things get sharp at once; Tarrasch called 4.Ng5 “a duffer’s move”, and then everyone played it.'],
+ ['1.e4 e5','C45','Scotch Game','e4 e5 Nf3 Nc6 d4 exd4 Nxd4','White opens the centre immediately. Kasparov revived it at the top level in 1990 as a way to avoid the Ruy Lopez’s deep theory.'],
+ ['1.e4 e5','C42','Petrov Defence','e4 e5 Nf3 Nf6','Black mirrors White and counter-attacks e4. Solid to the point of stubbornness; beware the trap 3.Nxe5 Nxe4? 4.Qe2!'],
+ ['1.e4 e5','C25','Vienna Game','e4 e5 Nc3','A flexible developing move that keeps f4 in reserve — a gentler cousin of the King’s Gambit.'],
+ ['1.e4 e5','C33','King’s Gambit Accepted','e4 e5 f4 exf4','The great Romantic opening: White gives a pawn to tear open the f-file. Spassky beat Fischer with it; Fischer then wrote an article titled “A Bust to the King’s Gambit”.'],
+ ['1.e4 other','B20','Sicilian Defence','e4 c5','The most popular reply to 1.e4. Black fights for d4 from the side, accepting an unbalanced position in exchange for winning chances.'],
+ ['1.e4 other','B90','Sicilian, Najdorf','e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6','Fischer’s and Kasparov’s weapon. The modest …a6 controls b5 and prepares …e5 or …b5 — among the most deeply analysed positions in chess.'],
+ ['1.e4 other','B70','Sicilian, Dragon','e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6','Named for the pawn chain’s resemblance to the constellation Draco. The bishop on g7 breathes fire down the long diagonal; White often castles long and attacks.'],
+ ['1.e4 other','C00','French Defence','e4 e6','Black prepares …d5 with a solid but cramped pawn chain. The light-squared bishop is the French player’s eternal problem.'],
+ ['1.e4 other','C15','French, Winawer','e4 e6 d4 d5 Nc3 Bb4','Black pins the knight and is ready to give the bishop for it, wrecking White’s pawns. Sharp, strategic and double-edged.'],
+ ['1.e4 other','B10','Caro-Kann Defence','e4 c6','Like the French, but the bishop gets out before …e6. Solid, respectable, and Karpov’s favourite.'],
+ ['1.e4 other','B12','Caro-Kann, Advance','e4 c6 d4 d5 e5','White grabs space and dares Black to prove the pawn on e5 is a weakness rather than a bone in the throat.'],
+ ['1.e4 other','B01','Scandinavian Defence','e4 d5','Black challenges e4 at once. After 2.exd5 Qxd5 the queen comes out early; it survives, usually.'],
+ ['1.e4 other','B07','Pirc Defence','e4 d6 d4 Nf6 Nc3 g6','Black lets White build a big centre, planning to undermine it later with the fianchettoed bishop.'],
+ ['1.e4 other','B02','Alekhine’s Defence','e4 Nf6','A provocation: Black invites the pawns forward to chase the knight, hoping they will become targets.'],
+ ['1.d4','D06','Queen’s Gambit','d4 d5 c4','Not really a gambit — Black cannot usefully keep the pawn. White trades a wing pawn for central control.'],
+ ['1.d4','D30','Queen’s Gambit Declined','d4 d5 c4 e6','The rock of classical chess. Solid and patient; for decades the main battleground of world championship matches.'],
+ ['1.d4','D20','Queen’s Gambit Accepted','d4 d5 c4 dxc4','Black takes the pawn intending to give it back for free development. White builds a centre with e4 or e3.'],
+ ['1.d4','D10','Slav Defence','d4 d5 c4 c6','Supports d5 without blocking the c8 bishop. One of the most reliable defences in modern chess.'],
+ ['1.d4','D02','London System','d4 d5 Nf3 Nf6 Bf4','A system rather than an opening: the same set-up against almost anything. Beloved of club players and, lately, of world champions.'],
+ ['Indian','E20','Nimzo-Indian Defence','d4 Nf6 c4 e6 Nc3 Bb4','Nimzowitsch’s hypermodern masterpiece: control e4 with pieces, not pawns, and pin the knight that wants to support it.'],
+ ['Indian','E12','Queen’s Indian Defence','d4 Nf6 c4 e6 Nf3 b6','When White avoids the Nimzo with Nf3, Black fianchettoes the queen’s bishop to watch e4 from afar.'],
+ ['Indian','E60','King’s Indian Defence','d4 Nf6 c4 g6','Let White have the centre, then attack it. Fischer and Kasparov both lived by it; the middlegames are among the most violent in chess.'],
+ ['Indian','D80','Grünfeld Defence','d4 Nf6 c4 g6 Nc3 d5','Black invites White to build a big centre with cxd5 and e4, then besieges it with the g7 bishop and …c5.'],
+ ['Indian','A60','Modern Benoni','d4 Nf6 c4 c5 d5 e6','An unbalanced pawn structure: Black gets a queenside majority and active pieces in return for a hole on d6.'],
+ ['Flank','A80','Dutch Defence','d4 f5','Black grabs e4 with a pawn and eyes a kingside attack. The Stonewall and Leningrad variations are its main forms.'],
+ ['Flank','A10','English Opening','c4','Named after Howard Staunton, the Englishman who played it in 1843. Flexible and positional; it often transposes into 1.d4 openings.'],
+ ['Flank','A09','Réti Opening','Nf3 d5 c4','Richard Réti’s hypermodern idea: attack the centre from the wings rather than occupying it.'],
+ ['Flank','A02','Bird’s Opening','f4','Henry Bird’s favourite, a Dutch Defence with an extra tempo. Rare, but it has its devotees.'],
+].map(([g,eco,name,line,note])=>({g,eco,name,moves:line.split(' '),note}));
+
+/* =================== STATE / UI =================== */
+let hist=[],ply=0,flipped=false,sel=-1;
+function stateAt(n){let s=initial();for(let i=0;i<n;i++)s=make(s,hist[i].m);return s;}
+function playSAN(list){hist=[];let s=initial();for(const t of list){const m=fromSAN(s,t);if(!m)break;hist.push({m,san:san(s,m)});s=make(s,m);}ply=hist.length;}
+const GLYPH={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+const NAMES={k:'king',q:'queen',r:'rook',b:'bishop',n:'knight',p:'pawn'};
+const board=$('board');const sqEls=[];
+for(let v=0;v<64;v++){const el=document.createElement('button');el.type='button';el.className='sq';el.addEventListener('click',()=>clickSq(+el.dataset.i));board.appendChild(el);sqEls.push(el);}
+function render(){
+  const s=stateAt(ply);const moves=legal(s);const targets=sel>=0?moves.filter(m=>m.from===sel):[];
+  const last=ply?hist[ply-1].m:null;const chk=inCheck(s,s.turn)?kingSq(s,s.turn):-1;
+  sqEls.forEach((el,v)=>{const i=flipped?63-v:v;el.dataset.i=i;const r=Math.floor(i/8),f=i%8;
+    el.className='sq '+((r+f)%2?'d':'l')+(last&&(last.from===i||last.to===i)?' last':'')+(sel===i?' sel':'')+(chk===i?' chk':'');
+    const p=s.b[i];const t=targets.find(m=>m.to===i);
+    let h='';if(p)h+=`<span class="pc ${isW(p)?'w':'b'}">${GLYPH[p.toLowerCase()]}︎</span>`;
+    if(t)h+=p||t.ep?'<span class="ring"></span>':'<span class="dot"></span>';
+    const vr=Math.floor(v/8),vf=v%8;if(vr===7)h+=`<span class="coord f">${FILES[f]}</span>`;if(vf===0)h+=`<span class="coord r">${8-r}</span>`;
+    el.innerHTML=h;el.setAttribute('aria-label',sqName(i)+(p?`, ${isW(p)?'white':'black'} ${NAMES[p.toLowerCase()]}`:'')+(t?', legal move':''));
+  });
+  // status
+  let st;const who=s.turn==='w'?'White':'Black';
+  if(!moves.length)st=inCheck(s,s.turn)?`<b>Checkmate.</b> ${s.turn==='w'?'Black':'White'} wins.`:'<b>Stalemate.</b> A draw.';
+  else st=`${who} to move${chk>=0?' — <b>check!</b>':''} · move ${Math.floor(ply/2)+1}`;
+  $('status').innerHTML=st;$('fTurn').textContent=moves.length?who:'—';
+  renderSheet();renderOpening();
+}
+function renderSheet(){
+  const rows=[];for(let n=0;n<24;n++){const w=hist[n*2],b=hist[n*2+1];
+    const cell=(h,k)=>h?`<button type="button" class="mv${k===ply-1?' cur':''}" data-k="${k}">${h.san}</button>`:'';
+    rows.push(`<tr><td>${n+1}</td><td>${cell(w,n*2)}</td><td>${cell(b,n*2+1)}</td></tr>`);}
+  $('mv1').innerHTML=rows.slice(0,12).join('');$('mv2').innerHTML=rows.slice(12).join('');
+}
+document.querySelector('.cols').addEventListener('click',e=>{const b=e.target.closest('.mv');if(!b)return;ply=+b.dataset.k+1;sel=-1;render();});
+function played(){return hist.slice(0,ply).map(h=>clean(h.san));}
+function matchOpening(){
+  const p=played();let best=null;
+  for(const o of OPEN){if(o.moves.length<=p.length&&o.moves.every((m,i)=>clean(m)===p[i])){if(!best||o.moves.length>best.moves.length)best=o;}}
+  return best;
+}
+function renderOpening(){
+  const p=played();const o=matchOpening();
+  const inBook=OPEN.some(x=>p.every((m,i)=>i<x.moves.length&&clean(x.moves[i])===m));
+  if(o){$('opEco').textContent=o.eco+(inBook?'':' · now out of book');$('opName').textContent=o.name;$('opText').textContent=o.note;
+    $('opLine').textContent=o.moves.map((m,i)=>(i%2?'':(i/2+1)+'.')+m).join(' ');$('fOpening').textContent=o.name;$('fEco').textContent=o.eco;}
+  else if(!p.length){$('opEco').textContent='—';$('opName').textContent='The starting position';$('opText').textContent='Twenty legal first moves, four of them serious. Pick a continuation below, or simply play a move on the board.';$('opLine').textContent='';$('fOpening').textContent='—';$('fEco').textContent='—';}
+  else{$('opEco').textContent='—';$('opName').textContent=inBook?'Heading into the book…':'Out of book';$('opText').textContent=inBook?'These moves lead toward several named lines. Choose a continuation below.':'This position is not in our little book. The engine still knows the rules — keep playing, or step back to rejoin a known line.';$('opLine').textContent='';$('fOpening').textContent=inBook?'…':'Irregular';$('fEco').textContent='—';}
+  // continuations
+  const next=new Map();
+  OPEN.forEach(x=>{if(x.moves.length>p.length&&p.every((m,i)=>clean(x.moves[i])===m)){const mv=x.moves[p.length];const cur=next.get(mv);if(!cur||x.moves.length<cur.moves.length)next.set(mv,x);}});
+  $('contH').textContent=next.size?'Book continuations':'No further book moves';
+  $('cont').innerHTML=[...next.entries()].map(([mv,x])=>`<li><button type="button" data-mv="${mv}"><b>${(p.length%2?Math.floor(p.length/2)+1+'…':Math.floor(p.length/2)+1+'.')}${mv}</b><span>${x.name}</span></button></li>`).join('');
+  document.querySelectorAll('#groups button').forEach(b=>b.setAttribute('aria-current',o&&b.dataset.name===o.name&&o.moves.length===p.length?'true':'false'));
+}
+$('cont').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const s=stateAt(ply);const m=fromSAN(s,b.dataset.mv);if(m)push(m);});
+function push(m){const s=stateAt(ply);const rec={m,san:san(s,m)};hist=hist.slice(0,ply);hist.push(rec);ply++;sel=-1;render();}
+function clickSq(i){
+  const s=stateAt(ply);const p=s.b[i];
+  if(sel>=0){const ms=legal(s).filter(m=>m.from===sel&&m.to===i);
+    if(ms.length){const pr=$('promo').value;push(ms.find(m=>!m.promo||m.promo===pr)||ms[0]);return;}}
+  sel=(p&&colorOf(p)===s.turn&&sel!==i)?i:-1;render();
+}
+$('start').onclick=()=>{ply=0;sel=-1;render();};
+$('prev').onclick=()=>{ply=Math.max(0,ply-1);sel=-1;render();};
+$('next').onclick=()=>{ply=Math.min(hist.length,ply+1);sel=-1;render();};
+$('flip').onclick=()=>{flipped=!flipped;render();};
+$('reset').onclick=()=>{hist=[];ply=0;sel=-1;render();};
+addEventListener('keydown',e=>{if(e.target.matches('select,input'))return;if(e.key==='ArrowLeft'){$('prev').click();e.preventDefault();}if(e.key==='ArrowRight'){$('next').click();e.preventDefault();}});
+
+// repertoire
+const GROUPS=[['1.e4 e5','Open games · 1.e4 e5'],['1.e4 other','Semi-open · 1.e4 others'],['1.d4','Closed games · 1.d4 d5'],['Indian','Indian defences · 1.d4 Nf6'],['Flank','Flank & irregular']];
+$('groups').innerHTML=GROUPS.map(([k,t])=>`<div class="group"><h3>${t}</h3><ul>${OPEN.filter(o=>o.g===k).map(o=>`<li><button type="button" data-name="${o.name}"><span class="e">${o.eco}</span><span class="n">${o.name}<small>${o.moves.map((m,i)=>(i%2?'':(i/2+1)+'.')+m).join(' ')}</small></span></button></li>`).join('')}</ul></div>`).join('');
+let anim=null;
+$('groups').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const o=OPEN.find(x=>x.name===b.dataset.name);
+  clearInterval(anim);playSAN(o.moves);sel=-1;
+  if(reduce){render();}else{const target=ply;ply=0;render();anim=setInterval(()=>{ply++;render();if(ply>=target)clearInterval(anim);},280);}
+  $('board').scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});});
+
+// preload the Closed Ruy Lopez
+playSAN(OPEN.find(o=>o.eco==='C84').moves);
+render();
+
+})();
+</script>
+</body>
+</html>

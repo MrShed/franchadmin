@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Letterform Field Guide</title>
+<meta name="description" content="A risograph-style type specimen that names the parts of letters — baseline, x-height, bowl, counter, terminal, shoulder and more — on live Fraunces glyphs, with a playground for dragging the variable axes of Fraunces and Recursive.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Recursive:slnt,wght,CASL,CRSV,MONO@-15..0,300..1000,0..1,0..1,0..1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f6f2;
+  --ink:#121212;
+  --pink:#ff3fa4;
+  --blue:#0a74d0;
+  --yellow:#ffe14d;
+  --mute:#6a6a66;
+  --rule:#d6d6cf;
+  --fr:"Fraunces","Georgia","Times New Roman",serif;
+  --rec:"Recursive","Menlo","Consolas",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper)}
+body{color:var(--ink);font-family:var(--rec);font-variation-settings:"MONO" 0,"CASL" 0;font-size:15px;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+a{color:inherit}
+.back{position:absolute;top:16px;left:max(16px,env(safe-area-inset-left));font-family:var(--rec);font-variation-settings:"MONO" 1;font-size:12px;color:var(--ink);text-decoration:none;background:var(--yellow);padding:3px 7px}
+.back:hover{background:var(--pink);color:#fff}
+.wrap{max-width:1320px;margin:0 auto;padding:64px max(16px,3.5vw) 60px}
+
+/* masthead */
+.mast{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;border-bottom:3px solid var(--ink);padding-bottom:14px}
+.mast h1{font-family:var(--fr);font-weight:900;font-variation-settings:"opsz" 144,"SOFT" 100,"WONK" 1;font-size:clamp(60px,11vw,168px);line-height:.8;margin:0;letter-spacing:-.035em;position:relative}
+.mast h1 .ov{position:absolute;left:.04em;top:.03em;color:var(--pink);mix-blend-mode:multiply;z-index:-0;pointer-events:none}
+.mast h1 .base{position:relative;color:var(--blue);mix-blend-mode:multiply}
+.mast .meta{font-variation-settings:"MONO" 1;font-size:12px;line-height:1.6;text-align:right;color:var(--mute)}
+.mast .meta b{color:var(--ink);font-weight:700}
+.intro{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin:18px 0 0;font-size:14px;line-height:1.6}
+.intro p{margin:0}
+.intro p:first-child{font-family:var(--fr);font-variation-settings:"opsz" 24;font-size:20px;line-height:1.4;grid-column:span 2}
+
+/* anatomy */
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin:56px 0 12px;flex-wrap:wrap}
+.sec-h h2{font-family:var(--fr);font-weight:700;font-variation-settings:"opsz" 72,"SOFT" 50;font-size:clamp(34px,4.4vw,58px);margin:0;letter-spacing:-.02em;line-height:1}
+.sec-h span{font-variation-settings:"MONO" 1;font-size:12px;color:var(--mute)}
+.stage{position:relative;padding:20px 0 30px;user-select:none}
+#word{font-family:var(--fr);font-weight:400;font-variation-settings:"opsz" 144,"SOFT" 0,"WONK" 0;white-space:nowrap;line-height:1;display:inline-block;position:relative;z-index:2;color:var(--ink)}
+#word span{display:inline-block;transition:color .25s}
+#word span.hot{color:var(--pink)}
+#overlay{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:visible;width:100%;height:100%}
+#overlay .g{stroke:var(--blue);stroke-width:1;fill:none}
+#overlay .gl{font-family:"Recursive",monospace;font-size:11px;fill:var(--blue)}
+#overlay .pin{fill:var(--paper);stroke:var(--ink);stroke-width:1.2}
+#overlay .pin.on{fill:var(--pink);stroke:var(--pink)}
+#overlay .pinn{font-family:"Recursive",monospace;font-size:9.5px;fill:var(--ink);font-weight:700;text-anchor:middle;dominant-baseline:central}
+#overlay .ring{fill:none;stroke:var(--pink);stroke-width:2.5}
+#overlay .lead{stroke:var(--pink);stroke-width:1.5;fill:none}
+.gloss{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0;border-top:1px solid var(--ink);border-left:1px solid var(--ink);margin-top:6px}
+.gloss button{all:unset;box-sizing:border-box;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:12px 14px 14px;cursor:pointer;display:grid;grid-template-columns:26px 1fr;gap:4px 8px;align-items:start;background:transparent;transition:background .15s}
+.gloss button:hover{background:#fff}
+.gloss button:focus-visible{outline:2px solid var(--blue);outline-offset:-3px}
+.gloss button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.gloss .no{font-variation-settings:"MONO" 1;font-size:11px;font-weight:700;width:22px;height:22px;border:1.2px solid currentColor;border-radius:50%;display:grid;place-items:center}
+.gloss button[aria-pressed="true"] .no{background:var(--pink);border-color:var(--pink);color:#fff}
+.gloss .t{font-family:var(--fr);font-variation-settings:"opsz" 36;font-weight:600;font-size:20px;line-height:1.05}
+.gloss .d{grid-column:2;font-size:12.5px;line-height:1.5;opacity:.8}
+
+/* playground */
+.play{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:28px;align-items:start}
+.canvas{border:1px solid var(--ink);background:#fff;position:relative;min-height:420px;display:flex;flex-direction:column}
+.canvas .bar{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--ink);font-variation-settings:"MONO" 1;font-size:11.5px;flex-wrap:wrap}
+#sample{flex:1;padding:22px clamp(14px,2.4vw,30px);outline:none;font-size:var(--sz,96px);line-height:1.02;overflow-wrap:anywhere;letter-spacing:-.01em}
+#sample:focus-visible{outline:2px dashed var(--blue);outline-offset:-6px}
+.panel{display:flex;flex-direction:column;gap:14px}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink)}
+.seg button{font-family:inherit;font-size:14px;background:transparent;border:0;padding:10px 8px;cursor:pointer;color:var(--ink)}
+.seg button+button{border-left:1px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.ax{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center}
+.ax label{font-variation-settings:"MONO" 1;font-size:12px;font-weight:700}
+.ax label small{font-weight:400;color:var(--mute)}
+.ax output{font-variation-settings:"MONO" 1;font-size:12px;font-variant-numeric:tabular-nums}
+.ax input{grid-column:1/-1;width:100%;accent-color:var(--pink);margin:2px 0 0}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button,.small{font-family:inherit;font-variation-settings:"MONO" 1;font-size:11.5px;background:var(--paper);border:1px solid var(--ink);padding:6px 8px;cursor:pointer;color:var(--ink)}
+.presets button:hover,.small:hover{background:var(--yellow)}
+.small[aria-pressed="true"]{background:var(--pink);color:#fff;border-color:var(--pink)}
+pre{margin:0;background:var(--ink);color:#f4f4f0;padding:12px 14px;font-family:var(--rec);font-variation-settings:"MONO" 1;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+pre b{color:var(--yellow);font-weight:400}
+
+.water{margin-top:10px;border-top:1px solid var(--ink)}
+.water div{display:grid;grid-template-columns:56px 1fr;gap:12px;align-items:baseline;border-bottom:1px solid var(--rule);padding:6px 0;overflow:hidden;white-space:nowrap}
+.water span{font-variation-settings:"MONO" 1;font-size:11px;color:var(--mute)}
+.water p{margin:0;overflow:hidden;text-overflow:clip}
+footer{margin-top:50px;font-size:12px;color:var(--mute);line-height:1.7;font-variation-settings:"MONO" 1;max-width:100ch}
+@media (max-width:980px){.play{grid-template-columns:1fr}.intro{grid-template-columns:1fr}.intro p:first-child{grid-column:auto}}
+@media (max-width:560px){.mast{grid-template-columns:1fr}.mast .meta{text-align:left}#sample{--sz:56px}}
+@media (prefers-reduced-motion:reduce){#word span{transition:none}}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Showcase</a>
+<div class="wrap">
+  <header class="mast">
+    <h1><span class="ov" aria-hidden="true">Letterform</span><span class="base">Letterform</span><br>Field Guide</h1>
+    <div class="meta">Specimen no. 10<br>Set in <b>Fraunces</b> &amp; <b>Recursive</b><br>Two inks · pink &amp; blue</div>
+  </header>
+  <div class="intro">
+    <p>Type designers have a name for every part of a letter — borrowed from anatomy, architecture and the metal type shop. Learn a dozen and you will never see a word the same way again.</p>
+    <p>Choose a term below to find it on the specimen word, the typographer's traditional test string <i>Hamburgefonstiv</i>. Then scroll to the playground and bend the letters yourself: both typefaces are variable fonts with continuously adjustable axes.</p>
+  </div>
+
+  <div class="sec-h"><h2>Anatomy</h2><span id="fontState">Fraunces · opsz 144 · wght 400</span></div>
+  <div class="stage" id="stage">
+    <div id="word" aria-label="Hamburgefonstiv"></div>
+    <svg id="overlay" aria-hidden="true"></svg>
+  </div>
+  <div class="gloss" id="gloss" role="group" aria-label="Parts of a letter"></div>
+
+  <div class="sec-h"><h2>Playground</h2><span>Click the sample to edit it</span></div>
+  <div class="play">
+    <div class="canvas">
+      <div class="bar"><span id="stateLine">Fraunces</span><span><label for="size">Size </label><input id="size" type="range" min="18" max="200" value="96" style="vertical-align:middle;accent-color:var(--blue)"> <output id="sizeOut" for="size">96 px</output></span></div>
+      <div id="sample" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" aria-label="Editable sample text">Quirky wonks gather by the fjord.</div>
+    </div>
+    <div class="panel">
+      <div class="seg" role="group" aria-label="Typeface">
+        <button id="f-fr" aria-pressed="true" data-f="fr">Fraunces</button>
+        <button id="f-rec" aria-pressed="false" data-f="rec">Recursive</button>
+      </div>
+      <div id="axes"></div>
+      <div class="presets" id="presets" role="group" aria-label="Presets"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="small" id="breathe" aria-pressed="false">Animate axes</button><button class="small" id="italic" aria-pressed="false">Italic</button><button class="small" id="copy">Copy CSS</button></div>
+      <pre id="css" aria-live="polite"></pre>
+    </div>
+  </div>
+  <div class="water" id="water" aria-label="Size waterfall"></div>
+
+  <footer>Fraunces is by Phaedra Charles and Flavia Zimbardi (Undercase Type), a "Wonky" Old Style inspired by early-20th-century faces such as Windsor, Souvenir and Cooper. Recursive is by Stephen Nixon (Arrow Type), a mono-to-sans family drawn from single-stroke casual brush lettering. Both are open source and served by Google Fonts. Anatomy positions are measured from the rendered glyphs at run time.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const WORD='Hamburgefonstiv';
+// terms: [name, description, glyph index or null, fx, fy-spec]
+// fy-spec: function(m) → y, using metrics m = {base, xh, cap, asc, desc} in px from top of word box
+const TERMS=[
+ ['Baseline','The invisible line letters sit on. Round letters dip slightly below it — "overshoot" — so they look level.',null,'base'],
+ ['x-height','Height of the lowercase x. A large x-height reads well at small sizes; Fraunces grows its x-height as the optical size drops.',null,'xh'],
+ ['Cap height','Height of flat capital letters such as H. Usually a little lower than the ascenders.',null,'cap'],
+ ['Ascender','The part of a lowercase letter that rises above the x-height, as in b, d, f, h.',3,0.2,m=>(m.asc+m.xh)/2],
+ ['Descender','The part that drops below the baseline, as in g, p, y.',6,0.5,m=>m.base+(m.desc-m.base)*0.6],
+ ['Bowl','A curved stroke enclosing a space — the round part of b, d, p, q.',3,0.86,m=>m.base-(m.base-m.xh)*0.5],
+ ['Counter','The enclosed or partly enclosed white space inside a letter.',9,0.5,m=>m.base-(m.base-m.xh)*0.5],
+ ['Serif','The small finishing stroke at the end of a main stroke. Fraunces’s serifs soften and round as the SOFT axis rises.',0,0.06,m=>m.base-3],
+ ['Stem','The main vertical stroke of a letter.',0,0.2,m=>m.base-(m.base-m.cap)*0.28],
+ ['Crossbar','A horizontal stroke joining two strokes, as in H and A.',0,0.5,m=>m.base-(m.base-m.cap)*0.5],
+ ['Shoulder','The curved stroke leaving a stem, as in n, m and h.',10,0.66,m=>m.xh+(m.base-m.xh)*0.1],
+ ['Terminal','The end of a stroke without a serif. Fraunces ends many strokes in round “ball” terminals.',1,0.22,m=>m.xh+(m.base-m.xh)*0.24],
+ ['Eye','The enclosed counter of a lowercase e.',7,0.5,m=>m.xh+(m.base-m.xh)*0.34],
+ ['Aperture','The opening of a partly enclosed counter, like the mouth of e, c or s.',7,0.84,m=>m.xh+(m.base-m.xh)*0.68],
+ ['Spine','The main curved stroke of an S.',11,0.5,m=>m.xh+(m.base-m.xh)*0.5],
+ ['Tittle','The dot over i and j. Yes, it really is called that.',13,0.5,m=>m.xh-(m.xh-m.asc)*0.32],
+ ['Vertex','The point where two strokes meet at the bottom, as in v and w. At the top, as in A, it is an apex.',14,0.5,m=>m.base-2],
+ ['Cross stroke','A horizontal stroke that crosses a stem, as in t and f.',12,0.56,m=>m.xh+2]
+];
+
+// build word
+const word=$('word');
+word.innerHTML=[...WORD].map((c,i)=>`<span data-i="${i}">${c}</span>`).join('');
+const stage=$('stage'), svg=$('overlay');
+let active=5; // Bowl
+
+// ---------- metrics: measure ink with a canvas at the element's size ----------
+function metrics(){
+  const cs=getComputedStyle(word), fs=parseFloat(cs.fontSize);
+  const c=document.createElement('canvas').getContext('2d');
+  c.font=`${cs.fontWeight} ${fs}px Fraunces, Georgia, serif`;
+  const mx=c.measureText('x'), mH=c.measureText('H'), mb=c.measureText('bdh'), mp=c.measureText('gp'), base=c.measureText('H');
+  // DOM line box: find baseline via an inline-block trick
+  const probe=document.createElement('span'); probe.style.cssText='display:inline-block;width:1px;height:0;vertical-align:baseline';
+  word.appendChild(probe); const wr=word.getBoundingClientRect(), pr=probe.getBoundingClientRect(); probe.remove();
+  const b=pr.top-wr.top;
+  return {base:b, xh:b-mx.actualBoundingBoxAscent, cap:b-mH.actualBoundingBoxAscent, asc:b-mb.actualBoundingBoxAscent, desc:b+mp.actualBoundingBoxDescent, fs};
+}
+function fit(){
+  const avail=stage.clientWidth;
+  word.style.fontSize='100px';
+  const w=word.getBoundingClientRect().width;
+  const fs=Math.max(28,Math.min(230,100*avail/w*0.98));
+  word.style.fontSize=fs+'px';
+  stage.style.paddingTop=Math.max(34,fs*0.28)+'px';
+  stage.style.paddingBottom=Math.max(40,fs*0.36)+'px';
+}
+function draw(){
+  fit();
+  const m=metrics();
+  const sr=stage.getBoundingClientRect(), wr=word.getBoundingClientRect();
+  const ox=wr.left-sr.left, oy=wr.top-sr.top;
+  const W=sr.width, Hh=sr.height;
+  svg.setAttribute('viewBox',`0 0 ${W} ${Hh}`);
+  const spans=[...word.children];
+  const box=i=>{const r=spans[i].getBoundingClientRect(); return {x:r.left-sr.left,w:r.width}};
+  let s='';
+  const lines=[['base','baseline'],['xh','x-height'],['cap','cap height'],['asc','ascender'],['desc','descender']];
+  lines.forEach(([k,lab])=>{
+    const y=oy+m[k]; const hot=TERMS[active][3]===k;
+    s+=`<line class="g" x1="0" x2="${W}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" ${hot?'style="stroke:#ff3fa4;stroke-width:2.2"':k==='base'?'style="stroke-width:1.4"':'stroke-dasharray="4 4"'}/>`;
+    const left = k==='asc'||k==='desc';
+    s+=`<text class="gl" x="${left?2:W-2}" y="${(y-4).toFixed(1)}" text-anchor="${left?'start':'end'}" ${hot?'style="fill:#ff3fa4;font-weight:700"':''}>${lab}</text>`;
+  });
+  // pins
+  TERMS.forEach((t,i)=>{
+    if(t[2]===null) return;
+    const b=box(t[2]); const x=b.x+b.w*t[3], y=oy+t[4](m);
+    const on=i===active;
+    if(on){
+      const r=Math.max(10,m.fs*0.09);
+      s+=`<circle class="ring" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}"/>`;
+      const ly=Math.min(Hh-8, Math.max(14, y<oy+m.xh? oy+m.asc-m.fs*0.18 : oy+m.desc+m.fs*0.2));
+      const lx=Math.min(W-10,Math.max(10,x));
+      s+=`<path class="lead" d="M${x.toFixed(1)} ${(y+(ly<y?-r:r)).toFixed(1)} L${lx.toFixed(1)} ${ly.toFixed(1)}"/>`;
+      const anchor = lx>W*0.7?'end':lx<W*0.3?'start':'middle';
+      s+=`<text x="${lx.toFixed(1)}" y="${(ly+(ly<y?-6:16)).toFixed(1)}" text-anchor="${anchor}" style="font-family:Fraunces,serif;font-weight:700;font-size:${Math.max(15,Math.min(26,m.fs*0.16))}px;fill:#ff3fa4">${t[0]}</text>`;
+    } else {
+      s+=`<circle class="pin" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7.5"/><text class="pinn" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${i+1}</text>`;
+    }
+  });
+  svg.innerHTML=s;
+  spans.forEach((sp,i)=>sp.classList.toggle('hot',TERMS[active][2]===i));
+  $('fontState').textContent=`Fraunces · opsz 144 · wght 400 · ${Math.round(m.fs)} px`;
+}
+$('gloss').innerHTML=TERMS.map((t,i)=>`<button id="term-${i}" aria-pressed="${i===active}" data-i="${i}"><span class="no">${i+1}</span><span class="t">${t[0]}</span><span class="d">${t[1]}</span></button>`).join('');
+$('gloss').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; active=+b.dataset.i; document.querySelectorAll('#gloss button').forEach(x=>x.setAttribute('aria-pressed',x===b)); draw(); if(innerWidth<800) stage.scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});});
+
+// ---------- playground ----------
+const FONTS={
+  fr:{name:'Fraunces',family:'Fraunces, Georgia, serif',axes:[['opsz','Optical size',9,144,1,72],['wght','Weight',100,900,1,500],['SOFT','Softness',0,100,1,0],['WONK','Wonky',0,1,1,0]],
+      presets:[['Book text',{opsz:12,wght:400,SOFT:0,WONK:0}],['Poster',{opsz:144,wght:900,SOFT:100,WONK:1}],['Hairline',{opsz:144,wght:100,SOFT:0,WONK:0}],['Soft & round',{opsz:72,wght:650,SOFT:100,WONK:0}]]},
+  rec:{name:'Recursive',family:'Recursive, Menlo, monospace',axes:[['MONO','Monospace',0,1,0.01,0],['CASL','Casual',0,1,0.01,0],['wght','Weight',300,1000,1,500],['slnt','Slant',-15,0,0.5,0],['CRSV','Cursive',0,1,0.5,0.5]],
+      presets:[['Linear sans',{MONO:0,CASL:0,wght:500,slnt:0,CRSV:0}],['Casual mono',{MONO:1,CASL:1,wght:500,slnt:0,CRSV:0.5}],['Brush italic',{MONO:0,CASL:1,wght:800,slnt:-15,CRSV:1}],['Code',{MONO:1,CASL:0,wght:400,slnt:0,CRSV:0}]]}
+};
+let F='fr', V={}, ital=false, breathing=false, raf=0;
+const sample=$('sample');
+function buildAxes(){
+  const f=FONTS[F];
+  V={}; f.axes.forEach(a=>V[a[0]]=a[5]);
+  $('axes').innerHTML=f.axes.map(([k,n,min,max,st,def])=>`<div class="ax"><label for="ax-${k}">${k} <small>${n}</small></label><output id="o-${k}" for="ax-${k}">${def}</output><input id="ax-${k}" type="range" min="${min}" max="${max}" step="${st}" value="${def}" data-k="${k}"></div>`).join('');
+  $('axes').querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{V[inp.dataset.k]=+inp.value; apply();}));
+  $('presets').innerHTML=f.presets.map(([n],i)=>`<button id="pre-${F}-${i}" data-i="${i}">${n}</button>`).join('');
+  $('presets').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{Object.assign(V,f.presets[+b.dataset.i][1]); syncInputs(); apply();}));
+  $('italic').style.display = F==='fr'?'':'none';
+  apply();
+}
+function syncInputs(){Object.entries(V).forEach(([k,v])=>{const i=$('ax-'+k); if(i) i.value=v;})}
+function fvs(){return Object.entries(V).filter(([k])=>k!=='wght').map(([k,v])=>`"${k}" ${+(+v).toFixed(2)}`).join(', ')}
+function apply(){
+  const f=FONTS[F];
+  sample.style.fontFamily=f.family;
+  sample.style.fontWeight=Math.round(V.wght);
+  sample.style.fontStyle=(F==='fr'&&ital)?'italic':'normal';
+  sample.style.fontVariationSettings=fvs();
+  if(F==='fr') sample.style.fontOpticalSizing='none';
+  Object.entries(V).forEach(([k,v])=>{const o=$('o-'+k); if(o) o.textContent=+(+v).toFixed(2)});
+  $('stateLine').textContent=`${f.name} · ${Object.entries(V).map(([k,v])=>k+' '+(+(+v).toFixed(2))).join(' · ')}`;
+  $('css').innerHTML=`<b>font-family</b>: "${f.name}";\n<b>font-weight</b>: ${Math.round(V.wght)};${F==='fr'&&ital?'\n<b>font-style</b>: italic;':''}\n<b>font-variation-settings</b>: ${fvs()};`;
+  water();
+}
+function water(){
+  const f=FONTS[F]; const txt=(sample.textContent||'').trim()||'Hamburgefonstiv';
+  $('water').innerHTML=[12,16,24,36,54,80].map(sz=>`<div><span>${sz} px</span><p style="font-family:${f.family};font-size:${sz}px;font-weight:${Math.round(V.wght)};font-variation-settings:${fvs().replace(/"/g,"'")};font-style:${F==='fr'&&ital?'italic':'normal'}">${txt.replace(/[<&]/g,c=>c==='<'?'&lt;':'&amp;')}</p></div>`).join('');
+}
+document.querySelectorAll('[data-f]').forEach(b=>b.addEventListener('click',()=>{
+  F=b.dataset.f; document.querySelectorAll('[data-f]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  if(F==='rec' && sample.textContent.trim()==='Quirky wonks gather by the fjord.') sample.textContent='const glyph = draw("brush", 0.5);';
+  else if(F==='fr' && sample.textContent.trim()==='const glyph = draw("brush", 0.5);') sample.textContent='Quirky wonks gather by the fjord.';
+  buildAxes();
+}));
+$('size').addEventListener('input',e=>{sample.style.setProperty('--sz',e.target.value+'px'); $('sizeOut').textContent=e.target.value+' px'});
+sample.addEventListener('input',water);
+$('italic').addEventListener('click',e=>{ital=!ital; e.currentTarget.setAttribute('aria-pressed',ital); apply();});
+$('copy').addEventListener('click',e=>{const t=$('css').textContent; const btn=e.currentTarget; const done=()=>{btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent='Copy CSS',1400)}; try{ navigator.clipboard.writeText(t).then(done,()=>{btn.textContent='Select & copy'}); }catch(err){btn.textContent='Select & copy'}});
+$('breathe').addEventListener('click',e=>{
+  breathing=!breathing; e.currentTarget.setAttribute('aria-pressed',breathing);
+  if(breathing && !reduce){ const t0=performance.now(); const f=FONTS[F];
+    const loop=t=>{ const s=(t-t0)/1000; f.axes.forEach(([k,,min,max],i)=>{ if(k==='CRSV'||k==='WONK') return; const u=(Math.sin(s*0.9+i*1.7)+1)/2; V[k]=min+(max-min)*u; }); syncInputs(); apply(); if(breathing) raf=requestAnimationFrame(loop); };
+    raf=requestAnimationFrame(loop);
+  } else cancelAnimationFrame(raf);
+});
+
+buildAxes(); draw();
+let rz; addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(draw,120)});
+if(document.fonts){ document.fonts.ready.then(draw); document.fonts.load('400 100px Fraunces').then(draw).catch(()=>{}); }
+})();
+</script>
+</body>
+</html>
