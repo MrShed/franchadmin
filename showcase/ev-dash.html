@@ -101,7 +101,9 @@ body[data-mode="sport"] .speed{font-weight:900; font-style:italic}
   .modes{grid-template-columns:repeat(2,1fr)}
   .trip b{font-size:18px}
   .readout b{font-size:30px}
-  .demo{left:14px; bottom:10px}
+  .demo{position:static; margin-top:12px; text-align:center; letter-spacing:.1em}
+  .brand span{display:none}
+  .back{white-space:nowrap}
 }
 @media (prefers-reduced-motion:reduce){ body{transition:none} }
 </style>
@@ -232,7 +234,7 @@ function drawMapBase(){
   o += `<path d="${pl}" fill="none" stroke="var(--line)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="${pl}" fill="none" stroke="var(--dim)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
   o += `<path id="doneRoute" d="${pl}" fill="none" stroke="var(--acc)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
   [['Edinburgh',60,250,'start'],['Perth',210,160,'end'],['Pitlochry',330,100,'end'],['Aviemore',470,56,'end'],['Inverness',555,34,'end']].forEach(([n,x,y,a]) => { o += `<circle cx="${x}" cy="${y}" r="4" fill="var(--fg)"/><text x="${x + (a==='start'?8:-8)}" y="${y+18}" text-anchor="${a}" font-family="Red Hat Display,sans-serif" font-size="12" font-weight="500" fill="var(--fg)">${n}</text>`; });
-  o += `<g transform="translate(300 130)"><rect x="-10" y="-26" width="20" height="16" rx="3" fill="var(--acc)"/><path d="M-3 -22 L-5 -17 L-1 -17 L-3 -12" stroke="var(--bg)" stroke-width="1.5" fill="none"/><text x="14" y="-14" font-family="Red Hat Mono,monospace" font-size="10" fill="var(--acc)">Ionity · 350 kW</text></g>`;
+  o += `<g transform="translate(262 150)"><rect x="-10" y="-26" width="20" height="16" rx="3" fill="var(--acc)"/><path d="M-3 -22 L-5 -17 L-1 -17 L-3 -12" stroke="var(--bg)" stroke-width="1.5" fill="none"/><text x="14" y="-14" font-family="Red Hat Mono,monospace" font-size="10" fill="var(--acc)">Ionity · 350 kW</text></g>`;
   o += `<g id="car"><circle r="11" fill="var(--acc)" opacity=".25"/><path d="M0 -8 L6 7 L0 3 L-6 7Z" fill="var(--fg)"/></g>`;
   $('#map').innerHTML = o; fixVars($('#map'));
   const dr = $('#doneRoute'); dr.style.strokeDasharray = rlen[rlen.length-1];
