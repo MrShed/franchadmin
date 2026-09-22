@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stride Activity</title>
+<meta name="description" content="A sporty fitness dashboard in chalk white and electric colour: animated activity rings, a week streak, heart-rate zones and a workout breakdown with an SVG route map, splits and elevation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Semi+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eceef5; --card:#ffffff; --ink:#0d1433; --mut:#6b7190; --line:#dfe2ee;
+  --move:#ff2e63; --ex:#12c47a; --stand:#1f7bff; --volt:#3b2cff;
+  --z1:#9fb3ff; --z2:#1f7bff; --z3:#12c47a; --z4:#ffb000; --z5:#ff2e63;
+  --disp:"Anton","Impact","Arial Narrow Bold",sans-serif; --ui:"Barlow Semi Condensed","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg); color:var(--ink); font-family:var(--ui); font-size:16px; overflow-x:hidden; min-height:100vh;
+  background-image:repeating-linear-gradient(-58deg, transparent 0 46px, rgba(59,44,255,.035) 46px 48px)}
+:focus-visible{outline:3px solid var(--volt); outline-offset:2px}
+.wrap{max-width:1240px; margin:0 auto; padding:18px max(16px,3vw) 50px}
+.top{display:flex; justify-content:space-between; align-items:center; gap:16px}
+.brand{display:flex; align-items:center; gap:10px; font:26px var(--disp); letter-spacing:.02em; text-transform:uppercase; font-style:italic}
+.brand i{width:30px; height:18px; background:var(--volt); clip-path:polygon(30% 0,100% 0,70% 100%,0 100%); display:block}
+.back{font:600 14px var(--ui); color:var(--ink); text-decoration:none; text-transform:uppercase; letter-spacing:.08em; padding:6px 12px; background:var(--card); border-radius:3px; box-shadow:0 2px 0 var(--line)}
+.back:hover{background:var(--ink); color:#fff}
+.hero{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:26px; margin-top:22px; align-items:center}
+.hi small{font-weight:600; text-transform:uppercase; letter-spacing:.16em; color:var(--mut); font-size:13px}
+.hi h1{font:clamp(56px,9vw,124px)/.86 var(--disp); text-transform:uppercase; margin:8px 0 0; letter-spacing:-.005em}
+.hi h1 span{color:var(--volt); font-style:italic; display:inline-block}
+.hi p{max-width:30em; color:var(--mut); font-size:18px; line-height:1.45; margin:16px 0 0}
+.card{background:var(--card); border-radius:4px 24px 4px 24px; padding:20px; box-shadow:0 1px 0 var(--line), 0 20px 40px -30px rgba(13,20,51,.35); position:relative; overflow:hidden}
+.card h2{margin:0 0 14px; font:22px var(--disp); text-transform:uppercase; letter-spacing:.02em; display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+.card h2 small{font:600 13px var(--ui); color:var(--mut); letter-spacing:.08em}
+
+.rings-card{display:grid; grid-template-columns:260px 1fr; gap:24px; align-items:center}
+#rings{width:260px; height:260px; display:block; max-width:100%}
+.stat{padding:12px 0; border-top:2px solid var(--line)}
+.stat:first-child{border-top:0; padding-top:0}
+.stat .lab{font-weight:700; text-transform:uppercase; letter-spacing:.14em; font-size:12.5px; display:flex; gap:8px; align-items:center}
+.stat .lab i{width:12px; height:12px; border-radius:50%}
+.stat .val{font:44px/1 var(--disp); margin-top:4px}
+.stat .val small{font:600 17px var(--ui); color:var(--mut)}
+.stat .pct{float:right; font:600 15px var(--ui); color:var(--mut); margin-top:14px}
+
+.week{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:18px}
+.day{background:none; border:0; padding:8px 0 6px; border-radius:12px; cursor:pointer; font:600 13px var(--ui); color:var(--mut); display:flex; flex-direction:column; align-items:center; gap:6px; text-transform:uppercase; letter-spacing:.06em}
+.day svg{width:40px; height:40px}
+.day[aria-pressed="true"]{background:var(--ink); color:#fff}
+.day:hover:not([aria-pressed="true"]){background:var(--bg)}
+.streak{display:flex; align-items:center; gap:14px; margin-top:16px; padding:12px 14px; border-radius:14px; background:linear-gradient(100deg, var(--volt), #7b2cff); color:#fff}
+.streak b{font:40px/1 var(--disp)}
+.streak span{font-weight:600; font-size:15px; line-height:1.25}
+.streak svg{width:28px; height:28px; margin-left:auto; flex:none}
+
+.grid2{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:22px; margin-top:22px}
+.tabs{display:flex; gap:8px; flex-wrap:wrap}
+.tab{border:2px solid var(--ink); background:none; border-radius:30px; padding:6px 14px; font:700 14px var(--ui); text-transform:uppercase; letter-spacing:.08em; cursor:pointer; color:var(--ink)}
+.tab[aria-pressed="true"]{background:var(--ink); color:#fff}
+.w-head{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:16px 0 10px}
+.w-head div{border-left:3px solid var(--volt); padding-left:10px}
+.w-head small{display:block; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--mut)}
+.w-head b{font:32px/1.1 var(--disp)}
+.w-head b em{font:600 14px var(--ui); color:var(--mut); font-style:normal}
+.mapbox{position:relative; border-radius:14px; overflow:hidden; background:#f4f5fa}
+#map{width:100%; height:auto; display:block; aspect-ratio:16/10}
+.map-tag{position:absolute; left:12px; top:12px; background:var(--card); padding:6px 10px; border-radius:8px; font-weight:600; font-size:13px; box-shadow:0 4px 12px -6px rgba(13,20,51,.4)}
+#elev{width:100%; height:110px; display:block; margin-top:10px; touch-action:none; cursor:crosshair}
+.elev-read{display:flex; justify-content:space-between; font-weight:600; font-size:13px; color:var(--mut); margin-top:2px}
+.splits{width:100%; border-collapse:collapse; font-size:15px; margin-top:6px}
+.splits th{font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--mut); text-align:left; padding:6px 0; border-bottom:2px solid var(--line)}
+.splits td{padding:7px 0; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums}
+.splits td.bar{width:44%}
+.splits td.bar i{display:block; height:10px; border-radius:5px; background:linear-gradient(90deg,var(--volt),#7b2cff); transform-origin:left; animation:grow .8s cubic-bezier(.2,.8,.2,1) both}
+.splits tr.best td{font-weight:700} .splits tr.best td.bar i{background:linear-gradient(90deg,var(--move),#ff7a2e)}
+@keyframes grow{from{transform:scaleX(0)}}
+#hr{width:100%; height:190px; display:block; touch-action:none; cursor:crosshair}
+.zones{margin-top:12px}
+.zrow{display:grid; grid-template-columns:34px 1fr 64px; gap:10px; align-items:center; padding:5px 0; font-weight:600; font-size:14px}
+.zrow b{font:18px var(--disp)}
+.ztrack{height:14px; border-radius:7px; background:var(--bg); overflow:hidden}
+.ztrack i{display:block; height:100%; border-radius:7px; transform-origin:left; animation:grow 1s cubic-bezier(.2,.8,.2,1) both}
+.zrow span{text-align:right; color:var(--mut)}
+.hr-read{display:flex; gap:18px; align-items:baseline; font-weight:600; color:var(--mut); font-size:14px; min-height:26px}
+.hr-read b{font:26px var(--disp); color:var(--ink)}
+.coach{margin-top:14px; padding:14px 16px; border-radius:14px; background:var(--bg); font-size:16px; line-height:1.45}
+.coach b{color:var(--volt)}
+.foot{margin-top:26px; color:var(--mut); font-size:13px}
+@media (max-width:980px){ .hero,.grid2{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:560px){
+  .rings-card{grid-template-columns:minmax(0,1fr); justify-items:center}
+  .rings-card > div{width:100%}
+  #rings{width:230px; height:230px}
+  .w-head{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .day svg{width:32px; height:32px}
+  .card{padding:16px}
+}
+@media (prefers-reduced-motion:reduce){ .splits td.bar i,.ztrack i{animation:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div class="brand"><i></i>Stride</div><a class="back" id="backLink" href="index.html">← Showcase</a></div>
+
+  <section class="hero">
+    <div class="hi">
+      <small id="dateLine">Tuesday 22 September · Nia Okafor</small>
+      <h1>Close<br>the <span>rings.</span></h1>
+      <p id="heroTxt">You closed Move and Exercise before lunch. Two more stand hours and you've closed all three for the 23rd day in a row.</p>
+    </div>
+    <div class="card">
+      <div class="rings-card">
+        <svg id="rings" viewBox="0 0 260 260" role="img" aria-label="Activity rings"></svg>
+        <div>
+          <div class="stat"><div class="lab"><i style="background:var(--move)"></i>Move</div><span class="pct" id="pMove"></span><div class="val" id="vMove"></div></div>
+          <div class="stat"><div class="lab"><i style="background:var(--ex)"></i>Exercise</div><span class="pct" id="pEx"></span><div class="val" id="vEx"></div></div>
+          <div class="stat"><div class="lab"><i style="background:var(--stand)"></i>Stand</div><span class="pct" id="pStand"></span><div class="val" id="vStand"></div></div>
+        </div>
+      </div>
+      <div class="week" id="week" role="group" aria-label="Choose a day"></div>
+      <div class="streak"><b id="streakN">23</b><span>day streak<br><span style="opacity:.8;font-weight:500">best ever: 41 days (March)</span></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z" fill="#fff"/></svg></div>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="card">
+      <h2>Workout <small id="wDate">Today, 07:12</small></h2>
+      <div class="tabs" role="group" aria-label="Workouts">
+        <button class="tab" id="wRun" aria-pressed="true">Run</button><button class="tab" id="wRide" aria-pressed="false">Ride</button><button class="tab" id="wHike" aria-pressed="false">Hike</button>
+      </div>
+      <div class="w-head" id="wHead"></div>
+      <div class="mapbox"><svg id="map" viewBox="0 0 640 400" role="img" aria-label="Route map"></svg><div class="map-tag" id="mapTag"></div></div>
+      <svg id="elev" preserveAspectRatio="none" role="img" aria-label="Elevation profile. Hover to trace the route."></svg>
+      <div class="elev-read"><span id="elevL">Elevation</span><span id="elevR"></span></div>
+    </div>
+    <div style="display:grid; gap:22px; align-content:start">
+      <div class="card">
+        <h2>Heart rate <small id="hrAvg">avg 152 · max 181</small></h2>
+        <div class="hr-read" id="hrRead"><span>Hover the chart</span></div>
+        <svg id="hr" preserveAspectRatio="none" role="img" aria-label="Heart rate over time, coloured by zone"></svg>
+        <div class="zones" id="zones"></div>
+        <div class="coach" id="coach"></div>
+      </div>
+      <div class="card">
+        <h2>Splits <small id="splitUnit">per km</small></h2>
+        <table class="splits" id="splits"></table>
+      </div>
+    </div>
+  </section>
+  <p class="foot">Data is fictional. Routes are drawn procedurally around Holyrood Park, the Pentland Hills and the Water of Leith.</p>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const NS = 'http://www.w3.org/2000/svg';
+function srand(seed){ let s = seed; return () => (s = (s*16807) % 2147483647) / 2147483647; }
+
+/* ---------- rings ---------- */
+const DAYS = [
+  {d:'Wed',n:16,move:[498,560],ex:[34,30],stand:[12,12]},{d:'Thu',n:17,move:[601,560],ex:[52,30],stand:[13,12]},{d:'Fri',n:18,move:[566,560],ex:[31,30],stand:[12,12]},
+  {d:'Sat',n:19,move:[912,560],ex:[118,30],stand:[12,12]},{d:'Sun',n:20,move:[582,560],ex:[44,30],stand:[12,12]},{d:'Mon',n:21,move:[640,560],ex:[38,30],stand:[14,12]},
+  {d:'Tue',n:22,move:[612,560],ex:[48,30],stand:[10,12]}];
+DAYS[0].move = [571,560];
+const TXT = {
+  Tue:'You closed Move and Exercise before lunch. Two more stand hours and you’ll have closed all three for the 23rd day in a row.',
+  Mon:'A steady Monday. Two commutes on the bike and an evening walk up Calton Hill closed every ring.',
+  Sun:'Recovery day done right: an easy 5 km and a lot of standing at the farmers’ market.',
+  Sat:'Big day. The Pentlands ride pushed Move to 163% and Exercise past two hours.',
+  Fri:'You only just closed Exercise, with a brisk walk to Waverley at 18:40.',
+  Thu:'Intervals on the Meadows. Move goal beaten by 41 kcal.',
+  Wed:'A quiet start to the streak week. All three rings closed, if only just.'};
+const R = [{r:108,c:'#ff2e63',k:'move'},{r:80,c:'#12c47a',k:'ex'},{r:52,c:'#1f7bff',k:'stand'}];
+const RW = 24;
+function ringsSvg(svg, day, size, animate){
+  const cx = 130, cy = 130; let o = '<defs>';
+  R.forEach((ring,i) => { o += `<linearGradient id="rg${i}${size}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${ring.c}"/><stop offset="1" stop-color="${shade(ring.c)}"/></linearGradient>`; });
+  o += '<filter id="capsh" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-opacity=".45"/></filter></defs>';
+  R.forEach((ring,i) => { const [v,g] = day[ring.k]; const p = v/g; const C = 2*Math.PI*ring.r;
+    o += `<circle cx="${cx}" cy="${cy}" r="${ring.r}" fill="none" stroke="${ring.c}" stroke-opacity=".14" stroke-width="${RW}"/>`;
+    o += `<circle class="arc" data-p="${p}" data-c="${C}" cx="${cx}" cy="${cy}" r="${ring.r}" fill="none" stroke="url(#rg${i}${size})" stroke-width="${RW}" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    if (p > 1){ o += `<g class="cap" data-p="${p}" data-r="${ring.r}" opacity="0"><circle r="${RW/2}" fill="${shade(ring.c)}" filter="url(#capsh)"/></g>`; }
+    o += `<path class="chev" d="M-5 -6 L3 0 L-5 6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" transform="translate(${cx} ${cy-ring.r})"/>`;
+  });
+  svg.innerHTML = o;
+  const arcs = svg.querySelectorAll('.arc'), caps = svg.querySelectorAll('.cap');
+  const t0 = performance.now(), dur = animate && !reduce ? 1300 : 1;
+  const step = t => { const k = Math.min(1, (t-t0)/dur); const e = 1 - Math.pow(1-k, 4);
+    arcs.forEach(a => { const p = +a.dataset.p, C = +a.dataset.c; const shown = Math.min(p*e, 1); a.setAttribute('stroke-dashoffset', C*(1-shown));
+      // for >100% draw a second lap on top using a second circle
+      if (p > 1 && p*e > 1){ let lap = a.nextElementSibling; if (!lap || !lap.classList.contains('lap')){ lap = a.cloneNode(); lap.classList.remove('arc'); lap.classList.add('lap'); a.after(lap); }
+        lap.setAttribute('stroke-dashoffset', C*(1-(p*e-1))); } });
+    caps.forEach(cp => { const p = +cp.dataset.p, r = +cp.dataset.r; const a = (p*e)*Math.PI*2 - Math.PI/2; cp.setAttribute('opacity', p*e > 1 ? 1 : 0);
+      cp.setAttribute('transform', `translate(${cx + Math.cos(a)*r} ${cy + Math.sin(a)*r})`); cp.parentNode.appendChild(cp); });
+    if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function shade(hex){ const n = parseInt(hex.slice(1),16); const r = (n>>16)&255, g = (n>>8)&255, b = n&255; const f = .78; return `rgb(${r*f|0},${g*f|0},${b*f|0})`; }
+function countUp(el, to, suffix){ const t0 = performance.now(), d = reduce ? 1 : 1000; const step = t => { const k = Math.min(1,(t-t0)/d); const e = 1-Math.pow(1-k,3); el.innerHTML = Math.round(to*e) + suffix; if (k<1) requestAnimationFrame(step); }; requestAnimationFrame(step); }
+let dayIdx = 6;
+function renderDay(animate){
+  const d = DAYS[dayIdx]; ringsSvg($('#rings'), d, 'big', animate);
+  countUp($('#vMove'), d.move[0], `<small>/${d.move[1]} kcal</small>`); countUp($('#vEx'), d.ex[0], `<small>/${d.ex[1]} min</small>`); countUp($('#vStand'), d.stand[0], `<small>/${d.stand[1]} h</small>`);
+  $('#pMove').textContent = Math.round(d.move[0]/d.move[1]*100) + '%'; $('#pEx').textContent = Math.round(d.ex[0]/d.ex[1]*100) + '%'; $('#pStand').textContent = Math.round(d.stand[0]/d.stand[1]*100) + '%';
+  $('#heroTxt').textContent = TXT[d.d]; $('#dateLine').textContent = `${({Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday',Sat:'Saturday',Sun:'Sunday'})[d.d]} ${d.n} September · Nia Okafor`;
+  $('#streakN').textContent = 17 + dayIdx;
+  document.querySelectorAll('.day').forEach((b,i) => b.setAttribute('aria-pressed', i===dayIdx));
+}
+const wk = $('#week');
+DAYS.forEach((d,i) => { const b = document.createElement('button'); b.className = 'day'; b.id = 'day-'+d.d; b.setAttribute('aria-label', `${d.d} ${d.n} September`);
+  b.innerHTML = `<svg viewBox="0 0 260 260"></svg>${d.d}`; wk.appendChild(b); ringsSvg(b.querySelector('svg'), d, 'm'+i, false);
+  b.addEventListener('click', () => { dayIdx = i; renderDay(true); }); });
+
+/* ---------- workouts ---------- */
+const WO = {
+  run:{ name:'Arthur’s Seat loop', when:'Today, 07:12', dist:8.4, time:'42:31', unit:'km', kcal:612, seed:11, lobes:3, amp:.26, elevBase:48, elevAmp:190, hrBase:148, peaks:[.35,.62], place:'Holyrood Park, Edinburgh',
+    coach:'Most of this run was in <b>Zone 3–4</b>, as it should be for a hill loop. The climb up the Radical Road spiked you into Zone 5 for 3 minutes. Tomorrow: easy.' },
+  ride:{ name:'Pentlands reservoir circuit', when:'Sat, 09:40', dist:46.2, time:'2:04:18', unit:'km', kcal:1480, seed:29, lobes:2, amp:.34, elevBase:190, elevAmp:320, hrBase:136, peaks:[.25,.55,.8], place:'Pentland Hills Regional Park',
+    coach:'Long aerobic ride. <b>71% in Zone 2–3</b> builds the base you need for the Etape. You were fastest on the drop to Flotterstone.' },
+  hike:{ name:'Water of Leith walkway', when:'Sun, 11:05', dist:12.8, time:'2:51:02', unit:'km', kcal:720, seed:47, lobes:5, amp:.12, elevBase:20, elevAmp:70, hrBase:108, peaks:[.7], place:'Balerno to Leith',
+    coach:'A proper recovery day. <b>Almost all Zone 1–2</b>, which is exactly what your legs needed after Saturday.' }
+};
+let wo = 'run', trace = [], elevData = [], hrData = [];
+function build(w){
+  const r = srand(w.seed); const N = 240; const pts = [];
+  const ph = [r()*6, r()*6, r()*6];
+  for (let i=0;i<N;i++){ const t = i/N*Math.PI*2;
+    const rad = 1 + w.amp*Math.sin(w.lobes*t + ph[0]) + .08*Math.sin(7*t + ph[1]) + .05*Math.cos(11*t + ph[2]);
+    pts.push([320 + Math.cos(t)*rad*150*(w===WO.hike?1.5:1.25), 200 + Math.sin(t)*rad*110]); }
+  if (w === WO.hike){ // open route, river-like
+    for (let i=0;i<N;i++){ const t = i/(N-1); pts[i] = [60 + t*520, 250 - Math.sin(t*Math.PI*1.4)*110 + Math.sin(t*19)*14 + Math.sin(t*7+1)*18]; } }
+  trace = pts;
+  elevData = pts.map((_,i) => { const t = i/(N-1); let e = w.elevBase; w.peaks.forEach((p,k) => e += w.elevAmp*(k===0?1:.6)*Math.exp(-Math.pow((t-p)/.09,2))); return e + Math.sin(t*40)*4; });
+  const M = Math.round(w.dist*6 + 40); hrData = Array.from({length:M}, (_,i) => { const t = i/(M-1);
+    let h = w.hrBase*(t < .08 ? .75 + t*3 : 1); w.peaks.forEach(p => h += 28*Math.exp(-Math.pow((t-p)/.06,2))); h += Math.sin(i*1.7)*3 + (r()-.5)*5; if (t > .94) h -= (t-.94)*400; return Math.round(h); });
+}
+function zoneOf(h){ return h < 115 ? 1 : h < 135 ? 2 : h < 155 ? 3 : h < 172 ? 4 : 5; }
+const ZC = ['','var(--z1)','var(--z2)','var(--z3)','var(--z4)','var(--z5)'];
+const ZH = ['','#9fb3ff','#1f7bff','#12c47a','#ffb000','#ff2e63'];
+function renderWorkout(){
+  const w = WO[wo]; build(w);
+  $('#wDate').textContent = w.when;
+  const secs = w.time.split(':').reduce((a,b)=>a*60+ +b,0); const pace = secs/w.dist; const pm = Math.floor(pace/60), ps = Math.round(pace%60);
+  const gain = Math.round(elevData.reduce((a,e,i) => i && e > elevData[i-1] ? a + e - elevData[i-1] : a, 0));
+  $('#wHead').innerHTML = `<div><small>Distance</small><b>${w.dist}<em> km</em></b></div><div><small>Time</small><b>${w.time}</b></div><div><small>${wo==='ride'?'Speed':'Pace'}</small><b>${wo==='ride' ? (w.dist/(secs/3600)).toFixed(1) + '<em> km/h</em>' : pm + ':' + String(ps).padStart(2,'0') + '<em> /km</em>'}</b></div><div><small>Climb</small><b>${gain}<em> m</em></b></div>`;
+  $('#mapTag').textContent = `${w.name} · ${w.place}`;
+  drawMap(w); drawElev(); drawHR(); drawSplits(w, secs); $('#coach').innerHTML = w.coach;
+  document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-pressed', b.id === 'w' + wo[0].toUpperCase() + wo.slice(1)));
+}
+function drawMap(w){
+  const svg = $('#map'); const r = srand(w.seed + 5);
+  let o = '<defs><linearGradient id="rt" x1="0" x2="1"><stop offset="0" stop-color="#3b2cff"/><stop offset=".5" stop-color="#ff2e63"/><stop offset="1" stop-color="#3b2cff"/></linearGradient></defs>';
+  // contours
+  for (let k=0;k<11;k++){ const cx = 200 + r()*260, cy = 120 + r()*160; for (let j=1;j<=5;j++){ const rr = j*18 + k*3; let d = '';
+      for (let a=0;a<=40;a++){ const t = a/40*Math.PI*2; const q = rr*(1 + .18*Math.sin(3*t + k) + .08*Math.sin(5*t + j)); d += (a?'L':'M') + (cx + Math.cos(t)*q*1.3).toFixed(1) + ' ' + (cy + Math.sin(t)*q).toFixed(1); }
+      o += `<path d="${d}Z" fill="none" stroke="#c9cde0" stroke-width="${j===5?1.2:.7}" opacity="${.35 + j*.07}"/>`; } }
+  if (wo === 'hike') o += `<path d="M0 300 C 150 250, 250 330, 400 260 S 600 200, 640 230" fill="none" stroke="#bcd6ff" stroke-width="16" opacity=".7"/>`;
+  if (wo === 'ride') o += `<ellipse cx="420" cy="160" rx="60" ry="22" fill="#bcd6ff" opacity=".8"/><ellipse cx="210" cy="270" rx="38" ry="16" fill="#bcd6ff" opacity=".8"/>`;
+  const d = trace.map((p,i) => (i?'L':'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('') + (wo!=='hike'?'Z':'');
+  o += `<path d="${d}" fill="none" stroke="#fff" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>`;
+  o += `<path id="routePath" d="${d}" fill="none" stroke="url(#rt)" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // km markers
+  const km = Math.floor(w.dist); const step = w.dist > 20 ? 10 : w.dist > 10 ? 2 : 1;
+  for (let k = step; k < w.dist; k += step){ const p = trace[Math.round(k/w.dist*(trace.length-1))]; o += `<g transform="translate(${p[0]} ${p[1]})"><circle r="10" fill="#0d1433"/><text y="4" text-anchor="middle" fill="#fff" font-size="10" font-family="Barlow Semi Condensed,sans-serif" font-weight="700">${k}</text></g>`; }
+  const s = trace[0], e = trace[trace.length-1];
+  o += `<g transform="translate(${s[0]} ${s[1]})"><circle r="9" fill="#12c47a" stroke="#fff" stroke-width="3"/></g>`;
+  if (wo === 'hike') o += `<g transform="translate(${e[0]} ${e[1]})"><rect x="-8" y="-8" width="16" height="16" fill="#0d1433" stroke="#fff" stroke-width="3"/></g>`;
+  o += `<circle id="runner" r="8" fill="#fff" stroke="#ff2e63" stroke-width="4" opacity="0"/>`;
+  o += `<g font-family="Barlow Semi Condensed,sans-serif" font-size="11" fill="#6b7190" font-weight="600"><text x="16" y="388">N ↑</text><line x1="540" y1="382" x2="620" y2="382" stroke="#6b7190" stroke-width="2"/><text x="580" y="374" text-anchor="middle">${wo==='ride'?'5 km':'1 km'}</text></g>`;
+  svg.innerHTML = o;
+  const rp = $('#routePath'); if (!reduce && rp.getTotalLength){ const L = rp.getTotalLength(); rp.style.strokeDasharray = L; rp.style.strokeDashoffset = L; rp.getBoundingClientRect(); rp.style.transition = 'stroke-dashoffset 1.6s cubic-bezier(.4,0,.2,1)'; rp.style.strokeDashoffset = 0; }
+}
+function drawElev(){
+  const svg = $('#elev'); const W = svg.clientWidth || 600, H = 110; svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const mn = Math.min(...elevData) - 10, mx = Math.max(...elevData) + 10; const X = i => i/(elevData.length-1)*W, Y = e => H - 16 - (e-mn)/(mx-mn)*(H-26);
+  const d = elevData.map((e,i) => (i?'L':'M') + X(i).toFixed(1) + ' ' + Y(e).toFixed(1)).join('');
+  svg.innerHTML = `<defs><linearGradient id="eg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#3b2cff" stop-opacity=".35"/><stop offset="1" stop-color="#3b2cff" stop-opacity="0"/></linearGradient></defs>
+    <path d="${d}L${W} ${H-16}L0 ${H-16}Z" fill="url(#eg)"/><path d="${d}" fill="none" stroke="#3b2cff" stroke-width="2.5"/>
+    <line x1="0" x2="${W}" y1="${H-16}" y2="${H-16}" stroke="#dfe2ee"/><text x="0" y="${H-2}" font-size="11" fill="#6b7190" font-family="Barlow Semi Condensed,sans-serif" font-weight="600">0 km</text><text x="${W}" y="${H-2}" text-anchor="end" font-size="11" fill="#6b7190" font-family="Barlow Semi Condensed,sans-serif" font-weight="600">${WO[wo].dist} km</text>
+    <line id="eCur" y1="0" y2="${H-16}" stroke="#0d1433" stroke-width="1.5" opacity="0"/><circle id="eDot" r="5" fill="#ff2e63" stroke="#fff" stroke-width="2" opacity="0"/>`;
+  $('#elevL').textContent = `Elevation ${Math.round(Math.min(...elevData))}–${Math.round(Math.max(...elevData))} m`; $('#elevR').textContent = 'Hover or drag to trace the route';
+  svg.onpointermove = e => { const rc = svg.getBoundingClientRect(); const f = Math.max(0, Math.min(1, (e.clientX - rc.left)/rc.width)); const i = Math.round(f*(elevData.length-1));
+    const x = X(i), y = Y(elevData[i]); const c = $('#eCur'), dt = $('#eDot'); c.setAttribute('x1',x); c.setAttribute('x2',x); c.setAttribute('opacity',.5); dt.setAttribute('cx',x); dt.setAttribute('cy',y); dt.setAttribute('opacity',1);
+    const p = trace[i]; const run = $('#runner'); run.setAttribute('cx', p[0]); run.setAttribute('cy', p[1]); run.setAttribute('opacity', 1);
+    $('#elevR').textContent = `${(f*WO[wo].dist).toFixed(1)} km · ${Math.round(elevData[i])} m`; };
+  svg.onpointerleave = () => { $('#eCur').setAttribute('opacity',0); $('#eDot').setAttribute('opacity',0); $('#runner').setAttribute('opacity',0); $('#elevR').textContent = 'Hover or drag to trace the route'; };
+}
+function drawHR(){
+  const svg = $('#hr'); const W = svg.clientWidth || 500, H = 190; svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const mn = 90, mx = 195; const X = i => i/(hrData.length-1)*W, Y = h => H - 20 - (h-mn)/(mx-mn)*(H-30);
+  let o = '<defs>'; const segs = [];
+  // gradient stops by zone along x
+  o += '<linearGradient id="hrg" x1="0" x2="1" y1="0" y2="0">';
+  hrData.forEach((h,i) => { o += `<stop offset="${(i/(hrData.length-1)).toFixed(4)}" stop-color="${ZH[zoneOf(h)]}"/>`; });
+  o += '</linearGradient><linearGradient id="hrf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0d1433" stop-opacity=".08"/><stop offset="1" stop-color="#0d1433" stop-opacity="0"/></linearGradient></defs>';
+  [[115,'Z2'],[135,'Z3'],[155,'Z4'],[172,'Z5']].forEach(([b,l]) => { o += `<line x1="0" x2="${W}" y1="${Y(b)}" y2="${Y(b)}" stroke="#dfe2ee" stroke-dasharray="3 4"/><text x="${W-2}" y="${Y(b)-4}" text-anchor="end" font-size="10" fill="#6b7190" font-family="Barlow Semi Condensed,sans-serif" font-weight="700">${l}</text>`; });
+  const d = hrData.map((h,i) => (i?'L':'M') + X(i).toFixed(1) + ' ' + Y(h).toFixed(1)).join('');
+  o += `<path d="${d}L${W} ${H-20}L0 ${H-20}Z" fill="url(#hrf)"/><path id="hrLine" d="${d}" fill="none" stroke="url(#hrg)" stroke-width="3.2" stroke-linejoin="round"/>`;
+  const secs = WO[wo].time.split(':').reduce((a,b)=>a*60+ +b,0);
+  for (let k=0;k<=4;k++) o += `<text x="${k/4*W}" y="${H-4}" text-anchor="${k===0?'start':k===4?'end':'middle'}" font-size="11" fill="#6b7190" font-family="Barlow Semi Condensed,sans-serif" font-weight="600">${fmtT(secs*k/4)}</text>`;
+  o += `<line id="hCur" y1="0" y2="${H-20}" stroke="#0d1433" opacity="0"/><circle id="hDot" r="5" fill="#fff" stroke="#0d1433" stroke-width="2.5" opacity="0"/>`;
+  svg.innerHTML = o;
+  const rp = $('#hrLine'); if (!reduce && rp.getTotalLength){ const L = rp.getTotalLength(); rp.style.strokeDasharray = L; rp.style.strokeDashoffset = L; rp.getBoundingClientRect(); rp.style.transition = 'stroke-dashoffset 1.4s ease-out'; rp.style.strokeDashoffset = 0; }
+  const avg = Math.round(hrData.reduce((a,b)=>a+b,0)/hrData.length), max = Math.max(...hrData); $('#hrAvg').textContent = `avg ${avg} · max ${max}`;
+  const counts = [0,0,0,0,0,0]; hrData.forEach(h => counts[zoneOf(h)]++);
+  $('#zones').innerHTML = [5,4,3,2,1].map(z => { const f = counts[z]/hrData.length; return `<div class="zrow"><b style="color:${ZC[z]}">Z${z}</b><div class="ztrack"><i style="width:${Math.max(1,f*100)}%; background:${ZC[z]}; animation-delay:${(5-z)*.08}s"></i></div><span>${fmtT(secs*f)}</span></div>`; }).join('');
+  svg.onpointermove = e => { const rc = svg.getBoundingClientRect(); const f = Math.max(0, Math.min(1, (e.clientX - rc.left)/rc.width)); const i = Math.round(f*(hrData.length-1)); const h = hrData[i];
+    $('#hCur').setAttribute('x1', X(i)); $('#hCur').setAttribute('x2', X(i)); $('#hCur').setAttribute('opacity', .4); $('#hDot').setAttribute('cx', X(i)); $('#hDot').setAttribute('cy', Y(h)); $('#hDot').setAttribute('opacity', 1);
+    $('#hrRead').innerHTML = `<b>${h}</b> bpm <span style="color:${ZC[zoneOf(h)]}">Zone ${zoneOf(h)}</span><span>at ${fmtT(secs*f)}</span>`; };
+  svg.onpointerleave = () => { $('#hCur').setAttribute('opacity',0); $('#hDot').setAttribute('opacity',0); $('#hrRead').innerHTML = '<span>Hover the chart</span>'; };
+}
+function fmtT(s){ s = Math.round(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60; return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}` : `${m}:${String(x).padStart(2,'0')}`; }
+function drawSplits(w, secs){
+  const n = w.dist > 20 ? Math.floor(w.dist/5) : Math.floor(w.dist); const per = w.dist > 20 ? 5 : 1; $('#splitUnit').textContent = w.dist > 20 ? 'per 5 km' : 'per km';
+  const r = srand(w.seed + 3); const base = secs/w.dist*per; const sp = Array.from({length:n}, (_,i) => { const t = (i+.5)/n; let v = base*(1 + (r()-.5)*.08); w.peaks.forEach(p => v += base*.14*Math.exp(-Math.pow((t-p)/.12,2))); return v; });
+  const mn = Math.min(...sp), mx = Math.max(...sp);
+  $('#splits').innerHTML = `<tr><th>${per===1?'Km':'Km'}</th><th>${wo==='ride'?'Time':'Pace'}</th><th></th><th style="text-align:right">HR</th></tr>` +
+    sp.map((v,i) => { const best = v === mn; const hr = hrData[Math.round((i+.5)/n*(hrData.length-1))]; return `<tr class="${best?'best':''}"><td>${(i+1)*per}</td><td>${fmtT(v)}</td><td class="bar"><i style="width:${30 + (1-(v-mn)/(mx-mn||1))*70}%; animation-delay:${i*.05}s"></i></td><td style="text-align:right">${hr}</td></tr>`; }).join('');
+}
+['Run','Ride','Hike'].forEach(k => $('#w'+k).addEventListener('click', () => { wo = k.toLowerCase(); renderWorkout(); }));
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { drawElev(); drawHR(); }, 150); });
+renderDay(true); renderWorkout();
+})();
+</script>
+</body>
+</html>

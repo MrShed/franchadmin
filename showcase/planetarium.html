@@ -189,7 +189,7 @@ const S=[
 ['Nu Andromedae',0.830,41.079,4.53,'And','b'],['Epsilon Lyrae',18.739,39.670,4.60,'Lyr','w'],['Delta Coronae Borealis',15.826,26.068,4.63,'CrB','y'],['Asellus Borealis',8.722,21.469,4.66,'Cnc','w'],
 ['Eta Ursae Minoris',16.292,75.755,4.95,'UMi','w'],['Iota Coronae Borealis',16.024,29.851,4.98,'CrB','w'],['Mekbuda',7.068,20.570,3.90,'Gem','y'],['Propus',6.248,22.507,3.30,'Gem','r'],
 ['Beta Lupi',14.976,-43.134,2.68,'Lup','b'],['Mu Velorum',10.779,-49.420,2.69,'Vel','y'],['Iota Centauri',13.343,-36.712,2.75,'Cen','w'],['Delta Centauri',12.139,-50.722,2.52,'Cen','b'],
-['Tiaki',22.711,-46.885,2.07,'Gru','r'],['Sigma Octantis',21.146,-88.956,5.40,'Oct','w'],['Delta Capricorni',21.784,-16.127,2.85,'Cap','w']
+['Tiaki',22.711,-46.885,2.07,'Gru','r'],['Sigma Octantis',21.146,-88.956,5.40,'Oct','w']
 ];
 const CON={Ori:'Orion',UMa:'Ursa Major',UMi:'Ursa Minor',Cas:'Cassiopeia',Cyg:'Cygnus',Lyr:'Lyra',Aql:'Aquila',Sco:'Scorpius',Sgr:'Sagittarius',Leo:'Leo',Gem:'Gemini',Tau:'Taurus',CMa:'Canis Major',CMi:'Canis Minor',Aur:'Auriga',Per:'Perseus',And:'Andromeda',Peg:'Pegasus',Boo:'Boötes',CrB:'Corona Borealis',Her:'Hercules',Vir:'Virgo',Cru:'Crux',Cen:'Centaurus',Dra:'Draco',Cep:'Cepheus',Ari:'Aries',Lib:'Libra',Cap:'Capricornus',Aqr:'Aquarius',PsA:'Piscis Austrinus',Gru:'Grus',Eri:'Eridanus',Car:'Carina',Vel:'Vela',Pup:'Puppis',Col:'Columba',Lep:'Lepus',Hya:'Hydra',Crv:'Corvus',Oph:'Ophiuchus',Ser:'Serpens',Del:'Delphinus',Tri:'Triangulum',Cet:'Cetus',TrA:'Triangulum Australe',Pav:'Pavo',Ara:'Ara',Lup:'Lupus',Mus:'Musca',Hyi:'Hydrus',Phe:'Phoenix',Tuc:'Tucana',Lyn:'Lynx',CVn:'Canes Venatici',Com:'Coma Berenices',Cnc:'Cancer',Oct:'Octans'};
 const FIG={
@@ -239,6 +239,7 @@ Cnc:[['Tarf','Asellus Australis'],['Asellus Australis','Asellus Borealis'],['Ase
 };
 // add a couple of named stars that figures reference but are missing above
 S.push(['Mizar',13.399,54.925,2.27,'UMa','w'],['Rasalas',9.879,26.007,3.88,'Leo','o'],['Iota Cephei',22.828,66.201,3.52,'Cep','o']);
+const GREEK=/^(Alpha|Beta|Gamma|Delta|Epsilon|Zeta|Eta|Theta|Iota|Kappa|Lambda|Mu|Nu|Xi|Omicron|Pi|Rho|Sigma|Tau|Upsilon|Phi|Chi|Psi|Omega|\d)/;
 const COLORS={b:[170,195,255],w:[245,246,255],y:[255,240,200],o:[255,205,150],r:[255,160,120]};
 const byName={};S.forEach(s=>byName[s[0]]=s);
 const stars=S.map(s=>({name:s[0],ra:s[1]*15*D2R,dec:s[2]*D2R,mag:s[3],con:s[4],col:COLORS[s[5]]||COLORS.w,tw:Math.random()*6.28}));
@@ -253,6 +254,7 @@ const MW=[];(function(){const raP=192.859*D2R,decP=27.128*D2R,lNCP=122.932*D2R;l
     const y=Math.cos(b)*Math.sin(lNCP-l),x=Math.cos(decP)*Math.sin(b)-Math.sin(decP)*Math.cos(b)*Math.cos(lNCP-l);const ra=raP+Math.atan2(y,x);
     MW.push({ra,dec,a:Math.max(0,bright),r:6+rnd()*14});}})();
 
+const SPR=document.createElement('canvas');SPR.width=SPR.height=64;(function(){const x=SPR.getContext('2d');const gr=x.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(160,170,220,1)');gr.addColorStop(1,'rgba(160,170,220,0)');x.fillStyle=gr;x.fillRect(0,0,64,64);})();
 // ---------- astronomy ----------
 function jd(date){return date.getTime()/86400000+2440587.5;}
 function lstRad(date,lon){const d=jd(date)-2451545.0;let g=18.697374558+24.06570982441908*d;g=((g%24)+24)%24;return((g+lon/15)%24+24)%24*15*D2R;}
@@ -292,7 +294,7 @@ function draw(t){
   const starVis=Math.max(0,Math.min(1,(-sa-2)/10));
   // milky way
   if(layers.mw&&starVis>0){g.globalCompositeOperation='lighter';for(const p of MW){const [a,z]=altAz(p.ra,p.dec,lst,lat);if(a<-.05)continue;const q=project(a,z);if(!q)continue;
-      const r=p.r*scale/500;const gr=g.createRadialGradient(q[0],q[1],0,q[0],q[1],r);gr.addColorStop(0,`rgba(150,160,210,${.05*p.a*starVis})`);gr.addColorStop(1,'rgba(150,160,210,0)');g.fillStyle=gr;g.fillRect(q[0]-r,q[1]-r,r*2,r*2);}g.globalCompositeOperation='source-over';}
+      const r=p.r*scale/500;g.globalAlpha=Math.min(1,.09*p.a*starVis);g.drawImage(SPR,q[0]-r,q[1]-r,r*2,r*2);}g.globalAlpha=1;g.globalCompositeOperation='source-over';}
   // grid
   if(layers.grid){g.strokeStyle='rgba(200,162,90,.18)';g.lineWidth=1;
     for(let a=0;a<90;a+=15){g.beginPath();let pen=false;for(let z=0;z<=360;z+=3){const q=project(a*D2R,z*D2R);if(!q){pen=false;continue;}pen?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]);pen=true;}g.stroke();}
@@ -306,12 +308,12 @@ function draw(t){
     for(const [a,b] of lines){if(!a.p||!b.p)continue;const dx=b.p[0]-a.p[0],dy=b.p[1]-a.p[1],d=Math.hypot(dx,dy);if(d>W*.9)continue;const ra=Math.min(6,d*.2)/d;
       g.moveTo(a.p[0]+dx*ra,a.p[1]+dy*ra);g.lineTo(b.p[0]-dx*ra,b.p[1]-dy*ra);}g.stroke();}
   const zoom=100*D2R/view.fov;
-  for(const s of projected){const q=s.p;const r=Math.max(.6,(4.6-s.mag)*.72*Math.pow(zoom,.35));const tw=reduce?1:.82+.18*Math.sin(t*3+s.tw)*(s.alt<.35?1.6:.6);
-    const al=Math.min(1,(1.1-s.mag*.12))*starVis*tw*Math.min(1,.3+s.alt*3);if(al<=.01)continue;const [cr,cg2,cb]=s.col;
-    if(s.mag<1.6){const gr=g.createRadialGradient(q[0],q[1],0,q[0],q[1],r*4.5);gr.addColorStop(0,`rgba(${cr},${cg2},${cb},${.35*al})`);gr.addColorStop(1,`rgba(${cr},${cg2},${cb},0)`);g.fillStyle=gr;g.fillRect(q[0]-r*4.5,q[1]-r*4.5,r*9,r*9);}
+  for(const s of projected){const q=s.p;const r=Math.max(.8,(5.3-s.mag)*.78*Math.pow(zoom,.35));const tw=reduce?1:.82+.18*Math.sin(t*3+s.tw)*(s.alt<.35?1.6:.6);
+    const al=Math.min(1,(1.3-s.mag*.12))*starVis*tw*Math.min(1,.3+s.alt*3);if(al<=.01)continue;const [cr,cg2,cb]=s.col;
+    if(s.mag<2.2){const gr=g.createRadialGradient(q[0],q[1],0,q[0],q[1],r*4.5);gr.addColorStop(0,`rgba(${cr},${cg2},${cb},${.35*al})`);gr.addColorStop(1,`rgba(${cr},${cg2},${cb},0)`);g.fillStyle=gr;g.fillRect(q[0]-r*4.5,q[1]-r*4.5,r*9,r*9);}
     g.fillStyle=`rgba(${cr},${cg2},${cb},${al})`;g.beginPath();g.arc(q[0],q[1],r,0,6.283);g.fill();}
   if(layers.names&&starVis>0){g.font='12px Spectral, Georgia, serif';g.fillStyle=`rgba(239,228,200,${.7*starVis})`;g.textBaseline='middle';
-    const lim=1.6+Math.max(0,(zoom-1))*1.8;for(const s of projected){if(s.mag>lim||/^[A-Z][a-z]+ [A-Z]/.test(s.name)&&s.mag>1.8)continue;g.fillText(s.name,s.p[0]+6,s.p[1]-7);}
+    const lim=1.6+Math.max(0,(zoom-1))*1.8;for(const s of projected){if(s.mag>lim||GREEK.test(s.name)&&zoom<1.8)continue;g.fillText(s.name,s.p[0]+6,s.p[1]-7);}
     g.font='600 11px Cinzel, Georgia, serif';g.fillStyle=`rgba(200,162,90,${.55*starVis})`;g.textAlign='center';
     for(const c in conCenters){const cc=conCenters[c];if(cc.n<3||!CON[c])continue;g.fillText(CON[c].toUpperCase(),cc.x/cc.n,cc.y/cc.n+22);}g.textAlign='left';}
   // moon & sun
@@ -347,7 +349,7 @@ function drawMoon(x,y,r,phase){
   const lit=(1-Math.cos(phase))/2;const waxing=phase<Math.PI;
   g.fillStyle='#f4efdc';g.beginPath();
   g.arc(x,y,r,-Math.PI/2,Math.PI/2,!waxing);
-  const k=Math.cos(phase);g.ellipse(x,y,Math.abs(k)*r,r,0,Math.PI/2,-Math.PI/2,(k<0)!==waxing?false:true);
+  const k=Math.cos(phase);g.ellipse(x,y,Math.abs(k)*r,r,0,Math.PI/2,-Math.PI/2,(k<0)!==waxing);
   g.fill();g.shadowBlur=0;
   const gl=g.createRadialGradient(x,y,r,x,y,r*3);gl.addColorStop(0,`rgba(244,239,220,${.18*lit})`);gl.addColorStop(1,'rgba(244,239,220,0)');g.fillStyle=gl;g.beginPath();g.arc(x,y,r*3,0,6.283);g.fill();
   g.restore();

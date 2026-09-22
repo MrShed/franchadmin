@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Floating World Press</title>
+<meta name="description" content="An ukiyo-e homage: a Great Wave–inspired SVG print with parallax layers, the story of Hokusai and Hiroshige, and the woodblock process explained step by step as each colour block is printed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
+<style>
+:root{
+  --indigo:#14263d;
+  --indigo2:#1c3552;
+  --prussian:#1f4e79;
+  --pale:#8fb3c7;
+  --washi:#efe4c8;
+  --washi2:#e2d3ad;
+  --ver:#c8412e;
+  --sumi:#1b1a1a;
+  --text:#ece3cc;
+  --muted:#a9b6c4;
+  --mincho:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho","Songti SC",Georgia,serif;
+  --brush:"Yuji Syuku","Shippori Mincho","Hiragino Mincho ProN",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--indigo);color:var(--text);font-family:var(--mincho);font-size:18px;line-height:1.7;overflow-x:hidden;
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 2px,transparent 2px 7px),radial-gradient(ellipse at 50% 0%,#23426a 0%,transparent 60%)}
+a{color:var(--washi)}
+:focus-visible{outline:2px solid var(--ver);outline-offset:3px}
+.pad{padding-left:max(16px,env(safe-area-inset-left),5vw);padding-right:max(16px,env(safe-area-inset-right),5vw)}
+
+.back{position:fixed;right:max(14px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));z-index:40;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--washi);font:600 14px var(--mincho);letter-spacing:.1em;background:rgba(20,38,61,.85);padding:8px 12px 8px 10px;border:1px solid rgba(239,228,200,.4)}
+.back i{display:inline-grid;place-items:center;width:22px;height:22px;background:var(--ver);color:#fff;font:14px var(--brush);font-style:normal;border-radius:3px}
+.back:hover{background:var(--ver)}
+
+/* hero print */
+.hero{position:relative;padding-top:clamp(20px,4vw,50px);padding-bottom:40px}
+.printFrame{position:relative;max-width:1260px;margin:0 auto;background:var(--washi);padding:clamp(8px,1.4vw,18px);box-shadow:0 30px 70px rgba(0,0,0,.5),inset 0 0 0 1px rgba(0,0,0,.08)}
+.printFrame::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55 .08' numOctaves='3' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .25 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23f)'/%3E%3C/svg%3E");mix-blend-mode:multiply}
+.printFrame svg{display:block;width:100%;height:auto}
+.caption{max-width:1260px;margin:18px auto 0;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;color:var(--muted);font-size:15px}
+.caption b{color:var(--washi);font-weight:600}
+
+.intro{display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(24px,5vw,70px);max-width:1180px;margin:0 auto;padding-top:60px;padding-bottom:40px;align-items:start}
+.vtitle{writing-mode:vertical-rl;font:clamp(40px,6vw,76px)/1.1 var(--brush);color:var(--washi);letter-spacing:.12em;margin:0;display:flex;gap:.3em}
+.vtitle .seal{writing-mode:horizontal-tb;display:inline-grid;place-items:center;width:1.1em;height:1.1em;background:var(--ver);color:var(--washi);font-size:.5em;border-radius:4px;letter-spacing:0;align-self:flex-end}
+h1{font:800 clamp(34px,4.6vw,62px)/1.1 var(--mincho);margin:0 0 20px;color:var(--washi);letter-spacing:.01em}
+.lede{font-size:clamp(19px,1.8vw,23px);color:var(--text)}
+.lede::first-letter{color:var(--ver)}
+
+section{padding-top:70px;padding-bottom:70px;max-width:1180px;margin:0 auto}
+.sh{display:flex;align-items:baseline;gap:18px;margin-bottom:26px;border-bottom:1px solid rgba(239,228,200,.25);padding-bottom:12px;flex-wrap:wrap}
+.sh .jp{font:clamp(26px,3vw,38px) var(--brush);color:var(--ver)}
+.sh h2{margin:0;font:800 clamp(26px,3vw,40px)/1.15 var(--mincho);color:var(--washi)}
+
+/* history */
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px}
+.cols p{margin:0 0 1em}
+.eras{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:30px;border-top:2px solid var(--washi)}
+.era{padding:16px 16px 20px 0;border-right:1px solid rgba(239,228,200,.2)}
+.era+.era{padding-left:16px}
+.era:last-child{border-right:0}
+.era .y{font:800 22px var(--mincho);color:var(--washi)}
+.era .t{font:15px var(--brush);color:var(--ver);margin-bottom:6px}
+.era p{margin:0;font-size:15.5px;line-height:1.6;color:var(--muted)}
+
+/* masters */
+.masters{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.master{background:var(--washi);color:var(--sumi);padding:26px 26px 28px;position:relative;box-shadow:10px 10px 0 rgba(0,0,0,.3)}
+.master .seal{position:absolute;right:20px;top:20px;width:56px;height:56px;background:var(--ver);color:var(--washi);display:grid;place-items:center;font:22px/1 var(--brush);writing-mode:vertical-rl;border-radius:4px;letter-spacing:.05em}
+.master h3{font:800 28px/1.1 var(--mincho);margin:0 0 4px;padding-right:70px}
+.master .d{font-size:14px;color:#6a5a3a;margin-bottom:12px}
+.master p{margin:0 0 .8em;font-size:16.5px}
+.master ul{margin:0;padding-left:18px;font-size:15.5px}
+.others{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:26px}
+.other{border:1px solid rgba(239,228,200,.3);padding:14px}
+.other b{display:block;font-weight:800;color:var(--washi)}
+.other span{font-size:13px;color:var(--ver);font-family:var(--brush)}
+.other p{margin:6px 0 0;font-size:15px;color:var(--muted);line-height:1.55}
+
+/* process */
+.proc{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:36px;align-items:start}
+.pstage{position:relative;background:var(--washi);padding:10px;box-shadow:0 20px 40px rgba(0,0,0,.4);transition:background .5s}
+.pstage.wood{background:#b88a57;background-image:repeating-linear-gradient(94deg,rgba(90,50,20,.18) 0 3px,transparent 3px 11px),repeating-linear-gradient(90deg,rgba(255,220,170,.08) 0 1px,transparent 1px 23px)}
+.pstage svg{display:block;width:100%;height:auto;transition:transform .8s cubic-bezier(.5,0,.2,1)}
+.pstage.mirror svg{transform:scaleX(-1)}
+.pstage .tag{position:absolute;left:18px;top:18px;background:var(--sumi);color:var(--washi);font:600 13px var(--mincho);padding:4px 10px;letter-spacing:.08em;z-index:2}
+.steps{list-style:none;margin:0 0 18px;padding:0;display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.steps button{width:100%;aspect-ratio:1;border:1px solid rgba(239,228,200,.4);background:transparent;color:var(--washi);font:20px var(--brush);cursor:pointer;display:grid;place-items:center;transition:background .2s}
+.steps button[aria-current="step"]{background:var(--ver);border-color:var(--ver)}
+.steps button:hover{background:rgba(200,65,46,.4)}
+.pinfo h3{font:800 26px/1.2 var(--mincho);margin:0 0 4px;color:var(--washi)}
+.pinfo .who{font:15px var(--brush);color:var(--ver);margin-bottom:12px}
+.pinfo p{margin:0 0 1em}
+.pnav{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.pbtn{font:600 15px var(--mincho);background:var(--washi);color:var(--sumi);border:0;padding:10px 16px;cursor:pointer;letter-spacing:.05em}
+.pbtn.alt{background:transparent;color:var(--washi);border:1px solid var(--washi)}
+.pbtn:hover{background:var(--ver);color:var(--washi)}
+.blocks{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.blocks span{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);border:1px solid rgba(239,228,200,.2);padding:3px 8px}
+.blocks span i{width:14px;height:14px;display:block;border:1px solid rgba(0,0,0,.3)}
+.blocks span.on{color:var(--washi);border-color:var(--washi)}
+
+/* principles */
+.princ{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid rgba(239,228,200,.25)}
+.pr{padding:22px 22px 24px 0;border-bottom:1px solid rgba(239,228,200,.25)}
+.pr:nth-child(3n+2),.pr:nth-child(3n){padding-left:22px;border-left:1px solid rgba(239,228,200,.25)}
+.pr .k{font:34px/1 var(--brush);color:var(--ver);margin-bottom:6px}
+.pr h3{margin:0 0 6px;font:800 19px var(--mincho);color:var(--washi)}
+.pr p{margin:0;font-size:16px;color:var(--muted)}
+
+footer{max-width:1180px;margin:0 auto;padding-top:30px;padding-bottom:50px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;color:var(--muted);font-size:15px;border-top:1px solid rgba(239,228,200,.25)}
+footer .s{font:26px var(--brush);color:var(--washi)}
+
+@media (max-width:980px){
+  .cols,.proc,.masters{grid-template-columns:minmax(0,1fr)}
+  .eras,.others{grid-template-columns:1fr 1fr}
+  .era:nth-child(3){padding-left:0}
+  .princ{grid-template-columns:1fr 1fr}
+  .pr:nth-child(3n+2),.pr:nth-child(3n){padding-left:0;border-left:0}
+  .pr:nth-child(even){padding-left:22px;border-left:1px solid rgba(239,228,200,.25)}
+}
+@media (max-width:560px){
+  body{font-size:17px}
+  .intro{grid-template-columns:minmax(0,1fr)}
+  .vtitle{writing-mode:horizontal-tb;font-size:40px}
+  .eras,.others,.princ{grid-template-columns:1fr}
+  .era,.era+.era{padding-left:0;border-right:0;border-bottom:1px solid rgba(239,228,200,.2)}
+  .pr:nth-child(even){padding-left:0;border-left:0}
+  .steps button{font-size:16px}
+  .back span{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .pstage svg{transition:none}
+}
+</style>
+</head>
+<body>
+<a class="back" href="index.html" id="back"><i>戻</i><span>Showcase</span></a>
+
+<header class="hero pad">
+  <div class="printFrame"><svg id="heroPrint" viewBox="0 0 1200 760" role="img" aria-label="A Great Wave–inspired woodblock print: a towering blue wave with claw-like foam curls over three boats while a small Mount Fuji sits in the distance"></svg></div>
+  <div class="caption"><span><b>Beneath the Wave, after Hokusai</b> · drawn in SVG, printed in seven blocks</span><span>Move your pointer or scroll — the sea moves in layers</span></div>
+</header>
+
+<main>
+<div class="intro pad">
+  <p class="vtitle" lang="ja" aria-label="Ukiyo-e, pictures of the floating world">浮世絵<span class="seal">版</span></p>
+  <div>
+    <h1>Pictures of the floating world</h1>
+    <p class="lede">For two and a half centuries, the cheapest pictures in Edo — sold for about the price of a double serving of noodles — were printed from carved cherry wood. Courtesans, kabuki actors, sumo wrestlers, ghosts and, finally, landscapes: <i>ukiyo-e</i> showed the pleasures of a world that knew it was passing.</p>
+    <p>This page is printed the same way. The wave above is built from separate colour blocks, one per ink. Scroll down to watch the carver and the printer build it up, block by block.</p>
+  </div>
+</div>
+
+<section class="pad" id="history">
+  <div class="sh"><span class="jp" lang="ja">歴史</span><h2>A brief history</h2></div>
+  <div class="cols">
+    <div>
+      <p><i>Ukiyo</i> once meant "sorrowful world", a Buddhist idea of life's impermanence. In the peace of the Edo period (1603–1868), a pun turned it into the "floating world": the theatres, teahouses and pleasure quarters of a booming merchant class, where life was to be enjoyed precisely because it wouldn't last.</p>
+      <p>Painters could only make one picture at a time; woodblock printing could make hundreds. Publishers commissioned designs, and a team of specialists — artist, carver and printer — turned them into affordable prints for the public.</p>
+    </div>
+    <div>
+      <p>At first prints were black ink, coloured by hand. In 1765 Suzuki Harunobu led the invention of full-colour <i>nishiki-e</i> ("brocade pictures") using a registration mark, the <i>kentō</i>, to align many blocks precisely.</p>
+      <p>A new imported pigment, Prussian blue (<i>bero-ai</i>), became affordable in the late 1820s. It didn't fade like plant indigo, and it made possible the landscape boom of the 1830s — Hokusai's Fuji series and Hiroshige's roads — that the West would later fall in love with.</p>
+    </div>
+  </div>
+  <div class="eras">
+    <div class="era"><div class="y">1670s</div><div class="t" lang="ja">墨摺絵</div><p>Hishikawa Moronobu makes single-sheet prints in black ink — the style's first master.</p></div>
+    <div class="era"><div class="y">1765</div><div class="t" lang="ja">錦絵</div><p>Harunobu's full-colour brocade prints. Utamaro's beauties and Sharaku's actors follow by the 1790s.</p></div>
+    <div class="era"><div class="y">c. 1831</div><div class="t" lang="ja">富嶽三十六景</div><p>Hokusai's <i>Thirty-six Views of Mount Fuji</i>, including the Great Wave, printed in lavish Prussian blue.</p></div>
+    <div class="era"><div class="y">1867–</div><div class="t" lang="ja">ジャポニスム</div><p>Prints reach Paris. Monet collects them; Van Gogh copies Hiroshige; Debussy puts the Wave on the cover of <i>La Mer</i>.</p></div>
+  </div>
+</section>
+
+<section class="pad" id="masters">
+  <div class="sh"><span class="jp" lang="ja">絵師</span><h2>Two masters of landscape</h2></div>
+  <div class="masters">
+    <article class="master">
+      <div class="seal" lang="ja">北斎</div>
+      <h3>Katsushika Hokusai</h3>
+      <div class="d">1760–1849 · used more than thirty names in his life</div>
+      <p>Restless, prolific and funny, Hokusai moved house more than ninety times and styled himself "the old man mad about drawing". He published the <i>Hokusai Manga</i> sketchbooks, and in his early seventies designed the Fuji series that made him immortal.</p>
+      <ul><li><i>Under the Wave off Kanagawa</i> (c. 1831)</li><li><i>Fine Wind, Clear Morning</i> — "Red Fuji"</li><li><i>One Hundred Views of Mount Fuji</i> (1834)</li></ul>
+    </article>
+    <article class="master">
+      <div class="seal" lang="ja">広重</div>
+      <h3>Utagawa Hiroshige</h3>
+      <div class="d">1797–1858 · a fire warden's son from Edo</div>
+      <p>Where Hokusai is dramatic, Hiroshige is atmospheric: rain, snow, mist, moonlight, travellers on the road. His Tōkaidō series made him a star, and his daring cropped compositions were copied stroke for stroke by Van Gogh.</p>
+      <ul><li><i>Fifty-three Stations of the Tōkaidō</i> (1833–34)</li><li><i>One Hundred Famous Views of Edo</i> (1856–59)</li><li><i>Sudden Shower over Shin-Ōhashi Bridge</i></li></ul>
+    </article>
+  </div>
+  <div class="others">
+    <div class="other"><b>Suzuki Harunobu</b><span lang="ja">鈴木春信</span><p>c. 1725–1770. Pioneer of full-colour printing; delicate, dreamlike young lovers.</p></div>
+    <div class="other"><b>Kitagawa Utamaro</b><span lang="ja">喜多川歌麿</span><p>c. 1753–1806. Close-up portraits of women, sensitive and psychologically alive.</p></div>
+    <div class="other"><b>Tōshūsai Sharaku</b><span lang="ja">東洲斎写楽</span><p>Active 1794–95. Ten months of ferocious kabuki portraits, then vanished.</p></div>
+    <div class="other"><b>Utagawa Kuniyoshi</b><span lang="ja">歌川国芳</span><p>1798–1861. Warriors, giant skeletons and cats — the wild imagination of late Edo.</p></div>
+  </div>
+</section>
+
+<section class="pad" id="process">
+  <div class="sh"><span class="jp" lang="ja">木版の工程</span><h2>How a print was made — block by block</h2></div>
+  <div class="proc">
+    <div>
+      <ol class="steps" id="steps" aria-label="Printing steps"></ol>
+      <div class="pstage" id="pstage"><span class="tag" id="ptag">Step 1</span><svg id="procPrint" viewBox="0 0 1200 760" role="img" aria-label="The print at the current stage"></svg></div>
+    </div>
+    <div class="pinfo" aria-live="polite">
+      <h3 id="pTitle"></h3>
+      <div class="who" id="pWho"></div>
+      <div id="pBody"></div>
+      <div class="blocks" id="pBlocks"></div>
+      <div class="pnav">
+        <button type="button" class="pbtn alt" id="prev">← Previous</button>
+        <button type="button" class="pbtn" id="next">Next block →</button>
+        <button type="button" class="pbtn alt" id="auto" aria-pressed="false">Play all</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="principles">
+  <div class="sh"><span class="jp" lang="ja">美学</span><h2>What the West learned from the floating world</h2></div>
+  <div class="princ">
+    <div class="pr"><div class="k" lang="ja">線</div><h3>The outline</h3><p>A confident key line carved in wood, holding flat areas of colour — no modelling, no shadow.</p></div>
+    <div class="pr"><div class="k" lang="ja">平</div><h3>Flat colour</h3><p>Colour as shape, not as light. It shaped the posters of Toulouse-Lautrec and the Nabis.</p></div>
+    <div class="pr"><div class="k" lang="ja">暈</div><h3>Bokashi</h3><p>A gradient wiped by hand onto a wet block, so skies and seas fade from deep to pale.</p></div>
+    <div class="pr"><div class="k" lang="ja">間</div><h3>Asymmetry and ma</h3><p>Off-centre subjects, empty space that breathes, a tiny Fuji balanced against a giant wave.</p></div>
+    <div class="pr"><div class="k" lang="ja">切</div><h3>Daring crops</h3><p>Things cut by the frame, views through branches, a plum tree trunk filling the foreground.</p></div>
+    <div class="pr"><div class="k" lang="ja">今</div><h3>The everyday</h3><p>Travellers, fishermen, actors and weather — ordinary life as worthy subject for art.</p></div>
+  </div>
+</section>
+</main>
+
+<footer class="pad"><span class="s" lang="ja">浮世版元</span><span>Floating World Press — an homage to ukiyo-e and the carvers, printers and artists of Edo. <a href="index.html">Return to the Showcase</a></span></footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var NS="http://www.w3.org/2000/svg";
+  function el(t,a,p){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+
+  /* colour blocks as CSS custom properties on the svg */
+  var INK={paper:"#efe4c8",pale:"#8fb3c7",prussian:"#1f4e79",grey:"#8c8a84",wood:"#c9a36a",line:"#1d2a3a",sky:"1",seal:"#c8412e"};
+
+  function scene(svg,uid){
+    var defs=el('defs',{},svg);
+    var bk=el('linearGradient',{id:uid+'bokashi',x1:0,y1:0,x2:0,y2:1},defs);
+    el('stop',{offset:0,'stop-color':'#6b6a66','stop-opacity':.85},bk);el('stop',{offset:.45,'stop-color':'#b9ad8f','stop-opacity':.35},bk);el('stop',{offset:1,'stop-color':'#efe4c8','stop-opacity':0},bk);
+    var LS='stroke:var(--line);stroke-width:var(--lw);stroke-linejoin:round;stroke-linecap:round;';
+    function shape(p,d,c,extra){return el('path',Object.assign({d:d,style:'fill:var(--'+c+');'+LS},extra||{}),p);}
+    // paper
+    el('rect',{width:1200,height:760,style:'fill:var(--paper)'},svg);
+    // sky bokashi
+    el('rect',{width:1200,height:420,fill:'url(#'+uid+'bokashi)',style:'opacity:var(--sky)'},svg);
+    var layers={};
+    function layer(name,depth){var g=el('g',{class:'depth','data-d':depth},svg);layers[name]=g;return g;}
+
+    /* far: Fuji */
+    var far=layer('far',.15);
+    shape(far,'M430 648 L520 560 C528 552 540 552 548 560 L640 648Z','pale');
+    shape(far,'M494 586 L520 560 C528 552 540 552 548 560 L574 586 L560 580 L548 592 L534 578 L520 594 L506 580Z','paper');
+    shape(far,'M430 648 L468 612 L478 630 L494 606 L504 626 Z','grey',{style:'fill:var(--grey);'+LS+'opacity:.8'});
+
+    /* back wave (right, lower) */
+    var back=layer('back',.35);
+    shape(back,'M700 760 C760 660 860 590 980 580 C1080 572 1160 610 1200 640 V760Z','prussian');
+    shape(back,'M760 760 C810 690 890 640 980 630 C1060 624 1130 650 1200 690 V760Z','pale');
+    foamClaws(back,'M860 612 C920 586 1000 574 1080 590 C1130 600 1170 620 1200 640',9,20,LS,true);
+
+    /* boats */
+    var boats=layer('boats',.5);
+    boat(boats,120,586,-8,LS);
+    boat(boats,780,690,-14,LS);
+
+    /* main wave */
+    var main=layer('main',.75);
+    shape(main,'M1200 760 L1200 470 C1120 440 1040 360 980 280 C920 190 820 120 700 110 C580 100 470 150 420 230 C395 272 398 318 430 345 C470 378 540 372 590 400 C660 440 700 560 740 760Z','prussian');
+    // pale inner bands (printed from the pale block)
+    [[0,1],[34,.85],[68,.7],[102,.55]].forEach(function(o){
+      el('path',{d:'M'+(1180-o[0])+' 760 C'+(1150-o[0])+' 600 '+(1080-o[0]*.8)+' 470 '+(1000-o[0]*.6)+' '+(380+o[0]*.3)+' C'+(940-o[0]*.5)+' '+(300+o[0]*.4)+' '+(860-o[0]*.3)+' '+(220+o[0]*.6)+' '+(760-o[0]*.2)+' '+(200+o[0]*.8),style:'fill:none;stroke:var(--pale);stroke-width:'+(14-o[0]/12)+';opacity:'+o[1]},main);
+    });
+    // curl tube
+    shape(main,'M430 345 C470 378 540 372 590 400 C560 360 520 330 470 330 C450 330 438 336 430 345Z','pale');
+    shape(main,'M420 230 C395 272 398 318 430 345 C425 300 440 262 470 240 C455 238 435 234 420 230Z','paper');
+    // white cap along crest
+    el('path',{d:'M980 280 C920 190 820 120 700 110 C580 100 470 150 420 230',style:'fill:none;stroke:var(--paper);stroke-width:22;stroke-linecap:round'},main);
+    el('path',{d:'M980 280 C920 190 820 120 700 110 C580 100 470 150 420 230',style:'fill:none;'+LS},main);
+    foamClaws(main,'M1000 300 C940 200 830 124 700 112 C580 102 470 150 420 232',26,34,LS,false);
+    // spray dots
+    var spray=el('g',{},main);
+    for(var i=0;i<46;i++){var sx=380+Math.random()*260,sy=110+Math.random()*170;if(Math.hypot(sx-560,sy-230)<90)continue;el('circle',{cx:sx.toFixed(1),cy:sy.toFixed(1),r:(2+Math.random()*4).toFixed(1),style:'fill:var(--paper);'+LS+'stroke-width:calc(var(--lw) * .6)'},spray);}
+
+    /* foreground wave (left) */
+    var fore=layer('fore',1);
+    shape(fore,'M0 760 V650 C60 614 150 604 220 632 C280 656 320 710 340 760Z','prussian');
+    shape(fore,'M0 760 V700 C60 672 140 668 200 690 C240 706 270 730 284 760Z','pale');
+    foamClaws(fore,'M20 640 C80 612 160 608 230 636',8,16,LS,true);
+
+    /* cartouche + signature (printed with key block) */
+    var cart=el('g',{class:'cart'},svg);
+    el('rect',{x:1080,y:38,width:74,height:250,style:'fill:var(--paper);'+LS},cart);
+    el('rect',{x:1088,y:46,width:58,height:234,style:'fill:none;'+LS+'stroke-width:calc(var(--lw) * .6)'},cart);
+    var t=el('text',{x:1117,y:66,'font-family':'Yuji Syuku, Shippori Mincho, serif','font-size':30,'letter-spacing':4,style:'fill:var(--line);writing-mode:vertical-rl'},cart);t.textContent='浮世沖浪裏';
+    var sg=el('text',{x:1034,y:40,'font-family':'Yuji Syuku, Shippori Mincho, serif','font-size':22,style:'fill:var(--line);writing-mode:vertical-rl'},cart);sg.textContent='版元画';
+    el('rect',{x:1022,y:124,width:26,height:26,rx:3,style:'fill:var(--seal)'},cart);
+    return layers;
+  }
+  function boat(p,x,y,rot,LS){
+    var g=el('g',{transform:'translate('+x+' '+y+') rotate('+rot+')'},p);
+    el('path',{d:'M0 20 C40 30 280 30 330 4 L336 14 C300 44 60 46 -6 30Z',style:'fill:var(--wood);'+LS},g);
+    el('path',{d:'M6 20 C60 26 270 26 326 8',style:'fill:none;'+LS+'stroke-width:calc(var(--lw) * .6)'},g);
+    for(var i=0;i<8;i++){var bx=40+i*34;el('ellipse',{cx:bx,cy:12,rx:9,ry:7,style:'fill:var(--grey);'+LS},g);el('path',{d:'M'+(bx-9)+' 12 H'+(bx+9),style:'fill:none;'+LS+'stroke-width:calc(var(--lw) * .5)'},g);}
+  }
+  function foamClaws(p,d,n,size,LS,small){
+    var guide=el('path',{d:d,fill:'none',stroke:'none'},p);
+    var L=guide.getTotalLength();
+    var g=el('g',{},p);
+    for(var i=0;i<n;i++){
+      var s=(i+.5)/n*L,pt=guide.getPointAtLength(s),pt2=guide.getPointAtLength(Math.min(L,s+1));
+      var tx=pt2.x-pt.x,ty=pt2.y-pt.y,tl=Math.hypot(tx,ty)||1;tx/=tl;ty/=tl;
+      var nx=ty,ny=-tx; // normal (outward/up)
+      var sz=size*(small?1:(.7+.5*Math.sin(i/n*Math.PI)));
+      // claw: 3 fingers hooking forward (towards -tangent = direction the wave breaks)
+      for(var f=0;f<3;f++){
+        var off=(f-1)*sz*.45;
+        var bx=pt.x+tx*off,by=pt.y+ty*off;
+        var tipx=bx+nx*sz*.9-tx*sz*.55,tipy=by+ny*sz*.9-ty*sz*.55;
+        var hookx=tipx-tx*sz*.35-nx*sz*.25,hooky=tipy-ty*sz*.35-ny*sz*.25;
+        var w=sz*.16;
+        var dd='M'+(bx-tx*w).toFixed(1)+' '+(by-ty*w).toFixed(1)+
+          ' Q'+(bx+nx*sz*.6-tx*w*2).toFixed(1)+' '+(by+ny*sz*.6-ty*w*2).toFixed(1)+' '+tipx.toFixed(1)+' '+tipy.toFixed(1)+
+          ' Q'+(tipx-tx*sz*.2).toFixed(1)+' '+(tipy-ty*sz*.2).toFixed(1)+' '+hookx.toFixed(1)+' '+hooky.toFixed(1)+
+          ' Q'+(tipx+tx*w*.5-nx*w).toFixed(1)+' '+(tipy+ty*w*.5-ny*w).toFixed(1)+' '+(tipx+tx*w*1.2-nx*w*1.6).toFixed(1)+' '+(tipy+ty*w*1.2-ny*w*1.6).toFixed(1)+
+          ' Q'+(bx+nx*sz*.5+tx*w*2).toFixed(1)+' '+(by+ny*sz*.5+ty*w*2).toFixed(1)+' '+(bx+tx*w).toFixed(1)+' '+(by+ty*w).toFixed(1)+'Z';
+        el('path',{d:dd,style:'fill:var(--paper);'+LS+'stroke-width:calc(var(--lw) * .8)'},g);
+      }
+    }
+  }
+  function setInks(svg,o){
+    var s=svg.style;
+    s.setProperty('--paper',o.paper);s.setProperty('--pale',o.pale);s.setProperty('--prussian',o.prussian);s.setProperty('--grey',o.grey);s.setProperty('--wood',o.wood);
+    s.setProperty('--line',o.line);s.setProperty('--lw',o.lw);s.setProperty('--sky',o.sky);s.setProperty('--seal',o.seal);
+  }
+
+  /* ---------- hero with parallax ---------- */
+  var hero=document.getElementById('heroPrint');
+  var hl=scene(hero,'h');
+  setInks(hero,{paper:INK.paper,pale:INK.pale,prussian:INK.prussian,grey:INK.grey,wood:INK.wood,line:INK.line,lw:2.2,sky:1,seal:INK.seal});
+  var tx=0,ty=0,cx=0,cy=0,scrollY=0;
+  if(!reduce){
+    window.addEventListener('pointermove',function(e){tx=(e.clientX/innerWidth-.5);ty=(e.clientY/innerHeight-.5);},{passive:true});
+    window.addEventListener('scroll',function(){scrollY=window.scrollY;},{passive:true});
+    var depths=Array.prototype.slice.call(hero.querySelectorAll('.depth'));
+    (function loop(){
+      cx+=(tx-cx)*.06;cy+=(ty-cy)*.06;
+      var t=performance.now()/1000;
+      depths.forEach(function(g){var d=+g.dataset.d;var sway=Math.sin(t*.6+d*3)*d*3;var dx=-cx*40*d+sway,dy=-cy*18*d+Math.min(scrollY,700)*d*-.06;g.setAttribute('transform','translate('+dx.toFixed(2)+' '+dy.toFixed(2)+')');});
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  /* ---------- process ---------- */
+  var proc=document.getElementById('procPrint');
+  scene(proc,'p');
+  var OFF="transparent";
+  var STEPS=[
+    {t:"Hanshita — the drawing",jp:"版下絵",who:"eshi 絵師 · the artist",
+     b:"<p>The artist draws the design in ink on thin, almost transparent <i>mino</i> paper. This drawing will be destroyed: it is pasted face-down onto a block of mountain cherry wood.</p><p>Hokusai's hanshita for the Wave does not survive — they almost never do.</p>",
+     ink:{paper:"#f4ecd6",pale:OFF,prussian:OFF,grey:OFF,wood:OFF,line:"#57504a",lw:1.3,sky:0,seal:OFF},blocks:["line"],wood:false,mirror:false},
+    {t:"Carving the key block",jp:"主版",who:"horishi 彫師 · the carver",
+     b:"<p>Through the paper, the carver cuts away everything except the lines. The block is now a mirror image. The finest carvers could leave single hairs standing on a courtesan's head.</p><p>The key block, <i>omohan</i>, prints the black outlines and is also used to make proofs for all the colour blocks.</p>",
+     ink:{paper:OFF,pale:OFF,prussian:OFF,grey:OFF,wood:OFF,line:"#3a2210",lw:2.4,sky:0,seal:OFF},blocks:["line"],wood:true,mirror:true},
+    {t:"Key block printed",jp:"墨摺",who:"surishi 摺師 · the printer",
+     b:"<p>The printer brushes water-based ink onto the block, lays damp paper on it using the <i>kentō</i> registration notches, and rubs the back with a <i>baren</i> — a coiled bamboo pad.</p><p>Proofs of this key-line print go back to the artist, who marks on each one where a colour should go.</p>",
+     ink:{paper:"#efe4c8",pale:OFF,prussian:OFF,grey:OFF,wood:OFF,line:"#1d2a3a",lw:2.2,sky:0,seal:OFF},blocks:["line"],wood:false,mirror:false},
+    {t:"First colour: pale blue",jp:"薄藍",who:"surishi · colour block 1",
+     b:"<p>Each colour gets its own carved block. The printer starts with the lightest inks, so mistakes can be hidden later. The pale blue sets the inside of the wave and the calm water.</p>",
+     ink:{paper:"#efe4c8",pale:"#8fb3c7",prussian:OFF,grey:OFF,wood:OFF,line:"#1d2a3a",lw:2.2,sky:0,seal:OFF},blocks:["line","pale"],wood:false,mirror:false},
+    {t:"Prussian blue",jp:"ベロ藍",who:"surishi · colour block 2",
+     b:"<p>The star of the print: <i>bero-ai</i>, Berlin blue, a synthetic pigment newly cheap in Japan around 1829. Where the pale block is overprinted, it deepens the sea to near-black.</p><p>Early impressions of the Wave are bright; later ones, from worn blocks, are softer and less crisp.</p>",
+     ink:{paper:"#efe4c8",pale:"#8fb3c7",prussian:"#1f4e79",grey:OFF,wood:OFF,line:"#1d2a3a",lw:2.2,sky:0,seal:OFF},blocks:["line","pale","prussian"],wood:false,mirror:false},
+    {t:"Greys and the boats",jp:"鼠・木",who:"surishi · colour blocks 3 & 4",
+     b:"<p>Smaller blocks add the grey of the rowers' caps and Fuji's flank, and the pale yellow-brown of the <i>oshiokuri-bune</i> — fast boats rushing fresh fish to the Edo market.</p>",
+     ink:{paper:"#efe4c8",pale:"#8fb3c7",prussian:"#1f4e79",grey:"#8c8a84",wood:"#c9a36a",line:"#1d2a3a",lw:2.2,sky:0,seal:OFF},blocks:["line","pale","prussian","grey","wood"],wood:false,mirror:false},
+    {t:"Bokashi sky and the seal",jp:"暈し・印",who:"surishi · final impression",
+     b:"<p>For the sky, the printer wipes a damp block and brushes the ink on unevenly, so it fades from dark at the top to nothing: <i>bokashi</i>. It is done by hand, so no two impressions are quite alike.</p><p>Finally the censor's and publisher's seals, and the print goes on sale — perhaps five thousand of them, from blocks that would eventually wear out.</p>",
+     ink:{paper:"#efe4c8",pale:"#8fb3c7",prussian:"#1f4e79",grey:"#8c8a84",wood:"#c9a36a",line:"#1d2a3a",lw:2.2,sky:1,seal:"#c8412e"},blocks:["line","pale","prussian","grey","wood","sky","seal"],wood:false,mirror:false}
+  ];
+  var BLOCKS=[["line","Key","#1d2a3a"],["pale","Pale blue","#8fb3c7"],["prussian","Prussian","#1f4e79"],["grey","Grey","#8c8a84"],["wood","Boat","#c9a36a"],["sky","Bokashi","linear-gradient(#6b6a66,#efe4c8)"],["seal","Seal","#c8412e"]];
+  var NUM=["一","二","三","四","五","六","七"];
+  var stepsEl=document.getElementById('steps'),cur=0,autoT=null;
+  STEPS.forEach(function(s,i){var li=document.createElement('li');var b=document.createElement('button');b.type='button';b.id='step-'+(i+1);b.textContent=NUM[i];b.setAttribute('aria-label','Step '+(i+1)+': '+s.t);b.addEventListener('click',function(){stopAuto();go(i);});li.appendChild(b);stepsEl.appendChild(li);});
+  var stage=document.getElementById('pstage');
+  function go(i){
+    cur=(i+STEPS.length)%STEPS.length;var s=STEPS[cur];
+    setInks(proc,s.ink);
+    stage.classList.toggle('wood',s.wood);stage.classList.toggle('mirror',s.mirror);
+    document.getElementById('ptag').textContent='Step '+(cur+1)+' of 7 · '+s.jp;
+    document.getElementById('pTitle').textContent=s.t;
+    document.getElementById('pWho').textContent=s.who;
+    document.getElementById('pBody').innerHTML=s.b;
+    document.getElementById('pBlocks').innerHTML=BLOCKS.map(function(b){return'<span class="'+(s.blocks.indexOf(b[0])>=0?'on':'')+'"><i style="background:'+b[2]+'"></i>'+b[1]+'</span>';}).join('');
+    Array.prototype.forEach.call(stepsEl.querySelectorAll('button'),function(b,k){if(k===cur)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});
+    document.getElementById('next').textContent=cur===STEPS.length-1?'Start again ↺':'Next block →';
+  }
+  function stopAuto(){if(autoT){clearInterval(autoT);autoT=null;}var a=document.getElementById('auto');a.setAttribute('aria-pressed','false');a.textContent='Play all';}
+  document.getElementById('next').addEventListener('click',function(){stopAuto();go(cur+1);});
+  document.getElementById('prev').addEventListener('click',function(){stopAuto();go(cur-1);});
+  document.getElementById('auto').addEventListener('click',function(){
+    if(autoT){stopAuto();return;}
+    var a=document.getElementById('auto');a.setAttribute('aria-pressed','true');a.textContent='Pause';
+    if(cur===STEPS.length-1)go(0);
+    autoT=setInterval(function(){if(cur>=STEPS.length-1){stopAuto();return;}go(cur+1);},reduce?4000:2600);
+  });
+  go(0);
+})();
+</script>
+</body>
+</html>

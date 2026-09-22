@@ -62,7 +62,9 @@ h2 + p{margin:0 0 26px;color:var(--ink2);max-width:52em;line-height:1.6}
 .day.key{background:var(--paper2)}
 .day.key .n{color:var(--ink);font-weight:600}
 .day.today{outline:1.5px solid var(--cobalt);outline-offset:-1px}
-.day .tag{position:absolute;top:1px;right:2px;font-size:8px;color:var(--cobalt);font-weight:600}
+.day .tag{position:absolute;top:2px;right:2px;line-height:0}
+.day .tag .qi{width:8px;height:8px}
+.qi{vertical-align:-1px;margin-right:3px}
 .events{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:58px}
 .events b{font-weight:500;color:var(--ink)}
 .tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--paper);font-size:12px;padding:6px 9px;border-radius:2px;z-index:20;opacity:0;transition:opacity .12s;white-space:nowrap}
@@ -108,7 +110,7 @@ footer{margin-top:50px;font-size:12.5px;color:var(--mute);line-height:1.7;max-wi
   <section class="next" id="next" aria-label="Upcoming phases"></section>
 
   <h2>The twelve months</h2>
-  <p>Each small moon shows the phase at 9 pm UK time that evening. Shaded squares mark a principal phase; hover or focus for the exact time.</p>
+  <p>Each small moon shows the phase at about 9 pm UK time that evening. Shaded squares mark a principal phase; hover or focus for the exact time.</p>
   <div class="months" id="months"></div>
 
   <h2>Thirteen full moons</h2>
@@ -196,7 +198,8 @@ const fmtUKt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'2-d
 const ukKey=d=>fmtUKd.format(d).split('/').reverse().join('-'); // yyyy-mm-dd
 function ukParts(d){const p={};fmtUK.formatToParts(d).forEach(x=>p[x.type]=x.value);return p}
 const QN=['New moon','First quarter','Full moon','Last quarter'];
-const QS=['●','◐','○','◑'];
+const QI=[[0,true],[.5,true],[1,true],[.5,false]];
+const QS=QI.map(([k,w])=>`<svg class="qi" viewBox="-6 -6 12 12" width="11" height="11" aria-hidden="true"><circle r="5.4" fill="#232741"/>${k===0?'':k===1?'<circle r="5.4" fill="#fff"/>':`<path d="M0 -5.4 A5.4 5.4 0 0 1 0 5.4Z" fill="#fff" ${w?'':'transform="scale(-1 1)"'}/>`}<circle r="5.6" fill="none" stroke="#232741" stroke-width=".8"/></svg>`);
 
 // ---------- moon drawing ----------
 let uid=0;
@@ -206,7 +209,7 @@ function moonSVG(k,waxing,r,opts={}){
   const sweep = k<0.5 ? 0 : 1;
   const lit = k<0.005 ? '' : k>0.995 ? `<circle r="${r}" fill="url(#g${id})"/>`
     : `<path d="M0 ${-r} A${r} ${r} 0 0 1 0 ${r} A${rx.toFixed(3)} ${r} 0 0 ${sweep} 0 ${-r}Z" fill="url(#g${id})" ${waxing?'':'transform="scale(-1 1)"'}/>`;
-  const maria = opts.detail ? `<g clip-path="url(#c${id})" opacity=".13" fill="#2b2f4a"><ellipse cx="-${r*.25}" cy="-${r*.3}" rx="${r*.28}" ry="${r*.2}"/><ellipse cx="${r*.2}" cy="-${r*.15}" rx="${r*.2}" ry="${r*.16}"/><ellipse cx="-${r*.05}" cy="${r*.25}" rx="${r*.16}" ry="${r*.12}"/><ellipse cx="${r*.38}" cy="${r*.25}" rx="${r*.1}" ry="${r*.14}"/><circle cx="-${r*.1}" cy="${r*.62}" r="${r*.06}" opacity=".6"/></g>` : '';
+  const maria = opts.detail ? `<g clip-path="url(#c${id})" opacity=".08" fill="#2b2f4a"><ellipse cx="-${r*.25}" cy="-${r*.3}" rx="${r*.28}" ry="${r*.2}"/><ellipse cx="${r*.2}" cy="-${r*.15}" rx="${r*.2}" ry="${r*.16}"/><ellipse cx="-${r*.05}" cy="${r*.25}" rx="${r*.16}" ry="${r*.12}"/><ellipse cx="${r*.38}" cy="${r*.25}" rx="${r*.1}" ry="${r*.14}"/><circle cx="-${r*.1}" cy="${r*.62}" r="${r*.06}" opacity=".6"/></g>` : '';
   return `<defs><radialGradient id="g${id}" cx="40%" cy="38%" r="75%"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f4f2ea"/><stop offset="1" stop-color="#d9d6cc"/></radialGradient><clipPath id="c${id}"><circle r="${r}"/></clipPath></defs>
     <circle r="${r}" fill="${opts.dark||'#232741'}"/>${lit}${maria}${opts.ring?`<circle r="${r+0.6}" fill="none" stroke="${opts.ring}" stroke-width="1.2"/>`:''}`;
 }
