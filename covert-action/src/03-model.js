@@ -1,190 +1,266 @@
 // ===================================================================
-// MODEL: cities, organizations, the plot, participants and clues
+// MODEL: regions, cities, the 26 organizations, crimes, participants,
+// clues and the calendar - following the 1990 manual.
 // ===================================================================
+const REGIONS = {
+  europe: { name: 'Europe', lon: [-11, 32], lat: [34, 58] },
+  mideast: { name: 'Middle East', lon: [10, 58], lat: [20, 44] },
+  americas: { name: 'the Americas', lon: [-112, -38], lat: [-36, 40] },
+};
 const CITIES = [
-  { id: 'WAS', name: 'Washington', country: 'USA', lon: -77, lat: 38.9, look: 'capitol', names: 'us' },
-  { id: 'NYC', name: 'New York', country: 'USA', lon: -74, lat: 40.7, look: 'towers', names: 'us' },
-  { id: 'MEX', name: 'Mexico City', country: 'Mexico', lon: -99.1, lat: 19.4, look: 'pyramid', names: 'es' },
-  { id: 'HAV', name: 'Havana', country: 'Cuba', lon: -82.4, lat: 23.1, look: 'fort', names: 'es' },
-  { id: 'BOG', name: 'Bogota', country: 'Colombia', lon: -74.1, lat: 4.7, look: 'andes', names: 'es' },
-  { id: 'RIO', name: 'Rio de Janeiro', country: 'Brazil', lon: -43.2, lat: -22.9, look: 'sugarloaf', names: 'pt' },
-  { id: 'LON', name: 'London', country: 'Britain', lon: -0.1, lat: 51.5, look: 'clock', names: 'uk' },
-  { id: 'PAR', name: 'Paris', country: 'France', lon: 2.35, lat: 48.9, look: 'eiffel', names: 'fr' },
-  { id: 'ROM', name: 'Rome', country: 'Italy', lon: 12.5, lat: 41.9, look: 'colosseum', names: 'it' },
-  { id: 'VIE', name: 'Vienna', country: 'Austria', lon: 16.4, lat: 48.2, look: 'spire', names: 'de' },
-  { id: 'BER', name: 'East Berlin', country: 'E. Germany', lon: 13.4, lat: 52.5, look: 'tvtower', names: 'de' },
-  { id: 'MOS', name: 'Moscow', country: 'USSR', lon: 37.6, lat: 55.8, look: 'onion', names: 'ru' },
-  { id: 'IST', name: 'Istanbul', country: 'Turkey', lon: 29, lat: 41, look: 'minaret', names: 'tr' },
-  { id: 'CAI', name: 'Cairo', country: 'Egypt', lon: 31.2, lat: 30, look: 'pyramids', names: 'ar' },
-  { id: 'HKG', name: 'Hong Kong', country: 'Hong Kong', lon: 114.2, lat: 22.3, look: 'harbour', names: 'zh' },
-  { id: 'TYO', name: 'Tokyo', country: 'Japan', lon: 139.7, lat: 35.7, look: 'tokyotower', names: 'ja' },
+  { id: 'WAS', name: 'Washington', country: 'USA', lon: -77, lat: 38.9, region: 'americas', lang: 'us', hq: true },
+  { id: 'MIA', name: 'Miami', country: 'USA', lon: -80.2, lat: 25.8, region: 'americas', lang: 'us' },
+  { id: 'MEX', name: 'Mexico City', country: 'Mexico', lon: -99.1, lat: 19.4, region: 'americas', lang: 'es' },
+  { id: 'HAV', name: 'Havana', country: 'Cuba', lon: -82.4, lat: 23.1, region: 'americas', lang: 'es' },
+  { id: 'PAN', name: 'Panama', country: 'Panama', lon: -79.5, lat: 9, region: 'americas', lang: 'es' },
+  { id: 'BOG', name: 'Bogota', country: 'Colombia', lon: -74.1, lat: 4.7, region: 'americas', lang: 'es' },
+  { id: 'MED', name: 'Medellin', country: 'Colombia', lon: -75.6, lat: 6.2, region: 'americas', lang: 'es' },
+  { id: 'LIM', name: 'Lima', country: 'Peru', lon: -77, lat: -12, region: 'americas', lang: 'es' },
+  { id: 'MVD', name: 'Montevideo', country: 'Uruguay', lon: -56.2, lat: -34.9, region: 'americas', lang: 'es' },
+  { id: 'LON', name: 'London', country: 'England', lon: -0.1, lat: 51.5, region: 'europe', lang: 'uk' },
+  { id: 'PAR', name: 'Paris', country: 'France', lon: 2.35, lat: 48.9, region: 'europe', lang: 'fr' },
+  { id: 'MRS', name: 'Marseilles', country: 'France', lon: 5.4, lat: 43.3, region: 'europe', lang: 'fr' },
+  { id: 'MAD', name: 'Madrid', country: 'Spain', lon: -3.7, lat: 40.4, region: 'europe', lang: 'es' },
+  { id: 'ROM', name: 'Rome', country: 'Italy', lon: 12.5, lat: 41.9, region: 'europe', lang: 'it' },
+  { id: 'BON', name: 'Bonn', country: 'W. Germany', lon: 7.1, lat: 50.7, region: 'europe', lang: 'de' },
+  { id: 'BER', name: 'East Berlin', country: 'E. Germany', lon: 13.4, lat: 52.5, region: 'europe', lang: 'de' },
+  { id: 'VIE', name: 'Vienna', country: 'Austria', lon: 16.4, lat: 48.2, region: 'europe', lang: 'de' },
+  { id: 'BEG', name: 'Belgrade', country: 'Yugoslavia', lon: 20.5, lat: 44.8, region: 'europe', lang: 'sl' },
+  { id: 'IST', name: 'Istanbul', country: 'Turkey', lon: 29, lat: 41, region: 'mideast', lang: 'tr' },
+  { id: 'CAI', name: 'Cairo', country: 'Egypt', lon: 31.2, lat: 30, region: 'mideast', lang: 'ar' },
+  { id: 'BEY', name: 'Beirut', country: 'Lebanon', lon: 35.5, lat: 33.9, region: 'mideast', lang: 'ar' },
+  { id: 'AMM', name: 'Amman', country: 'Jordan', lon: 35.9, lat: 31.9, region: 'mideast', lang: 'ar' },
+  { id: 'TLV', name: 'Tel Aviv', country: 'Israel', lon: 34.8, lat: 32.1, region: 'mideast', lang: 'he' },
+  { id: 'DAM', name: 'Damascus', country: 'Syria', lon: 36.3, lat: 33.5, region: 'mideast', lang: 'ar' },
+  { id: 'BGW', name: 'Baghdad', country: 'Iraq', lon: 44.4, lat: 33.3, region: 'mideast', lang: 'ar' },
+  { id: 'TRP', name: 'Tripoli', country: 'Libya', lon: 13.2, lat: 32.9, region: 'mideast', lang: 'ar' },
+  { id: 'THR', name: 'Tehran', country: 'Iran', lon: 51.4, lat: 35.7, region: 'mideast', lang: 'fa' },
 ];
 const cityById = id => CITIES.find(c => c.id === id);
+const regionCities = r => CITIES.filter(c => c.region === r && !c.hq);
 
 const NAMES = {
-  us: [['Frank', 'Walter', 'Gene', 'Harold', 'Lou', 'Carl', 'Ray'], ['Doris', 'Joan', 'Peggy', 'Lynn'], ['Kessler', 'Dawson', 'Mercer', 'Tully', 'Barrow', 'Hale', 'Pruitt', 'Crane']],
-  es: [['Luis', 'Ramon', 'Hector', 'Esteban', 'Rafael', 'Tomas'], ['Elena', 'Marisol', 'Ines', 'Rosa'], ['Ortega', 'Vargas', 'Salcedo', 'Ibarra', 'Mendoza', 'Quiroga', 'Duarte']],
-  pt: [['Paulo', 'Joao', 'Tiago', 'Rui'], ['Ana', 'Beatriz', 'Leticia'], ['Barbosa', 'Tavares', 'Moreira', 'Pinto', 'Nogueira']],
-  uk: [['Nigel', 'Colin', 'Alistair', 'Rupert', 'Desmond'], ['Fiona', 'Hilary', 'Margot'], ['Ashworth', 'Pym', 'Fairley', 'Stroud', 'Beck', 'Holloway']],
-  fr: [['Henri', 'Marcel', 'Didier', 'Luc', 'Gaston'], ['Colette', 'Simone', 'Odile'], ['Rousseau', 'Delorme', 'Garnier', 'Lefevre', 'Marchand']],
-  it: [['Enzo', 'Carlo', 'Sergio', 'Vito', 'Aldo'], ['Lucia', 'Gina', 'Paola'], ['Conti', 'Russo', 'Moretti', 'Galli', 'Ferrante', 'Bruno']],
-  de: [['Klaus', 'Dieter', 'Jurgen', 'Horst', 'Rainer'], ['Ursula', 'Heike', 'Greta'], ['Brandt', 'Vogel', 'Kranz', 'Heller', 'Adler', 'Lenz']],
-  ru: [['Yuri', 'Oleg', 'Viktor', 'Boris', 'Anatoly'], ['Irina', 'Tatiana', 'Olga'], ['Volkov', 'Petrov', 'Zhukov', 'Orlov', 'Karpov', 'Sokolov']],
+  us: [['Frank', 'Walter', 'Gene', 'Harold', 'Lou', 'Carl', 'Ray', 'Vince'], ['Doris', 'Joan', 'Peggy', 'Lynn'], ['Kessler', 'Dawson', 'Mercer', 'Tully', 'Barrow', 'Hale', 'Pruitt', 'Crane', 'Malone']],
+  es: [['Luis', 'Ramon', 'Hector', 'Esteban', 'Rafael', 'Tomas', 'Carlos', 'Jorge'], ['Elena', 'Marisol', 'Ines', 'Rosa'], ['Ortega', 'Vargas', 'Salcedo', 'Ibarra', 'Mendoza', 'Quiroga', 'Duarte', 'Alvarez', 'Lopez']],
+  uk: [['Nigel', 'Colin', 'Alistair', 'Rupert', 'Desmond', 'Liam', 'Sean'], ['Fiona', 'Hilary', 'Margot'], ['Ashworth', 'Pym', 'Fairley', 'Stroud', 'Beck', 'Holloway', 'Doyle', 'Keane']],
+  fr: [['Henri', 'Marcel', 'Didier', 'Luc', 'Gaston', 'Andre'], ['Colette', 'Simone', 'Odile'], ['Rousseau', 'Delorme', 'Garnier', 'Lefevre', 'Marchand', 'Santini']],
+  it: [['Enzo', 'Carlo', 'Sergio', 'Vito', 'Aldo', 'Franco'], ['Lucia', 'Gina', 'Paola'], ['Conti', 'Russo', 'Moretti', 'Galli', 'Ferrante', 'Bruno']],
+  de: [['Klaus', 'Dieter', 'Jurgen', 'Horst', 'Rainer', 'Andreas'], ['Ursula', 'Heike', 'Greta'], ['Brandt', 'Vogel', 'Kranz', 'Heller', 'Adler', 'Lenz', 'Baader']],
+  sl: [['Dragan', 'Milan', 'Zoran', 'Goran'], ['Vesna', 'Jelena'], ['Petrovic', 'Jovanovic', 'Markovic', 'Nikolic']],
   tr: [['Mehmet', 'Emre', 'Kemal', 'Orhan'], ['Leyla', 'Selin'], ['Yilmaz', 'Demir', 'Aksoy', 'Kaya']],
-  ar: [['Karim', 'Tarek', 'Samir', 'Nabil', 'Omar'], ['Layla', 'Nadia', 'Yasmin'], ['Haddad', 'Mansour', 'Nasser', 'Khalil', 'Farouk']],
-  zh: [['Wei', 'Chen', 'Ming', 'Jun', 'Tao'], ['Mei', 'Lin', 'Xiu'], ['Lau', 'Wong', 'Cheung', 'Ho', 'Fong']],
-  ja: [['Kenji', 'Hiro', 'Takeshi', 'Akira'], ['Yuki', 'Keiko', 'Emi'], ['Sato', 'Mori', 'Kuroda', 'Tanaka', 'Ishida']],
+  ar: [['Karim', 'Tarek', 'Samir', 'Nabil', 'Omar', 'Abdul', 'Yusuf'], ['Layla', 'Nadia', 'Yasmin'], ['Haddad', 'Mansour', 'Nasser', 'Khalil', 'Farouk', 'Nidal', 'Saleh']],
+  he: [['David', 'Avi', 'Moshe', 'Eli'], ['Miriam', 'Ruth'], ['Levy', 'Cohen', 'Mizrahi', 'Peretz']],
+  fa: [['Reza', 'Hassan', 'Ali', 'Mehdi'], ['Shirin', 'Parisa'], ['Tehrani', 'Ahmadi', 'Karimi', 'Rahimi']],
 };
-const CODENAMES = ['VIPER', 'RAVEN', 'JACKAL', 'MAGPIE', 'FALCON', 'COBRA', 'SPHINX', 'MANTIS', 'OSPREY', 'BADGER', 'CONDOR', 'LYNX', 'SCORPION', 'HERON', 'WOLF', 'PYTHON', 'KESTREL', 'MARTEN', 'IBIS', 'CAIMAN', 'SHRIKE', 'TIGER', 'OTTER', 'VULTURE', 'BISHOP', 'ROOK', 'KNIGHT', 'PAWN'];
+const STREETS = {
+  us: ['Flagler St', 'Collins Ave', 'K Street', 'Biscayne Blvd'], es: ['Calle Mayor', 'Avenida Bolivar', 'Calle Obispo', 'Paseo del Prado', 'Carrera Septima'],
+  uk: ['Bayswater Rd', 'Old Kent Rd', 'Wapping Lane', 'Mile End Rd'], fr: ['Rue Oberkampf', 'Rue de la Paix', 'Quai du Port', 'Rue Paradis'],
+  it: ['Via Condotti', 'Via Appia', 'Via Nazionale', 'Via Tiburtina'], de: ['ObensGrabbe', 'Kantstrasse', 'Friedrichstrasse', 'Ringstrasse'],
+  sl: ['Knez Mihailova', 'Bulevar Revolucije'], tr: ['Istiklal Cad.', 'Divan Yolu'], ar: ['Sharia Talaat', 'Hamra St', 'Rashid St', 'Souk al-Hamidiya'],
+  he: ['Dizengoff St', 'Allenby St'], fa: ['Ferdowsi Ave', 'Enghelab St'],
+};
 
-// Organizations are fictional. Uniform colour paints their guards in break-ins.
+// The 26 organizations of the manual (p.83-89). short = the map label.
 const ORGS = [
-  { name: 'Crimson Brigade', short: 'CRIMSON', type: 'terrorist', home: ['ROM', 'PAR', 'BER', 'IST'], uni: P.RD, uni2: P.BR },
-  { name: 'Directorate K', short: 'DIR. K', type: 'intelligence', home: ['MOS', 'BER', 'VIE', 'HAV'], uni: P.G2, uni2: P.OL },
-  { name: 'Cartel del Sol', short: 'CARTEL', type: 'narcotics', home: ['BOG', 'MEX', 'HAV', 'RIO'], uni: P.TN, uni2: P.BR2 },
-  { name: 'The Consortium', short: 'CONSORT.', type: 'mafia', home: ['NYC', 'ROM', 'LON', 'WAS'], uni: P.D2, uni2: P.G1 },
-  { name: 'Golden Dragon', short: 'DRAGON', type: 'triad', home: ['HKG', 'TYO', 'NYC', 'LON'], uni: P.YE2, uni2: P.BR },
-  { name: 'Nile Front', short: 'NILE FR.', type: 'terrorist', home: ['CAI', 'IST', 'PAR', 'ROM'], uni: P.OL, uni2: P.DG },
-  { name: 'Obsidian Group', short: 'OBSIDIAN', type: 'mercenary', home: ['VIE', 'LON', 'RIO', 'HKG'], uni: P.BL, uni2: P.NV },
-];
+  ['Colombian Cartel', 'ColCt', ['americas'], 'crime'], ['Death Squad', 'DthSq', ['americas'], 'terror'], ['Dignity Battalion', 'DigBt', ['americas'], 'crime'],
+  ['Direct Action', 'DirAc', ['europe'], 'terror'], ['FLN', 'FLN', ['americas'], 'terror'], ['Haitian Junta', 'HaiJt', ['americas'], 'crime'],
+  ['Iraqi SP', 'IraqSP', ['mideast', 'europe'], 'espionage'], ['Jamaican Gang', 'JamGg', ['americas'], 'crime'], ['Libyan Embassy', 'LibEb', ['mideast', 'europe'], 'terror'],
+  ['M-18', 'M-18', ['americas'], 'terror'], ['Mafia', 'Mafia', ['americas', 'europe'], 'crime'], ['Marxists', 'Mrxst', ['mideast'], 'terror'],
+  ['Mercenaries', 'Mercs', ['mideast', 'americas'], 'crime'], ['Muslim Jihad', 'MJihd', ['mideast'], 'terror'], ['PRC', 'PRC', ['mideast'], 'terror'],
+  ['PFO', 'PFO', ['mideast', 'europe'], 'terror'], ['PIFA', 'PIFA', ['europe', 'americas'], 'terror'], ['Red Army Faction', 'RAF', ['europe'], 'terror'],
+  ['Red Battalion', 'RedBt', ['europe'], 'terror'], ['Red September', 'RedSp', ['mideast'], 'terror'], ['Revolutionary Guards', 'RevGd', ['mideast'], 'terror'],
+  ['Shining Way', 'ShnWy', ['americas'], 'terror'], ['Amazon Cartel', 'AmzCt', ['americas'], 'crime'], ['Stassi', 'Stasi', ['europe'], 'espionage'],
+  ['Tupamaros', 'Tupam', ['americas'], 'crime'], ['Unione Corsique', 'UnCor', ['europe'], 'crime'],
+].map(([name, short, regions, focus], i) => ({ id: i, name, short, regions, focus, uni: [EGA.brown, EGA.dgray, EGA.green, EGA.blue, EGA.red, EGA.magenta, EGA.cyan][i % 7], mastermindFree: true }));
+const AGENCIES = ['KGB', 'MI-6', 'Mossad'];
 
+const RANKS = ['Recruit', 'Operative', 'Technician', 'Agent', 'Organizer', 'Special Agent', 'Group Leader', 'Mastermind'];
+const DIFFICULTY = [
+  { name: 'Local Disturbance', people: [6, 7], clueRate: 0.9, guards: 0, days: 16 },
+  { name: 'National Threat', people: [7, 8], clueRate: 0.75, guards: 1, days: 14 },
+  { name: 'Regional Conflict', people: [8, 9], clueRate: 0.6, guards: 2, days: 13 },
+  { name: 'Global Crisis', people: [9, 10], clueRate: 0.5, guards: 3, days: 12 },
+];
+const SKILL_NAMES = ['Average', 'Good', 'Excellent', 'Superior', 'Superior'];
+
+// crime templates: the object that names the case, and the roles that make it happen
 const CRIMES = [
-  { name: 'Assassination', verb: 'assassinate a visiting head of state', target: 'the summit' },
-  { name: 'Kidnapping', verb: 'kidnap an American diplomat', target: 'the embassy' },
-  { name: 'Bombing', verb: 'bomb a NATO communications centre', target: 'the relay station' },
-  { name: 'Hijacking', verb: 'hijack a nuclear fuel shipment', target: 'the convoy' },
-  { name: 'Theft of Secrets', verb: 'steal the plans for a stealth guidance system', target: 'the laboratory' },
-  { name: 'Counterfeiting', verb: 'flood Europe with counterfeit dollars', target: 'the mint' },
+  { kind: 'Kidnapping', object: 'Prison Warden', verb: 'kidnap the warden of a maximum security prison', roles: ['Kidnap Planner', 'Driver', 'Safe-House Keeper', 'Money Man', 'Courier', 'Kidnapper', 'Lookout'], items: ['stolen Volkswagen', 'safe house lease', 'payoff money', 'chloroform'] },
+  { kind: 'Bombing', object: 'Election Commission HQ', verb: 'bomb the election commission headquarters', roles: ['Bomb Specialist', 'Driver', 'Money Man', 'Courier', 'Explosives Smuggler', 'Surveillance', 'Forger'], items: ['plastic explosives', 'building blueprints', 'forged ID cards', 'delivery van'] },
+  { kind: 'Assassination', object: 'Summit IDs', verb: 'assassinate a delegate at the peace summit', roles: ['Assassin', 'Driver', 'Forger', 'Money Man', 'Courier', 'Surveillance', 'Arms Dealer'], items: ['sniper rifle', 'summit ID badges', 'airline ticket', 'payoff money'] },
+  { kind: 'Theft', object: 'Train Blueprints', verb: 'steal the blueprints of a new high-speed train', roles: ['Safecracker', 'Driver', 'Inside Man', 'Money Man', 'Courier', 'Fence', 'Surveillance'], items: ['train blueprints', 'security passes', 'getaway car', 'payoff money'] },
+  { kind: 'Drug Buy', object: 'Metal Foundry', verb: 'move a ton of raw drugs through a metal foundry', roles: ['Drug Supplier', 'Pilot', 'Chemist', 'Money Man', 'Courier', 'Enforcer', 'Driver'], items: ['raw drugs', 'foundry keys', 'light aircraft', 'large money withdrawal'] },
+  { kind: 'Hijacking', object: 'Helicopter Pilot', verb: 'hijack a helicopter carrying a defence minister', roles: ['Hijacker', 'Pilot', 'Arms Dealer', 'Money Man', 'Courier', 'Forger', 'Surveillance'], items: ['machine pistols', 'flight plan', 'forged passports', 'payoff money'] },
+  { kind: 'Espionage', object: 'Airbase Passwords', verb: 'steal the passwords of a NATO airbase', roles: ['Recruiter', 'Mole', 'Photographer', 'Money Man', 'Courier', 'Driver', 'Forger'], items: ['airbase passwords', 'microfilm', 'camera', 'payoff money'] },
 ];
-
-// tier 3 = mastermind, 2 = lieutenants, 1 = operatives
-const ROLES = [
-  { name: 'Mastermind', tier: 3, w: 30 },
-  { name: 'Planner', tier: 2, w: 12 }, { name: 'Financier', tier: 2, w: 12 }, { name: 'Recruiter', tier: 2, w: 10 },
-  { name: 'Courier', tier: 1, w: 6, mobile: true }, { name: 'Assassin', tier: 1, w: 9 }, { name: 'Safecracker', tier: 1, w: 7 },
-  { name: 'Forger', tier: 1, w: 6 }, { name: 'Driver', tier: 1, w: 5, mobile: true }, { name: 'Demolitions', tier: 1, w: 9 },
-  { name: 'Informant', tier: 1, w: 5 }, { name: 'Pilot', tier: 1, w: 6, mobile: true },
-];
-const FACETS = ['photo', 'name', 'city', 'org', 'role'];
-const FACET_LABEL = { photo: 'photograph', name: 'real name', city: 'location', org: 'organization', role: 'role' };
 
 // ------------------------------------------------------------------
 const game = {
-  agent: null, level: 1, day: 1, hour: 8, city: 'WAS', score: 0, careerScore: 0, cases: [],
-  plot: null, messages: [], log: [], bugs: [],
+  agent: null, diff: 0, rank: 0, careerPoints: 0, cases: [], masterminds: 0,
+  region: 'europe', city: 'WAS', t: 0, // t = minutes since the case began
+  startDate: null, crime: null, clues: [], messages: [], news: [], taps: [], chronology: [], activity: {}, buildings: {}, log: [],
 };
-function timeStr() { return 'Day ' + game.day + ', ' + String(game.hour).padStart(2, '0') + ':00'; }
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function dateOf(t) { const d = new Date(game.startDate.getTime() + t * 60000); return d; }
+function clockStr(t = game.t) { const d = dateOf(t); let h = d.getHours(), ap = h < 12 ? 'AM' : 'PM'; h = h % 12 || 12; return String(h).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ap + ' ' + MONTHS[d.getMonth()] + ' ' + String(d.getDate()).padStart(2, '0'); }
+function dayStr(t) { const d = dateOf(t); return MONTHS[d.getMonth()] + ' ' + String(d.getDate()).padStart(2, '0'); }
+const dayOf = t => Math.floor((t + 8 * 60) / 1440); // day 0 is the first day; cases start at 08:00
+const hourOf = t => dateOf(t).getHours();
 
-function newAgent(sex, focus) {
-  const sk = { combat: 2, driving: 2, crypto: 2, electronics: 2 };
-  if (focus) sk[focus] = 4;
-  return { first: sex === 'f' ? 'Maxine' : 'Max', last: 'Remington', sex, skills: sk, health: 3, maxHealth: 3 };
-}
+function newAgent(sex, codename) { return { first: sex === 'f' ? 'Maxine' : 'Maximillian', short: 'Max', sex, codename: codename || 'Lone Wolf', skills: { combat: 0, driving: 0, crypto: 0, electronics: 0 } }; }
+function skillLevel(k) { return game.agent ? game.agent.skills[k] : 0; }
 
-function makeFace(sex, ethnic) {
-  const skinBy = { us: [P.SK, P.SK, P.SK2, P.SK3], es: [P.SK, P.SK2], pt: [P.SK, P.SK2, P.SK3], uk: [P.SK], fr: [P.SK, P.SK2], it: [P.SK, P.SK2], de: [P.SK], ru: [P.SK], tr: [P.SK, P.SK2], ar: [P.SK2, P.SK2, P.SK], zh: [P.SK, P.TN], ja: [P.SK, P.TN] };
-  const hairs = ethnic === 'uk' || ethnic === 'de' || ethnic === 'ru' ? [P.K, P.BR, P.TN, P.BR2, P.G3] : [P.K, P.K, P.BR, P.G3];
+function makeFace(sex, lang) {
+  const dark = { es: 0.5, ar: 0.6, fa: 0.5, tr: 0.4, he: 0.3, us: 0.25, it: 0.3 }[lang] || 0.1;
   return {
-    sex, skin: pick(skinBy[ethnic] || [P.SK]), hair: pick(hairs), hairStyle: sex === 'f' ? ri(3, 5) : ri(0, 3),
-    beard: sex === 'm' && rnd() < 0.35 ? ri(1, 2) : 0, glasses: rnd() < 0.25 ? ri(1, 2) : 0, hat: rnd() < 0.12, jacket: pick([P.G2, P.BR, P.NV, P.D2, P.OL, P.G3]),
-    tie: pick([P.RD, P.BL, P.YE2, P.K]), eyes: rnd() < 0.5 ? 0 : 1, bg: pick([P.BL, P.TL, P.G2, P.BR2]), jaw: ri(0, 2),
+    sex, skin: rnd() < dark ? EGA.brown : EGA.lred, hair: pick(lang === 'uk' || lang === 'de' ? [EGA.black, EGA.brown, EGA.yellow, EGA.lgray] : [EGA.black, EGA.black, EGA.brown, EGA.dgray]),
+    hairStyle: sex === 'f' ? ri(4, 5) : ri(0, 3), beard: sex === 'm' && rnd() < 0.4 ? ri(1, 2) : 0, glasses: rnd() < 0.25 ? ri(1, 2) : 0, hat: rnd() < 0.1,
+    jacket: pick([EGA.dgray, EGA.brown, EGA.blue, EGA.black, EGA.lgray, EGA.green]), tie: pick([EGA.red, EGA.blue, EGA.brown, EGA.black]), eyes: ri(0, 1), bg: pick([EGA.blue, EGA.cyan, EGA.dgray]), jaw: ri(0, 2),
   };
 }
+function mkName(lang, sex, used) { const nm = NAMES[lang] || NAMES.us; let n, k = 0; do { n = pick(sex === 'f' ? nm[1] : nm[0]) + ' ' + pick(nm[2]); } while (used.has(n) && k++ < 50); used.add(n); return n; }
+function mkAddress(lang) { return pick(STREETS[lang] || STREETS.us) + ' ' + ri(2, 88); }
 
-function newPlot(level) {
-  const nOrgs = Math.min(3, 1 + Math.floor((level + 1) / 2));
-  const orgs = shuffle(ORGS.slice()).slice(0, nOrgs);
-  const crime = pick(CRIMES);
-  const nPeople = Math.min(16, 7 + level * 2);
-  const codes = shuffle(CODENAMES.slice());
-  const lieutenants = shuffle(ROLES.filter(r => r.tier === 2)).slice(0, Math.min(3, 1 + Math.ceil(level / 2)));
-  const ops = ROLES.filter(r => r.tier === 1);
-  const people = [];
-  const used = new Set();
-  function mk(role, org) {
-    const cid = rnd() < 0.7 ? pick(org.home) : pick(CITIES).id;
-    const city = cityById(cid); const nm = NAMES[city.names]; const sex = rnd() < 0.2 ? 'f' : 'm';
-    let full; do { full = pick(sex === 'f' ? nm[1] : nm[0]) + ' ' + pick(nm[2]); } while (used.has(full)); used.add(full);
-    const p = { id: people.length, code: codes.pop(), name: full, role, org, city: cid, home: cid, face: makeFace(sex, city.names),
-      known: { photo: false, name: false, city: false, org: false, role: false }, status: 'free', links: [], cityDay: 0, seen: false };
-    people.push(p); return p;
+// ------------------------------------------------------------------
+// a new case: pick a region, a mastermind org, allied orgs, participants and a schedule
+function newCrime() {
+  const D = DIFFICULTY[game.diff];
+  const region = pick(Object.keys(REGIONS)); game.region = region;
+  const cities = regionCities(region);
+  const orgPool = ORGS.filter(o => o.regions.includes(region));
+  const mmOrg = pick(orgPool.filter(o => o.mastermindFree).length ? orgPool.filter(o => o.mastermindFree) : orgPool);
+  const allies = shuffle(orgPool.filter(o => o !== mmOrg)).slice(0, 1 + Math.min(3, game.diff + ri(0, 1)));
+  const orgs = [mmOrg, ...allies];
+  // each org keeps a hideout in 2-4 cities of the region
+  const buildings = {};
+  for (const o of orgPool) { for (const c of shuffle(cities.slice()).slice(0, ri(2, 4))) { const key = o.id + '@' + c.id; buildings[key] = { key, org: o, city: c.id, address: mkAddress(c.lang), known: false, orgKnown: false, alert: 0, suspect: null, layout: null }; } }
+  for (const c of cities) for (const a of AGENCIES) if (rnd() < (a === 'Mossad' ? 0.5 : 0.8)) { const key = a + '@' + c.id; buildings[key] = { key, agency: a, city: c.id, address: mkAddress(c.lang), known: true, orgKnown: true, alert: 0 }; }
+  const crime = CRIMES[Math.floor(rnd() * CRIMES.length)];
+  const n = ri(D.people[0], D.people[1]);
+  const used = new Set(); const people = [];
+  const hideoutsOf = o => Object.values(buildings).filter(b => b.org === o);
+  function mk(org, role, rank, parent) {
+    // one suspect per organization per city
+    const free = hideoutsOf(org).filter(b => !b.suspect);
+    let b = free.length ? pick(free) : null;
+    if (!b) { const c = pick(cities.filter(c => !buildings[org.id + '@' + c.id])) || pick(cities); const key = org.id + '@' + c.id; b = buildings[key] = buildings[key] || { key, org, city: c.id, address: mkAddress(c.lang), known: false, orgKnown: false, alert: 0, suspect: null }; if (b.suspect) return null; }
+    const city = cityById(b.city), sex = rnd() < 0.15 ? 'f' : 'm';
+    const p = { id: people.length, name: mkName(city.lang, sex, used), sex, org, role, rank, city: b.city, building: b.key, face: makeFace(sex, city.lang), parent: parent ? parent.id : null, kids: [],
+      known: { face: false, name: false, org: false, city: false, hideout: false, role: false }, status: 'free', exists: false, tasks: 0 };
+    b.suspect = p.id; people.push(p); if (parent) parent.kids.push(p.id); return p;
   }
-  const mastermind = mk(ROLES[0], orgs[0]);
-  // the mastermind never sits in Washington
-  if (mastermind.city === 'WAS') { mastermind.city = mastermind.home = pick(orgs[0].home.filter(c => c !== 'WAS')); }
-  const lts = lieutenants.map((r, i) => { const p = mk(r, orgs[i % orgs.length]); p.links.push(mastermind.id); mastermind.links.push(p.id); return p; });
-  while (people.length < nPeople) {
-    const boss = pick(lts); const p = mk(pick(ops), rnd() < 0.6 ? boss.org : pick(orgs));
-    p.links.push(boss.id); boss.links.push(p.id);
+  const mm = mk(mmOrg, 'Mastermind', 7, null);
+  const org1 = mk(pick(orgs), 'Organizer', 5, mm) || mk(mmOrg, 'Organizer', 5, mm);
+  const roles = shuffle(crime.roles.slice());
+  const specialists = [];
+  while (people.length < n && roles.length) {
+    const parent = specialists.length < 2 || rnd() < 0.5 ? org1 : pick(specialists);
+    const p = mk(pick(orgs), roles.shift(), parent === org1 ? ri(3, 4) : ri(0, 2), parent); if (p) specialists.push(p);
   }
-  // a few sideways contacts between operatives
-  const opsP = people.filter(p => p.role.tier === 1);
-  for (let i = 0; i < Math.floor(opsP.length / 3); i++) { const a = pick(opsP), b = pick(opsP); if (a !== b && !a.links.includes(b.id)) { a.links.push(b.id); b.links.push(a.id); } }
-  const deadline = 18 + Math.max(0, 6 - level) + Math.floor(nPeople / 2);
-  const total = people.reduce((s, p) => s + p.role.w, 0);
-  return { crime, orgs, people, deadline, total, mastermind: mastermind.id, targetCity: pick(CITIES.filter(c => c.id !== 'WAS')).id, foiled: false, over: false, started: game.day };
-}
-
-function plotStrength() { const pl = game.plot; const free = pl.people.filter(p => p.status === 'free').reduce((s, p) => s + p.role.w, 0); return free / pl.total; }
-function isSuspect(p) { return FACETS.some(f => p.known[f]); }
-function knownCount(p) { return FACETS.filter(f => p.known[f]).length; }
-function label(p) { return p.known.name ? p.name : p.code; }
-function canArrest(p) { return p.status === 'free' && (p.known.name || p.known.photo) && p.known.city && p.city === game.city; }
-function peopleIn(cid) { return game.plot.people.filter(p => p.city === cid && p.status === 'free'); }
-
-// reveal one unknown facet of p (preferring the given facet). Returns a sentence or null.
-function reveal(p, prefer) {
-  if (!p) return null;
-  const opts = FACETS.filter(f => !p.known[f]); if (!opts.length) return null;
-  const f = prefer && !p.known[prefer] ? prefer : pick(opts);
-  p.known[f] = true; if (f === 'city') p.cityDay = game.day;
-  const who = p.code;
-  const txt = {
-    photo: 'A photograph of ' + who + '.',
-    name: who + ' is really ' + p.name + '.',
-    city: who + ' is operating in ' + cityById(p.city).name + '.',
-    org: who + ' works for the ' + p.org.name + '.',
-    role: who + ' is the ' + p.role.name + ' of the plot.',
-  }[f];
-  game.log.unshift({ day: game.day, t: txt }); if (game.log.length > 60) game.log.pop();
-  return txt;
-}
-// a clue about someone connected to p (or p itself)
-function clueFrom(p, preferSelf = 0.35) {
-  const pool = [p, ...p.links.map(i => game.plot.people[i])].filter(q => q && q.status !== 'dead');
-  const cand = rnd() < preferSelf ? [p] : shuffle(pool.slice());
-  for (const q of cand.concat(pool)) { const r = reveal(q); if (r) return r; }
-  return null;
+  // schedule: each link is a message or meeting; each specialist obtains an item; the executor commits the crime
+  const steps = []; let day = 0;
+  const order = people.slice(1).sort((a, b) => (a.parent === mm.id ? -1 : 0) - (b.parent === mm.id ? -1 : 0) || a.rank < b.rank);
+  const bfs = [mm.id]; const seen = new Set(bfs);
+  while (bfs.length) { const id = bfs.shift(); for (const k of people[id].kids) if (!seen.has(k)) { seen.add(k); bfs.push(k); day += rnd() < 0.6 ? 1 : 0; steps.push({ day: Math.max(1, day), kind: rnd() < 0.65 ? 'message' : 'meeting', from: id, to: k, done: false }); } }
+  crime.items.forEach((it, i) => { const p = specialists[i % Math.max(1, specialists.length)] || org1; day += rnd() < 0.5 ? 1 : 0; steps.push({ day: Math.max(2, day), kind: 'item', from: p.id, item: it, done: false }); });
+  const exec = specialists[0] || org1;
+  steps.forEach(s => { people[s.from].tasks++; if (s.to !== undefined) people[s.to].tasks++; });
+  const crimeDay = Math.max(day + 2, D.days - ri(0, 2));
+  game.crime = { ...crime, region, orgs, mastermind: mm.id, organizer: org1.id, executor: exec.id, people, steps, crimeDay, buildings, over: false, prevented: false, delay: 0, target: pick(cities).id, evidenceTaken: 0 };
+  game.buildings = buildings;
+  return game.crime;
 }
 
-// the plot moves on each day: mobile people relocate, messages get sent
-function advanceTime(hours) {
-  const before = game.day;
-  game.hour += hours; while (game.hour >= 24) { game.hour -= 24; game.day++; }
-  for (let d = before; d < game.day; d++) dailyTick();
+// ---------- knowledge ----------
+const FACET_ORDER = ['face', 'name', 'org', 'city', 'hideout', 'role'];
+function isSuspect(p) { return p.exists || FACET_ORDER.some(f => p.known[f]); }
+function knowledge(p) { return FACET_ORDER.filter(f => p.known[f]).length; }
+function learn(p, f) {
+  if (!p || p.known[f]) return false; p.known[f] = true; p.exists = true;
+  if (f === 'hideout') { const b = game.buildings[p.building]; b.known = true; b.orgKnown = b.orgKnown || p.known.org; p.known.city = true; }
+  if (f === 'org') { const b = game.buildings[p.building]; if (b.known) b.orgKnown = true; }
+  bumpActivity(p.city, p.org.name);
+  return true;
 }
-function dailyTick() {
-  const pl = game.plot; if (!pl || pl.over) return;
-  for (const p of pl.people) {
-    if (p.status !== 'free' || !p.role.mobile) continue;
-    if (rnd() < 0.25) { const linked = p.links.map(i => pl.people[i]).filter(q => q.status === 'free'); const dest = linked.length ? pick(linked).city : pick(CITIES).id; if (dest !== p.city) { p.city = dest; p.known.city = false; } }
-  }
-  // bugged buildings leak messages
-  for (const b of game.bugs) {
-    const p = pl.people[b.pid]; if (!p || p.status !== 'free') continue;
-    if (rnd() < 0.8) queueMessage(p);
-  }
-  if (rnd() < 0.35) { const free = pl.people.filter(p => p.status === 'free'); if (free.length) queueMessage(pick(free), true); }
+function bumpActivity(cityId, orgName) { const a = game.activity; a[cityId] = (a[cityId] || 0) + 1; a[orgName] = (a[orgName] || 0) + 1; }
+function who(p) { return p.known.name ? p.name : p.known.face ? 'Agent X (face known)' : 'an unidentified ' + (p.known.org ? p.org.name + ' member' : 'suspect'); }
+const SOURCES = ['CIA', 'CIA', 'CIA', 'Interpol', 'MI-6', 'Mossad', 'FBI', 'NSA'];
+// add a clue in the manual's format and apply what it reveals
+function addClue(p, heading, text, method, facets, extra = {}) {
+  const c = cityById(p.city); const src = pick(SOURCES); const source = src === 'CIA' ? 'CIA/' + pick(regionCities(game.region)).name : src;
+  const clue = { id: game.clues.length, pid: p.id, heading, text, method, source, t: game.t, facets, face: facets.includes('face'), ...extra };
+  facets.forEach(f => learn(p, f)); p.exists = true; game.clues.push(clue); bumpActivity(c.id, p.org.name);
+  return clue;
 }
-const MSG_BODIES = [
-  'FUNDS TRANSFERRED FROM ZURICH ACCOUNT. PROCEED AS PLANNED.', 'THE PACKAGE ARRIVES BY NIGHT TRAIN. BE AT THE STATION.', 'SAFEHOUSE IS COMPROMISED. MOVE THE DOCUMENTS TONIGHT.',
-  'PASSPORTS ARE READY. COLLECT FROM THE USUAL PLACE.', 'TARGET SCHEDULE CONFIRMED. WAIT FOR MY SIGNAL.', 'TRUST NO ONE. THE AMERICANS ARE WATCHING THE AIRPORT.',
-  'DELIVER THE CASE TO OUR FRIEND AND BURN THIS MESSAGE.', 'THE MONEY IS SHORT. TELL THE BANKER TO PAY IN FULL.', 'MEET ME AT THE CAFE NEAR THE CATHEDRAL AT NOON.',
-];
-function queueMessage(from, intercepted) {
-  const pl = game.plot; const to = pl.people[pick(from.links)]; if (!to) return;
-  const body = pick(MSG_BODIES);
-  const txt = 'FROM ' + from.code + ' IN ' + cityById(from.city).name.toUpperCase() + ' TO ' + to.code + '. ' + body;
-  game.messages.push({ from: from.id, to: to.id, text: txt, day: game.day, src: intercepted ? 'NSA intercept' : 'Wiretap' });
-  if (game.messages.length > 8) game.messages.shift();
+// a clue about participant p, revealing something new if possible
+function clueAbout(p, method = 'Covert Surveillance', forceFacet) {
+  const b = game.buildings[p.building], c = cityById(p.city), o = p.org;
+  const opts = FACET_ORDER.filter(f => !p.known[f] && f !== 'role');
+  const f = forceFacet || (opts.length ? pick(opts) : pick(['face', 'name', 'org', 'city', 'hideout']));
+  const he = p.sex === 'f' ? 'This woman' : 'This man';
+  switch (f) {
+    case 'face': return addClue(p, b.address, he + ' was identified by tenants at ' + b.address + '.', method, ['face']);
+    case 'name': return addClue(p, p.name, p.name + ' was seen ' + pick(['boarding a flight to ' + c.name, 'meeting known criminals in ' + c.name, 'renting a car in ' + c.name, 'withdrawing large sums in ' + c.name]) + '.', method, ['name', 'city']);
+    case 'org': return addClue(p, o.name, 'An informant says the ' + o.name + ' has brought in ' + (p.known.name ? p.name : 'a ' + RANKS[p.rank].toLowerCase()) + ' for a special job.', method, ['org']);
+    case 'city': return addClue(p, c.name, (p.known.name ? p.name : 'A suspect known to the ' + o.name) + ' is active in ' + c.name + '.', method, ['city']);
+    case 'hideout': return addClue(p, b.address, 'The ' + o.name + ' is using a building at ' + b.address + ', ' + c.name + '.', method, ['hideout', 'org']);
+    case 'role': return addClue(p, p.role, (p.known.name ? p.name : 'A ' + o.name + ' member') + ' is the ' + p.role + ' in this operation.', method, ['role']);
+  }
+}
+function canArrestHere(p) { return p.status === 'free'; }
+
+// ---------- messages (coded traffic) ----------
+const MSG_TEXT = {
+  message: ['PROCEED WITH THE PLAN. THE {ITEM} WILL BE READY. WAIT FOR MY SIGNAL.', 'YOU ARE TO RECRUIT A RELIABLE {ROLE}. MONEY IS NO OBJECT.', 'THE AMERICANS ARE WATCHING THE AIRPORT. USE THE SAFE HOUSE.', 'CONFIRM YOU HAVE THE {ITEM}. TRUST NO ONE IN {CITY}.'],
+  meeting: ['MEET ME AT THE CAFE NEAR THE CATHEDRAL IN {CITY} AT NOON.', 'COME TO {CITY}. WE MUST DISCUSS THE {ITEM} FACE TO FACE.'],
+};
+function makeMessage(step) {
+  const cr = game.crime, from = cr.people[step.from], to = cr.people[step.to] || from;
+  const body = pick(MSG_TEXT[step.kind === 'meeting' ? 'meeting' : 'message']).replace('{ITEM}', pick(cr.items).toUpperCase()).replace('{ROLE}', to.role.toUpperCase()).replace('{CITY}', cityById(to.city).name.toUpperCase());
+  const text = 'FROM ' + from.org.name.toUpperCase() + ' IN ' + cityById(from.city).name.toUpperCase() + ' TO ' + to.org.name.toUpperCase() + ' IN ' + cityById(to.city).name.toUpperCase() + '. ' + body;
+  return { id: 'M' + (100 + ri(0, 299)), from: from.id, to: to.id, text, t: game.t, stepDay: step.day, decoded: false };
+}
+
+// ---------- time passes: the plot advances and agencies pick up clues ----------
+function advance(minutes) {
+  const d0 = dayOf(game.t); game.t += minutes; const d1 = dayOf(game.t);
+  for (let d = d0 + 1; d <= d1; d++) plotDay(d);
+}
+function plotDay(d) {
+  const cr = game.crime; if (!cr || cr.over) return;
+  const D = DIFFICULTY[game.diff];
+  for (const s of cr.steps) {
+    if (s.done || s.blocked || s.day + cr.delay > d) continue;
+    const a = cr.people[s.from], b = s.to !== undefined ? cr.people[s.to] : null;
+    if (a.status !== 'free' || (b && b.status !== 'free')) { s.blocked = true; continue; }
+    s.done = true; a.tasks--; if (b) b.tasks--;
+    cr.chronologyAll = cr.chronologyAll || []; cr.chronologyAll.push({ day: d, s });
+    // the world notices
+    if (rnd() < D.clueRate) clueAbout(rnd() < 0.5 || !b ? a : b, pick(['Covert Surveillance', 'Telephone Tap', 'Informant', 'Airport Surveillance']));
+    if (s.kind !== 'item' && rnd() < D.clueRate * 0.5) game.messages.push(Object.assign(makeMessage(s), { src: 'NSA intercept' }));
+    if (s.kind === 'item') game.news.push({ t: dayToT(d), text: 'Police in ' + cityById(a.city).name + ' report ' + (s.item.includes('money') || s.item.includes('withdrawal') ? 'a large money withdrawal.' : 'the theft of ' + s.item + '.') });
+  }
+  // active taps leak messages
+  for (const tap of game.taps) {
+    const b = game.buildings[tap.key]; if (!b || tap.until < d) continue;
+    const p = b.suspect !== null && b.suspect !== undefined ? cr.people[b.suspect] : null;
+    if (p && p.status === 'free' && rnd() < 0.7) { const st = cr.steps.find(s => (s.from === p.id || s.to === p.id) && s.kind !== 'item' && !s.tapped); if (st) { st.tapped = true; game.messages.push(Object.assign(makeMessage(st), { src: 'Wiretap, ' + b.address })); } else if (rnd() < 0.5) clueAbout(p, 'Telephone Tap'); }
+  }
+  // blocked plans: critical links broken means the conspiracy falls apart
+  const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length;
+  if (blocked / total > 0.34 || cr.people[cr.mastermind].status !== 'free' || cr.people[cr.organizer].status !== 'free' && blocked > 0) { cr.over = true; cr.prevented = true; cr.endDay = d; }
+  else if (d >= cr.crimeDay + cr.delay) { cr.over = true; cr.prevented = false; cr.endDay = d; }
+}
+const dayToT = d => d * 1440 - 8 * 60 + 9 * 60;
+
+// ---------- scoring (1000 points = 100% efficiency) ----------
+function efficiency() {
+  const cr = game.crime; let got = 0, max = 0;
+  for (const p of cr.people) {
+    const v = 10 + p.rank * 6;
+    max += v * 5; got += v * ['name', 'org', 'city', 'hideout'].filter(f => p.known[f]).length;
+    if (p.status === 'arrested' || p.status === 'turned') got += v;
+  }
+  max += 250; if (cr.prevented) got += 150; if (cr.people[cr.mastermind].status === 'arrested') got += 100;
+  return Math.round(Math.min(1000, got / max * 1000));
 }

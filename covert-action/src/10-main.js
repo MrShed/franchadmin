@@ -1,97 +1,164 @@
 // ===================================================================
-// MAIN: glue between the city hub and the minigames
+// MAIN: enemy buildings, watching, and the glue to the action sequences
 // ===================================================================
 let practiceMode = false;
-function afterMission(hours, next) { advanceTime(hours); if (practiceMode) { go(titleScene()); return; } if (!checkCaseEnd()) next(); }
+function occupantOf(b) { if (!b || b.suspect === null || b.suspect === undefined) return null; const p = game.crime.people[b.suspect]; return p && p.status === 'free' ? p : null; }
+function guardWords(b) { const a = (b.alert || 0) + game.diff; return a <= 0 ? 'The building looks quiet.' : a <= 2 ? 'There are a few guards around.' : 'The building is swarming with guards.'; }
+function buildingName(b) { return b.agency ? 'the ' + b.agency + ' office' : b.orgKnown ? 'the ' + b.org.name + ' hideout' : 'the unknown building'; }
 
-// who is the break-in / wiretap / tail target in this city?
-function localTarget(preferMobile) {
-  const here = peopleIn(game.city); if (!here.length) return null;
-  const pool = preferMobile ? here.filter(p => p.role.mobile) : here;
-  return pick(pool.length ? pool : here);
+function buildingScene(b) {
+  const back = () => go(buildingScene(b));
+  const items = [{ label: 'Place Wiretap', go: () => startWiretap(b) }];
+  if (!b.agency) items.push({ label: 'Break Into The Building', go: () => startBreakin(b) }, { label: 'Watch The Building', go: () => go(watchScene(b)) });
+  items.push({ label: 'Check Data', go: () => go(dataSection(back)) }, { label: 'Leave', go: () => go(cityScene()) });
+  return locationScreen({ lines: ['You are at ' + buildingName(b) + ',', b.address + '.', guardWords(b), 'Do you ...'], items, art: (x, y, w, h) => buildingArt(x, y, w, h, b), back: () => go(cityScene()) });
 }
-const FRONTS = ['Import-Export', 'Travel Agency', 'Shipping Co.', 'Trading House', 'Consulting', 'Holdings', 'Freight Services'];
 
-function startBreakin() {
-  const p = localTarget(false);
-  const org = p ? p.org : pick(ORGS);
-  const front = (p ? p.name.split(' ')[1] : pick(NAMES[cityById(game.city).names][2])) + ' ' + pick(FRONTS);
-  const brief = p
-    ? 'Target: the offices of "' + front + '", ' + cityById(game.city).name + '. Local sources say the building is used by ' + (p.known.org ? 'the ' + p.org.name : 'a hostile group') + '. The occupant' + (p.known.name || p.known.photo ? ' is believed to be ' + p.code : '') + ' works on the top floor.\n\nSearch desks, files and safes. Bring the occupant out alive if you can. Leave by the door you came in.'
-    : 'Target: "' + front + '", ' + cityById(game.city).name + '. Our informants have seen nothing here lately, but it is the best lead we have. It may be a dry hole.\n\nSearch what you can and get out.';
-  go(loadoutScene(brief, kit => {
-    go(breakinScene(Object.assign({ level: game.level, occupant: p, org }, kit), res => {
-      let hours = 5;
-      if (res.kind === 'dead') { hours = 48; game.agent.health = Math.max(1, game.agent.health - 1); }
-      if (res.kind === 'police') hours = 24;
-      if (res.kills.civ) game.score -= 15 * res.kills.civ;
-      game.score += res.clues.length * 3;
-      if (p) p.seen = true;
-      if (res.killedTarget) { res.killedTarget.status = 'dead'; FACETS.forEach(f => res.killedTarget.known[f] = true); game.score -= 10; }
-      if (res.captured) { const c = res.captured; c.status = 'arrested'; const pts = c.role.tier === 3 ? 60 : c.role.tier === 2 ? 25 : 10; game.score += pts; FACETS.forEach(f => c.known[f] = true); afterMission(hours, () => go(interrogationScene(c, 'capture', pts))); return; }
-      afterMission(hours, () => go(missionReport('BREAK-IN', res.clues.length ? res.clues : ['Nothing of value was recovered.'])));
+// ---------- WATCH THE BUILDING ----------
+function watchScene(b) {
+  let face = null, target = null, note = 'You settle down across the street and watch the door.';
+  const next = () => {
+    advance(ri(30, 90)); const p = occupantOf(b);
+    if (p && rnd() < 0.35 + (b.watchT = (b.watchT || 0) + 0.1)) { target = p; face = p.face; b.watchT = 0; }
+    else { target = null; const sex = rnd() < 0.3 ? 'f' : 'm'; face = makeFace(sex, cityById(b.city).lang); }
+    note = (face.sex === 'f' ? 'A woman' : 'A man') + ' comes out of the building and walks to a car.';
+    sfx.tone(300, 0.06);
+  };
+  let s;
+  const mk = () => Menu([
+    { label: 'Wait', go: () => { next(); s.menu = mk(); } },
+    { label: face && face.sex === 'f' ? 'Follow Her' : 'Follow Him', off: !face, go: () => startChase(b, target, face) },
+    { label: 'Trace The Car', off: !face, go: () => startTracer(b, target) },
+    { label: 'Leave', go: () => go(buildingScene(b)) },
+  ], 14, 88, 128, 9);
+  s = menuScene({
+    menu: null, back: () => go(buildingScene(b)),
+    enter() { s.menu = mk(); },
+    draw() {
+      rect(0, 0, W, H, P.K); watchArt(150, 30, 170, 170, b, face, this.t); locPlate(cityById(b.city).name + ', ' + cityById(b.city).country);
+      text('Watching ' + buildingName(b) + '.', 10, 34, P.W); para(note, 10, 46, 134, P.G3, 9);
+      this.menu && this.menu.draw();
+      if (face) text('Compare the face with your files.', 10, 136, P.G1);
+    },
+  });
+  return s;
+}
+
+// ---------- WIRETAP & CAR TRACER ----------
+function startWiretap(b) {
+  advance(30);
+  go(wiretapScene({ level: game.diff, mode: 'tap', alert: b.alert || 0, label: b.address }, res => {
+    const out = [];
+    if (res.alarm) { b.alert = (b.alert || 0) + 1; out.push('An alarm went off. The building\'s guards are on alert now.'); }
+    if (res.tapped > 0) {
+      game.taps.push({ key: b.key, until: dayOf(game.t) + 2 + res.tapped });
+      out.push(res.tapped + ' phone' + (res.tapped > 1 ? 's' : '') + ' tapped.');
+      if (!b.agency) {
+        if (!b.orgKnown) { b.orgKnown = true; out.push('The line belongs to the ' + b.org.name + '.'); }
+        const p = occupantOf(b); if (p) { const c = clueAbout(p, 'Telephone Tap'); if (c) out.push(c.text); }
+        if (res.tapped > 1) { const other = Object.values(game.buildings).find(o => o.org === b.org && !o.known && o.suspect !== null && o.suspect !== undefined); if (other) { other.known = true; other.orgKnown = true; out.push('Calls go to another ' + b.org.name + ' office at ' + other.address + ', ' + cityById(other.city).name + '.'); } }
+      } else { const p = game.crime.people.find(q => q.city === b.city && q.status === 'free'); if (p) { const c = clueAbout(p, b.agency + ' Tap'); if (c) out.push(c.text); } else out.push('The ' + b.agency + ' line carries nothing about the case.'); }
+    } else if (!res.alarm) out.push('No phones were tapped.');
+    afterMission(60, () => go(report('Wiretap', out, () => go(buildingScene(b)))));
+  }));
+}
+function startTracer(b, target) {
+  go(wiretapScene({ level: game.diff, mode: 'tracer', alert: b.alert || 0, label: 'car tracer' }, res => {
+    if (!res.success) { if (res.alarm) b.alert = (b.alert || 0) + 1; afterMission(20, () => go(report('Car Tracer', [res.alarm ? 'The alarm spooks the driver. The car roars off.' : 'The car pulls away before the tracer is ready.'], () => go(watchScene(b))))); return; }
+    afterMission(60, () => go(report('Car Tracer', followResult(target), () => go(buildingScene(b)))));
+  }));
+}
+// where does a followed car go?
+function followResult(p) {
+  if (!p) return ['The car goes to an apartment block and the driver goes to bed. A civilian.'];
+  const cr = game.crime, out = [];
+  const contacts = cr.steps.filter(s => s.to !== undefined && (s.from === p.id || s.to === p.id)).map(s => cr.people[s.from === p.id ? s.to : s.from]).filter(q => q.status === 'free');
+  const q = contacts.length ? pick(contacts) : p; const qb = game.buildings[q.building];
+  const newLoc = !qb.known; learn(q, 'hideout'); learn(p, 'face');
+  out.push('The car stops at ' + qb.address + ', ' + cityById(qb.city).name + '.' + (newLoc ? ' A new location for your files.' : ''));
+  if (q !== p) { const c = clueAbout(q, 'Covert Surveillance', q.known.face ? undefined : 'face'); if (c) out.push(c.text); }
+  return out;
+}
+
+// ---------- CAR CHASE ----------
+function startChase(b, target, face) {
+  go(carSelectScene(cars => go(chaseScene({ level: game.diff, cars, night: isNight(), target, label: target ? who(target) : 'the driver', start: b }, res => {
+    if (res.arrest && target) { afterMission(90, () => go(arrestResult(target, 'car'))); return; }
+    if (res.arrest && !target) { afterMission(90, () => go(report('Car Chase', ['You run the car off the road. The driver is a frightened accountant. Sorry, sir.'], () => go(cityScene())))); return; }
+    const out = res.success ? followResult(target) : [res.how === 'abort' ? 'You break off the chase.' : 'You lost the car in traffic.'];
+    if (res.spotted && target) b.alert = (b.alert || 0) + 1;
+    afterMission(90, () => go(report('Car Chase', out, () => go(cityScene()))));
+  }))));
+}
+
+// ---------- BREAK-IN ----------
+function startBreakin(b) {
+  const p = occupantOf(b);
+  const words = ['Guards are lax.', 'Guards are alert.', 'Guards are very alert.', 'Guards expect trouble.'][Math.min(3, (b.alert || 0) + (game.diff > 1 ? 1 : 0))];
+  go(pageScene(() => { rect(0, 0, W, H, P.K); buildingArt(150, 30, 170, 170, b); msgBox(8, 60, 136, 60); text('Breaking in...', 16, 68, P.YE); para(words + ' You will have to find your own way around.', 16, 80, 120, P.W); }, () => go(armoryScene(kit => {
+    if (!b.seed) b.seed = (rnd() * 1e9) >>> 0;
+    go(breakinScene(Object.assign({ level: game.diff, occupant: p, building: b, org: b.org, alert: b.alert || 0 }, kit), res => {
+      const out = res.clues.slice();
+      b.alert = (b.alert || 0) + (res.alarm ? 1 : 0);
+      if (res.evidence) { game.crime.delay += 2; game.crime.evidenceTaken++; out.push('You made off with the ' + res.evidence + '. That will set their plans back.'); }
+      if (res.plan) { game.inside.push(masterPlan()); out.push('A master plan of the whole operation! See Inside Information.'); }
+      if (res.personnel) { game.inside.push(personnelFile(b.org)); out.push('A personnel file of the ' + b.org.name + '. See Inside Information.'); }
+      if (res.messages) for (let i = 0; i < res.messages; i++) { const st = pick(game.crime.steps.filter(s => s.kind !== 'item' && p && (s.from === p.id || s.to === p.id))) || pick(game.crime.steps.filter(s => s.kind !== 'item')); if (st) { game.messages.push(Object.assign(makeMessage(st), { src: 'Wall safe, ' + b.address })); out.push('A coded message from the safe - take it to the Crypto Branch.'); } }
+      const mins = 45 + Math.round(res.seconds / 2);
+      if (res.kind === 'captured') { afterMission(mins + 12 * 60, () => go(report('Captured', ['You were knocked out and taken prisoner. After hours of questioning you manage to steal a gun, loosen your bonds and slip away.', ...out], () => go(cityScene())))); return; }
+      if (res.prisoner) { afterMission(mins, () => go(arrestResult(res.prisoner, 'breakin'))); return; }
+      if (!out.length) out.push('You found nothing of value.');
+      afterMission(mins, () => go(report('Break-In', out, () => go(cityScene()))));
     }));
-  }, () => go(hubScene())));
+  }))));
 }
-function startWiretap() {
-  const p = localTarget(false);
-  go(wiretapScene({ level: game.level, label: p ? (p.known.name ? p.name : 'suspect') + "'s line" : 'Front company line' }, res => {
-    const out = [];
-    if (res.success) {
-      game.score += 5;
-      if (p) { p.seen = true; if (!game.bugs.some(b => b.pid === p.id)) game.bugs.push({ pid: p.id }); const c = clueFrom(p, 0.2); if (c) out.push('Phone company records: ' + c); queueMessage(p); out.push('A message has already been recorded. Decode it from the city menu.'); }
-      else out.push('The line is live but carries nothing but family gossip. No one in the ring uses it.');
-    } else out.push('The tap was not installed.');
-    afterMission(4, () => go(missionReport('WIRETAP', out)));
+function masterPlan() {
+  const cr = game.crime; cr.people.forEach(p => { p.exists = true; learn(p, 'face'); });
+  return { label: 'Master plan: ' + cr.object, draw() { cr.people.forEach((p, i) => { const x = 14 + (i % 5) * 60, y = 26 + Math.floor(i / 5) * 78; drawFace(p.face, x, y, 40, 50); text(fitText(p.role, 56), x, y + 52, P.W); if (p.status === 'arrested') text('ARRESTED', x, y + 61, P.RD2); }); } };
+}
+function personnelFile(org) {
+  const ps = game.crime.people.filter(p => p.org === org); ps.forEach(p => learn(p, 'name'));
+  return { label: 'Personnel file: ' + org.name, draw() { ps.forEach((p, i) => { text(p.name, 20, 30 + i * 10, P.W); text(cityById(p.city).name, 180, 30 + i * 10, P.CY); }); } };
+}
+
+// ---------- CRYPTO ----------
+function startCrypto(m) {
+  go(cryptoScene(m.text, { msgNo: m.id, level: game.diff }, res => {
+    const cr = game.crime, from = cr.people[m.from], to = cr.people[m.to];
+    advance(Math.max(30, Math.round(res.seconds || 60)) * 2 + (res.hints || 0) * 120);
+    if (!res.success) { go(report('Crypto Branch', ['The message is still unreadable. It stays in the pile.'], () => go(ciaScene()))); return; }
+    m.decoded = true; const st = cr.steps.find(s => s.from === m.from && s.to === m.to); if (st) st.known = true;
+    [from, to].forEach(p => { learn(p, 'role'); learn(p, 'org'); learn(p, 'city'); p.exists = true; });
+    const R = (k, v) => [k, v];
+    const rows = [R('Message Source', who(from)), R("Source's Organization", from.org.name), R('Evidence Against Source', from.role), R('Message Recipient', who(to)), R("Recipient's Organization", to.org.name), R('Location of Recipient', cityById(to.city).name), R('Evidence Against Recipient', to.role)];
+    go(pageScene(() => {
+      rect(0, 0, W, H, P.K); msgBox(4, 4, W - 8, H - 8); text('Message Decode', 14, 12, P.YE); text('Msg# ' + m.id, 240, 12, P.G3);
+      rows.forEach(([k, v], i) => { text(k, 14, 28 + i * 11, P.G3); text(fitText(v, 150), 150, 28 + i * 11, P.W); });
+      text('Paraphrased Decoded Message:', 14, 110, P.G3); para(m.text.split('. ').slice(1).join('. ').toLowerCase().replace(/(^|\. )([a-z])/g, (a, b, c) => b + c.toUpperCase()), 14, 122, W - 28, P.CY, 9);
+    }, () => go(ciaScene())));
   }));
 }
-function startChase() {
-  const p = localTarget(true);
-  const label = p ? (p.known.name || p.known.photo ? p.code : 'a suspect') + "'s car" : 'a delivery van';
-  go(chaseScene({ level: game.level, label }, res => {
-    const out = [];
-    if (p) {
-      p.seen = true;
-      if (res.how === 'captured') { p.status = 'arrested'; FACETS.forEach(f => p.known[f] = true); const pts = p.role.tier === 3 ? 60 : p.role.tier === 2 ? 25 : 10; game.score += pts; afterMission(4, () => go(interrogationScene(p, 'capture', pts))); return; }
-      if (res.success) {
-        game.score += 8; out.push(reveal(p, 'photo') || 'You get a clear look at the driver: ' + p.code + '.');
-        const contact = game.plot.people[pick(p.links)]; if (contact) { contact.seen = true; const a = reveal(contact, 'photo'); const b = reveal(contact, 'city'); if (a) out.push(a); if (b) out.push(b); if (!a && !b) out.push('The driver met ' + contact.code + ' - someone you already know about.'); }
-      } else out.push(res.how === 'abort' ? 'You called off the tail.' : 'The car got away.');
-    } else out.push(res.success ? 'The van delivers vegetables to a restaurant. A waste of an afternoon.' : 'You lose the van. Probably just as well.');
-    afterMission(4, () => go(missionReport('CAR TAIL', out)));
-  }));
-}
-function startCrypto(i) {
-  const m = game.messages[i]; if (!m) { go(hubScene()); return; }
-  go(cryptoScene(m.text, { source: m.src + ', day ' + m.day }, res => {
-    const out = [];
-    if (res.success) {
-      game.messages.splice(i, 1); game.score += 4;
-      const from = game.plot.people[m.from], to = game.plot.people[m.to]; from.seen = to.seen = true;
-      const a = reveal(from, 'city'); if (a) out.push(a); const b = reveal(to); if (b) out.push(b);
-      if (!out.length) out.push('The message confirms what you already knew about ' + from.code + ' and ' + to.code + '.');
-    } else { out.push('The message remains unreadable. It is dropped from the queue.'); game.messages.splice(i, 1); }
-    afterMission(2, () => go(missionReport('CODEBREAKING', out)));
-  }));
-}
-function missionReport(title, lines) {
+
+// ---------- shared ----------
+function afterMission(minutes, next) { if (practiceMode) { practiceMode = false; go(optionsScene()); return; } advance(minutes); if (!checkCaseEnd()) next(); }
+function report(title, lines, next) {
   return pageScene(() => {
-    rect(0, 0, W, H, P.K); dither(0, 0, W, H, P.K, P.NV, 5); panel(16, 20, W - 32, H - 50);
-    text(title + ' REPORT', 28, 30, P.YE); textR(timeStr(), W - 28, 30, P.CY); rect(28, 40, W - 56, 1, P.G2);
-    let y = 46; for (const l of lines) { y = para('- ' + l, 28, y, W - 56, P.G5, 9) + 3; if (y > 160) break; }
-  }, () => go(hubScene()));
+    rect(0, 0, W, H, P.K); msgBox(8, 20, W - 16, H - 40); text(title, 18, 28, P.YE); textR(clockStr(), W - 18, 28, P.G3); rect(18, 37, W - 36, 1, P.G1);
+    let y = 44; for (const l of lines) { y = para(l, 18, y, W - 36, P.W, 9) + 4; if (y > 160) break; }
+  }, next);
 }
-function practice(kind) {
-  practiceMode = true;
-  if (!game.agent) game.agent = newAgent('m', null);
-  const saved = game.plot; game.plot = newPlot(1); game.level = 1;
-  const back = () => { practiceMode = false; game.plot = saved; go(titleScene()); };
-  const occ = game.plot.people.find(p => p.role.tier === 1);
-  if (kind === 'breakin') go(loadoutScene('PRACTICE: A training building at the Farm. Guards carry live ammunition anyway. Find the occupant, search the files, get out.', kit => go(breakinScene(Object.assign({ level: 1, occupant: occ, org: occ.org }, kit), back)), back));
-  if (kind === 'crypto') go(cryptoScene('FROM ' + occ.code + ' TO RAVEN. ' + pick(MSG_BODIES), { source: 'Training exercise', practice: true }, back));
-  if (kind === 'wiretap') go(wiretapScene({ level: 1, label: 'Training board' }, back));
-  if (kind === 'chase') go(chaseScene({ level: 1, label: 'the instructor' }, back));
+function practice(kind, diff) {
+  practiceMode = true; game.diff = diff;
+  if (!game.agent) game.agent = newAgent('m', 'Trainee');
+  Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [] }); game.startDate = new Date(1990, 5, 1, 8, 0, 0); newCrime();
+  const back = () => { practiceMode = false; go(optionsScene()); };
+  const cr = game.crime, p = cr.people[1], b = game.buildings[p.building];
+  if (kind === 'breakin') go(armoryScene(kit => go(breakinScene(Object.assign({ level: diff, occupant: p, building: b, org: b.org, alert: 0 }, kit), back))));
+  if (kind === 'crypto') go(cryptoScene(makeMessage(cr.steps[0]).text, { msgNo: 'M001', level: diff }, back));
+  if (kind === 'wiretap') go(wiretapScene({ level: diff, mode: 'tap', alert: 0, label: 'training board' }, back));
+  if (kind === 'chase') go(carSelectScene(cars => go(chaseScene({ level: diff, cars, night: false, target: p, label: 'the instructor', start: b }, back))));
 }
+
 // boot
 fit();
 go(titleScene());

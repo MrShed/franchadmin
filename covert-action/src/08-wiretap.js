@@ -1,142 +1,154 @@
 // ===================================================================
-// WIRETAP: route current to the phone line, keep it off the alarms
+// ELECTRONICS: the junction-box puzzle. Current flows left to right
+// through two-lane chips. Swap chips with the one in hand until no
+// phone has power - without ever powering an alarm.
 // ===================================================================
-// tile openings as bitmask: 1=N 2=E 4=S 8=W
-const rotMask = (m, r) => { for (let i = 0; i < r; i++) m = ((m << 1) | (m >> 3)) & 15; return m; };
-const DIRS = [[0, -1, 1, 4], [1, 0, 2, 8], [0, 1, 4, 1], [-1, 0, 8, 2]]; // dx, dy, myBit, theirBit
+// chip types: route maps (top,bottom) inputs to outputs; inv flips a lane
+const CHIPS = {
+  S: { route: 'straight', inv: [0, 0] },   // =  two straight lanes
+  X: { route: 'cross', inv: [0, 0] },      // X  lanes swap
+  D: { route: 'down', inv: [0, 0] },       // top feeds the bottom output
+  U: { route: 'up', inv: [0, 0] },         // bottom feeds the top output
+  T: { route: 'straight', inv: [1, 0] },   // top lane is a terminator
+  B: { route: 'straight', inv: [0, 1] },   // bottom lane is a terminator
+  I: { route: 'straight', inv: [1, 1] },   // both lanes are terminators
+};
+function chipOut(type, a, b) {
+  const c = CHIPS[type]; let o;
+  if (c.route === 'straight') o = [a, b]; else if (c.route === 'cross') o = [b, a];
+  else if (c.route === 'down') o = [0, a]; else o = [b, 0];
+  return [c.inv[0] ? (o[0] ? 0 : 1) : o[0], c.inv[1] ? (o[1] ? 0 : 1) : o[1]];
+}
 function wiretapScene(opts, done) {
   const sk = game.agent ? game.agent.skills.electronics : 2, level = opts.level || 1;
-  const CO = Math.min(9, 7 + Math.floor(level / 2)), RO = 6, TW = 24, TH = 20, OX = 48, OY = 26;
-  const grid = [];
-  for (let y = 0; y < RO; y++) { grid.push([]); for (let x = 0; x < CO; x++) grid[y].push({ base: 0, rot: 0, fixed: false, path: false }); }
-  // choose inputs/outputs
-  const srcRow = ri(0, RO - 1);
-  const rows = shuffle([...Array(RO).keys()]);
-  const phoneRow = rows.find(r => Math.abs(r - srcRow) >= 2) ?? rows[0];
-  const alarmRows = rows.filter(r => r !== phoneRow).slice(0, 2 + Math.min(2, Math.floor(level / 2)));
-  // random self-avoiding walk from (0,srcRow) entering from W to (CO-1, phoneRow) exiting E
-  function walk() {
-    const seen = new Set(); const path = [[0, srcRow]]; seen.add('0,' + srcRow);
-    function step(x, y) {
-      if (x === CO - 1 && y === phoneRow) return true;
-      const opts2 = shuffle(DIRS.slice()).sort((a, b) => (b[0] - a[0]) * (rnd() < 0.6 ? 1 : 0));
-      for (const [dx, dy] of opts2) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= CO || ny >= RO || seen.has(nx + ',' + ny)) continue; if (path.length > CO * 2.4) continue; seen.add(nx + ',' + ny); path.push([nx, ny]); if (step(nx, ny)) return true; path.pop(); seen.delete(nx + ',' + ny); }
-      return false;
+  const COLS = 7, ROWS = 5, LANES = ROWS * 2;
+  const tracer = opts.mode === 'tracer';
+  const eff = Math.max(0, level - Math.max(0, sk - 1)); // skill above Good makes it easier
+  const pool = eff >= 1 ? 'SSXXDUTBI' : 'SSSXXXDU'; // inverters from National Threat up
+  const unknownRate = [0, 0.1, 0.2, 0.3][Math.min(3, eff)], hardRate = [0.08, 0.12, 0.16, 0.2][Math.min(3, eff)];
+  let grid, links, inputs, ends, hand, fixed, hidden;
+  function build() {
+    grid = []; fixed = []; hidden = [];
+    for (let c = 0; c < COLS; c++) { grid.push([]); fixed.push([]); for (let r = 0; r < ROWS; r++) { grid[c].push(pick(pool.split(''))); fixed[c].push(c === COLS - 1 || rnd() < hardRate); }
+      hidden.push([]); for (let r = 0; r < ROWS; r++) hidden[c].push(!fixed[c][r] && rnd() < unknownRate); }
+    // wiring between columns: mostly straight, with crossings between neighbouring chips
+    links = []; for (let c = 0; c < COLS - 1; c++) { const m = [...Array(LANES).keys()]; for (let l = 1; l < LANES - 1; l += 2) if (rnd() < 0.35) { [m[l], m[l + 1]] = [m[l + 1], m[l]]; } for (let l = 0; l < LANES; l += 2) if (rnd() < 0.2) { [m[l], m[l + 1]] = [m[l + 1], m[l]]; } links.push(m); }
+    // 5 volts enter at the bottom left and feed the lanes; some lanes are grounded
+    inputs = [...Array(LANES)].map(() => rnd() < 0.55 ? 1 : 0); inputs[LANES - 1] = 1;
+    hand = pick(pool.split(''));
+  }
+  function simulate(g, h) { // returns lane power per column output, and final outputs
+    const cols = []; let lanes = inputs.slice();
+    for (let c = 0; c < COLS; c++) {
+      const out = []; for (let r = 0; r < ROWS; r++) { const [a, b] = chipOut(g[c][r], lanes[r * 2], lanes[r * 2 + 1]); out.push(a, b); }
+      cols.push({ in: lanes, out }); if (c < COLS - 1) { const nx = []; links[c].forEach((to, from) => nx[to] = out[from]); lanes = nx; } else lanes = out;
     }
-    return step(0, srcRow) ? path : null;
+    return { cols, final: lanes };
   }
-  let path = null; for (let i = 0; i < 20 && !path; i++) path = walk();
-  if (!path) { path = []; const mid = ri(1, CO - 2); for (let x = 0; x <= mid; x++) path.push([x, srcRow]); const sy = Math.sign(phoneRow - srcRow); for (let y = srcRow + sy; y !== phoneRow; y += sy) path.push([mid, y]); for (let x = mid; x < CO; x++) path.push([x, phoneRow]); }
-  // set path tiles to the exact connecting shape
-  path.forEach(([x, y], i) => {
-    const prev = i === 0 ? [x - 1, y] : path[i - 1], next = i === path.length - 1 ? [x + 1, y] : path[i + 1];
-    let m = 0; for (const [px_, py] of [prev, next]) { const dx = px_ - x, dy = py - y; m |= dx === 1 ? 2 : dx === -1 ? 8 : dy === 1 ? 4 : 1; }
-    const c = grid[y][x]; c.path = true; c.sol = m;
-  });
-  // shapes: straight 5 (N+S), elbow 3 (N+E), tee 7, cross 15
-  const shapes = [5, 3, 7, 15, 3, 5];
-  for (let y = 0; y < RO; y++) for (let x = 0; x < CO; x++) {
-    const c = grid[y][x];
-    if (c.path) { c.base = (c.sol === 5 || c.sol === 10) ? 5 : 3; const need = c.sol; c.solRot = [0, 1, 2, 3].find(r => rotMask(c.base, r) === need); c.rot = ri(0, 3); if (rnd() < 0.15) { c.fixed = true; c.rot = c.solRot; } }
-    else { c.base = pick(shapes); c.rot = ri(0, 3); if (rnd() < 0.12) c.fixed = true; }
+  // generate a board whose starting state powers every phone and no alarm, and that can be solved
+  let tries = 0;
+  for (; tries < 200; tries++) {
+    build(); const f = simulate(grid).final;
+    const nOn = f.filter(Boolean).length; if (nOn < 3 || nOn > 7) continue;
+    ends = f.map(v => v ? (tracer ? 'setting' : 'phone') : 'alarm');
+    if (solvable()) break;
   }
-  let time = 80 + sk * 15 - level * 3, strikes = 0, cur = [0, srcRow], powered = null, pulse = 0, over = null, t = 0, flash = 0;
-  function flow() { // BFS from the source through matching openings
-    const on = grid.map(r => r.map(() => false)); const q = [];
-    const s = grid[srcRow][0]; if (rotMask(s.base, s.rot) & 8) { on[srcRow][0] = true; q.push([0, srcRow]); }
-    const hits = { phone: false, alarm: [] };
-    while (q.length) {
-      const [x, y] = q.shift(); const m = rotMask(grid[y][x].base, grid[y][x].rot);
-      for (const [dx, dy, my, their] of DIRS) {
-        if (!(m & my)) continue; const nx = x + dx, ny = y + dy;
-        if (nx === CO) { if (ny === phoneRow) hits.phone = true; if (alarmRows.includes(ny)) hits.alarm.push(ny); continue; }
-        if (nx < 0 || ny < 0 || ny >= RO) continue;
-        if (on[ny][nx]) continue; if (!(rotMask(grid[ny][nx].base, grid[ny][nx].rot) & their)) continue;
-        on[ny][nx] = true; q.push([nx, ny]);
+  function score(g) { const f = simulate(g).final; let s = 0; f.forEach((v, i) => { if (v) s += ends[i] === 'alarm' ? 3 : 1; }); return s; }
+  function solvable() { // random-restart hill climb over swaps with the hand chip
+    for (let restart = 0; restart < 6; restart++) {
+      const g = grid.map(c => c.slice()); let h = hand, cur = score(g);
+      for (let it = 0; it < 400; it++) {
+        const c = ri(0, COLS - 2), r = ri(0, ROWS - 1); if (fixed[c][r]) continue;
+        const old = g[c][r]; g[c][r] = h; const s = score(g);
+        if (s <= cur || rnd() < 0.05) { h = old; cur = s; if (cur === 0) return true; } else g[c][r] = old;
       }
     }
-    return { on, hits };
+    return false;
   }
-  function powerOn() {
-    if (powered || over) return; const f = flow(); powered = { f, t: 0 }; sfx.tone(60, 1.2, 'sawtooth', 0.05, 40);
+  const time0 = (tracer ? 60 : 150) + sk * 20 - level * 10 - (opts.alert || 0) * 15; let time = time0, cur = [0, 0], over = null, t = 0, flash = 0;
+  const need = tracer ? Math.min(5, ends.filter(e => e === 'setting').length) : 0;
+  const cutCount = () => simulate(grid).final.filter((v, i) => !v && ends[i] !== 'alarm').length;
+  const X0 = 30, Y0 = 26, DXc = 32, DYr = 26, CW = 14, CH = 16;
+  const chipXY = (c, r) => [X0 + c * DXc, Y0 + r * DYr];
+  const laneY = (r, l) => Y0 + r * DYr + 4 + l * 8;
+  function check() {
+    const f = simulate(grid).final;
+    if (f.some((v, i) => v && ends[i] === 'alarm')) { over = { win: false, alarm: true, t: 0, why: 'An alarm is live! Somewhere a light is blinking on a security desk.' }; flash = 2; sfx.alarm(); return; }
+    const n = cutCount();
+    if (tracer ? n >= need : !f.some((v, i) => v && ends[i] === 'phone')) { over = { win: true, t: 0 }; sfx.success(); }
   }
-  function resolvePower() {
-    const { hits } = powered.f;
-    if (hits.alarm.length) { strikes++; flash = 1; sfx.alarm(); if (strikes >= 2) { over = { win: false, t: 0, why: 'The second alarm brings security running. You pull out.' }; sfx.fail(); } else { time -= 15; } }
-    else if (hits.phone) { over = { win: true, t: 0 }; sfx.success(); }
-    else { sfx.deny(); }
-    powered = null;
+  function swap() { const [c, r] = cur; if (fixed[c][r]) { sfx.deny(); return; } [grid[c][r], hand] = [hand, grid[c][r]]; hidden[c][r] = false; sfx.tone(900, 0.03); sfx.tone(600, 0.04, 'square', 0.04, 0, 0.04); check(); }
+  function result() { const n = over.alarm ? 0 : cutCount(); return { success: over.win || (!tracer && n > 0 && !over.alarm), tapped: tracer ? 0 : n, alarm: !!over.alarm }; }
+  function moveCur(dc, dr) { let [c, r] = cur; for (let k = 0; k < COLS * ROWS; k++) { c = (c + dc + COLS) % COLS; r = (r + dr + ROWS) % ROWS; if (!fixed[c][r]) break; if (!dc && !dr) break; } cur = [c, r]; sfx.blip(); }
+  if (fixed[0][0]) moveCur(1, 0);
+  function drawChip(type, x, y, isFixed, sel) {
+    if (isFixed) { rect(x - 2, y - 2, CW + 4, CH + 4, P.K); rect(x - 1, y - 1, CW + 2, CH + 2, P.G1); }
+    rect(x, y, CW, CH, sel ? P.BL2 : P.G1); rect(x, y, CW, 1, P.G3); rect(x, y, 1, CH, P.G3);
+    // pins
+    for (const yy of [4, 12]) { px(x - 1, y + yy, P.W); px(x + CW, y + yy, P.W); }
+    if (sel || type === '?') return;
+    const c = CHIPS[type], L = x + 3, R = x + CW - 4, T = y + 4, Bm = y + 12, col = P.CY;
+    const lane = (yy, inv) => { if (inv) { rect(L, yy, 3, 1, col); rect(L + 3, yy - 1, 1, 3, col); rect(R - 3, yy - 1, 1, 3, col); rect(R - 2, yy, 3, 1, col); } else rect(L, yy, R - L + 1, 1, col); };
+    if (c.route === 'straight') { lane(T, c.inv[0]); lane(Bm, c.inv[1]); }
+    else if (c.route === 'cross') { line(L, T, R, Bm, col); line(L, Bm, R, T, col); px(R - 1, Bm - 1, col); px(R - 1, T + 1, col); }
+    else if (c.route === 'down') { line(L, T, R, Bm, col); rect(R - 2, Bm, 2, 1, col); rect(R, Bm - 2, 1, 2, col); }
+    else { line(L, Bm, R, T, col); rect(R - 2, T, 2, 1, col); rect(R, T + 1, 1, 2, col); }
   }
-  function rotate(x, y) { const c = grid[y][x]; if (c.fixed) { sfx.deny(); return; } c.rot = (c.rot + 1) % 4; sfx.tone(1000, 0.02); }
   return {
-    update(dt) {
-      t += dt; flash = Math.max(0, flash - dt);
-      if (over) { over.t += dt; return; }
-      if (powered) { powered.t += dt; if (powered.t > 1.4) resolvePower(); return; }
-      time -= dt; if (time <= 0) { time = 0; over = { win: false, t: 0, why: 'The phone company engineer is coming back. Time is up.' }; sfx.fail(); }
-      pulse += dt;
-    },
+    update(dt) { t += dt; flash = Math.max(0, flash - dt); if (over) { over.t += dt; return; } time -= dt; if (time <= 0) { time = 0; over = { win: false, t: 0, why: tracer ? 'The car pulls away before your tracer is ready.' : 'Guards are coming. You pack up and keep whatever lines you have cut.' }; sfx.fail(); } },
     onKey(k) {
-      if (over) { if (over.t > 0.6 && (k === 'select' || k === 'fire' || k === 'menu')) done({ success: over.win }); return; }
-      if (powered) return;
-      if (k === 'left') cur[0] = Math.max(0, cur[0] - 1); else if (k === 'right') cur[0] = Math.min(CO - 1, cur[0] + 1);
-      else if (k === 'up') cur[1] = Math.max(0, cur[1] - 1); else if (k === 'down') cur[1] = Math.min(RO - 1, cur[1] + 1);
-      else if (k === 'select' || k === 'fire' || k === 'action') rotate(cur[0], cur[1]);
-      else if (k === 'alt2' || k === 'alt') powerOn();
-      else if (k === 'menu') { over = { win: false, t: 1, why: 'You pack up your tools and leave.' }; }
-      if (['left', 'right', 'up', 'down'].includes(k)) sfx.blip();
+      if (over) { if (over.t > 0.6 && (k === 'select' || k === 'fire' || k === 'menu')) done(result()); return; }
+      if (k === 'left') moveCur(-1, 0); else if (k === 'right') moveCur(1, 0); else if (k === 'up') moveCur(0, -1); else if (k === 'down') moveCur(0, 1);
+      else if (k === 'select' || k === 'fire' || k === 'action') swap();
+      else if (k === 'menu') over = { win: false, t: 1, why: tracer ? 'You give up on the tracer.' : 'You close the junction box and walk away.' };
     },
     onTap(x, y) {
-      if (over) { if (over.t > 0.6) done({ success: over.win }); return; }
-      if (powered) return;
-      const gx = Math.floor((x - OX) / TW), gy = Math.floor((y - OY) / TH);
-      if (gx >= 0 && gy >= 0 && gx < CO && gy < RO) { cur = [gx, gy]; rotate(gx, gy); return; }
-      if (y > 160 && x > 200) powerOn(); else if (y > 160 && x < 90) { over = { win: false, t: 1, why: 'You pack up your tools and leave.' }; }
+      if (over) { if (over.t > 0.6) done(result()); return; }
+      for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) { const [cx, cy] = chipXY(c, r); if (x >= cx - 4 && x < cx + CW + 4 && y >= cy - 4 && y < cy + CH + 4) { if (fixed[c][r]) { sfx.deny(); return; } if (cur[0] === c && cur[1] === r) swap(); else { cur = [c, r]; sfx.blip(); } return; } }
+      if (y > 186 && x < 60) over = { win: false, t: 1, why: tracer ? 'You give up on the tracer.' : 'You close the junction box and walk away.' };
     },
     draw() {
       rect(0, 0, W, H, P.K);
-      // junction box housing
-      bevel(2, 2, W - 4, 154, P.G3, P.G5, P.G1); rect(8, 8, W - 16, 142, P.G1);
-      text('TELEPHONE JUNCTION BOX  -  ' + (opts.label || 'Suspect line'), 12, 11, P.W);
-      const k = time / (80 + sk * 15); textR(Math.ceil(time) + 's', W - 12, 11, k > 0.3 ? P.CY : P.RD2);
-      // circuit board
-      rect(OX - 4, OY - 4, CO * TW + 8, RO * TH + 8, P.DG); dither(OX - 4, OY - 4, CO * TW + 8, RO * TH + 8, P.DG, P.GR, 2);
-      const on = powered ? powered.f.on : null; const prog = powered ? Math.min(1, powered.t / 1.1) : 0;
-      // source
-      rect(10, OY + srcRow * TH + 3, 30, 14, P.K); frame(10, OY + srcRow * TH + 3, 30, 14, P.YE); text('LINE', 14, OY + srcRow * TH + 6, P.YE);
-      rect(40, OY + srcRow * TH + 9, 8, 2, powered ? P.YE : P.BR3);
-      for (let y = 0; y < RO; y++) for (let x = 0; x < CO; x++) {
-        const c = grid[y][x], X = OX + x * TW, Y = OY + y * TH, m = rotMask(c.base, c.rot);
-        rect(X + 1, Y + 1, TW - 2, TH - 2, c.fixed ? P.G1 : P.D2); frame(X + 1, Y + 1, TW - 2, TH - 2, c.fixed ? P.G2 : P.K);
-        if (c.fixed) { px(X + 3, Y + 3, P.G4); px(X + TW - 4, Y + 3, P.G4); px(X + 3, Y + TH - 4, P.G4); px(X + TW - 4, Y + TH - 4, P.G4); }
-        const lit = on && on[y][x] && (Math.abs(x - 0) + Math.abs(y - srcRow)) / (CO + RO) < prog + 0.1;
-        const col = lit ? ((t * 12 | 0) % 2 ? P.W : P.YE) : P.BR3;
-        const cx = X + TW / 2, cy = Y + TH / 2;
-        if (m & 1) rect(cx - 1, Y, 3, TH / 2 + 1, col); if (m & 4) rect(cx - 1, cy, 3, TH / 2, col);
-        if (m & 8) rect(X, cy - 1, TW / 2 + 1, 3, col); if (m & 2) rect(cx, cy - 1, TW / 2, 3, col);
-        rect(cx - 2, cy - 2, 5, 5, lit ? P.YE : P.G2); px(cx, cy, P.K);
+      rect(0, 14, W, 146, P.BL);
+      // board with cyan grid
+      rect(2, 16, W - 4, 142, P.GR);
+      for (let x = 2; x < W - 2; x += 8) rect(x, 16, 1, 142, P.TL); for (let y = 16; y < 158; y += 8) rect(2, y, W - 4, 1, P.TL);
+      const sim = simulate(grid); const dash = (t * 8 | 0) % 2;
+      const wire = (x0, y0, x1, y1, on) => { if (!on) { line(x0, y0, x1, y1, P.GR2); return; } const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)); for (let i = 0; i <= n; i++) { const xx = Math.round(x0 + (x1 - x0) * i / n), yy = Math.round(y0 + (y1 - y0) * i / n); px(xx, yy, ((i >> 1) + dash) % 2 ? P.RD2 : P.W); } };
+      // inputs from the +5V bus up the left side
+      for (let l = 0; l < LANES; l++) { const r = l >> 1, y = laneY(r, l & 1), on = inputs[l]; const bx = 6 + (l % 5) * 3; wire(bx, 158, bx, y, on); wire(bx, y, X0 - 2, y, on); }
+      // chip-to-chip wiring
+      for (let c = 0; c < COLS - 1; c++) for (let l = 0; l < LANES; l++) {
+        const to = links[c][l]; const [x0] = chipXY(c, 0), [x1] = chipXY(c + 1, 0);
+        const y0 = laneY(l >> 1, l & 1), y1 = laneY(to >> 1, to & 1), on = sim.cols[c].out[l];
+        const xa = x0 + CW + 1, xb = x1 - 2; if (y0 === y1) wire(xa, y0, xb, y1, on); else { wire(xa, y0, xa + 4, y0, on); wire(xa + 4, y0, xb - 4, y1, on); wire(xb - 4, y1, xb, y1, on); }
       }
-      // outputs
-      for (let y = 0; y < RO; y++) {
-        const Y = OY + y * TH, X = OX + CO * TW + 6;
-        if (y === phoneRow) { rect(X, Y + 3, 40, 14, P.BL); frame(X, Y + 3, 40, 14, P.CY); text('PHONE', X + 4, Y + 6, P.W); }
-        else if (alarmRows.includes(y)) { const a = flash > 0 && (t * 10 | 0) % 2; rect(X, Y + 3, 40, 14, a ? P.RD2 : P.RD); frame(X, Y + 3, 40, 14, P.OR); text('ALARM', X + 4, Y + 6, P.W); }
-        else { rect(X, Y + 7, 12, 6, P.G2); px(X + 3, Y + 9, P.K); }
-        rect(OX + CO * TW, Y + 9, 6, 2, P.BR3);
+      // to the phones and alarms
+      for (let l = 0; l < LANES; l++) {
+        const [x0] = chipXY(COLS - 1, 0); const y = laneY(l >> 1, l & 1), on = sim.final[l];
+        const ex = l % 2 ? 292 : 262, ey = 20 + l * 13.4 | 0;
+        wire(x0 + CW + 1, y, ex - 12, y, on); wire(ex - 12, y, ex - 12, ey + 7, on); wire(ex - 12, ey + 7, ex - 1, ey + 7, on);
+        rect(ex, ey, 16, 15, P.G1); rect(ex, ey, 16, 1, P.G3); rect(ex, ey, 1, 15, P.G3); rect(ex - 1, ey + 3, 1, 1, P.W); rect(ex - 1, ey + 11, 1, 1, P.W);
+        if (ends[l] === 'setting') { rect(ex + 4, ey + 4, 8, 7, on ? P.W : P.G3); text(String(1 + (l >> 1)), ex + 6, ey + 4, P.K); }
+        else if (ends[l] === 'phone') { rect(ex + 6, ey + 3, 2, 9, on ? P.W : P.G3); rect(ex + 8, ey + 2, 2, 2, on ? P.W : P.G3); rect(ex + 8, ey + 11, 2, 2, on ? P.W : P.G3); }
+        else { const lit = on || (flash > 0 && (t * 10 | 0) % 2); rect(ex + 5, ey + 3, 6, 7, lit ? P.RD2 : P.YE); rect(ex + 4, ey + 9, 8, 2, lit ? P.RD2 : P.YE); px(ex + 7, ey + 11, P.YE); rect(ex + 7, ey + 2, 2, 1, P.YE); }
       }
-      // cursor
-      if (!over) { const X = OX + cur[0] * TW, Y = OY + cur[1] * TH; if ((t * 4 | 0) % 2) frame(X, Y, TW, TH, P.YE); frame(X - 1, Y - 1, TW + 2, TH + 2, P.K); }
-      // footer
-      rect(0, 156, W, 44, P.K); panel(0, 156, W, 44);
-      bevel(12, 168, 70, 14, P.G2, P.G4, P.G1); textC('Give up', 47, 171, P.W);
-      bevel(W - 118, 168, 106, 14, P.RD, P.RD2, P.BR); textC(powered ? 'CURRENT ON' : 'Switch on current', W - 65, 171, P.YE);
-      text('Alarms tripped: ' + strikes + '/2', 96, 164, strikes ? P.RD2 : P.G4);
-      text('Feed the PHONE, not an ALARM.', 96, 176, P.G3);
+      for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) { const [x, y] = chipXY(c, r); drawChip(hidden[c][r] ? '?' : grid[c][r], x, y, fixed[c][r], !over && cur[0] === c && cur[1] === r); }
+      // bottom bar: bus strip, +5V / GND, chip in hand, clock
+      rect(0, 158, W, 1, P.G3); for (let x = 56; x < 250; x += 4) { rect(x, 158, 2, 3, P.YE); rect(x + 2, 158, 2, 3, P.GR); }
+      rect(4, 161, W - 8, 24, P.G1); rect(4, 161, W - 8, 1, P.G3);
+      rect(56, 162, 7, 22, P.BL2); rect(64, 162, 7, 22, P.BL2);
+      g.save(); g.translate(62, 183); g.rotate(-Math.PI / 2); text('+5V.', 0, -6, P.CY); text('GND.', 0, 2, P.CY); g.restore();
+      drawChip(hand, 153, 165, false, false);
+      rect(252, 166, 60, 13, P.K); frame(252, 166, 60, 13, P.G3);
+      const mm = Math.floor(time / 60), ss = Math.floor(time % 60); text('00:' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0'), 257, 169, P.G4);
+      text(tracer ? 'Car tracer' : 'Junction box: ' + (opts.label || 'suspect line'), 4, 3, P.G4); textR(tracer ? 'Cut power to ' + need + ' settings: ' + cutCount() + '/' + need : 'Phones cut: ' + cutCount() + '/' + ends.filter(e => e === 'phone').length, W - 4, 3, P.G3);
+      text('ESC: leave', 4, 189, P.G2);
       if (over) {
-        panel(40, 50, W - 80, 64);
-        textC(over.win ? 'TAP INSTALLED' : 'NO TAP', W / 2, 60, over.win ? P.GR2 : P.RD2);
-        para(over.win ? 'The bug is live. Anything said on this line will now reach the Agency.' : over.why, 54, 74, W - 108, P.G5, 9);
-        if (over.t > 0.6) textC('Press OK', W / 2, 104, P.G3);
+        rect(40, 56, W - 80, 58, P.K); frame(40, 56, W - 80, 58, P.W); frame(42, 58, W - 84, 54, P.G3);
+        textC(over.win ? (tracer ? 'TRACER SET' : 'ALL PHONES TAPPED') : over.alarm ? 'ALARM!' : (!tracer && cutCount() ? cutCount() + ' PHONES TAPPED' : 'NO TAP'), W / 2, 64, over.win || (!tracer && !over.alarm && cutCount()) ? P.GR2 : P.RD2);
+        para(over.win ? (tracer ? 'The tracer is live. You can follow the car at a safe distance.' : 'Every phone is dead and nobody noticed. Your bugs are on the lines.') : over.why, 52, 78, W - 104, P.W, 9);
+        if (over.t > 0.6) textC('Press a key', W / 2, 102, P.G3);
       }
     },
   };

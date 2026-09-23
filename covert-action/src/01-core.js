@@ -8,13 +8,16 @@ const SCREEN = g;
 g.imageSmoothingEnabled = false;
 
 // MCGA-era palette, picked by hand to sit in the 6-bit-per-channel VGA DAC range
+// The 16-colour EGA palette the original ran in, under descriptive names.
+const EGA = { black: '#000000', blue: '#0000AA', green: '#00AA00', cyan: '#00AAAA', red: '#AA0000', magenta: '#AA00AA', brown: '#AA5500', lgray: '#AAAAAA',
+  dgray: '#555555', lblue: '#5555FF', lgreen: '#55FF55', lcyan: '#55FFFF', lred: '#FF5555', lmagenta: '#FF55FF', yellow: '#FFFF55', white: '#FFFFFF' };
 const P = {
-  K: '#000000', DK: '#141418', D2: '#24242c', G1: '#383844', G2: '#545464', G3: '#7c7c8c', G4: '#a8a8b8', G5: '#cccccc', W: '#fcfcfc',
-  NV: '#000c38', BL: '#1c2c9c', BL2: '#3450d0', BL3: '#6c8cfc', CY: '#54d8fc', TL: '#1c7c7c',
-  YE: '#fce03c', YE2: '#b89c1c', OR: '#f47c18', RD: '#b40c0c', RD2: '#f04040', PK: '#fc9cb4',
-  GR: '#107c1c', GR2: '#3cb838', GR3: '#90e070', DG: '#0c3c10', OL: '#5c6824',
-  BR: '#5c3814', BR2: '#8c5c2c', BR3: '#b8844c', TN: '#dcb884', CR: '#ece0bc',
-  SK: '#f0b088', SK2: '#b87850', SK3: '#6c4028', PU: '#6c2c9c', PU2: '#a860dc', MG: '#c02c8c',
+  K: EGA.black, DK: EGA.black, D2: EGA.black, G1: EGA.dgray, G2: EGA.dgray, G3: EGA.lgray, G4: EGA.lgray, G5: EGA.white, W: EGA.white,
+  NV: EGA.blue, BL: EGA.blue, BL2: EGA.lblue, BL3: EGA.lblue, CY: EGA.lcyan, TL: EGA.cyan,
+  YE: EGA.yellow, YE2: EGA.brown, OR: EGA.lred, RD: EGA.red, RD2: EGA.lred, PK: EGA.lmagenta,
+  GR: EGA.green, GR2: EGA.lgreen, GR3: EGA.lgreen, DG: EGA.black, OL: EGA.brown,
+  BR: EGA.brown, BR2: EGA.brown, BR3: EGA.lgray, TN: EGA.lgray, CR: EGA.white,
+  SK: EGA.lred, SK2: EGA.brown, SK3: EGA.red, PU: EGA.magenta, PU2: EGA.lmagenta, MG: EGA.magenta,
 };
 
 // ---------- fit canvas ----------
@@ -93,6 +96,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyM' && !typing) { sfx.toggle(); e.preventDefault(); return; }
   if (typing && /^Key[A-Z]$/.test(e.code) && !e.ctrlKey && !e.metaKey) { scene.onChar && scene.onChar(e.code.slice(3)); e.preventDefault(); return; }
   if (typing && (e.code === 'Backspace' || e.code === 'Delete')) { scene.onChar && scene.onChar(''); e.preventDefault(); return; }
+  if (scene.rawKey && scene.rawKey(e)) { e.preventDefault(); sfx.unlock(); return; }
   const k = KEYMAP[e.code]; if (!k) return;
   e.preventDefault(); sfx.unlock();
   if (!held.has(k)) { pressedQ.push(k); }

@@ -1,10 +1,10 @@
 // ===================================================================
-// HUB: title, agent setup, briefing, city screen, travel, case file,
-// messages, arrests, interrogation, headlines
+// HUB: title, game options, training, briefing, city locations,
+// CIA headquarters, airport, hotel, data screens, case end
 // ===================================================================
 
-// ---------- reusable menu ----------
-function Menu(items, x, y, w, lh = 10) {
+// ---------- menu widget: yellow highlight bar, like the original ----------
+function Menu(items, x, y, w, lh = 9) {
   return {
     items, x, y, w, lh, sel: Math.max(0, items.findIndex(i => !i.off)),
     move(d) { const n = this.items.length; for (let k = 0; k < n; k++) { this.sel = (this.sel + d + n) % n; if (!this.items[this.sel].off) break; } sfx.blip(); },
@@ -13,417 +13,508 @@ function Menu(items, x, y, w, lh = 10) {
       else if (k === 'select' || k === 'fire') { const it = this.items[this.sel]; if (it && !it.off) { sfx.select(); it.go(); } else sfx.deny(); return true; }
       return false;
     },
-    tap(tx, ty) {
-      for (let i = 0; i < this.items.length; i++) { const iy = this.y + i * this.lh; if (tx >= this.x - 4 && tx < this.x + this.w && ty >= iy - 1 && ty < iy + this.lh - 1) { this.sel = i; const it = this.items[i]; if (it.off) sfx.deny(); else { sfx.select(); it.go(); } return true; } }
-      return false;
-    },
-    hover(tx, ty) { for (let i = 0; i < this.items.length; i++) { const iy = this.y + i * this.lh; if (tx >= this.x - 4 && tx < this.x + this.w && ty >= iy - 1 && ty < iy + this.lh - 1 && !this.items[i].off) this.sel = i; } },
-    draw() {
+    hit(tx, ty) { for (let i = 0; i < this.items.length; i++) { const iy = this.y + i * this.lh; if (tx >= this.x - 3 && tx < this.x + this.w && ty >= iy - 1 && ty < iy + this.lh - 1) return i; } return -1; },
+    tap(tx, ty) { const i = this.hit(tx, ty); if (i < 0) return false; this.sel = i; const it = this.items[i]; if (it.off) sfx.deny(); else { sfx.select(); it.go(); } return true; },
+    hover(tx, ty) { const i = this.hit(tx, ty); if (i >= 0 && !this.items[i].off) this.sel = i; },
+    draw(fg = P.W) {
       this.items.forEach((it, i) => {
         const iy = this.y + i * this.lh;
-        if (i === this.sel) { rect(this.x - 4, iy - 1, this.w, this.lh - 1, P.BL2); rect(this.x - 4, iy - 1, 2, this.lh - 1, P.YE); }
-        text(it.label, this.x, iy, it.off ? P.G2 : i === this.sel ? P.YE : P.G5);
-        if (it.right) textR(it.right, this.x + this.w - 8, iy, it.off ? P.G2 : P.CY);
+        if (i === this.sel) rect(this.x - 3, iy - 1, this.w, this.lh, P.YE);
+        text(it.label, this.x, iy, it.off ? P.G1 : i === this.sel ? P.G1 : fg);
+        if (it.right) textR(it.right, this.x + this.w - 6, iy, i === this.sel ? P.G1 : P.CY);
       });
     },
   };
 }
-// a scene that is just a menu over some art
 function menuScene(opts) {
   return Object.assign({
     t: 0, update(dt) { this.t += dt; },
     onKey(k) { if (k === 'menu' && this.back) { sfx.blip(); this.back(); return; } this.menu.key(k); },
-    onTap(x, y) { this.menu.tap(x, y); }, onHover(x, y) { this.menu.hover(x, y); },
+    onTap(x, y) { if (!this.menu.tap(x, y) && this.tapElse) this.tapElse(x, y); }, onHover(x, y) { this.menu.hover(x, y); },
   }, opts);
 }
-// full-screen message page: "press any key"
 function pageScene(drawFn, next, opts = {}) {
   return {
-    t: 0, update(dt) { this.t += dt; }, draw() { drawFn(this.t); if (this.t > 0.6) { const blink = (this.t * 2 | 0) % 2; if (blink) textC(opts.prompt || 'Press OK to continue', W / 2, H - 10, P.G4); } },
-    onKey(k) { if (this.t > 0.4 && (k === 'select' || k === 'fire' || k === 'menu' || k === 'action')) { sfx.blip(); next(); } }, onTap() { if (this.t > 0.4) { sfx.blip(); next(); } },
+    t: 0, update(dt) { this.t += dt; }, draw() { drawFn(this.t); },
+    onKey(k) { if (this.t > 0.3 && (k === 'select' || k === 'fire' || k === 'menu' || k === 'action')) { sfx.blip(); next(); } }, onTap() { if (this.t > 0.3) { sfx.blip(); next(); } },
   };
+}
+// white-bordered black text box, as used for every message
+function msgBox(x, y, w, h) { rect(x, y, w, h, P.K); frame(x, y, w, h, P.W); frame(x + 2, y + 2, w - 4, h - 4, P.G3); }
+// the location plate: city and time, double border, green text
+function locPlate(cityName) {
+  rect(8, 4, 150, 24, P.G1); frame(8, 4, 150, 24, P.G3); frame(10, 6, 146, 20, P.K); frame(11, 7, 144, 18, P.G3);
+  textC(cityName, 83, 9, P.GR2); textC(clockStr(), 83, 17, P.GR2);
+}
+// generic "you are at ..." screen with menu on the left and a picture on the right
+function locationScreen({ lines, items, art, back, cityName }) {
+  let s;
+  s = menuScene({
+    menu: null, back,
+    enter() { const y = 34 + lines.length * 9 + 4; s.menu = Menu(items, 14, y, 128, 9); },
+    draw() {
+      rect(0, 0, W, H, P.K);
+      art && art(150, 30, 170, 170, this.t);
+      locPlate(cityName || (cityById(game.city).name + ', ' + cityById(game.city).country));
+      lines.forEach((l, i) => text(l, 10, 34 + i * 9, P.W));
+      this.menu && this.menu.draw();
+    },
+  });
+  return s;
 }
 
 // ---------- TITLE ----------
+let serifCache = null;
+function serifLogo() { // "Covert Action" in a big serif face, thresholded to 1-bit like the original bitmap
+  if (serifCache) return serifCache;
+  const c = document.createElement('canvas'); c.width = 320; c.height = 110; const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  x.font = 'bold 50px "Times New Roman", Times, "Liberation Serif", Georgia, serif'; x.fillText('Covert', 160, 58);
+  x.fillText('Action', 170, 104);
+  x.font = 'bold italic 17px "Times New Roman", Times, Georgia, serif'; x.fillStyle = '#f55'; x.fillText("Sid Meier's", 118, 15);
+  const d = x.getImageData(0, 0, 320, 110); for (let i = 0; i < d.data.length; i += 4) { const a = d.data[i + 3]; d.data[i + 3] = a > 110 ? 255 : 0; }
+  x.putImageData(d, 0, 0); serifCache = c; return c;
+}
+function stripedSilhouettes(y0, h, flip) { // blue scanlines with dark figures, top and bottom of the title
+  for (let y = 0; y < h; y += 2) rect(0, y0 + y, W, 1, P.BL);
+  const figs = [[40, 0.9], [95, 1.1], [150, 1], [210, 1.15], [268, 0.95]];
+  for (const [fx, sc] of figs) { g.fillStyle = P.K; const top = flip ? y0 - 8 : y0 + 2; g.beginPath(); g.ellipse(fx, top + 10 * sc, 9 * sc, 11 * sc, 0, 0, 7); g.fill(); g.fillRect(fx - 20 * sc, top + 20 * sc, 40 * sc, 60); }
+  for (let y = 0; y < h; y += 2) rect(0, y0 + y + 1, W, 1, P.K);
+}
 function titleScene() {
-  const items = [
-    { label: 'Begin a new career', go: () => go(setupScene()) },
-    { label: 'Practice: Break into a building', go: () => practice('breakin') },
-    { label: 'Practice: Codebreaking', go: () => practice('crypto') },
-    { label: 'Practice: Wiretapping', go: () => practice('wiretap') },
-    { label: 'Practice: Tailing a car', go: () => practice('chase') },
-    { label: 'How to play', go: () => go(helpScene(() => go(titleScene()))) },
-  ];
-  return menuScene({
-    menu: Menu(items, 76, 124, 176),
-    enter() { sfx.jingle(); },
+  return {
+    t: 0, enter() { sfx.jingle(); },
+    update(dt) { this.t += dt; },
     draw() {
-      vgrad(0, 0, W, 112, [P.K, P.NV, P.BL, P.PU]);
-      // searchlight beams over a night city
-      const t = this.t;
-      for (const [bx, sp] of [[70, 0.5], [250, -0.4]]) { const a = Math.sin(t * sp) * 0.5 - Math.PI / 2; for (let r = 10; r < 120; r += 2) { const w = r * 0.12; const xx = bx + Math.cos(a) * r, yy = 104 + Math.sin(a) * r; dither(xx - w, yy, w * 2, 2, 'rgba(0,0,0,0)', P.BL3, 3); } }
-      drawCityScene(cityById('WAS'), 0, 60, W, 52, 23);
-      drawLogo(W / 2, 22, t);
-      textC("A recreation of Sid Meier's 1990 espionage classic", W / 2, 52, P.CY, P.K);
-      rect(0, 112, W, 88, P.K); panel(62, 114, 196, 70);
-      this.menu.draw();
-      textC('Arrows/WASD + Enter, or tap.  M toggles sound.', W / 2, 190, P.G3);
+      rect(0, 0, W, H, P.K);
+      g.save(); g.beginPath(); g.rect(0, 0, W, 44); g.clip(); stripedSilhouettes(0, 44, true); g.restore();
+      g.save(); g.beginPath(); g.rect(0, 156, W, 44); g.clip(); stripedSilhouettes(156, 44, false); g.restore();
+      rect(0, 44, W, 1, P.RD); rect(0, 155, W, 1, P.RD);
+      g.drawImage(serifLogo(), 0, 46);
+      text('TM', 262, 90, P.G1);
+      if (this.t > 1.2 && (this.t * 1.5 | 0) % 2) textC('Press a key', W / 2, 146, P.G3);
+      textC('A from-memory recreation. Not affiliated with MicroProse.', W / 2, 192, P.G3);
     },
+    onKey() { sfx.select(); go(optionsScene()); }, onTap() { sfx.select(); go(optionsScene()); },
+  };
+}
+function optionsScene() {
+  const saved = loadSave();
+  return menuScene({
+    menu: Menu([
+      { label: 'Create A New Character', go: () => go(sexScene()) },
+      { label: 'Load A Saved Game', off: !saved, go: () => { restoreSave(saved); go(cityScene()); } },
+      { label: 'Practice A Skill', go: () => go(practiceScene()) },
+      { label: 'How To Play', go: () => go(helpScene(() => go(optionsScene()))) },
+    ], 100, 92, 130, 11),
+    back: () => go(titleScene()),
+    draw() { rect(0, 0, W, H, P.K); textC('Game Options', W / 2, 70, P.W); rect(W / 2 - 34, 79, 68, 1, P.W); this.menu.draw(); textC('Arrows or keypad, Enter selects, Esc goes back.  M: sound', W / 2, 186, P.G1); },
   });
+}
+function practiceScene() {
+  let diff = 0;
+  const m2 = () => Menu(['Combat', 'Driving', 'Cryptography', 'Electronics'].map((l, i) => ({ label: l, go: () => practice(['breakin', 'chase', 'crypto', 'wiretap'][i], diff) })), 110, 92, 110, 11);
+  let s; s = menuScene({
+    menu: Menu(DIFFICULTY.map((d, i) => ({ label: d.name, go: () => { diff = i; s.menu = m2(); s.step = 1; } })), 100, 92, 130, 11), step: 0,
+    back: () => { if (s.step) { s.step = 0; s.menu = Menu(DIFFICULTY.map((d, i) => ({ label: d.name, go: () => { diff = i; s.menu = m2(); s.step = 1; } })), 100, 92, 130, 11); } else go(optionsScene()); },
+    draw() { rect(0, 0, W, H, P.K); textC(this.step ? 'Practice which skill?' : 'Practice at which level?', W / 2, 70, P.W); this.menu.draw(); },
+  });
+  return s;
 }
 function helpScene(back) {
   const pages = [
-    ['THE JOB', 'You are Max (or Maxine) Remington, a freelance agent on contract to the CIA. Each case is a plot by a ring of criminals, spies and terrorists spread across a dozen cities. Identify them, find them and arrest them before the crime takes place.\n\nThe ring is a chain of command: operatives answer to lieutenants, who answer to the Mastermind. Every clue about one member points toward the people they work with.'],
-    ['GATHERING CLUES', 'BREAK-INS: search desks, files and safes for documents and photos. Grab the occupant to interrogate them. Get out through the door you came in.\nWIRETAPS: route current to the phone line without tripping an alarm. A bugged line keeps leaking messages.\nCODEBREAKING: crack substitution ciphers on intercepted messages.\nCAR TAILS: follow a car to its destination without being spotted.'],
-    ['CONTROLS', 'Move: arrows or WASD (or the pad).  OK: Enter.\nBreak-in: Space fires, E searches / opens / grabs, G throws a grenade, Tab changes grenade type.\nCodebreaking: pick a code letter, then type (or tap) your guess.\nWiretap: move the cursor, OK rotates a chip, Tab switches the current on.\nCar tail: steer with arrows; Tab changes car.\nEsc: back / pause.  M: sound on or off.'],
+    ['THE JOB', 'You are Max Remington, the only freelance secret agent in the western world. Each case is a crime being planned by a conspiracy of 6 to 10 people from several organizations. Find them, prove their roles, and arrest them before the crime happens.\n\nArrests only stick if you know the suspect\'s ROLE. Decoded messages reveal the roles of sender and recipient.'],
+    ['GETTING AROUND', 'Each city has locations: CIA Headquarters (Data, Intelligence and Crypto), the Airport, the Hotel, and any enemy hideouts you have found.\n\nAt a building you can Place Wiretap, Break Into The Building, or Watch The Building to follow people who come out.\n\nSuspects can only be arrested in their car or inside their own organization\'s building.'],
+    ['CONTROLS', 'Menus: arrows + Enter, Esc to leave.\nBuilding: arrows move (diagonals with two keys), Space fires, E examines/opens/searches (F1), P photographs (F2), B bugs (F3), G throws (F5), Tab changes grenade (F10), C crouches.\nCar: arrows order the next turn, + and - change speed, Tab swaps cars, F resumes follow, E arrests when prompted.\nCrypto: pick a code letter, type the plain letter.\nElectronics: move the highlight, Enter swaps with the spare chip.'],
   ];
   let i = 0;
-  const s = pageScene(() => {
-    rect(0, 0, W, H, P.K); panel(8, 8, W - 16, H - 28);
-    const [h, b] = pages[i]; text(h, 20, 18, P.YE); textR((i + 1) + '/' + pages.length, W - 20, 18, P.G3); rect(20, 28, W - 40, 1, P.G2);
-    para(b, 20, 34, W - 40, P.G5, 10);
+  return pageScene(() => {
+    rect(0, 0, W, H, P.K); msgBox(6, 6, W - 12, H - 12);
+    const [h, b] = pages[i]; text(h, 16, 14, P.YE); textR((i + 1) + '/' + pages.length, W - 16, 14, P.G3);
+    para(b, 16, 28, W - 32, P.W, 9);
+    textC('Press a key', W / 2, 184, P.G3);
   }, () => { i++; if (i >= pages.length) back(); });
-  return s;
 }
 
-// ---------- AGENT SETUP ----------
-function setupScene() {
-  let sex = 'm', step = 0;
-  const skills = [['combat', 'Combat', 'Better aim, more body armour'], ['driving', 'Driving', 'Faster, harder-to-spot cars'], ['crypto', 'Cryptography', 'More letters decoded for you'], ['electronics', 'Electronics', 'More time on circuits']];
-  let s;
-  const m1 = Menu([{ label: 'Max Remington', go: () => { sex = 'm'; step = 1; s.menu = m2; } }, { label: 'Maxine Remington', go: () => { sex = 'f'; step = 1; s.menu = m2; } }], 150, 70, 150, 12);
-  const m2 = Menu(skills.map(([k, n]) => ({ label: n, go: () => { game.agent = newAgent(sex, k); startCareer(); } })), 150, 70, 150, 12);
-  s = menuScene({
-    menu: m1, back: () => { if (step) { step = 0; s.menu = m1; } else go(titleScene()); },
+// ---------- NEW CHARACTER ----------
+function sexScene() {
+  return menuScene({
+    menu: Menu([{ label: 'Maximillian Remington', go: () => go(nameScene('m')) }, { label: 'Maxine Remington', go: () => go(nameScene('f')) }], 90, 96, 150, 11),
+    back: () => go(optionsScene()),
+    draw() { rect(0, 0, W, H, P.K); textC('Who will you be?', W / 2, 70, P.W); drawAgent(this.menu.sel === 1 ? 'f' : 'm', 24, 70); this.menu.draw(); },
+  });
+}
+function nameScene(sex) {
+  let name = ''; const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const done = () => { game.agent = newAgent(sex, name.trim() || (sex === 'f' ? 'Nightshade' : 'Lone Wolf')); go(difficultyScene()); };
+  return {
+    typing: true, t: 0, update(dt) { this.t += dt; },
+    onChar(ch) { if (ch === '') name = name.slice(0, -1); else if (name.length < 14) name += name.length ? ch.toLowerCase() : ch; sfx.tick(); },
+    onKey(k) { if (k === 'select') done(); if (k === 'fire' && name.length < 14) name += ' '; if (k === 'menu') go(sexScene()); },
+    onTap(x, y) {
+      const c = Math.floor((x - 22) / 21), r = Math.floor((y - 120) / 15);
+      if (r >= 0 && r < 2 && c >= 0 && c < 13) { this.onChar(A[r * 13 + c]); return; }
+      if (y >= 152 && y < 166) { if (x < 110) name = name.slice(0, -1); else if (x < 210) { if (name.length < 14) name += ' '; } else done(); }
+    },
     draw() {
-      rect(0, 0, W, H, P.K); dither(0, 0, W, H, P.NV, P.K, 8); panel(8, 8, W - 16, H - 16);
-      text('CENTRAL INTELLIGENCE AGENCY', 20, 18, P.YE); text('Contract agent file', 20, 28, P.G4); rect(20, 38, W - 40, 1, P.G2);
-      const cur = step === 0 ? (this.menu.sel === 1 ? 'f' : 'm') : sex;
-      rect(28, 50, 56, 68, P.G4); drawAgent(cur, 30, 52); text('REMINGTON', 30, 122, P.G5); text(cur === 'f' ? 'Maxine' : 'Max', 30, 131, P.G4);
-      text(step === 0 ? 'Select your agent:' : 'Choose a specialty:', 150, 54, P.CY);
-      this.menu.draw();
-      if (step === 1) { const d = skills[this.menu.sel][2]; para(d, 150, 130, 150, P.G4); para('Your other skills are average. Each specialty makes one kind of mission easier.', 150, 150, 150, P.G3); }
-      else para('Both agents are equal in the field. The choice is yours.', 150, 130, 150, P.G3);
+      rect(0, 0, W, H, P.K); textC('Character Name', W / 2, 40, P.W); rect(W / 2 - 38, 49, 76, 1, P.W);
+      textC('Type in a code name for Max Remington:', W / 2, 64, P.G3);
+      msgBox(80, 80, 160, 18); text(name + ((this.t * 2 | 0) % 2 ? '_' : ''), 88, 86, P.YE);
+      for (let i = 0; i < 26; i++) { const x = 22 + (i % 13) * 21, y = 120 + Math.floor(i / 13) * 15; rect(x, y, 19, 13, P.G1); textC(A[i], x + 9, y + 3, P.W); }
+      rect(22, 152, 86, 13, P.G1); textC('Rub out', 65, 155, P.W); rect(112, 152, 96, 13, P.G1); textC('Space', 160, 155, P.W); rect(212, 152, 86, 13, P.BL); textC('Done', 255, 155, P.YE);
+    },
+  };
+}
+function difficultyScene() {
+  return menuScene({
+    menu: Menu(DIFFICULTY.map((d, i) => ({ label: d.name, go: () => { game.diff = i; go(trainingScene()); } })), 104, 92, 120, 11),
+    back: () => go(sexScene()),
+    draw() {
+      rect(0, 0, W, H, P.K); textC('Difficulty Level', W / 2, 70, P.W); rect(W / 2 - 38, 79, 76, 1, P.W); this.menu.draw();
+      para(['Introductory. Extra help, more clues, sleepy guards.', 'More participants, fewer clues.', 'Alert guards, harder wiretaps and codes.', 'Red herrings, no spaces in codes, deadly guards.'][this.menu.sel], 60, 150, 200, P.G3);
+    },
+  });
+}
+function trainingScene() {
+  let picks = 4; const keys = ['combat', 'driving', 'crypto', 'electronics'];
+  const cols = [P.RD, P.BL2, P.G1, P.GR]; const labels = ['Combat', 'Driving', 'Crypto', 'Electronics'];
+  let s; s = menuScene({
+    menu: Menu(['Combat training', 'Driving training', 'Cryptography training', 'Electronics training'].map((l, i) => ({ label: l, go: () => { if (picks > 0 && game.agent.skills[keys[i]] < 3) { game.agent.skills[keys[i]]++; picks--; sfx.select(); if (!picks) setTimeout(() => go(chiefScene()), 700); } else sfx.deny(); } })), 100, 18, 124, 10),
+    back: () => go(difficultyScene()),
+    draw() {
+      rect(0, 0, W, H, P.K); textC('Preparation for Field Work', W / 2, 4, P.W); rect(W / 2 - 64, 12, 128, 1, P.W);
+      this.menu.draw(); textC(picks ? picks + ' training period' + (picks === 1 ? '' : 's') + ' left' : 'Training complete', W / 2, 52, picks ? P.G3 : P.YE);
+      for (let i = 0; i < 4; i++) {
+        const x = 16 + i * 74, y = 62, w = 68, h = 134;
+        frame(x, y, w, h, P.W); rect(x + 1, y + 1, w - 2, h - 2, P.K);
+        trainingArt(i, x + 3, y + 3, w - 6, 100, this.t);
+        rect(x + 3, y + 104, w - 6, 27, cols[i]); textC(labels[i], x + w / 2, y + 107, P.W); textC(SKILL_NAMES[game.agent.skills[keys[i]]], x + w / 2, y + 117, P.YE);
+      }
     },
   });
   return s;
 }
-function startCareer() { game.level = 1; game.careerScore = 0; game.cases = []; newCase(); }
-function newCase() {
-  Object.assign(game, { day: 1, hour: 8, city: 'WAS', score: 0, messages: [], log: [], bugs: [] });
-  game.agent.health = game.agent.maxHealth;
-  game.plot = newPlot(game.level);
-  // opening intelligence: two leads
-  const pl = game.plot; const ops = shuffle(pl.people.filter(p => p.role.tier === 1));
-  ops[0].seen = true; reveal(ops[0], 'city'); reveal(ops[0], 'photo');
-  if (ops[1]) { ops[1].seen = true; reveal(ops[1], 'org'); }
-  go(briefingScene());
-}
 
-function briefingScene() {
-  const pl = game.plot, ops = pl.people.filter(p => p.seen);
-  const txt = 'Intelligence sources report that a hostile group is planning to ' + pl.crime.verb + ' in ' + cityById(pl.targetCity).name + '. We believe the ' + pl.orgs.map(o => o.name).join(' and the ') + (pl.orgs.length > 1 ? ' are' : ' is') + ' involved. The operation is expected to take place in about ' + (pl.deadline - game.day) + ' days.\n\nOur only leads: an operative codenamed ' + ops[0].code + ', seen in ' + cityById(ops[0].city).name + (ops[1] ? ', and a contact called ' + ops[1].code + ' who works for the ' + ops[1].org.name : '') + '.\n\nFind the Mastermind. Good luck, ' + game.agent.first + '.';
+// ---------- THE CHIEF ----------
+function chiefScene() {
+  newCase();
+  const cr = game.crime;
+  const txt = 'Welcome back, ' + game.agent.short + '. It looks like the bad guys are preparing for action and the President is worried. He insists that you\'re the agent for this job. Things seem to be heating up in ' + REGIONS[cr.region].name + '. We have picked up a few clues. Check them at any CIA office. Good luck ' + game.agent.short + ', you are our best hope.';
+  const lines = wrap(txt, 290);
+  let page = 0; const per = 5;
   return pageScene(t => {
-    rect(0, 0, W, H, P.K);
-    // a manila folder on a desk
-    dither(0, 0, W, H, P.BR, P.BR2, 5);
-    rect(14, 10, W - 28, H - 24, P.TN); rect(14, 10, 70, 6, P.BR3); rect(18, 16, W - 36, H - 34, P.CR);
-    rect(W - 90, 20, 64, 12, P.RD); text('TOP SECRET', W - 86, 22, P.W);
-    text('CASE ' + game.level + ':  OPERATION ' + ['NIGHTFALL', 'SILENT GATE', 'IRON VEIL', 'BLACK TIDE', 'COLD HARBOR', 'RED LANTERN', 'GLASS KEY'][(game.level - 1) % 7], 26, 22, P.K);
-    text('Subject: ' + pl.crime.name, 26, 34, P.BR);
-    rect(26, 44, W - 52, 1, P.BR3);
-    para(txt, 26, 49, W - 60, P.D2, 9);
-  }, () => go(hubScene()));
+    chiefArt(t);
+    rect(0, 146, W, 54, P.K); frame(4, 147, W - 8, 51, P.W);
+    lines.slice(page * per, page * per + per).forEach((l, i) => text(l, 12, 152 + i * 9, P.W));
+  }, () => { page++; if (page * per >= lines.length) { game.city = 'WAS'; go(cityScene()); } });
+}
+function newCase() {
+  Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [], caseStart: Date.now() });
+  const y = 1990 + game.cases.length; game.startDate = new Date(y, ri(0, 11), ri(1, 25), 8, 0, 0);
+  newCrime();
+  const cr = game.crime, D = DIFFICULTY[game.diff];
+  // opening clues: a few leads, more at the easy levels
+  const people = shuffle(cr.people.filter(p => p.role !== 'Mastermind'));
+  for (let i = 0; i < 4 - game.diff + 1; i++) clueAbout(people[i % people.length], 'Covert Surveillance');
+  clueAbout(people[0], 'Informant', 'hideout');
+  if (game.diff === 0) game.messages.push(Object.assign(makeMessage(cr.steps[0]), { src: 'NSA intercept' }));
 }
 
-// ---------- CITY HUB ----------
-function activityWord(cid) { const n = peopleIn(cid).length; return n === 0 ? ['Quiet', P.G3] : n === 1 ? ['Some activity', P.YE] : ['Heavy activity', P.OR]; }
-function hubScene() {
+// ---------- CITY: choose a location ----------
+function locationsHere() {
+  const out = [{ kind: 'cia', label: 'CIA Headquarters' }, { kind: 'airport', label: 'Airport' }, { kind: 'hotel', label: 'Hotel' }];
+  for (const b of Object.values(game.buildings)) if (b.city === game.city && b.known) out.push({ kind: b.agency ? 'agency' : 'org', b, label: b.agency ? b.agency + ' office' : (b.orgKnown ? b.org.name : 'Unknown building') + ', ' + b.address });
+  return out;
+}
+function cityScene() {
+  if (checkCaseEnd()) return { draw() {} };
   const city = cityById(game.city);
-  let s;
-  const items = () => [
-    { label: 'Break into a suspect building', go: () => startBreakin() },
-    { label: 'Tap a telephone line', go: () => startWiretap() },
-    { label: 'Stake out and tail a car', go: () => startChase() },
-    { label: 'Decode intercepted messages', right: game.messages.length ? String(game.messages.length) : '', off: !game.messages.length, go: () => go(messagesScene()) },
-    { label: 'Review the case file', go: () => go(caseFileScene(() => go(hubScene()))) },
-    { label: 'Arrest a suspect', off: !game.plot.people.some(p => p.status === 'free' && (p.known.name || p.known.photo) && p.known.city && p.city === game.city) && !game.plot.people.some(p => p.status === 'free' && (p.known.name || p.known.photo)), go: () => go(arrestScene()) },
-    { label: 'Travel to another city', go: () => go(travelScene()) },
-    { label: 'Contact CIA headquarters', go: () => go(hqScene()) },
-  ];
-  s = menuScene({
-    menu: Menu(items(), 14, 117, 190, 9),
-    enter() { if (checkCaseEnd()) return; },
-    back() { go(pauseScene(() => go(hubScene()))); },
-    draw() {
-      drawCityScene(city, 0, 0, W, 110, game.hour);
-      // caption plate
-      const cap = city.name + ', ' + city.country; const cw = textW(cap) + 12;
-      rect(4, 4, cw, 21, P.K); frame(4, 4, cw, 21, P.G3); text(cap, 10, 7, P.W); text(timeStr(), 10, 16, P.CY);
-      rect(0, 110, W, 90, P.K); panel(0, 110, 212, 90); panel(212, 110, 108, 90);
-      this.menu.draw();
-      // status
-      const pl = game.plot, left = pl.deadline - game.day;
-      text('CASE ' + game.level, 220, 117, P.YE); textR('Score ' + game.score, 312, 117, P.G4);
-      text('Days left', 220, 128, P.G4); textR(String(Math.max(0, left)), 312, 128, left <= 3 ? P.RD2 : P.W);
-      text('Plot', 220, 139, P.G4); const st = plotStrength(); rect(250, 140, 62, 5, P.K); rect(250, 140, 62 * st, 5, st > 0.6 ? P.RD2 : st > 0.35 ? P.OR : P.GR2);
-      text('Health', 220, 150, P.G4); for (let i = 0; i < game.agent.maxHealth; i++) rect(262 + i * 9, 151, 7, 5, i < game.agent.health ? P.RD2 : P.G1);
-      text('Suspects', 220, 161, P.G4); textR(pl.people.filter(p => isSuspect(p)).length + '/' + pl.people.length, 312, 161, P.W);
-      const [aw, ac] = activityWord(game.city); text('Local', 220, 175, P.G4); textR(aw, 312, 175, ac);
-    },
-  });
-  return s;
+  const items = locationsHere().map(l => ({ label: fitText(l.label, 132), go: () => goLocation(l) }));
+  items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });
+  return locationScreen({ lines: ['You are in ' + city.name + '.', 'Where do you want to go?'], items, art: (x, y, w, h) => streetArt(x, y, w, h, city), back: () => go(pauseScene(() => go(cityScene()))) });
+}
+function goLocation(l) {
+  advance(20);
+  if (l.kind === 'cia') go(ciaScene()); else if (l.kind === 'airport') go(airportScene()); else if (l.kind === 'hotel') go(hotelScene()); else go(buildingScene(l.b));
 }
 function pauseScene(back) {
   return menuScene({
-    menu: Menu([
-      { label: 'Resume', go: back },
-      { label: () => 0, go: () => { sfx.toggle(); } },
-      { label: 'How to play', go: () => go(helpScene(() => go(pauseScene(back)))) },
-      { label: 'Abandon career', go: () => go(titleScene()) },
-    ].map(i => typeof i.label === 'function' ? Object.assign(i, { label: 'Sound on / off' }) : i), 110, 80, 110, 12),
+    menu: Menu([{ label: 'Continue', go: back }, { label: 'Sound On / Off', go: () => sfx.toggle() }, { label: 'How To Play', go: () => go(helpScene(() => go(pauseScene(back)))) }, { label: 'Save Game', go: () => { writeSave(); toast('Game saved'); } }, { label: 'Quit To Title', go: () => go(titleScene()) }], 110, 80, 110, 11),
     back,
-    draw() { rect(0, 0, W, H, P.K); dither(0, 0, W, H, P.K, P.NV, 6); panel(96, 56, 128, 80); textC('PAUSED', W / 2, 66, P.YE); this.menu.draw(); },
+    draw() { rect(0, 0, W, H, P.K); msgBox(96, 60, 128, 76); textC('PAUSED', W / 2, 66, P.YE); this.menu.draw(); },
   });
 }
 
-// ---------- HQ ----------
-function hqScene() {
-  const pl = game.plot;
-  advanceTime(1);
-  // intelligence: which cities are busy, plus one fresh fact
-  const busy = CITIES.filter(c => peopleIn(c.id).length > 0).sort((a, b) => peopleIn(b.id).length - peopleIn(a.id).length).slice(0, 3);
-  const unk = pl.people.filter(p => p.status === 'free' && isSuspect(p) && knownCount(p) < 5);
-  let fact = null; if (unk.length && rnd() < 0.5) fact = reveal(pick(unk));
-  const arrested = pl.people.filter(p => p.status === 'arrested').length;
-  const lines = [
-    'Station reports list unusual activity in: ' + busy.map(c => c.name).join(', ') + '.',
-    fact ? 'Analysts have turned up something new: ' + fact : 'Analysts have nothing new for you today.',
-    arrested ? arrested + ' of the ring are in custody.' : 'No arrests yet. The Director is getting impatient.',
-    'Estimated ' + Math.max(0, pl.deadline - game.day) + ' days before the ' + pl.crime.name.toLowerCase() + '.',
-  ];
-  return pageScene(() => {
-    rect(0, 0, W, H, P.K); rect(0, 0, W, 40, P.NV); disc(28, 20, 14, P.G4); disc(28, 20, 11, P.BL); textC('CIA', 28, 16, P.W);
-    text('CIA HEADQUARTERS', 50, 10, P.W); text('Langley, Virginia  -  secure line', 50, 20, P.G4); text(timeStr(), 50, 29, P.CY);
-    panel(8, 46, W - 16, H - 62);
-    let y = 58; for (const l of lines) { y = para(l, 20, y, W - 40, P.G5, 10) + 5; }
-  }, () => go(hubScene()));
+// ---------- CIA HEADQUARTERS ----------
+function ciaScene() {
+  const back = () => go(ciaScene());
+  return locationScreen({
+    lines: ['You are at CIA Headquarters.', game.city === 'WAS' ? 'Langley sends its regards.' : 'The station chief nods.', 'Do you want ...'],
+    items: [
+      { label: 'Data Section', go: () => go(dataSection(back)) },
+      { label: 'Intelligence Section', go: () => go(intelSection(back)) },
+      { label: 'Crypto Branch', go: () => go(cryptoBranch(back)) },
+      { label: 'Leave', go: () => go(cityScene()) },
+    ],
+    art: (x, y, w, h) => embassyArt(x, y, w, h), back: () => go(cityScene()),
+  });
 }
-
-// ---------- TRAVEL ----------
-function travelScene() {
-  if (!mapCanvas) buildMap();
-  let sel = CITIES.findIndex(c => c.id !== game.city), flying = null;
-  const here = cityById(game.city);
-  const hoursTo = c => Math.round(3 + dist(here.lon, here.lat, c.lon, c.lat) / 9);
-  const pos = c => mapXY(c.lon, c.lat);
-  function nearestInDir(dx, dy) {
-    const [sx, sy] = pos(CITIES[sel]); let best = -1, bd = 1e9;
-    CITIES.forEach((c, i) => { if (i === sel) return; const [x, y] = pos(c); const vx = x - sx, vy = y - sy; const along = vx * dx + vy * dy; if (along <= 0) return; const d = along + Math.abs(vx * dy - vy * dx) * 2.5; if (d < bd) { bd = d; best = i; } });
-    if (best >= 0) { sel = best; sfx.blip(); }
-  }
-  function fly() { const c = CITIES[sel]; if (c.id === game.city) { go(hubScene()); return; } flying = { from: pos(here), to: pos(c), t: 0, dest: c, h: hoursTo(c) }; sfx.tone(300, 1.2, 'sawtooth', 0.03, 200); }
-  return {
-    t: 0,
-    update(dt) { this.t += dt; if (flying) { flying.t += dt / 1.8; if (flying.t >= 1) { advanceTime(flying.h); game.city = flying.dest.id; go(hubScene()); } } },
-    onKey(k) {
-      if (flying) return;
-      if (k === 'left') nearestInDir(-1, 0); else if (k === 'right') nearestInDir(1, 0); else if (k === 'up') nearestInDir(0, -1); else if (k === 'down') nearestInDir(0, 1);
-      else if (k === 'select' || k === 'fire') fly(); else if (k === 'menu') go(hubScene());
-    },
-    onTap(x, y) {
-      if (flying) return;
-      if (y > 150 && x > 230) { fly(); return; } if (y > 150 && x < 90) { go(hubScene()); return; }
-      let best = -1, bd = 14; CITIES.forEach((c, i) => { const [cx, cy] = pos(c); const d = dist(x, y, cx, cy); if (d < bd) { bd = d; best = i; } });
-      if (best >= 0) { if (best === sel) fly(); else { sel = best; sfx.blip(); } }
-    },
-    draw() {
-      rect(0, 0, W, H, P.K); g.drawImage(mapCanvas, 0, 0);
-      text('WORLD MAP', 4, 1, P.G4); textR(timeStr(), W - 4, 1, P.CY);
-      CITIES.forEach((c, i) => {
-        const [x, y] = pos(c); const active = c.id === game.city, s = i === sel;
-        rect(x - 1, y - 1, 3, 3, active ? P.YE : peopleIn(c.id).length && game.plot.people.some(p => p.city === c.id && p.known.city && p.status === 'free') ? P.RD2 : P.W); px(x, y, P.K);
-        if (s && ((this.t * 4 | 0) % 2 || flying)) { frame(x - 4, y - 4, 9, 9, P.YE); }
-      });
-      if (flying) {
-        const { from, to, t } = flying; const n = 30;
-        for (let i = 0; i <= n * t; i++) { const f = i / n; const x = from[0] + (to[0] - from[0]) * f, y = from[1] + (to[1] - from[1]) * f - Math.sin(f * Math.PI) * 10; if (i % 2 === 0) px(x, y, P.W); }
-        const x = from[0] + (to[0] - from[0]) * t, y = from[1] + (to[1] - from[1]) * t - Math.sin(t * Math.PI) * 10;
-        rect(x - 3, y, 7, 1, P.W); rect(x, y - 2, 1, 5, P.W); rect(x - 1, y - 2, 3, 1, P.G4);
-      }
-      rect(0, 116, W, 84, P.K); panel(0, 116, W, 84);
-      const c = CITIES[sel];
-      text('From ' + here.name + ' to', 14, 126, P.G4); bigText(c.name, 14, 136, 2, P.YE, P.K);
-      text(c.country + '   Flight time ' + hoursTo(c) + ' hours', 14, 158, P.G5);
-      const known = game.plot.people.filter(p => p.city === c.id && p.known.city && p.status === 'free');
-      text(known.length ? 'Suspects believed here: ' + known.map(p => p.code).join(', ') : 'No known suspects here.', 14, 168, known.length ? P.RD2 : P.G3);
-      bevel(14, 180, 64, 13, P.G2, P.G4, P.G1); textC('Cancel', 46, 183, P.W);
-      bevel(W - 90, 180, 76, 13, P.BL, P.BL3, P.NV); textC(flying ? 'In flight...' : 'Fly there', W - 52, 183, P.YE);
-    },
-  };
-}
-
-// ---------- CASE FILE ----------
-function caseFileScene(back) {
-  const pl = game.plot; let tab = 0, sel = 0, detail = null;
-  const list = () => pl.people.filter(p => isSuspect(p));
-  const COLS = 5, CW = 62, CH = 50;
+function listScreen(title, rows, back, opts = {}) { // generic scrolling list of text rows with optional open action
+  let sel = 0, top = 0; const vis = 18;
   return {
     t: 0, update(dt) { this.t += dt; },
     onKey(k) {
-      const L = list();
-      if (detail) { if (k === 'menu' || k === 'select' || k === 'fire') { detail = null; sfx.blip(); } else if (k === 'left' || k === 'right') { const i = L.indexOf(detail); detail = L[(i + (k === 'left' ? -1 : 1) + L.length) % L.length]; sfx.blip(); } return; }
       if (k === 'menu') { back(); return; }
-      if (k === 'alt2' || k === 'alt') { tab = 1 - tab; sfx.blip(); return; }
-      if (tab === 0 && L.length) {
-        if (k === 'left') sel = Math.max(0, sel - 1); if (k === 'right') sel = Math.min(L.length - 1, sel + 1);
-        if (k === 'up') sel = Math.max(0, sel - COLS); if (k === 'down') sel = Math.min(L.length - 1, sel + COLS);
-        if (k === 'select' || k === 'fire') { detail = L[sel]; sfx.select(); }
-      }
+      if (!rows.length) { if (k === 'select' || k === 'fire') back(); return; }
+      if (k === 'up') sel = Math.max(0, sel - 1); if (k === 'down') sel = Math.min(rows.length - 1, sel + 1);
+      if (sel < top) top = sel; if (sel >= top + vis) top = sel - vis + 1;
+      if ((k === 'select' || k === 'fire') && rows[sel].open) { sfx.select(); rows[sel].open(); }
     },
-    onTap(x, y) {
-      if (detail) { detail = null; return; }
-      if (y < 16) { if (x < 110) tab = 0; else if (x < 200) tab = 1; else back(); return; }
-      if (tab === 0) { const L = list(); const i = Math.floor((y - 20) / CH) * COLS + Math.floor((x - 5) / CW); if (i >= 0 && i < L.length) { sel = i; detail = L[i]; sfx.select(); } }
-    },
+    onTap(x, y) { if (y > 188) { back(); return; } const i = top + Math.floor((y - 18) / 9); if (i >= 0 && i < rows.length) { if (i === sel && rows[i].open) rows[i].open(); sel = i; } },
     draw() {
-      rect(0, 0, W, H, P.NV);
-      rect(0, 0, W, 15, P.K);
-      [['SUSPECTS', 4], ['CLUE LOG', 110]].forEach(([n, x], i) => { if (i === tab) rect(x, 1, 96, 13, P.BL); text(n, x + 6, 4, i === tab ? P.YE : P.G4); });
-      bevel(262, 2, 54, 11, P.G2, P.G4, P.G1); textC('Back', 289, 4, P.W);
-      if (tab === 0) {
-        const L = list();
-        L.slice(0, 15).forEach((p, i) => {
-          const x = 5 + (i % COLS) * CW, y = 20 + Math.floor(i / COLS) * CH;
-          rect(x, y, CW - 3, CH - 3, P.K); frame(x, y, CW - 3, CH - 3, i === sel ? P.YE : P.G1);
-          if (p.known.photo) drawFace(p.face, x + 2, y + 2, 20, 25); else { g.save(); g.translate(x + 2, y + 2); g.scale(20 / 26, 25 / 32); drawUnknownFace(0, 0); g.restore(); }
-          text(fitText(p.code, 34), x + 24, y + 3, P.YE);
-          text(p.known.role ? fitText(p.role.name, 34) : '?', x + 24, y + 12, P.G4);
-          text(p.known.city ? fitText(cityById(p.city).name, 34) : '?', x + 24, y + 21, P.CY);
-          text(p.known.org ? p.org.short : '?', x + 3, y + 29, P.G3);
-          text(p.known.name ? fitText(p.name, 54) : '', x + 3, y + 38, P.W);
-          if (p.status !== 'free') { rect(x + 1, y + 16, CW - 5, 9, P.RD); textC(p.status === 'arrested' ? 'ARRESTED' : 'DEAD', x + (CW - 3) / 2, y + 17, P.W); }
-        });
-        if (!L.length) textC('No suspects identified yet.', W / 2, 90, P.G4);
-        text('Tab: clue log   OK: open dossier', 6, 190, P.G3);
-      } else {
-        let y = 22; for (const e of game.log.slice(0, 16)) { text('Day ' + e.day, 8, y, P.CY); y = para(e.t, 50, y, 262, P.G5, 9) + 2; if (y > 186) break; }
-        if (!game.log.length) textC('No clues yet.', W / 2, 90, P.G4);
-      }
-      if (detail) drawDossier(detail);
+      rect(0, 0, W, H, P.K); text(title, 8, 4, P.YE); rect(8, 12, textW(title), 1, P.YE);
+      if (!rows.length) text(opts.empty || '...none', 12, 22, P.G3);
+      rows.slice(top, top + vis).forEach((r, i) => { const y = 18 + i * 9, on = top + i === sel; if (on && r.open) rect(6, y - 1, W - 12, 9, P.YE); text(fitText(r.label, 250), 10, y, on && r.open ? P.G1 : r.col || P.W); if (r.right) textR(r.right, W - 10, y, on && r.open ? P.G1 : P.CY); });
+      text('Esc: leave' + (rows.some(r => r.open) ? '   Enter: open' : ''), 8, 190, P.G1);
     },
   };
 }
-function drawDossier(p) {
-  panel(20, 18, W - 40, 170);
-  rect(32, 30, 56, 68, P.G1); if (p.known.photo) drawFace(p.face, 34, 32, 52, 64); else { g.save(); g.translate(34, 32); g.scale(2, 2); drawUnknownFace(0, 0); g.restore(); }
-  bigText(p.code, 98, 30, 2, P.YE, P.K);
-  const rows = [['Name', p.known.name ? p.name : 'Unknown'], ['Role', p.known.role ? p.role.name : 'Unknown'], ['Group', p.known.org ? p.org.name : 'Unknown'], ['Location', p.known.city ? cityById(p.city).name + ' (day ' + p.cityDay + ')' : 'Unknown'], ['Status', p.status === 'free' ? 'At large' : p.status === 'arrested' ? 'In custody' : 'Deceased']];
-  rows.forEach(([k, v], i) => { text(k, 98, 52 + i * 10, P.G4); text(v, 146, 52 + i * 10, v === 'Unknown' ? P.G2 : P.W); });
-  const contacts = p.links.map(i => game.plot.people[i]).filter(q => isSuspect(q));
-  text('Known contacts:', 32, 108, P.G4);
-  para(contacts.length ? contacts.map(q => q.code).join(', ') : 'none identified', 32, 118, W - 70, P.CY);
-  const n = knownCount(p); text('File ' + (n * 20) + '% complete', 32, 150, P.G3); rect(32, 160, 120, 4, P.K); rect(32, 160, n * 24, 4, P.GR2);
-  para(canArrest(p) ? 'Enough evidence to arrest - and in this city.' : (p.known.name || p.known.photo) ? (p.known.city ? 'Travel to ' + cityById(p.city).name + ' to arrest.' : 'Location needed to make an arrest.') : 'Name or photograph needed to make an arrest.', 160, 150, 130, P.G5, 9);
-  text('◀ ▶ next  ·  OK close', 32, 176, P.G3);
+function dataSection(back) {
+  const me = () => go(dataSection(back));
+  return locationScreen({
+    lines: ['Data Section', 'Select a file:'],
+    items: [
+      { label: 'Review Clues', go: () => go(reviewClues(me)) },
+      { label: 'Review Suspects', go: () => go(reviewSuspects(me)) },
+      { label: 'Inside Information', go: () => go(insideInfo(me)) },
+      { label: 'News Bulletins', go: () => go(listScreen('News Bulletins', game.news.slice().reverse().map(n => ({ label: dayStr(n.t) + '  ' + n.text })), me, { empty: '...no news' })) },
+      { label: 'Organization Summary', go: () => go(orgSummary(me)) },
+      { label: 'City Summary', go: () => go(citySummary(me)) },
+      { label: 'Activity Reports', go: () => go(activityReports(me)) },
+      { label: 'Leave', go: back },
+    ],
+    art: (x, y, w, h) => terminalArt(x, y, w, h), back,
+  });
 }
-
-// ---------- MESSAGES ----------
-function messagesScene() {
-  const items = game.messages.map((m, i) => ({ label: 'Day ' + m.day + '  ' + m.src, right: m.text.length + ' chars', go: () => startCrypto(i) }));
-  items.push({ label: 'Back', go: () => go(hubScene()) });
-  return menuScene({
-    menu: Menu(items, 24, 50, 272, 12), back: () => go(hubScene()),
-    draw() { rect(0, 0, W, H, P.K); panel(8, 8, W - 16, H - 16); text('INTERCEPTED MESSAGES', 20, 20, P.YE); para('Encrypted traffic from bugged lines and NSA intercepts. Decoding one takes about 2 hours.', 20, 30, W - 40, P.G4); this.menu.draw(); },
+function reviewClues(back) {
+  const rows = game.clues.slice().reverse().map(c => ({ label: dayStr(c.t) + '  ' + c.heading, open: () => go(clueScreen(c, () => go(reviewClues(back)))) }));
+  return listScreen('Review Clues', rows, back, { empty: '...no clues yet' });
+}
+function clueScreen(c, back) {
+  const p = game.crime.people[c.pid];
+  const related = game.clues.filter(o => o !== c && o.heading === c.heading);
+  return pageScene(() => {
+    rect(0, 0, W, H, P.K); msgBox(4, 4, W - 8, H - 8);
+    text(c.heading, 14, 12, P.YE); rect(14, 20, textW(c.heading), 1, P.YE);
+    text('Related Clues:', 14, 26, P.G3); text(related.length ? related.map(r => r.heading).slice(0, 2).join(', ') : '...none', 90, 26, P.W);
+    text('Source: ' + c.source, 14, 40, P.CY); text(dayStr(c.t), 250, 40, P.G3);
+    para(c.text, 14, 52, c.face ? 200 : W - 32, P.W, 9);
+    text('Method: ' + c.method, 14, 150, P.G3);
+    if (c.face) { frame(229, 51, 58, 70, P.G3); drawFace(p.face, 230, 52, 56, 68); }
+    textC('Press a key', W / 2, 182, P.G1);
+  }, back);
+}
+function reviewSuspects(back) {
+  const ps = game.crime.people.filter(isSuspect);
+  return listScreen('Review Suspects', ps.map(p => ({ label: (p.known.name ? p.name : 'Agent X') + (p.known.org ? '  (' + p.org.short + ')' : ''), right: p.status !== 'free' ? p.status.toUpperCase() : p.known.city ? cityById(p.city).name : '?', open: () => go(suspectFile(p, () => go(reviewSuspects(back)))) })), back, { empty: '...no suspects identified' });
+}
+function suspectFile(p, back) {
+  const steps = game.crime.steps.filter(s => (s.from === p.id || s.to === p.id) && s.known);
+  return pageScene(() => {
+    rect(0, 0, W, H, P.K); msgBox(4, 4, W - 8, H - 8);
+    frame(15, 13, 58, 70, P.G3); if (p.known.face) drawFace(p.face, 16, 14, 56, 68); else { g.save(); g.translate(16, 14); g.scale(56 / 26, 68 / 32); drawUnknownFace(0, 0); g.restore(); }
+    const rows = [['Name', p.known.name ? p.name : 'unknown'], ['Organization', p.known.org ? p.org.name : 'unknown'], ['City', p.known.city ? cityById(p.city).name : 'unknown'], ['Hideout', p.known.hideout ? game.buildings[p.building].address : 'unknown'], ['Rank', p.known.org ? RANKS[p.rank] : 'unknown'], ['Role', p.known.role ? p.role : 'unknown']];
+    rows.forEach(([k, v], i) => { text(k, 82, 14 + i * 10, P.G3); text(v, 150, 14 + i * 10, v === 'unknown' ? P.G1 : P.W); });
+    text('Status:', 82, 76, P.G3); text(p.status === 'free' ? 'at large' : p.status, 150, 76, p.status === 'free' ? P.W : P.RD2);
+    text('Messages and meetings:', 14, 92, P.YE);
+    let y = 102; if (!steps.length) text('...none known', 20, y, P.G1);
+    for (const s of steps.slice(0, 8)) { const o = game.crime.people[s.from === p.id ? s.to : s.from]; text((s.from === p.id ? 'to ' : 'from ') + (o.known.name ? o.name : 'Agent X') + ' (' + s.kind + ')', 20, y, P.W); y += 9; }
+    if (!p.known.role) para('No evidence of involvement. An arrest will not stick.', 14, 170, W - 28, P.RD2);
+  }, back);
+}
+function insideInfo(back) { return listScreen('Inside Information', (game.inside || []).map(x => ({ label: x.label, open: () => go(pageScene(() => { rect(0, 0, W, H, P.K); msgBox(4, 4, W - 8, H - 8); text(x.label, 14, 12, P.YE); x.draw(); }, () => go(insideInfo(back)))) })), back, { empty: '...no master plans or personnel files' }); }
+function orgSummary(back) {
+  const orgs = ORGS.filter(o => game.crime.people.some(p => p.org === o && p.known.org) || Object.values(game.buildings).some(b => b.org === o && b.orgKnown));
+  return listScreen('Organization Summary', orgs.map(o => ({ label: o.name, open: () => go(pageScene(() => {
+    rect(0, 0, W, H, P.K); msgBox(4, 4, W - 8, H - 8); text(o.name, 14, 12, P.YE);
+    const allies = game.crime.orgs.filter(x => x !== o && game.crime.orgs.includes(o)).map(x => x.short);
+    text('Allies:', 14, 30, P.G3); text(allies.length ? allies.join(', ') : 'none known', 110, 30, P.W);
+    text('Known Locations:', 14, 44, P.G3);
+    const locs = Object.values(game.buildings).filter(b => b.org === o && b.known); locs.forEach((b, i) => text('- ' + ['hideout in ', 'office in ', 'active cel in '][i % 3] + cityById(b.city).name, 110, 44 + i * 9, P.W));
+    if (!locs.length) text('none', 110, 44, P.G1);
+    text('Focus: ' + { crime: 'international crime', terror: 'terrorism', espionage: 'espionage' }[o.focus], 14, 150, P.G3);
+  }, () => go(orgSummary(back)))) })), back, { empty: '...no organizations identified' });
+}
+function citySummary(back) {
+  return listScreen('City Summary', regionCities(game.region).map(c => ({ label: c.name, open: () => go(pageScene(() => {
+    rect(0, 0, W, H, P.K); msgBox(4, 4, W - 8, H - 8); text(c.name + ', ' + c.country, 14, 12, P.YE);
+    const orgs = [...new Set(Object.values(game.buildings).filter(b => b.city === c.id && b.known && b.orgKnown && b.org).map(b => b.org.name))];
+    const sus = game.crime.people.filter(p => p.known.city && p.city === c.id);
+    text('Organizations:', 14, 28, P.G3); para(orgs.join(', ') || 'none known', 110, 28, 190, P.W);
+    text('Suspects:', 14, 60, P.G3); para(sus.map(p => p.known.name ? p.name : 'Agent X').join(', ') || 'none known', 110, 60, 190, P.W);
+    text('Clues from here:', 14, 100, P.G3); text(String(game.clues.filter(k => k.source.includes(c.name)).length), 110, 100, P.W);
+  }, () => go(citySummary(back)))) })), back);
+}
+function activityReports(back) {
+  return pageScene(() => {
+    rect(0, 0, W, H, P.K); text('Activity Reports', 8, 4, P.YE); rect(8, 12, 88, 1, P.YE);
+    const a = game.activity; const cities = regionCities(game.region).map(c => [c.name, a[c.id] || 0]).sort((x, y) => y[1] - x[1]).slice(0, 8);
+    const orgs = ORGS.map(o => [o.name, a[o.name] || 0]).filter(x => x[1] > 0).sort((x, y) => y[1] - x[1]).slice(0, 8);
+    const mx = Math.max(1, ...cities.map(c => c[1]), ...orgs.map(o => o[1]));
+    text('Cities', 8, 20, P.CY); cities.forEach(([n, v], i) => { text(fitText(n, 60), 8, 30 + i * 9, P.W); rect(70, 31 + i * 9, 80 * v / mx, 6, P.RD2); });
+    text('Organizations', 164, 20, P.CY); orgs.forEach(([n, v], i) => { text(fitText(n, 70), 164, 30 + i * 9, P.W); rect(238, 31 + i * 9, 76 * v / mx, 6, P.YE); });
+    textC('Press a key', W / 2, 186, P.G1);
+  }, back);
+}
+function intelSection(back) {
+  const me = () => go(intelSection(back));
+  const scan = (hours, local) => { advance(hours * 60); const pool = game.crime.people.filter(p => p.status === 'free' && (!local || p.city === game.city)); let c = null; if (pool.length && rnd() < (local ? 0.55 : 0.75)) c = clueAbout(pick(pool), local ? 'Local Police Report' : 'International Scan'); go(pageScene(() => { rect(0, 0, W, H, P.K); msgBox(20, 50, W - 40, 90); text(local ? 'Local Scan' : 'International Scan', 30, 58, P.YE); para(c ? c.text : 'The scan turns up nothing new.', 30, 72, W - 60, P.W); }, me)); };
+  return locationScreen({
+    lines: ['Intelligence Section', 'Do you want ...'],
+    items: [
+      { label: 'Local Scan', go: () => scan(2, true) },
+      { label: 'International Scan', go: () => scan(6, false) },
+      { label: 'Active Wire Taps', go: () => go(listScreen('Active Wire Taps', game.taps.filter(tp => tp.until >= dayOf(game.t)).map(tp => { const b = game.buildings[tp.key]; return { label: cityById(b.city).name + ': ' + (b.orgKnown ? (b.org ? b.org.name : b.agency) : 'unknown building') + ', ' + b.address }; }), me, { empty: '...no active taps' })) },
+      { label: 'Check With Sam', go: () => go(pageScene(() => { rect(0, 0, W, H, P.K); msgBox(20, 50, W - 40, 90); text('Sam says:', 30, 58, P.YE); para(samHint(), 30, 72, W - 60, P.W); }, me)) },
+      { label: 'Leave', go: back },
+    ],
+    art: (x, y, w, h) => terminalArt(x, y, w, h), back,
+  });
+}
+function samHint() {
+  const cr = game.crime;
+  const arrestable = cr.people.find(p => p.status === 'free' && p.known.role && p.known.hideout);
+  if (arrestable) return 'We have the goods on ' + who(arrestable) + '. The ' + arrestable.org.name + ' building at ' + game.buildings[arrestable.building].address + ', ' + cityById(arrestable.city).name + ' is where to grab him.';
+  if (game.messages.length) return 'There are coded messages waiting in the Crypto Branch. Decoded messages give us the roles we need for arrests.';
+  const hid = cr.people.find(p => p.status === 'free' && p.known.hideout);
+  if (hid) return 'Try a wiretap or a break-in at ' + game.buildings[hid.building].address + ' in ' + cityById(hid.city).name + '.';
+  const busy = Object.entries(game.activity).filter(([k]) => cityById(k)).sort((a, b) => b[1] - a[1])[0];
+  return busy ? 'The Activity Reports point at ' + cityById(busy[0]).name + '. I would start there.' : 'Run an International Scan. We need a lead.';
+}
+function cryptoBranch(back) {
+  const me = () => go(cryptoBranch(back));
+  return locationScreen({
+    lines: ['Crypto Branch', 'Do you want ...'],
+    items: [
+      { label: 'Coded Messages', right: String(game.messages.filter(m => !m.decoded).length), go: () => go(listScreen('Coded Messages', game.messages.filter(m => !m.decoded).map(m => ({ label: 'Msg# ' + m.id + '  ' + dayStr(m.t), right: m.src, open: () => startCrypto(m) })), me, { empty: '...no coded messages' })) },
+      { label: 'Crime Chronology', go: () => go(listScreen('Crime Chronology', game.crime.steps.filter(s => s.known).sort((a, b) => a.day - b.day).map(s => { const a = game.crime.people[s.from], b = s.to !== undefined ? game.crime.people[s.to] : null; return { label: dayStr(dayToT(s.day)) + '  ' + (a.known.name ? a.name : 'Agent X') + (s.kind === 'item' ? ' obtained ' + s.item : (s.kind === 'meeting' ? ' met ' : ' messaged ') + (b.known.name ? b.name : 'Agent X')) }; }), me, { empty: '...nothing established' })) },
+      { label: 'Leave', go: back },
+    ],
+    art: (x, y, w, h) => terminalArt(x, y, w, h), back,
   });
 }
 
-// ---------- ARREST ----------
-function arrestScene() {
-  const cands = game.plot.people.filter(p => p.status === 'free' && (p.known.name || p.known.photo));
-  const items = cands.map(p => ({ label: p.code + (p.known.name ? '  (' + p.name + ')' : ''), right: p.known.city ? cityById(p.city).name : 'location ?', off: !(p.known.city && p.city === game.city) && !(p.known.city === false), go: () => doArrest(p) }));
-  // suspects with a known city elsewhere are shown but disabled; unknown-location ones can be tried on a hunch
-  items.push({ label: 'Back', go: () => go(hubScene()) });
-  return menuScene({
-    menu: Menu(items, 24, 44, 272, 11), back: () => go(hubScene()),
-    draw() { rect(0, 0, W, H, P.K); panel(8, 8, W - 16, H - 16); text('ARREST A SUSPECT IN ' + cityById(game.city).name.toUpperCase(), 20, 18, P.YE); para('Local police will make the arrest if you can identify the suspect. Guessing wrong costs time.', 20, 28, W - 40, P.G4); this.menu.draw(); },
+// ---------- AIRPORT ----------
+function airportScene() {
+  const here = cityById(game.city);
+  const dests = (game.city === 'WAS' ? regionCities(game.region) : [cityById('WAS'), ...regionCities(game.region)]).filter(c => c.id !== game.city);
+  let flying = null;
+  const items = dests.map(c => ({ label: c.name, go: () => { flying = { to: c, t: 0 }; sfx.tone(300, 1.4, 'sawtooth', 0.03, 200); } }));
+  items.push({ label: 'Stay here', go: () => go(cityScene()) }, { label: 'Check Data', go: () => go(dataSection(() => go(airportScene()))) });
+  const s = menuScene({
+    menu: Menu(items, 12, 64, 100, 9), back: () => go(cityScene()),
+    update(dt) { this.t += dt; if (flying) { flying.t += dt / 2; if (flying.t >= 1) { const h = Math.round(2 + dist(here.lon, here.lat, flying.to.lon, flying.to.lat) / 8); advance(h * 60); game.city = flying.to.id; go(cityScene()); } } },
+    onKey(k) { if (flying) return; if (k === 'menu') go(cityScene()); else this.menu.key(k); },
+    draw() {
+      rect(0, 0, W, H, P.K);
+      const reg = game.city === 'WAS' ? 'americas' : game.region; drawRegionMap(game.city === 'WAS' ? game.region : game.region, 120, 30, 196, 164, here, dests, this.menu.items[this.menu.sel], flying, this.t);
+      locPlate(here.name + ', ' + here.country);
+      text('You are at the airport.', 10, 34, P.W); text('Fly to ...', 10, 44, P.W);
+      this.menu.draw();
+      textC(REGIONS[game.region].name.replace('the ', '') + ' World Map', 218, 20, P.G3);
+    },
+  });
+  return s;
+}
+
+// ---------- HOTEL ----------
+function hotelScene() {
+  return locationScreen({
+    lines: ['You are at the hotel.', 'Do you want to ...'],
+    items: [
+      { label: 'Leave', go: () => go(cityScene()) },
+      { label: 'Sleep', go: () => go(sleepScene()) },
+      { label: 'Hang Out In The Lounge', go: () => { advance(180); const pool = game.crime.people.filter(p => p.status === 'free' && p.city === game.city); const c = pool.length && rnd() < 0.6 ? clueAbout(pick(pool), 'Local Gossip') : null; game.heat = (game.heat || 0) + 1; go(pageScene(() => { rect(0, 0, W, H, P.K); msgBox(20, 50, W - 40, 90); text('In the lounge', 30, 58, P.YE); para(c ? 'A bartender with a long memory mentions something. ' + c.text : 'Nothing but tourists and piano music. Somebody at the bar is watching you, though.', 30, 72, W - 60, P.W); }, () => go(hotelScene()))); } },
+      { label: 'Save Game', go: () => { writeSave(); toast('Game saved under "' + game.agent.codename + '"'); } },
+      { label: 'Quit', go: () => go(titleScene()) },
+    ],
+    art: (x, y, w, h) => hotelArt(x, y, w, h), back: () => go(cityScene()),
   });
 }
-function doArrest(p) {
-  advanceTime(3);
-  if (p.city === game.city && p.status === 'free') {
-    p.status = 'arrested'; p.seen = true; FACETS.forEach(f => p.known[f] = true);
-    const pts = p.role.tier === 3 ? 60 : p.role.tier === 2 ? 25 : 10; game.score += pts; sfx.success();
-    go(interrogationScene(p, 'arrest', pts));
-  } else {
-    if (p.known.city) p.known.city = false;
-    sfx.fail(); go(pageScene(() => { rect(0, 0, W, H, P.K); panel(30, 60, W - 60, 70); textC('NO ARREST', W / 2, 72, P.RD2); para(p.code + ' was not found in ' + cityById(game.city).name + '. The trail has gone cold - the suspect may have moved on.', 44, 88, W - 88, P.G5); }, () => go(hubScene())));
-  }
+function sleepScene() {
+  return pageScene(t => {
+    rect(0, 0, W, H, P.K); msgBox(30, 60, W - 60, 70);
+    para('You sleep. The investigation is over and the crime will play out without you.\n\nPress a key to wake up and hear the news.', 42, 70, W - 84, P.W);
+  }, () => { const cr = game.crime; while (!cr.over) advance(1440); go(synopsisScene()); });
 }
-function interrogationScene(p, how, pts = 0) {
-  const n = p.role.tier === 1 ? 2 : 3; const clues = [];
-  for (let i = 0; i < n + (how === 'capture' ? 1 : 0); i++) { const c = clueFrom(p, 0); if (c) clues.push(c); }
-  p.links.forEach(i => { game.plot.people[i].seen = true; });
+
+// ---------- SAVES ----------
+function writeSave() { try { localStorage.setItem('covert-action-save', JSON.stringify({ agent: game.agent, diff: game.diff, rank: game.rank, careerPoints: game.careerPoints, cases: game.cases, masterminds: ORGS.map(o => o.mastermindFree) })); } catch (e) {} }
+function loadSave() { try { return JSON.parse(localStorage.getItem('covert-action-save')); } catch (e) { return null; } }
+function restoreSave(s) { Object.assign(game, { agent: s.agent, diff: s.diff, rank: s.rank, careerPoints: s.careerPoints, cases: s.cases || [] }); (s.masterminds || []).forEach((f, i) => ORGS[i].mastermindFree = f); newCase(); game.city = 'WAS'; }
+
+// ---------- ARRESTS & INTERROGATION ----------
+function arrestResult(p, how) {
+  const cr = game.crime;
+  if (!p.known.role) { p.exists = true; learn(p, 'face'); learn(p, 'name'); return pageScene(() => { rect(0, 0, W, H, P.K); drawFace(p.face, 20, 30, 52, 64); msgBox(84, 30, W - 100, 100); text('RELEASED', 94, 38, P.RD2); para(p.name + ' has been released for lack of evidence. Without proof of a role in the crime, the arrest will not stick.', 94, 52, W - 120, P.W); }, () => go(cityScene())); }
+  p.status = 'arrested'; FACET_ORDER.forEach(f => learn(p, f));
+  if (p.role === 'Mastermind') p.org.mastermindFree = false;
+  const told = [];
+  const contacts = cr.steps.filter(s => (s.from === p.id || s.to === p.id)).map(s => cr.people[s.from === p.id ? s.to : s.from]).filter(Boolean);
+  for (const q of contacts) { if (isSuspect(q) && told.length < 3) { const c = clueAbout(q, 'Interrogation'); if (c) told.push(c.text); if (rnd() < 0.5 && !q.known.role) { const r = clueAbout(q, 'Interrogation', 'role'); if (r) told.push(r.text); } } }
+  cr.steps.filter(s => s.from === p.id || s.to === p.id).forEach(s => s.known = true);
   return pageScene(() => {
     rect(0, 0, W, H, P.K);
-    // bare bulb interrogation room
-    vgrad(0, 0, W, 90, [P.K, P.D2, P.G1]); disc(W / 2, 10, 4, P.YE); line(W / 2, 0, W / 2, 6, P.G3);
-    rect(W / 2 - 60, 70, 120, 6, P.BR2); rect(W / 2 - 56, 76, 4, 14, P.BR); rect(W / 2 + 52, 76, 4, 14, P.BR);
-    drawFace(p.face, W / 2 - 13, 34, 26, 32);
-    panel(8, 92, W - 16, 100);
-    text((how === 'arrest' ? 'ARRESTED: ' : how === 'capture' ? 'CAPTURED: ' : '') + p.name + ' (' + p.code + ')', 20, 102, P.YE);
-    text(p.role.name + ', ' + p.org.name + (pts ? '   +' + pts + ' points' : ''), 20, 112, P.G4);
-    let y = 124; if (!clues.length) para('Under questioning, the suspect tells you nothing you did not already know.', 20, y, W - 40, P.G5);
-    for (const c of clues) y = para('- ' + c, 20, y, W - 40, P.G5, 9) + 2;
-  }, () => go(hubScene()));
+    vgrad(0, 0, W, 90, [P.K, P.G1]); disc(W / 2, 8, 3, P.YE); rect(W / 2 - 60, 74, 120, 5, P.BR);
+    frame(W / 2 - 14, 33, 28, 34, P.G3); drawFace(p.face, W / 2 - 13, 34, 26, 32);
+    msgBox(4, 92, W - 8, 104);
+    text((how === 'car' ? 'Arrested on the road: ' : 'Arrested: ') + p.name, 14, 100, P.YE); text(p.role + ', ' + p.org.name, 14, 110, P.G3);
+    let y = 124; if (!told.length) para('"I know nothing." Under interrogation the suspect only confirms what you already knew.', 14, y, W - 28, P.W);
+    for (const c of told) y = para('- ' + c, 14, y, W - 28, P.W, 9) + 2;
+  }, () => go(cityScene()));
 }
 
-// ---------- CASE END / HEADLINES ----------
-function checkCaseEnd() {
-  const pl = game.plot; if (pl.over) return false;
-  const mm = pl.people[pl.mastermind];
-  if (mm.status !== 'free' || plotStrength() < 0.3) { pl.over = true; pl.foiled = true; go(headlineScene(true)); return true; }
-  if (game.day > pl.deadline) { pl.over = true; pl.foiled = false; go(headlineScene(false)); return true; }
-  return false;
+// ---------- CASE END: synopsis, efficiency, reward ----------
+function checkCaseEnd() { if (game.crime && game.crime.over && !game.crime.reported) { game.crime.reported = true; go(synopsisScene()); return true; } return false; }
+function synopsisScene() {
+  const cr = game.crime; cr.reported = true;
+  const steps = cr.steps.slice().sort((a, b) => a.day - b.day);
+  const lines = steps.map(s => { const a = cr.people[s.from], b = s.to !== undefined ? cr.people[s.to] : null; return dayStr(dayToT(s.day)) + ': ' + a.name + ' (' + a.org.short + ') ' + (s.kind === 'item' ? 'obtained the ' + s.item : (s.kind === 'meeting' ? 'met ' : 'sent a message to ') + b.name) + (s.blocked ? ' - stopped' : ''); });
+  lines.push(dayStr(dayToT(cr.endDay)) + ': ' + (cr.prevented ? 'The conspiracy falls apart.' : 'The ' + cr.kind.toLowerCase() + ' goes ahead: the plan to ' + cr.verb + ' succeeds.'));
+  let page = 0; const per = 8;
+  return pageScene(() => {
+    rect(0, 0, W, H, P.K); text('Synopsis', 8, 4, P.YE); rect(8, 12, 44, 1, P.YE); text('The Case of the ' + cr.object, 70, 4, P.W);
+    let y = 20; for (const l of lines.slice(page * per, page * per + per)) { y = para(l, 10, y, 220, P.W, 9) + 3; }
+    cr.people.slice(0, 10).forEach((p, i) => { const x = 238 + (i % 3) * 27, yy = 20 + Math.floor(i / 3) * 36; drawFace(p.face, x, yy, 24, 30); if (p.status === 'arrested') { rect(x, yy + 24, 24, 6, P.RD); text('JAIL', x + 2, yy + 24, P.W); } });
+    textC('Press a key', W / 2, 190, P.G1);
+  }, () => { page++; if (page * per >= lines.length) go(efficiencyScene()); });
 }
-function headlineScene(won) {
-  const pl = game.plot, mm = pl.people[pl.mastermind], city = cityById(pl.targetCity);
-  const caught = mm.status !== 'free';
-  let bonus = 0; if (won) bonus = 50 + Math.max(0, pl.deadline - game.day) * 3 + (caught ? 40 : 0);
-  game.score += bonus; game.careerScore += game.score;
-  game.cases.push({ level: game.level, won, score: game.score });
-  const head = won ? (caught ? 'MASTERMIND SEIZED' : 'TERROR RING SMASHED') : { Assassination: 'LEADER SLAIN', Kidnapping: 'DIPLOMAT SEIZED', Bombing: 'BLAST ROCKS', Hijacking: 'NUCLEAR CONVOY HIJACKED', 'Theft of Secrets': 'SECRETS STOLEN', Counterfeiting: 'FAKE DOLLAR FLOOD' }[pl.crime.name];
-  const sub = won ? 'Plot to ' + pl.crime.verb + ' foiled; ' + pl.people.filter(p => p.status === 'arrested').length + ' held' : 'Attack in ' + city.name + ' stuns world; ringleader "' + mm.code + '" still at large';
+function efficiencyScene() {
+  const cr = game.crime, pts = efficiency(); const pct = Math.round(pts / 10);
+  game.careerPoints += pts; const oldRank = game.rank; game.rank = Math.min(RANKS.length - 1, Math.floor(game.careerPoints / 900));
+  if (!game.cases.find(c => c.t === game.caseStart)) game.cases.push({ t: game.caseStart, object: cr.object, prevented: cr.prevented, pts });
+  const reward = pct < 25 ? 0 : pct < 50 ? 1 : pct < 75 || !cr.prevented ? 2 : 3;
   return pageScene(t => {
-    rect(0, 0, W, H, P.K);
-    // spinning-in newspaper
-    const k = Math.min(1, t * 1.6); g.save(); g.translate(W / 2, H / 2); g.rotate((1 - k) * 6); g.scale(k, k); g.translate(-W / 2, -H / 2);
-    rect(16, 6, W - 32, H - 22, P.CR); rect(16, 6, W - 32, 1, P.G4);
-    bigText('THE WORLD TRIBUNE', W / 2 - bigW('THE WORLD TRIBUNE', 2) / 2, 10, 2, P.K);
-    rect(24, 30, W - 48, 1, P.K); text('Day ' + game.day + '  ·  Late edition  ·  25 cents', 26, 33, P.G2); rect(24, 42, W - 48, 1, P.K);
-    const hw = bigW(head, 2); bigText(head, Math.max(24, W / 2 - hw / 2), 48, hw > W - 48 ? 1 : 2, won ? P.K : P.RD);
-    para(sub, 26, 72, W - 52, P.D2, 9);
-    rect(26, 96, 60, 74, P.G4); drawFace(won && caught ? mm.face : pl.people.find(p => p.status === 'arrested')?.face || mm.face, 30, 100, 52, 64);
-    para(won ? 'Sources credit a CIA contract agent, identified only as "' + game.agent.first + ' R.", with tracking the ring across ' + (n => n + (n === 1 ? ' city.' : ' cities.'))(new Set(pl.people.filter(p => p.status === 'arrested').map(p => p.city)).size) : 'Intelligence officials admit they were aware of the threat. "We were close," said one. "Not close enough."', 94, 98, W - 122, P.D2, 9);
-    if (t > 1) { rect(94, 150, W - 122, 22, P.K); text('Case score ' + game.score + (bonus ? '  (bonus ' + bonus + ')' : ''), 100, 153, P.YE); text('Career total ' + game.careerScore, 100, 162, P.CY); }
-    g.restore();
-  }, () => go(careerScene(won)), { prompt: 'Press OK' });
+    rect(0, 0, W, H, P.K); rewardArt(reward, 0, 0, W, 120, t);
+    msgBox(4, 122, W - 8, 74);
+    text('Efficiency Report', 14, 128, P.YE); textR(pts + ' points  (' + pct + '%)', W - 14, 128, P.W);
+    const arrested = cr.people.filter(p => p.status === 'arrested').length;
+    text('Participants identified: ' + cr.people.filter(p => p.known.name).length + '/' + cr.people.length + '    Arrested: ' + arrested, 14, 140, P.W);
+    text(cr.prevented ? 'Crime prevented.' : 'The crime was committed.', 14, 150, cr.prevented ? P.GR2 : P.RD2);
+    if (cr.people[cr.mastermind].status === 'arrested') text('The Mastermind is behind bars!', 150, 150, P.YE);
+    text('Rank: ' + RANKS[game.rank] + (game.rank > oldRank ? '  - PROMOTED!' : ''), 14, 162, P.CY);
+    para(['Saturday night at the laundromat. Maybe next time.', 'Another week hanging around the office.', 'The Agency sends you to the beach for a well-earned rest.', 'A casino in Monaco, and company to match. Well done, ' + game.agent.short + '.'][reward], 14, 174, W - 28, P.G3);
+  }, () => go(endOptionsScene()));
 }
-function rankFor(s) { return [[0, 'Trainee'], [100, 'Field Agent'], [300, 'Senior Agent'], [600, 'Station Chief'], [1000, 'Deputy Director'], [1600, 'Legend of the Agency']].filter(([m]) => s >= m).pop()[1]; }
-function careerScene(won) {
-  const items = [
-    { label: won ? 'Accept the next case (harder)' : 'Try another case at this level', go: () => { if (won) game.level++; newCase(); } },
-    { label: 'Retire to the title screen', go: () => go(titleScene()) },
-  ];
+function endOptionsScene() {
+  const done = ORGS.filter(o => !o.mastermindFree).length;
   return menuScene({
-    menu: Menu(items, 40, 150, 240, 12),
-    draw() {
-      rect(0, 0, W, H, P.K); panel(8, 8, W - 16, H - 16);
-      text('SERVICE RECORD: ' + game.agent.first.toUpperCase() + ' REMINGTON', 20, 18, P.YE);
-      text('Rank: ' + rankFor(game.careerScore), 20, 30, P.CY); textR('Career score ' + game.careerScore, W - 20, 30, P.W);
-      rect(20, 40, W - 40, 1, P.G2);
-      game.cases.slice(-8).forEach((c, i) => { text('Case ' + c.level, 24, 46 + i * 11, P.G4); text(c.won ? 'Plot foiled' : 'Plot succeeded', 90, 46 + i * 11, c.won ? P.GR2 : P.RD2); textR(String(c.score), W - 24, 46 + i * 11, P.W); });
-      this.menu.draw();
-    },
+    menu: Menu([
+      { label: 'Review Reports', go: () => go(dataSection(() => go(endOptionsScene()))) },
+      { label: 'Continue Game', go: () => go(chiefScene()) },
+      { label: 'Save Game', go: () => { writeSave(); toast('Game saved'); } },
+      { label: 'End The Game', go: () => go(titleScene()) },
+    ], 110, 90, 110, 11),
+    draw() { rect(0, 0, W, H, P.K); textC('End Game Options', W / 2, 60, P.W); rect(W / 2 - 44, 69, 88, 1, P.W); this.menu.draw(); textC('Masterminds arrested: ' + done + ' of 26', W / 2, 150, P.CY); },
   });
 }
