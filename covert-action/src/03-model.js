@@ -165,7 +165,9 @@ function newCrime() {
   crime.items.forEach((it, i) => { const p = specialists[i % Math.max(1, specialists.length)] || org1; day += rnd() < 0.5 ? 1 : 0; steps.push({ day: Math.max(2, day), kind: 'item', from: p.id, item: it, done: false }); });
   const exec = specialists[0] || org1;
   steps.forEach(s => { people[s.from].tasks++; if (s.to !== undefined) people[s.to].tasks++; });
-  const crimeDay = Math.max(day + 2, D.days - ri(0, 2));
+  const crimeDay = D.days - ri(0, 2) + Math.floor(n / 4);
+  // spread the plan across the days before the crime, keeping its order
+  const maxDay = Math.max(1, ...steps.map(s => s.day)); steps.forEach(s => { s.day = 1 + Math.round((s.day - 1) / Math.max(1, maxDay - 1) * (crimeDay - 3)); });
   game.crime = { ...crime, region, orgs, mastermind: mm.id, organizer: org1.id, executor: exec.id, people, steps, crimeDay, buildings, over: false, prevented: false, delay: 0, target: pick(cities).id, evidenceTaken: 0 };
   game.buildings = buildings;
   return game.crime;

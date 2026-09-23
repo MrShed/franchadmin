@@ -227,7 +227,7 @@ function locationsHere() {
   return out;
 }
 function cityScene() {
-  if (checkCaseEnd()) return { draw() {} };
+  if (game.crime && game.crime.over && !game.crime.reported) return synopsisScene();
   const city = cityById(game.city);
   const items = locationsHere().map(l => ({ label: fitText(l.label, 132), go: () => goLocation(l) }));
   items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });
