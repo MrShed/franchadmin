@@ -10,8 +10,8 @@ const FURN = {
   desk: { w: 2, h: 1, name: 'Desk', open: 1.2 }, chair: { w: 1, h: 1, name: 'Chair' }, file: { w: 1, h: 1, name: 'File cabinet', open: 1.5, hide: true },
   wallsafe: { w: 1, h: 1, name: 'Wall safe', open: 4, kit: true }, floorsafe: { w: 1, h: 1, name: 'Floor safe', open: 5, kit: true, flat: true },
   plant: { w: 1, h: 1, name: 'Plant', bug: true }, typewriter: { w: 1, h: 1, name: 'Typewriter', bug: true }, couch: { w: 2, h: 1, name: 'Couch', bug: true },
-  picture: { w: 1, h: 1, name: 'Picture', bug: true, flat: true }, computer: { w: 2, h: 1, name: 'Mainframe computer', bug: true, open: 2.5, hide: true },
-  terminal: { w: 1, h: 1, name: 'Computer terminal', open: 1.5 }, table: { w: 2, h: 2, name: 'Table' }, toilet: { w: 1, h: 1, name: 'Toilet' }, sink: { w: 1, h: 1, name: 'Sink' },
+  picture: { w: 1, h: 1, name: 'Picture', bug: true, flat: true }, computer: { w: 2, h: 1, name: 'Mainframe computer', bug: true, hide: true },
+  terminal: { w: 1, h: 1, name: 'Computer terminal' }, table: { w: 2, h: 2, name: 'Table' }, toilet: { w: 1, h: 1, name: 'Toilet' }, sink: { w: 1, h: 1, name: 'Sink' },
   evidence: { w: 1, h: 1, name: 'Crate', flat: true },
 };
 const GREN = { frag: { name: 'Frag', col: P.RD2 }, stun: { name: 'Stun', col: P.W }, gas: { name: 'Gas', col: P.GR2 } };
@@ -88,7 +88,7 @@ function furnish(B, opts) {
     const a = room.w * room.h;
     switch (room.kind) {
       case 'exec': deskWithChair(room, true); wallSpot(room, 'file', 2); wallSpot(room, 'plant', 1); wallSpot(room, 'picture', 1); if (rnd() < 0.7) wallSpot(room, 'wallsafe', 1); mid(room, 'floorsafe', 1); wallSpot(room, 'couch', 1); break;
-      case 'office': for (let i = 0; i < Math.max(1, Math.floor(a / 40)); i++) deskWithChair(room); wallSpot(room, 'file', ri(1, 2)); wallSpot(room, 'typewriter', 1); wallSpot(room, 'plant', 1); wallSpot(room, 'picture', 1); break;
+      case 'office': if (rnd() < 0.4) wallSpot(room, 'terminal', 1); for (let i = 0; i < Math.max(1, Math.floor(a / 40)); i++) deskWithChair(room); wallSpot(room, 'file', ri(1, 2)); wallSpot(room, 'typewriter', 1); wallSpot(room, 'plant', 1); wallSpot(room, 'picture', 1); break;
       case 'file': wallSpot(room, 'file', Math.max(3, Math.floor(a / 10))); if (rnd() < 0.4) wallSpot(room, 'wallsafe', 1); break;
       case 'computer': wallSpot(room, 'computer', 2); wallSpot(room, 'terminal', 2); mid(room, 'chair', 1); break;
       case 'cipher': deskWithChair(room); wallSpot(room, 'terminal', 1); wallSpot(room, 'typewriter', 1); wallSpot(room, 'wallsafe', 1); break;
@@ -97,6 +97,8 @@ function furnish(B, opts) {
       case 'hall': wallSpot(room, 'plant', 1); break;
     }
   }
+  if (!F.some(f => f.type === 'computer')) { for (const r of shuffle(B.rooms.filter(r => r.kind !== 'hall' && r.kind !== 'bath'))) if (wallSpot(r, 'computer', 1)) break; }
+  if (!F.some(f => f.type === 'terminal')) { for (const r of shuffle(B.rooms.filter(r => r.kind !== 'bath'))) if (wallSpot(r, 'terminal', 1)) break; }
   const openable = F.filter(f => FURN[f.type].open && !FURN[f.type].kit);
   const nClues = opts.occupant ? 3 + (opts.level < 2 ? 1 : 0) : 1;
   shuffle(openable).slice(0, nClues).forEach(f => f.content = 'clue');
@@ -116,6 +118,11 @@ function breakinScene(opts, done) {
   const saved = seed; if (opts.building && opts.building.seed) seed = opts.building.seed;
   const B = genBuilding(level); const { F, occ } = furnish(B, { occupant, level });
   seed = saved;
+  const PWORDS = ['CONDOR', 'SPHINX', 'ORCHID', 'JACKAL', 'VORTEX', 'ZENITH', 'COBALT', 'PHOENIX', 'MIDNIGHT', 'TANGO', 'OMEGA', 'SCIMITAR', 'GRANITE', 'MONSOON', 'LANTERN'];
+  const bld = opts.building || {};
+  if (!bld.pw) { bld.pw = PWORDS[(bld.seed || ri(0, 999)) % PWORDS.length]; bld.pwKnown = bld.pw.split('').map(() => false); }
+  const terminals = F.filter(f => f.type === 'terminal'); terminals.forEach((f, i) => f.letter = i % bld.pw.length);
+  let comp = null; // the mainframe session overlay
   const people = [], bullets = [], grenades = [], clouds = [], fx = [];
   const out = { clues: [], messages: 0, plan: false, personnel: false, evidence: null, alarm: false, bugged: false };
   let msg = 'Select the door to enter by.', t = 0, clock = hourOf(game.t || 0) * 3600 + ri(0, 3599), alarm = false, alarmT = 0, over = null, entryDoor = null, pauseMenu = null;
@@ -211,11 +218,50 @@ function breakinScene(opts, done) {
     if (door) { door.open = !door.open; sfx.tone(door.open ? 220 : 180, 0.06); say(door.open ? 'Door opened.' : 'Door closed.'); return; }
     if (!f) { say('Nothing there.'); return; }
     const def = FURN[f.type];
+    if (f.type === 'terminal') { const i = f.letter; bld.pwKnown[i] = true; sfx.tick(); say('Terminal. Password letter ' + (i + 1) + ' of ' + bld.pw.length + ' is "' + bld.pw[i] + '".  ' + pwPattern()); return; }
+    if (f.type === 'computer') { openComputer(); return; }
     if (f.type === 'evidence' && f.content) { out.evidence = pick(game.crime ? game.crime.items : ['payoff money']); f.content = null; say('You pick up the ' + out.evidence + '!'); sfx.select(); raiseAlarm('The evidence is missing.'); return; }
     if (!def.open) { say(def.name + '.' + (def.bug && !f.bugged ? '    bug' : '')); return; }
     if (def.kit && !kit.safekit) { say(def.name + '. You need a safecracking kit.'); sfx.deny(); return; }
     if (f.opened) { say(def.name + ' open.' + (f.content === 'clue' && !f.photographed ? '    photo' : ' Nothing more here.')); return; }
     max.busy = { f, t: 0, need: def.open * (def.kit ? 1 - skillLevel('electronics') * 0.1 : 1) }; say((def.kit ? 'Cracking the ' : 'Opening the ') + def.name.toLowerCase() + '...');
+  }
+  // ---------- enemy computers: password, then search ----------
+  const pwPattern = () => bld.pwKnown.map((k, i) => k ? bld.pw[i] : '_').join(' ');
+  function openComputer() { comp = { stage: 'pw', input: '', lines: ['MAINFRAME ONLINE. ENTER PASSWORD.', 'Known letters: ' + pwPattern()], searches: 0, misses: 0 }; typing = true; sfx.select(); say('Mainframe computer. Type the password (F4).'); }
+  function closeComputer(m) { comp = null; typing = false; if (m) say(m); }
+  function compChar(ch) {
+    if (!comp) return; if (ch === '') { comp.input = comp.input.slice(0, -1); return; }
+    if (comp.stage === 'result') { comp.stage = 'search'; comp.input = ''; }
+    if (comp.input.length < 18) comp.input += ch; sfx.tick();
+  }
+  function compEnter() {
+    if (!comp) return;
+    if (comp.stage === 'result') { comp.stage = 'search'; comp.input = ''; return; }
+    if (comp.stage === 'pw') {
+      if (comp.input === bld.pw) { comp.stage = 'search'; comp.input = ''; comp.lines = ['ACCESS GRANTED.', 'Search for a person, city, organization,', 'street address or item of evidence.']; sfx.success(); bld.pwKnown = bld.pw.split('').map(() => true); }
+      else { closeComputer('ACCESS DENIED.'); raiseAlarm('The computer logs a bad password.'); }
+      return;
+    }
+    const res = searchDB(comp.input.trim()); comp.stage = 'result';
+    if (res.length) { comp.searches++; comp.lines = ['SEARCH: ' + comp.input, ...res]; res.forEach(r => out.clues.push(r)); sfx.select(); }
+    else { comp.misses++; comp.lines = ['SEARCH: ' + comp.input, 'NO RECORDS FOUND.', comp.misses >= 3 ? 'SESSION TERMINATED.' : 'You may try again.']; sfx.deny(); }
+    if (comp.searches >= 3 || comp.misses >= 3) comp.last = true;
+  }
+  function searchDB(q) {
+    q = q.toUpperCase(); if (q.length < 3 || !game.crime) return [];
+    const cr = game.crime, found = []; const add = s => { if (s && !found.includes(s)) found.push(s); };
+    // people: a hit on the name gives the smoking gun - the role
+    for (const p of cr.people) { const n = p.name.toUpperCase(); if (n.includes(q) || q.includes(n.split(' ')[1])) { learn(p, 'name'); learn(p, 'org'); learn(p, 'city'); const c = clueAbout(p, 'Enemy Computer', 'role'); add(p.name + ': ' + p.role + ', ' + p.org.name + ', ' + cityById(p.city).name + '.'); if (!p.known.hideout && rnd() < 0.6) { learn(p, 'hideout'); add('Works from ' + game.buildings[p.building].address + '.'); } } }
+    // cities: organizations and suspects operating there
+    for (const c of CITIES) if (c.name.toUpperCase().includes(q)) { for (const b of Object.values(game.buildings)) if (b.city === c.id && b.org && (b.org === org || cr.orgs.includes(b.org))) { b.known = true; b.orgKnown = true; add(b.org.name + ' office: ' + b.address + ', ' + c.name + '.'); } const ps = cr.people.filter(p => p.city === c.id); ps.forEach(p => { learn(p, 'city'); p.exists = true; }); if (ps.length) add(ps.length + ' of our associates operate in ' + c.name + '.'); }
+    // organizations: their offices and people
+    for (const o of ORGS) if (o.name.toUpperCase().includes(q) || o.short.toUpperCase() === q) { for (const b of Object.values(game.buildings)) if (b.org === o) { b.known = true; b.orgKnown = true; add(o.name + ': ' + b.address + ', ' + cityById(b.city).name + '.'); } cr.people.filter(p => p.org === o).forEach(p => { learn(p, 'name'); learn(p, 'org'); add(p.name + ' - member of the ' + o.name + '.'); }); }
+    // street addresses
+    for (const b of Object.values(game.buildings)) if (b.address.toUpperCase().includes(q) && b.org) { b.known = true; b.orgKnown = true; add(b.address + ' is used by the ' + b.org.name + '.'); const s = b.suspect !== null && b.suspect !== undefined ? cr.people[b.suspect] : null; if (s) { learn(s, 'face'); learn(s, 'name'); add('Resident: ' + s.name + '.'); } }
+    // crime evidence
+    for (const s of cr.steps) if (s.kind === 'item' && s.item.toUpperCase().includes(q)) { const p = cr.people[s.from]; learn(p, 'role'); learn(p, 'name'); s.known = true; add('The ' + s.item + ' is handled by ' + p.name + ' (' + p.role + ').'); }
+    return found.slice(0, 7);
   }
   function opened(f) {
     f.opened = true; const def = FURN[f.type];
@@ -287,10 +333,11 @@ function breakinScene(opts, done) {
       if (max.stun > 0) max.stun -= dt;
       if (max.gassed > 0) max.gassed = Math.max(0, max.gassed - dt * 0.5);
       max.cool -= dt;
-      const ax = input.axis();
+      const ax = comp ? { x: 0, y: 0 } : input.axis();
       if (max.busy) { if (ax.x || ax.y) { max.busy = null; say('Interrupted.'); } else { max.busy.t += dt; if ((max.busy.t * 5 | 0) !== ((max.busy.t - dt) * 5 | 0)) sfx.tick(); if (max.busy.t >= max.busy.need) { const f = max.busy.f; max.busy = null; opened(f); } } }
       else if (max.stun <= 0 && (ax.x || ax.y)) { const l = Math.hypot(ax.x, ax.y); max.dir = Math.atan2(ax.y, ax.x); const sp = (max.crouch ? 14 : 30) * (max.prisoner ? 0.8 : 1); moveEnt(max, ax.x / l * sp, ax.y / l * sp, dt); max.walk += dt; }
-      if (input.held('fire')) fire();
+      if (input.held('fire') && !comp) fire();
+      if (comp && people.some(p => p.kind === 'guard' && p.state === 'attack' && !p.out)) closeComputer('A guard! You jump away from the keyboard.');
       if (max.prisoner) { const p = max.prisoner; const d = dist(p.x, p.y, max.x, max.y); if (d > 8) { p.dir = Math.atan2(max.y - p.y, max.x - p.x); moveEnt(p, Math.cos(p.dir) * 34, Math.sin(p.dir) * 34, dt); p.walk += dt; if (d > 30) { p.x = max.x - Math.cos(max.dir) * 6; p.y = max.y - Math.sin(max.dir) * 6; } } if (p.alarmIn !== undefined) { p.alarmIn -= dt; if (p.alarmIn <= 0) { p.alarmIn = undefined; raiseAlarm('The kidnapping has been noticed.'); } } }
       for (const p of people) if (p.out && !p.hidden && dist(p.x, p.y, max.x, max.y) < 4) {
         if (p === target) { target.state = 'captive'; target.out = false; max.prisoner = target; say('You hoist the suspect over your shoulder. Get out!'); continue; }
@@ -383,6 +430,7 @@ function breakinScene(opts, done) {
     wrap(msg, 138).slice(-2).forEach((l, i) => text(l, 34, 12 + i * 8, P.G4));
     drawEquip(178, 1);
     drawBuildingWindow(178, 104, 140, 94, r);
+    if (comp) drawComputer();
     if (over) drawOver();
     if (pauseMenu) { msgBox(60, 56, 200, 84); textC('MISSION PAUSED', W / 2, 62, P.YE); pauseMenu.draw(); }
   };
@@ -425,6 +473,16 @@ function breakinScene(opts, done) {
     const sc = Math.min(134 / B.bw, 88 / B.bh); B.outer.forEach((d, i) => text(String(i + 1), 93 - B.bx * sc + d.x * sc + 2, 99 - B.by * sc + d.y * sc - 3, P.YE, P.K));
     doorMenu.draw();
   }
+  function drawComputer() {
+    rect(RX + 2, RY + 2, RW - 4, RH - 4, P.K); frame(RX + 2, RY + 2, RW - 4, RH - 4, P.GR2);
+    let y = RY + 6; for (const l of comp.lines) { y = para(l, RX + 6, y, RW - 14, P.GR2, 8) + 1; if (y > RY + 96) break; }
+    const prompt = comp.stage === 'pw' ? 'PASSWORD: ' : 'SEARCH: ';
+    if (comp.stage !== 'result') text(prompt + comp.input + ((t * 3 | 0) % 2 ? '_' : ''), RX + 6, RY + 104, P.YE);
+    else text(comp.last ? 'Enter: log off' : 'Type again, or Esc: log off', RX + 6, RY + 104, P.G3);
+    // touch keyboard
+    const K = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (let i = 0; i < 29; i++) { const x = 8 + (i % 13) * 12, yy = 148 + Math.floor(i / 13) * 12; if (i >= 26 && i > 28) continue; rect(x, yy, 11, 11, i < 26 ? P.GR : P.G1); textC(i < 26 ? K[i] : ['_', '<', 'OK'][i - 26], x + 5, yy + 2, i < 26 ? P.K : P.W); }
+  }
   function drawOver() {
     const k = over.kind; msgBox(20, 50, W - 40, 96);
     textC({ escaped: 'YOU ARE OUT', captured: 'KNOCKED OUT AND CAPTURED', abort: 'MISSION ABORTED' }[k], W / 2, 58, k === 'escaped' ? P.GR2 : P.RD2);
@@ -441,7 +499,9 @@ function breakinScene(opts, done) {
     if (out.bugged && opts.building && !lost) game.taps.push({ key: opts.building.key, until: dayOf(game.t) + 4 });
     done({ kind: k, clues: out.clues, messages: lost ? 0 : out.messages, plan: !lost && out.plan, personnel: !lost && out.personnel, evidence: lost ? null : out.evidence, prisoner: k === 'escaped' && max.prisoner ? occupant : null, alarm: out.alarm, seconds: t });
   }
+  scene.onChar = ch => compChar(ch);
   scene.onKey = function (k) {
+    if (comp) { if (k === 'menu') closeComputer('You log off.'); else if (k === 'select') { if (comp.last && comp.stage === 'result') closeComputer('The mainframe logs you off.'); else compEnter(); } else if (k === 'fire' && comp.stage !== 'pw') compChar(' '); return; }
     if (!entryDoor) { if (k === 'menu') { over = { kind: 'abort', t: 1 }; end(); return; } doorMenu.key(k); return; }
     if (over) { if (over.t > 0.8 && (k === 'select' || k === 'fire' || k === 'action' || k === 'menu')) end(); return; }
     if (pauseMenu) { if (k === 'menu') pauseMenu = null; else pauseMenu.key(k); return; }
@@ -452,6 +512,7 @@ function breakinScene(opts, done) {
     if (k === 'alt2') { const ks = ['frag', 'stun', 'gas']; max.gtype = ks[(ks.indexOf(max.gtype) + 1) % 3]; sfx.blip(); say(GREN[max.gtype].name + ' grenades selected.'); }
   };
   scene.onTap = function (x, y) {
+    if (comp) { const c = Math.floor((x - 8) / 12), r = Math.floor((y - 148) / 12); if (r >= 0 && r < 3 && c >= 0 && c < 13) { const K = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const i = r * 13 + c; if (i < 26) compChar(K[i]); else if (i === 26) compChar(' '); else if (i === 27) compChar(''); else scene.onKey('select'); } return; }
     if (!entryDoor) { doorMenu.tap(x, y); return; }
     if (over) { if (over.t > 0.8) end(); return; }
     if (pauseMenu) { pauseMenu.tap(x, y); return; }
@@ -462,10 +523,10 @@ function breakinScene(opts, done) {
     const cam = roomCam(); if (x >= RX && x < RX + RW && y >= RY && y < RY + RH) max.dir = Math.atan2((y - cam.oy) / cam.Z - max.y, (x - cam.ox) / cam.Z - max.x);
   };
   scene.rawKey = e => {
-    const c = e.code; if (!entryDoor || over || pauseMenu) return false;
+    const c = e.code; if (!entryDoor || over || pauseMenu || comp) return false;
     if (c === 'KeyP' || c === 'F2') { photo(); return true; } if (c === 'KeyB' || c === 'F3') { bug(); return true; }
     if (c === 'KeyC' || c === 'Numpad5') { max.crouch = !max.crouch; say(max.crouch ? 'Crouching.' : 'Standing.'); return true; }
-    if (c === 'F1') { examine(); return true; } if (c === 'F5' || c === 'Digit1') { throwG(0); return true; } if (c === 'F6' || c === 'Digit2') { throwG(1); return true; } if (c === 'F7' || c === 'Digit3') { throwG(2); return true; }
+    if (c === 'F1') { examine(); return true; } if (c === 'F4') { const { f } = facing(); if (f && f.type === 'computer') openComputer(); else say('Face the mainframe to use it.'); return true; } if (c === 'F5' || c === 'Digit1') { throwG(0); return true; } if (c === 'F6' || c === 'Digit2') { throwG(1); return true; } if (c === 'F7' || c === 'Digit3') { throwG(2); return true; }
     if (c === 'F10') { const ks = ['frag', 'stun', 'gas']; max.gtype = ks[(ks.indexOf(max.gtype) + 1) % 3]; return true; }
     return false;
   };
