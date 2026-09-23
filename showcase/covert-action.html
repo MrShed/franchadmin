@@ -1,0 +1,2204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Covert Action</title>
+<meta name="description" content="A from-memory recreation of the 1990 espionage classic: break-ins, codebreaking, wiretaps and car tails across a randomly generated international plot.">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    touch-action: none; -webkit-user-select: none; user-select: none;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box; font-family: monospace;
+  }
+  #screen {
+    display: block; image-rendering: pixelated; image-rendering: crisp-edges;
+    background: #000; outline: none;
+  }
+  #pad { display: none; width: 100%; max-width: 640px; box-sizing: border-box; padding: 10px 16px 14px; gap: 12px;
+    justify-content: space-between; align-items: center; }
+  body.touch #pad { display: flex; }
+  body.touch { justify-content: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+  .dpad { position: relative; width: 132px; height: 132px; flex: none; }
+  .dpad button { position: absolute; width: 44px; height: 44px; }
+  .dpad [data-k="up"] { left: 44px; top: 0; }
+  .dpad [data-k="down"] { left: 44px; bottom: 0; }
+  .dpad [data-k="left"] { left: 0; top: 44px; }
+  .dpad [data-k="right"] { right: 0; top: 44px; }
+  .btns { display: grid; grid-template-columns: repeat(2, 60px); gap: 10px; }
+  #pad button {
+    font: bold 11px/1 monospace; letter-spacing: .05em; color: #d8d8e0;
+    background: linear-gradient(#5c5c6c, #3c3c48); border: 2px solid #8c8c9c; border-bottom-color: #1c1c24; border-right-color: #1c1c24;
+    border-radius: 3px; padding: 0; touch-action: none;
+  }
+  #pad button.on { background: #2034a8; color: #f8e030; }
+  .btns button { height: 48px; }
+  .mid { display: flex; flex-direction: column; gap: 8px; }
+  .mid button { width: 56px; height: 30px; }
+</style>
+</head>
+<body>
+<canvas id="screen" width="320" height="200" tabindex="0" aria-label="Covert Action game screen"></canvas>
+<div id="pad" aria-hidden="true">
+  <div class="dpad">
+    <button data-k="up" id="k-up">▲</button>
+    <button data-k="left" id="k-left">◀</button>
+    <button data-k="right" id="k-right">▶</button>
+    <button data-k="down" id="k-down">▼</button>
+  </div>
+  <div class="mid">
+    <button data-k="menu" id="k-menu">ESC</button>
+    <button data-k="alt2" id="k-alt2">TAB</button>
+  </div>
+  <div class="btns">
+    <button data-k="alt" id="k-alt">GREN</button>
+    <button data-k="fire" id="k-fire">FIRE</button>
+    <button data-k="action" id="k-action">SEARCH</button>
+    <button data-k="select" id="k-select">OK</button>
+  </div>
+</div>
+<script>
+"use strict";
+// ===================================================================
+// CORE: screen, palette, input, sound, rng, drawing primitives, scenes
+// ===================================================================
+const W = 320, H = 200;
+const cv = document.getElementById('screen');
+let g = cv.getContext('2d', { alpha: false });
+const SCREEN = g;
+g.imageSmoothingEnabled = false;
+
+// MCGA-era palette, picked by hand to sit in the 6-bit-per-channel VGA DAC range
+const P = {
+  K: '#000000', DK: '#141418', D2: '#24242c', G1: '#383844', G2: '#545464', G3: '#7c7c8c', G4: '#a8a8b8', G5: '#cccccc', W: '#fcfcfc',
+  NV: '#000c38', BL: '#1c2c9c', BL2: '#3450d0', BL3: '#6c8cfc', CY: '#54d8fc', TL: '#1c7c7c',
+  YE: '#fce03c', YE2: '#b89c1c', OR: '#f47c18', RD: '#b40c0c', RD2: '#f04040', PK: '#fc9cb4',
+  GR: '#107c1c', GR2: '#3cb838', GR3: '#90e070', DG: '#0c3c10', OL: '#5c6824',
+  BR: '#5c3814', BR2: '#8c5c2c', BR3: '#b8844c', TN: '#dcb884', CR: '#ece0bc',
+  SK: '#f0b088', SK2: '#b87850', SK3: '#6c4028', PU: '#6c2c9c', PU2: '#a860dc', MG: '#c02c8c',
+};
+
+// ---------- fit canvas ----------
+function fit() {
+  const touch = document.body.classList.contains('touch');
+  const vw = window.innerWidth, vh = window.innerHeight - (touch ? 190 : 0);
+  // original ran 320x200 on a 4:3 monitor: pixels were 1.2x taller than wide
+  let w = Math.min(vw, vh * 4 / 3), h = w * 3 / 4;
+  if (w >= 640 && !touch) { const s = Math.floor(w / 320); w = 320 * s; h = w * 3 / 4; }
+  cv.style.width = Math.floor(w) + 'px'; cv.style.height = Math.floor(h) + 'px';
+}
+window.addEventListener('resize', fit);
+
+// ---------- rng ----------
+let seed = (Date.now() ^ 0x5eed) >>> 0;
+function rnd() { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+const pick = a => a[Math.floor(rnd() * a.length)];
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+
+// ---------- drawing primitives ----------
+function rect(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x | 0, y | 0, w | 0, h | 0); }
+function px(x, y, c) { g.fillStyle = c; g.fillRect(x | 0, y | 0, 1, 1); }
+function frame(x, y, w, h, c) { rect(x, y, w, 1, c); rect(x, y + h - 1, w, 1, c); rect(x, y, 1, h, c); rect(x + w - 1, y, 1, h, c); }
+function line(x0, y0, x1, y1, c) {
+  x0 |= 0; y0 |= 0; x1 |= 0; y1 |= 0; g.fillStyle = c;
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = dx + dy;
+  for (let n = 0; n < 2000; n++) { g.fillRect(x0, y0, 1, 1); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } }
+}
+function disc(cx, cy, r, c) { g.fillStyle = c; for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y + r * 0.8)); g.fillRect(cx - w | 0, cy + y | 0, w * 2 + 1, 1); } }
+// 4x4 ordered (Bayer) dither: the signature look of 1990 gradients
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+function dither(x, y, w, h, c1, c2, level) { // level 0..16 = amount of c2
+  rect(x, y, w, h, c1); if (level <= 0) return; g.fillStyle = c2;
+  if (level >= 16) { g.fillRect(x, y, w, h); return; }
+  for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) if (BAYER[((y + yy) & 3) * 4 + ((x + xx) & 3)] < level) g.fillRect(x + xx, y + yy, 1, 1);
+}
+function vgrad(x, y, w, h, cols) { // banded + dithered vertical gradient through a list of colours
+  const seg = h / (cols.length - 1);
+  for (let yy = 0; yy < h; yy++) {
+    const t = yy / seg, i = Math.min(cols.length - 2, Math.floor(t)), f = t - i;
+    const lvl = Math.round(f * 16);
+    g.fillStyle = cols[i]; g.fillRect(x, y + yy, w, 1);
+    if (lvl > 0) { g.fillStyle = cols[i + 1]; for (let xx = 0; xx < w; xx++) if (BAYER[((y + yy) & 3) * 4 + ((x + xx) & 3)] < lvl) g.fillRect(x + xx, y + yy, 1, 1); }
+  }
+}
+// raised / sunken bevel boxes, MicroProse-menu style
+function bevel(x, y, w, h, face, hi, lo) { rect(x, y, w, h, face); rect(x, y, w, 1, hi); rect(x, y, 1, h, hi); rect(x, y + h - 1, w, 1, lo); rect(x + w - 1, y, 1, h, lo); }
+function panel(x, y, w, h) { rect(x, y, w, h, P.K); bevel(x + 1, y + 1, w - 2, h - 2, P.G3, P.G5, P.G1); rect(x + 4, y + 4, w - 8, h - 8, P.G1); rect(x + 5, y + 5, w - 10, h - 10, P.NV); }
+
+// cached offscreen sprites
+const spriteCache = new Map();
+function sprite(key, w, h, drawFn) {
+  let c = spriteCache.get(key);
+  if (!c) { c = document.createElement('canvas'); c.width = w; c.height = h; drawTo(c.getContext('2d'), drawFn); spriteCache.set(key, c); }
+  return c;
+}
+let gStack = [];
+function drawTo(ctx, fn) { gStack.push(g); g = ctx; try { fn(); } finally { g = gStack.pop(); } }
+
+// ---------- input ----------
+// logical buttons: up down left right fire action alt alt2 select menu
+const KEYMAP = {
+  ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
+  Space: 'fire', ControlLeft: 'fire', KeyE: 'action', KeyX: 'action', KeyG: 'alt', KeyQ: 'alt', Tab: 'alt2', Enter: 'select', NumpadEnter: 'select', Escape: 'menu',
+};
+const held = new Set(); const pressedQ = [];
+const input = {
+  held: k => held.has(k),
+  axis() { return { x: (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0), y: (held.has('down') ? 1 : 0) - (held.has('up') ? 1 : 0) }; },
+};
+let typing = false; // crypto scene wants raw letters
+window.addEventListener('keydown', e => {
+  if (e.code === 'KeyM' && !typing) { sfx.toggle(); e.preventDefault(); return; }
+  if (typing && /^Key[A-Z]$/.test(e.code) && !e.ctrlKey && !e.metaKey) { scene.onChar && scene.onChar(e.code.slice(3)); e.preventDefault(); return; }
+  if (typing && (e.code === 'Backspace' || e.code === 'Delete')) { scene.onChar && scene.onChar(''); e.preventDefault(); return; }
+  const k = KEYMAP[e.code]; if (!k) return;
+  e.preventDefault(); sfx.unlock();
+  if (!held.has(k)) { pressedQ.push(k); }
+  held.add(k);
+});
+window.addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) held.delete(k); });
+window.addEventListener('blur', () => held.clear());
+
+// touch pad
+document.querySelectorAll('#pad button').forEach(b => {
+  const k = b.dataset.k;
+  const down = e => { e.preventDefault(); sfx.unlock(); if (!held.has(k)) pressedQ.push(k); held.add(k); b.classList.add('on'); };
+  const up = e => { e.preventDefault(); held.delete(k); b.classList.remove('on'); };
+  b.addEventListener('pointerdown', down); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up);
+});
+function enableTouch() { if (!document.body.classList.contains('touch')) { document.body.classList.add('touch'); fit(); } }
+if (matchMedia('(pointer: coarse)').matches) enableTouch();
+window.addEventListener('touchstart', enableTouch, { passive: true });
+
+// pointer on the canvas -> game coordinates
+const mouse = { x: -1, y: -1, down: false };
+function toGame(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
+cv.addEventListener('pointerdown', e => { e.preventDefault(); cv.focus(); sfx.unlock(); const p = toGame(e); mouse.x = p.x; mouse.y = p.y; mouse.down = true; scene.onTap && scene.onTap(p.x, p.y); });
+cv.addEventListener('pointermove', e => { const p = toGame(e); mouse.x = p.x; mouse.y = p.y; scene.onHover && scene.onHover(p.x, p.y); });
+window.addEventListener('pointerup', () => { mouse.down = false; });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+
+// ---------- sound: PC-speaker / early AdLib flavoured square-wave bleeps ----------
+const sfx = {
+  ctx: null, muted: false,
+  unlock() { if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; } try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { this.ctx = null; } },
+  toggle() { this.muted = !this.muted; toast(this.muted ? 'SOUND OFF' : 'SOUND ON'); },
+  tone(f, d = 0.08, type = 'square', vol = 0.06, slide = 0, delay = 0) {
+    if (this.muted || !this.ctx) return; const c = this.ctx, t = c.currentTime + delay;
+    const o = c.createOscillator(), gn = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + d);
+    gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0008, t + d); o.connect(gn); gn.connect(c.destination); o.start(t); o.stop(t + d + 0.02);
+  },
+  noise(d = 0.15, vol = 0.1, hp = 800, delay = 0) {
+    if (this.muted || !this.ctx) return; const c = this.ctx, t = c.currentTime + delay, n = Math.floor(c.sampleRate * d);
+    const b = c.createBuffer(1, n, c.sampleRate), a = b.getChannelData(0); for (let i = 0; i < n; i++) a[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = c.createBufferSource(); s.buffer = b; const f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp; const gn = c.createGain(); gn.gain.value = vol;
+    s.connect(f); f.connect(gn); gn.connect(c.destination); s.start(t);
+  },
+  blip() { this.tone(880, 0.03, 'square', 0.04); },
+  select() { this.tone(660, 0.05, 'square', 0.05); this.tone(990, 0.06, 'square', 0.05, 0, 0.05); },
+  deny() { this.tone(160, 0.18, 'square', 0.06); },
+  shot() { this.noise(0.12, 0.18, 400); this.tone(220, 0.08, 'square', 0.05, -150); },
+  boom() { this.noise(0.6, 0.3, 60); this.tone(90, 0.5, 'sawtooth', 0.08, -60); },
+  hiss() { this.noise(0.8, 0.06, 2500); },
+  alarm() { for (let i = 0; i < 4; i++) { this.tone(900, 0.16, 'square', 0.05, 0, i * 0.34); this.tone(600, 0.16, 'square', 0.05, 0, i * 0.34 + 0.17); } },
+  tick() { this.tone(1400, 0.015, 'square', 0.025); },
+  success() { [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.12, 'square', 0.05, 0, i * 0.1)); },
+  fail() { [392, 330, 262, 196].forEach((f, i) => this.tone(f, 0.16, 'square', 0.05, 0, i * 0.14)); },
+  jingle() { // title sting
+    const n = [196, 0, 196, 233, 262, 0, 196, 175, 196, 0, 147, 0, 156, 175, 196];
+    n.forEach((f, i) => { if (f) { this.tone(f, 0.16, 'square', 0.045, 0, i * 0.13); this.tone(f / 2, 0.16, 'triangle', 0.07, 0, i * 0.13); } });
+  },
+};
+
+// ---------- toast / scenes ----------
+let toastMsg = '', toastT = 0;
+function toast(m, t = 1.6) { toastMsg = m; toastT = t; }
+let scene = { update() {}, draw() {} };
+function go(s) { if (scene.leave) scene.leave(); scene = s; typing = !!s.typing; held.clear(); pressedQ.length = 0; if (s.enter) s.enter(); }
+
+let last = performance.now(), acc = 0; const STEP = 1 / 60;
+function frameLoop(now) {
+  let dt = Math.min(0.1, (now - last) / 1000); last = now; acc += dt;
+  while (pressedQ.length) { const k = pressedQ.shift(); scene.onKey && scene.onKey(k); }
+  let n = 0; while (acc >= STEP && n < 6) { scene.update && scene.update(STEP); acc -= STEP; n++; }
+  if (n === 6) acc = 0;
+  g.save(); scene.draw && scene.draw(); g.restore();
+  if (toastT > 0) { toastT -= dt; const w = textW(toastMsg) + 10; rect((W - w) / 2, 4, w, 12, P.K); frame((W - w) / 2, 4, w, 12, P.YE); text(toastMsg, (W - w) / 2 + 5, 7, P.YE); }
+  requestAnimationFrame(frameLoop);
+}
+// ===================================================================
+// FONT: hand-drawn proportional bitmap face (cap height 7, descender 2)
+// ===================================================================
+const GLYPHS = {
+  'A': '.xxx. x...x x...x xxxxx x...x x...x x...x', 'B': 'xxxx. x...x x...x xxxx. x...x x...x xxxx.',
+  'C': '.xxx. x...x x.... x.... x.... x...x .xxx.', 'D': 'xxxx. x...x x...x x...x x...x x...x xxxx.',
+  'E': 'xxxxx x.... x.... xxxx. x.... x.... xxxxx', 'F': 'xxxxx x.... x.... xxxx. x.... x.... x....',
+  'G': '.xxx. x...x x.... x.xxx x...x x...x .xxxx', 'H': 'x...x x...x x...x xxxxx x...x x...x x...x',
+  'I': 'xxx .x. .x. .x. .x. .x. xxx', 'J': '..xxx ...x. ...x. ...x. x..x. x..x. .xx..',
+  'K': 'x...x x..x. x.x.. xx... x.x.. x..x. x...x', 'L': 'x.... x.... x.... x.... x.... x.... xxxxx',
+  'M': 'x...x xx.xx x.x.x x.x.x x...x x...x x...x', 'N': 'x...x xx..x x.x.x x..xx x...x x...x x...x',
+  'O': '.xxx. x...x x...x x...x x...x x...x .xxx.', 'P': 'xxxx. x...x x...x xxxx. x.... x.... x....',
+  'Q': '.xxx. x...x x...x x...x x.x.x x..x. .xx.x', 'R': 'xxxx. x...x x...x xxxx. x.x.. x..x. x...x',
+  'S': '.xxxx x.... x.... .xxx. ....x ....x xxxx.', 'T': 'xxxxx ..x.. ..x.. ..x.. ..x.. ..x.. ..x..',
+  'U': 'x...x x...x x...x x...x x...x x...x .xxx.', 'V': 'x...x x...x x...x x...x x...x .x.x. ..x..',
+  'W': 'x...x x...x x...x x.x.x x.x.x xx.xx x...x', 'X': 'x...x x...x .x.x. ..x.. .x.x. x...x x...x',
+  'Y': 'x...x x...x .x.x. ..x.. ..x.. ..x.. ..x..', 'Z': 'xxxxx ....x ...x. ..x.. .x... x.... xxxxx',
+  'a': '..... ..... .xxx. ....x .xxxx x...x .xxxx', 'b': 'x.... x.... xxxx. x...x x...x x...x xxxx.',
+  'c': '.... .... .xxx x... x... x... .xxx', 'd': '....x ....x .xxxx x...x x...x x...x .xxxx',
+  'e': '..... ..... .xxx. x...x xxxxx x.... .xxx.', 'f': '..xx .x.. xxx. .x.. .x.. .x.. .x..',
+  'g': '..... ..... .xxxx x...x x...x x...x .xxxx ....x .xxx.', 'h': 'x.... x.... xxxx. x...x x...x x...x x...x',
+  'i': '.x. ... xx. .x. .x. .x. xxx', 'j': '..x ... .xx ..x ..x ..x ..x x.x .x.',
+  'k': 'x... x... x..x x.x. xx.. x.x. x..x', 'l': 'xx. .x. .x. .x. .x. .x. xxx',
+  'm': '..... ..... xx.x. x.x.x x.x.x x.x.x x...x', 'n': '..... ..... xxxx. x...x x...x x...x x...x',
+  'o': '..... ..... .xxx. x...x x...x x...x .xxx.', 'p': '..... ..... xxxx. x...x x...x x...x xxxx. x.... x....',
+  'q': '..... ..... .xxxx x...x x...x x...x .xxxx ....x ....x', 'r': '.... .... x.xx xx.. x... x... x...',
+  's': '.... .... .xxx x... .xx. ...x xxx.', 't': '.x.. .x.. xxxx .x.. .x.. .x.x ..x.',
+  'u': '..... ..... x...x x...x x...x x..xx .xx.x', 'v': '..... ..... x...x x...x x...x .x.x. ..x..',
+  'w': '..... ..... x...x x...x x.x.x x.x.x .x.x.', 'x': '..... ..... x...x .x.x. ..x.. .x.x. x...x',
+  'y': '..... ..... x...x x...x x...x x...x .xxxx ....x .xxx.', 'z': '..... ..... xxxxx ...x. ..x.. .x... xxxxx',
+  '0': '.xxx. x...x x..xx x.x.x xx..x x...x .xxx.', '1': '.x. xx. .x. .x. .x. .x. xxx',
+  '2': '.xxx. x...x ....x ...x. ..x.. .x... xxxxx', '3': 'xxxx. ....x ....x .xxx. ....x ....x xxxx.',
+  '4': '...x. ..xx. .x.x. x..x. xxxxx ...x. ...x.', '5': 'xxxxx x.... xxxx. ....x ....x x...x .xxx.',
+  '6': '.xxx. x.... x.... xxxx. x...x x...x .xxx.', '7': 'xxxxx ....x ...x. ..x.. .x... .x... .x...',
+  '8': '.xxx. x...x x...x .xxx. x...x x...x .xxx.', '9': '.xxx. x...x x...x .xxxx ....x ....x .xxx.',
+  ' ': '... ... ... ... ... ... ...', '.': '. . . . . . x', ',': '. . . . . . x x', '!': 'x x x x x . x',
+  '?': '.xxx. x...x ....x ...x. ..x.. ..... ..x..', "'": 'x x . . . . .', '"': 'x.x x.x ... ... ... ... ...',
+  '-': '.... .... .... xxxx .... .... ....', '+': '..... ..x.. ..x.. xxxxx ..x.. ..x.. .....',
+  ':': '. . x . . x .', ';': '. . x . . x x', '/': '....x ...x. ...x. ..x.. .x... .x... x....',
+  '(': '.x x. x. x. x. x. .x', ')': 'x. .x .x .x .x .x x.', '#': '.x.x. xxxxx .x.x. .x.x. .x.x. xxxxx .x.x.',
+  '%': 'xx..x xx..x ...x. ..x.. .x... x..xx x..xx', '&': '.xx.. x..x. x.x.. .x... x.x.x x..x. .xx.x',
+  '*': '..... x.x.x .xxx. xxxxx .xxx. x.x.x .....', '=': '..... ..... xxxxx ..... xxxxx ..... .....',
+  '<': '...x ..x. .x.. x... .x.. ..x. ...x', '>': 'x... .x.. ..x. ...x ..x. .x.. x...',
+  '[': 'xx x. x. x. x. x. xx', ']': 'xx .x .x .x .x .x xx', '_': '..... ..... ..... ..... ..... ..... ..... xxxxx',
+  '$': '..x.. .xxxx x.x.. .xxx. ..x.x xxxx. ..x..', '@': '.xxx. x...x x.xxx x.x.x x.xxx x.... .xxx.',
+  '£': '..xx. .x..x .x... xxx.. .x... .x... xxxxx', '—': '...... ...... ...... xxxxxx ...... ...... ......',
+  '·': '. . . x . . .', '▶': 'x... xx.. xxx. xxxx xxx. xx.. x...', '◀': '...x ..xx .xxx xxxx .xxx ..xx ...x',
+  '▲': '....... ....... ...x... ..xxx.. .xxxxx. xxxxxxx .......', '▼': '....... xxxxxxx .xxxxx. ..xxx.. ...x... ....... .......',
+  '█': 'xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx',
+};
+const FONT = {};
+for (const ch in GLYPHS) { const rows = GLYPHS[ch].split(' '); FONT[ch] = { w: rows[0].length, rows }; }
+const glyphCache = new Map();
+function glyphImg(ch, col) {
+  const k = ch + col; let c = glyphCache.get(k); if (c) return c;
+  const gl = FONT[ch] || FONT['?']; c = document.createElement('canvas'); c.width = gl.w; c.height = 9;
+  const x = c.getContext('2d'); x.fillStyle = col;
+  gl.rows.forEach((r, y) => { for (let i = 0; i < r.length; i++) if (r[i] === 'x') x.fillRect(i, y, 1, 1); });
+  glyphCache.set(k, c); return c;
+}
+function textW(s) { let w = 0; for (const ch of s) w += (FONT[ch] || FONT['?']).w + 1; return Math.max(0, w - 1); }
+function text(s, x, y, col = P.W, shadow = null) {
+  s = String(s); x = Math.round(x); y = Math.round(y);
+  if (shadow) { let xx = x + 1; for (const ch of s) { g.drawImage(glyphImg(ch, shadow), xx, y + 1); xx += (FONT[ch] || FONT['?']).w + 1; } }
+  for (const ch of s) { g.drawImage(glyphImg(ch, col), x, y); x += (FONT[ch] || FONT['?']).w + 1; }
+  return x;
+}
+function textC(s, cx, y, col, shadow) { return text(s, cx - textW(String(s)) / 2, y, col, shadow); }
+function textR(s, rx, y, col, shadow) { return text(s, rx - textW(String(s)), y, col, shadow); }
+// scaled text for logos and headlines
+function bigText(s, x, y, scale, col, shadow) {
+  s = String(s); let xx = Math.round(x);
+  for (const ch of s) {
+    const gl = FONT[ch] || FONT['?'];
+    if (shadow) g.drawImage(glyphImg(ch, shadow), 0, 0, gl.w, 9, xx + scale, y + scale, gl.w * scale, 9 * scale);
+    g.drawImage(glyphImg(ch, col), 0, 0, gl.w, 9, xx, y, gl.w * scale, 9 * scale);
+    xx += (gl.w + 1) * scale;
+  }
+  return xx;
+}
+function bigW(s, scale) { return textW(String(s)) * scale + (scale - 1); }
+function wrap(s, maxW) {
+  const out = []; for (const para of String(s).split('\n')) {
+    let lineS = ''; for (const word of para.split(' ')) {
+      const t = lineS ? lineS + ' ' + word : word;
+      if (textW(t) > maxW && lineS) { out.push(lineS); lineS = word; } else lineS = t;
+    } out.push(lineS);
+  } return out;
+}
+function fitText(s, w) { s = String(s); if (textW(s) <= w) return s; while (s.length > 1 && textW(s + '.') > w) s = s.slice(0, -1); return s + '.'; }
+function para(s, x, y, maxW, col = P.W, lh = 10, shadow = null) { const ls = wrap(s, maxW); ls.forEach((l, i) => text(l, x, y + i * lh, col, shadow)); return y + ls.length * lh; }
+// ===================================================================
+// MODEL: cities, organizations, the plot, participants and clues
+// ===================================================================
+const CITIES = [
+  { id: 'WAS', name: 'Washington', country: 'USA', lon: -77, lat: 38.9, look: 'capitol', names: 'us' },
+  { id: 'NYC', name: 'New York', country: 'USA', lon: -74, lat: 40.7, look: 'towers', names: 'us' },
+  { id: 'MEX', name: 'Mexico City', country: 'Mexico', lon: -99.1, lat: 19.4, look: 'pyramid', names: 'es' },
+  { id: 'HAV', name: 'Havana', country: 'Cuba', lon: -82.4, lat: 23.1, look: 'fort', names: 'es' },
+  { id: 'BOG', name: 'Bogota', country: 'Colombia', lon: -74.1, lat: 4.7, look: 'andes', names: 'es' },
+  { id: 'RIO', name: 'Rio de Janeiro', country: 'Brazil', lon: -43.2, lat: -22.9, look: 'sugarloaf', names: 'pt' },
+  { id: 'LON', name: 'London', country: 'Britain', lon: -0.1, lat: 51.5, look: 'clock', names: 'uk' },
+  { id: 'PAR', name: 'Paris', country: 'France', lon: 2.35, lat: 48.9, look: 'eiffel', names: 'fr' },
+  { id: 'ROM', name: 'Rome', country: 'Italy', lon: 12.5, lat: 41.9, look: 'colosseum', names: 'it' },
+  { id: 'VIE', name: 'Vienna', country: 'Austria', lon: 16.4, lat: 48.2, look: 'spire', names: 'de' },
+  { id: 'BER', name: 'East Berlin', country: 'E. Germany', lon: 13.4, lat: 52.5, look: 'tvtower', names: 'de' },
+  { id: 'MOS', name: 'Moscow', country: 'USSR', lon: 37.6, lat: 55.8, look: 'onion', names: 'ru' },
+  { id: 'IST', name: 'Istanbul', country: 'Turkey', lon: 29, lat: 41, look: 'minaret', names: 'tr' },
+  { id: 'CAI', name: 'Cairo', country: 'Egypt', lon: 31.2, lat: 30, look: 'pyramids', names: 'ar' },
+  { id: 'HKG', name: 'Hong Kong', country: 'Hong Kong', lon: 114.2, lat: 22.3, look: 'harbour', names: 'zh' },
+  { id: 'TYO', name: 'Tokyo', country: 'Japan', lon: 139.7, lat: 35.7, look: 'tokyotower', names: 'ja' },
+];
+const cityById = id => CITIES.find(c => c.id === id);
+
+const NAMES = {
+  us: [['Frank', 'Walter', 'Gene', 'Harold', 'Lou', 'Carl', 'Ray'], ['Doris', 'Joan', 'Peggy', 'Lynn'], ['Kessler', 'Dawson', 'Mercer', 'Tully', 'Barrow', 'Hale', 'Pruitt', 'Crane']],
+  es: [['Luis', 'Ramon', 'Hector', 'Esteban', 'Rafael', 'Tomas'], ['Elena', 'Marisol', 'Ines', 'Rosa'], ['Ortega', 'Vargas', 'Salcedo', 'Ibarra', 'Mendoza', 'Quiroga', 'Duarte']],
+  pt: [['Paulo', 'Joao', 'Tiago', 'Rui'], ['Ana', 'Beatriz', 'Leticia'], ['Barbosa', 'Tavares', 'Moreira', 'Pinto', 'Nogueira']],
+  uk: [['Nigel', 'Colin', 'Alistair', 'Rupert', 'Desmond'], ['Fiona', 'Hilary', 'Margot'], ['Ashworth', 'Pym', 'Fairley', 'Stroud', 'Beck', 'Holloway']],
+  fr: [['Henri', 'Marcel', 'Didier', 'Luc', 'Gaston'], ['Colette', 'Simone', 'Odile'], ['Rousseau', 'Delorme', 'Garnier', 'Lefevre', 'Marchand']],
+  it: [['Enzo', 'Carlo', 'Sergio', 'Vito', 'Aldo'], ['Lucia', 'Gina', 'Paola'], ['Conti', 'Russo', 'Moretti', 'Galli', 'Ferrante', 'Bruno']],
+  de: [['Klaus', 'Dieter', 'Jurgen', 'Horst', 'Rainer'], ['Ursula', 'Heike', 'Greta'], ['Brandt', 'Vogel', 'Kranz', 'Heller', 'Adler', 'Lenz']],
+  ru: [['Yuri', 'Oleg', 'Viktor', 'Boris', 'Anatoly'], ['Irina', 'Tatiana', 'Olga'], ['Volkov', 'Petrov', 'Zhukov', 'Orlov', 'Karpov', 'Sokolov']],
+  tr: [['Mehmet', 'Emre', 'Kemal', 'Orhan'], ['Leyla', 'Selin'], ['Yilmaz', 'Demir', 'Aksoy', 'Kaya']],
+  ar: [['Karim', 'Tarek', 'Samir', 'Nabil', 'Omar'], ['Layla', 'Nadia', 'Yasmin'], ['Haddad', 'Mansour', 'Nasser', 'Khalil', 'Farouk']],
+  zh: [['Wei', 'Chen', 'Ming', 'Jun', 'Tao'], ['Mei', 'Lin', 'Xiu'], ['Lau', 'Wong', 'Cheung', 'Ho', 'Fong']],
+  ja: [['Kenji', 'Hiro', 'Takeshi', 'Akira'], ['Yuki', 'Keiko', 'Emi'], ['Sato', 'Mori', 'Kuroda', 'Tanaka', 'Ishida']],
+};
+const CODENAMES = ['VIPER', 'RAVEN', 'JACKAL', 'MAGPIE', 'FALCON', 'COBRA', 'SPHINX', 'MANTIS', 'OSPREY', 'BADGER', 'CONDOR', 'LYNX', 'SCORPION', 'HERON', 'WOLF', 'PYTHON', 'KESTREL', 'MARTEN', 'IBIS', 'CAIMAN', 'SHRIKE', 'TIGER', 'OTTER', 'VULTURE', 'BISHOP', 'ROOK', 'KNIGHT', 'PAWN'];
+
+// Organizations are fictional. Uniform colour paints their guards in break-ins.
+const ORGS = [
+  { name: 'Crimson Brigade', short: 'CRIMSON', type: 'terrorist', home: ['ROM', 'PAR', 'BER', 'IST'], uni: P.RD, uni2: P.BR },
+  { name: 'Directorate K', short: 'DIR. K', type: 'intelligence', home: ['MOS', 'BER', 'VIE', 'HAV'], uni: P.G2, uni2: P.OL },
+  { name: 'Cartel del Sol', short: 'CARTEL', type: 'narcotics', home: ['BOG', 'MEX', 'HAV', 'RIO'], uni: P.TN, uni2: P.BR2 },
+  { name: 'The Consortium', short: 'CONSORT.', type: 'mafia', home: ['NYC', 'ROM', 'LON', 'WAS'], uni: P.D2, uni2: P.G1 },
+  { name: 'Golden Dragon', short: 'DRAGON', type: 'triad', home: ['HKG', 'TYO', 'NYC', 'LON'], uni: P.YE2, uni2: P.BR },
+  { name: 'Nile Front', short: 'NILE FR.', type: 'terrorist', home: ['CAI', 'IST', 'PAR', 'ROM'], uni: P.OL, uni2: P.DG },
+  { name: 'Obsidian Group', short: 'OBSIDIAN', type: 'mercenary', home: ['VIE', 'LON', 'RIO', 'HKG'], uni: P.BL, uni2: P.NV },
+];
+
+const CRIMES = [
+  { name: 'Assassination', verb: 'assassinate a visiting head of state', target: 'the summit' },
+  { name: 'Kidnapping', verb: 'kidnap an American diplomat', target: 'the embassy' },
+  { name: 'Bombing', verb: 'bomb a NATO communications centre', target: 'the relay station' },
+  { name: 'Hijacking', verb: 'hijack a nuclear fuel shipment', target: 'the convoy' },
+  { name: 'Theft of Secrets', verb: 'steal the plans for a stealth guidance system', target: 'the laboratory' },
+  { name: 'Counterfeiting', verb: 'flood Europe with counterfeit dollars', target: 'the mint' },
+];
+
+// tier 3 = mastermind, 2 = lieutenants, 1 = operatives
+const ROLES = [
+  { name: 'Mastermind', tier: 3, w: 30 },
+  { name: 'Planner', tier: 2, w: 12 }, { name: 'Financier', tier: 2, w: 12 }, { name: 'Recruiter', tier: 2, w: 10 },
+  { name: 'Courier', tier: 1, w: 6, mobile: true }, { name: 'Assassin', tier: 1, w: 9 }, { name: 'Safecracker', tier: 1, w: 7 },
+  { name: 'Forger', tier: 1, w: 6 }, { name: 'Driver', tier: 1, w: 5, mobile: true }, { name: 'Demolitions', tier: 1, w: 9 },
+  { name: 'Informant', tier: 1, w: 5 }, { name: 'Pilot', tier: 1, w: 6, mobile: true },
+];
+const FACETS = ['photo', 'name', 'city', 'org', 'role'];
+const FACET_LABEL = { photo: 'photograph', name: 'real name', city: 'location', org: 'organization', role: 'role' };
+
+// ------------------------------------------------------------------
+const game = {
+  agent: null, level: 1, day: 1, hour: 8, city: 'WAS', score: 0, careerScore: 0, cases: [],
+  plot: null, messages: [], log: [], bugs: [],
+};
+function timeStr() { return 'Day ' + game.day + ', ' + String(game.hour).padStart(2, '0') + ':00'; }
+
+function newAgent(sex, focus) {
+  const sk = { combat: 2, driving: 2, crypto: 2, electronics: 2 };
+  if (focus) sk[focus] = 4;
+  return { first: sex === 'f' ? 'Maxine' : 'Max', last: 'Remington', sex, skills: sk, health: 3, maxHealth: 3 };
+}
+
+function makeFace(sex, ethnic) {
+  const skinBy = { us: [P.SK, P.SK, P.SK2, P.SK3], es: [P.SK, P.SK2], pt: [P.SK, P.SK2, P.SK3], uk: [P.SK], fr: [P.SK, P.SK2], it: [P.SK, P.SK2], de: [P.SK], ru: [P.SK], tr: [P.SK, P.SK2], ar: [P.SK2, P.SK2, P.SK], zh: [P.SK, P.TN], ja: [P.SK, P.TN] };
+  const hairs = ethnic === 'uk' || ethnic === 'de' || ethnic === 'ru' ? [P.K, P.BR, P.TN, P.BR2, P.G3] : [P.K, P.K, P.BR, P.G3];
+  return {
+    sex, skin: pick(skinBy[ethnic] || [P.SK]), hair: pick(hairs), hairStyle: sex === 'f' ? ri(3, 5) : ri(0, 3),
+    beard: sex === 'm' && rnd() < 0.35 ? ri(1, 2) : 0, glasses: rnd() < 0.25 ? ri(1, 2) : 0, hat: rnd() < 0.12, jacket: pick([P.G2, P.BR, P.NV, P.D2, P.OL, P.G3]),
+    tie: pick([P.RD, P.BL, P.YE2, P.K]), eyes: rnd() < 0.5 ? 0 : 1, bg: pick([P.BL, P.TL, P.G2, P.BR2]), jaw: ri(0, 2),
+  };
+}
+
+function newPlot(level) {
+  const nOrgs = Math.min(3, 1 + Math.floor((level + 1) / 2));
+  const orgs = shuffle(ORGS.slice()).slice(0, nOrgs);
+  const crime = pick(CRIMES);
+  const nPeople = Math.min(16, 7 + level * 2);
+  const codes = shuffle(CODENAMES.slice());
+  const lieutenants = shuffle(ROLES.filter(r => r.tier === 2)).slice(0, Math.min(3, 1 + Math.ceil(level / 2)));
+  const ops = ROLES.filter(r => r.tier === 1);
+  const people = [];
+  const used = new Set();
+  function mk(role, org) {
+    const cid = rnd() < 0.7 ? pick(org.home) : pick(CITIES).id;
+    const city = cityById(cid); const nm = NAMES[city.names]; const sex = rnd() < 0.2 ? 'f' : 'm';
+    let full; do { full = pick(sex === 'f' ? nm[1] : nm[0]) + ' ' + pick(nm[2]); } while (used.has(full)); used.add(full);
+    const p = { id: people.length, code: codes.pop(), name: full, role, org, city: cid, home: cid, face: makeFace(sex, city.names),
+      known: { photo: false, name: false, city: false, org: false, role: false }, status: 'free', links: [], cityDay: 0, seen: false };
+    people.push(p); return p;
+  }
+  const mastermind = mk(ROLES[0], orgs[0]);
+  // the mastermind never sits in Washington
+  if (mastermind.city === 'WAS') { mastermind.city = mastermind.home = pick(orgs[0].home.filter(c => c !== 'WAS')); }
+  const lts = lieutenants.map((r, i) => { const p = mk(r, orgs[i % orgs.length]); p.links.push(mastermind.id); mastermind.links.push(p.id); return p; });
+  while (people.length < nPeople) {
+    const boss = pick(lts); const p = mk(pick(ops), rnd() < 0.6 ? boss.org : pick(orgs));
+    p.links.push(boss.id); boss.links.push(p.id);
+  }
+  // a few sideways contacts between operatives
+  const opsP = people.filter(p => p.role.tier === 1);
+  for (let i = 0; i < Math.floor(opsP.length / 3); i++) { const a = pick(opsP), b = pick(opsP); if (a !== b && !a.links.includes(b.id)) { a.links.push(b.id); b.links.push(a.id); } }
+  const deadline = 18 + Math.max(0, 6 - level) + Math.floor(nPeople / 2);
+  const total = people.reduce((s, p) => s + p.role.w, 0);
+  return { crime, orgs, people, deadline, total, mastermind: mastermind.id, targetCity: pick(CITIES.filter(c => c.id !== 'WAS')).id, foiled: false, over: false, started: game.day };
+}
+
+function plotStrength() { const pl = game.plot; const free = pl.people.filter(p => p.status === 'free').reduce((s, p) => s + p.role.w, 0); return free / pl.total; }
+function isSuspect(p) { return FACETS.some(f => p.known[f]); }
+function knownCount(p) { return FACETS.filter(f => p.known[f]).length; }
+function label(p) { return p.known.name ? p.name : p.code; }
+function canArrest(p) { return p.status === 'free' && (p.known.name || p.known.photo) && p.known.city && p.city === game.city; }
+function peopleIn(cid) { return game.plot.people.filter(p => p.city === cid && p.status === 'free'); }
+
+// reveal one unknown facet of p (preferring the given facet). Returns a sentence or null.
+function reveal(p, prefer) {
+  if (!p) return null;
+  const opts = FACETS.filter(f => !p.known[f]); if (!opts.length) return null;
+  const f = prefer && !p.known[prefer] ? prefer : pick(opts);
+  p.known[f] = true; if (f === 'city') p.cityDay = game.day;
+  const who = p.code;
+  const txt = {
+    photo: 'A photograph of ' + who + '.',
+    name: who + ' is really ' + p.name + '.',
+    city: who + ' is operating in ' + cityById(p.city).name + '.',
+    org: who + ' works for the ' + p.org.name + '.',
+    role: who + ' is the ' + p.role.name + ' of the plot.',
+  }[f];
+  game.log.unshift({ day: game.day, t: txt }); if (game.log.length > 60) game.log.pop();
+  return txt;
+}
+// a clue about someone connected to p (or p itself)
+function clueFrom(p, preferSelf = 0.35) {
+  const pool = [p, ...p.links.map(i => game.plot.people[i])].filter(q => q && q.status !== 'dead');
+  const cand = rnd() < preferSelf ? [p] : shuffle(pool.slice());
+  for (const q of cand.concat(pool)) { const r = reveal(q); if (r) return r; }
+  return null;
+}
+
+// the plot moves on each day: mobile people relocate, messages get sent
+function advanceTime(hours) {
+  const before = game.day;
+  game.hour += hours; while (game.hour >= 24) { game.hour -= 24; game.day++; }
+  for (let d = before; d < game.day; d++) dailyTick();
+}
+function dailyTick() {
+  const pl = game.plot; if (!pl || pl.over) return;
+  for (const p of pl.people) {
+    if (p.status !== 'free' || !p.role.mobile) continue;
+    if (rnd() < 0.25) { const linked = p.links.map(i => pl.people[i]).filter(q => q.status === 'free'); const dest = linked.length ? pick(linked).city : pick(CITIES).id; if (dest !== p.city) { p.city = dest; p.known.city = false; } }
+  }
+  // bugged buildings leak messages
+  for (const b of game.bugs) {
+    const p = pl.people[b.pid]; if (!p || p.status !== 'free') continue;
+    if (rnd() < 0.8) queueMessage(p);
+  }
+  if (rnd() < 0.35) { const free = pl.people.filter(p => p.status === 'free'); if (free.length) queueMessage(pick(free), true); }
+}
+const MSG_BODIES = [
+  'FUNDS TRANSFERRED FROM ZURICH ACCOUNT. PROCEED AS PLANNED.', 'THE PACKAGE ARRIVES BY NIGHT TRAIN. BE AT THE STATION.', 'SAFEHOUSE IS COMPROMISED. MOVE THE DOCUMENTS TONIGHT.',
+  'PASSPORTS ARE READY. COLLECT FROM THE USUAL PLACE.', 'TARGET SCHEDULE CONFIRMED. WAIT FOR MY SIGNAL.', 'TRUST NO ONE. THE AMERICANS ARE WATCHING THE AIRPORT.',
+  'DELIVER THE CASE TO OUR FRIEND AND BURN THIS MESSAGE.', 'THE MONEY IS SHORT. TELL THE BANKER TO PAY IN FULL.', 'MEET ME AT THE CAFE NEAR THE CATHEDRAL AT NOON.',
+];
+function queueMessage(from, intercepted) {
+  const pl = game.plot; const to = pl.people[pick(from.links)]; if (!to) return;
+  const body = pick(MSG_BODIES);
+  const txt = 'FROM ' + from.code + ' IN ' + cityById(from.city).name.toUpperCase() + ' TO ' + to.code + '. ' + body;
+  game.messages.push({ from: from.id, to: to.id, text: txt, day: game.day, src: intercepted ? 'NSA intercept' : 'Wiretap' });
+  if (game.messages.length > 8) game.messages.shift();
+}
+// ===================================================================
+// ART: suspect portraits, world map, city skylines, agent portrait
+// ===================================================================
+
+// ---------- dossier photo, 26x32 ----------
+function drawFace(f, x, y, w = 26, h = 32) {
+  const key = 'face' + JSON.stringify(f) + w;
+  const c = sprite(key, 26, 32, () => {
+    dither(0, 0, 26, 32, f.bg, P.K, 5);
+    // shoulders / jacket
+    rect(2, 26, 22, 6, f.jacket); rect(4, 24, 18, 3, f.jacket);
+    rect(10, 24, 6, 8, P.W); rect(12, 25, 2, 7, f.sex === 'm' ? f.tie : P.W);
+    if (f.sex === 'f') { rect(10, 24, 6, 4, f.skin); }
+    // neck
+    rect(10, 20, 6, 5, f.skin); rect(10, 22, 6, 1, P.SK3);
+    // head
+    const jw = [0, 1, -1][f.jaw];
+    rect(7, 6, 12, 14, f.skin); rect(8 + (jw < 0 ? 1 : 0), 20, 10 - (jw < 0 ? 2 : 0), 2, f.skin); rect(6, 10, 1, 6, f.skin); rect(19, 10, 1, 6, f.skin);
+    rect(5, 11, 1, 3, f.skin); rect(20, 11, 1, 3, f.skin); // ears
+    rect(18, 7, 1, 13, P.SK3); rect(8, 21, 10, 1, P.SK3);
+    // hair
+    const hc = f.hair;
+    if (f.hairStyle === 0) { rect(7, 4, 12, 4, hc); rect(6, 6, 2, 5, hc); rect(18, 6, 2, 5, hc); }
+    else if (f.hairStyle === 1) { rect(8, 5, 10, 2, hc); rect(7, 6, 1, 3, hc); rect(18, 6, 1, 3, hc); } // receding
+    else if (f.hairStyle === 2) { rect(6, 3, 14, 5, hc); rect(6, 7, 2, 7, hc); rect(18, 7, 2, 7, hc); rect(9, 7, 4, 1, hc); } // full
+    else if (f.hairStyle === 3) { rect(7, 3, 12, 4, hc); rect(7, 6, 3, 2, hc); rect(12, 6, 2, 1, hc); } // side part
+    else if (f.hairStyle === 4) { rect(5, 3, 16, 5, hc); rect(4, 7, 3, 17, hc); rect(19, 7, 3, 17, hc); } // long
+    else { rect(6, 3, 14, 5, hc); rect(5, 7, 3, 10, hc); rect(18, 7, 3, 10, hc); rect(9, 2, 8, 2, hc); } // bob
+    if (f.hat) { rect(4, 5, 18, 2, P.D2); rect(7, 0, 12, 6, P.D2); rect(7, 4, 12, 1, P.RD); }
+    // eyes & brows
+    rect(9, 11, 3, 1, hc === P.G3 ? P.G2 : P.K); rect(14, 11, 3, 1, hc === P.G3 ? P.G2 : P.K);
+    rect(9, 13, 3, 1, P.W); rect(14, 13, 3, 1, P.W); px(10 + f.eyes, 13, P.K); px(15 + f.eyes, 13, P.K);
+    if (f.glasses === 1) { frame(8, 12, 5, 3, P.K); frame(13, 12, 5, 3, P.K); }
+    if (f.glasses === 2) { rect(8, 12, 10, 3, P.K); px(10, 13, P.G2); px(15, 13, P.G2); }
+    // nose / mouth
+    rect(12, 14, 2, 3, P.SK3); px(13, 14, f.skin);
+    rect(11, 18, 5, 1, f.sex === 'f' ? P.RD : P.SK3);
+    if (f.beard === 1) { rect(10, 17, 7, 1, hc); }
+    if (f.beard === 2) { rect(8, 17, 10, 5, hc); rect(11, 18, 5, 1, P.SK3); }
+    if (f.sex === 'f') { px(8, 15, P.PK); px(17, 15, P.PK); }
+  });
+  g.drawImage(c, x, y, w, h);
+}
+function drawUnknownFace(x, y) {
+  dither(x, y, 26, 32, P.G1, P.K, 6);
+  rect(x + 8, y + 7, 10, 13, P.G2); rect(x + 5, y + 24, 16, 8, P.G2); rect(x + 10, y + 20, 6, 4, P.G2);
+  textC('?', x + 13, y + 9, P.G4);
+}
+
+// ---------- world map ----------
+const LAND = [
+  // North America
+  [[-165, 62], [-160, 70], [-140, 70], [-120, 69], [-95, 70], [-80, 73], [-65, 62], [-60, 55], [-56, 52], [-67, 45], [-70, 42], [-76, 38], [-76, 35], [-81, 31], [-80, 26], [-82, 25], [-84, 30], [-90, 29], [-97, 27], [-97, 22], [-92, 18], [-87, 21], [-88, 16], [-83, 15], [-83, 10], [-78, 8], [-80, 8], [-86, 12], [-92, 14], [-105, 20], [-110, 23], [-112, 30], [-117, 32], [-124, 40], [-124, 48], [-130, 55], [-140, 60], [-152, 59], [-158, 56], [-165, 55]],
+  [[-55, 78], [-20, 78], [-20, 70], [-40, 62], [-50, 61], [-54, 67]], // Greenland
+  [[-78, 8], [-72, 12], [-62, 11], [-52, 5], [-35, -5], [-39, -14], [-41, -22], [-48, -26], [-53, -34], [-58, -38], [-65, -41], [-68, -50], [-70, -54], [-74, -50], [-73, -40], [-71, -30], [-70, -18], [-76, -14], [-81, -5], [-80, 0], [-77, 4]],
+  // Eurasia
+  [[-9, 38], [-9, 43], [-2, 43.5], [-4, 48], [2, 51], [5, 53], [8, 54], [14, 54], [20, 55], [22, 58], [24, 60], [30, 60], [33, 66], [40, 67], [44, 68], [55, 68], [60, 70], [70, 73], [80, 73], [100, 78], [140, 78], [180, 72], [190, 66], [172, 62], [163, 60], [157, 51], [156, 57], [145, 59], [135, 55], [140, 48], [135, 43], [130, 42], [129, 35], [126, 35], [126, 37], [125, 40], [121, 40], [122, 37], [119, 35], [121, 31], [122, 28], [119, 25], [114, 22], [108, 21], [106, 17], [109, 12], [106, 10], [100, 13], [101, 6], [104, 1.5], [101, 3], [98, 8], [97, 17], [92, 22], [88, 22], [80, 15], [77, 8], [73, 17], [70, 22], [66, 25], [58, 24], [59, 22], [52, 16], [43, 12], [39, 20], [35, 28], [34, 31], [36, 36], [30, 36], [27, 37], [26, 40], [23, 40], [22, 37], [20, 40], [19, 42], [13, 45], [12, 44], [16, 41], [18, 40], [16, 38], [15, 40], [11, 42], [9, 44], [7, 44], [3, 43], [0, 39], [-2, 37], [-6, 36]],
+  [[5, 58], [6, 62], [13, 66], [18, 70], [28, 71], [31, 69], [29, 65], [25, 65], [21, 63], [19, 60], [16, 56], [12, 56], [10, 59], [8, 58]], // Scandinavia
+  // Africa
+  [[-17, 21], [-17, 15], [-15, 11], [-8, 5], [-3, 5], [5, 6], [9, 4], [10, 0], [13, -6], [12, -17], [15, -27], [18, -34], [22, -34], [27, -33], [32, -28], [35, -22], [40, -15], [40, -5], [43, 0], [48, 5], [51, 11], [44, 11], [38, 18], [35, 24], [33, 29], [32, 31], [25, 32], [20, 31], [15, 32], [11, 34], [10, 37], [3, 37], [-2, 35], [-6, 36], [-10, 30], [-13, 27]],
+  [[44, -25], [47, -25], [50, -15], [49, -12], [44, -16]],
+  [[-5, 50], [1, 51], [1.7, 53], [0, 54], [-2, 56], [-2, 58], [-5, 58.6], [-6, 57], [-5, 55], [-3, 54], [-4.5, 52]], // Britain
+  [[-10, 52], [-6, 52], [-6, 55], [-8, 55], [-10, 54]],
+  [[-24, 64], [-22, 66], [-15, 66.5], [-13, 65], [-18, 63.5]],
+  [[130, 31], [132, 34], [135, 34], [140, 35], [141, 38], [142, 41], [140, 41.5], [139, 38], [137, 37], [133, 35.5], [130, 33.5]], // Japan
+  [[140, 42], [145, 43], [142, 45.5], [140, 43.5]],
+  [[114, -22], [114, -34], [118, -35], [123, -34], [131, -31], [137, -33], [140, -38], [147, -39], [150, -37], [153, -30], [153, -25], [146, -18], [145, -14], [142, -11], [141, -17], [136, -12], [130, -12], [125, -14], [122, -18]],
+  [[109, 1], [111, -3], [116, -4], [119, 0], [117, 7], [113, 3]], [[95, 5], [98, 4], [106, -6], [104, -5], [100, -1]],
+  [[131, -1], [141, -3], [150, -10], [142, -9], [138, -8], [132, -4]], [[120, 18], [122, 18], [126, 7], [124, 7], [121, 13]],
+  [[-85, 22], [-80, 23], [-74, 20], [-77, 20], [-82, 22]], [[-74, 20], [-68, 19.5], [-69, 18], [-74, 18]],
+  [[172, -35], [178, -38], [175, -41.5], [172, -41]], [[172, -41], [174, -42], [171, -46], [167, -46], [168, -44]],
+];
+const WATER = [
+  [[-95, 60], [-80, 63], [-77, 55], [-82, 52], [-92, 57]], // Hudson Bay
+  [[47, 45], [53, 47], [54, 42], [53, 37], [49, 38], [47, 42]], // Caspian
+  [[28, 41], [28, 45], [33, 46], [38, 47], [41, 42], [36, 41.5], [30, 41]], // Black Sea
+];
+const DESERTS = [[10, 23, 16], [30, 24, 10], [46, 22, 9], [60, 30, 7], [100, 42, 11], [80, 40, 7], [132, -25, 10], [20, -24, 6], [-112, 32, 6], [-70, -24, 4]];
+function vnoise(x, y) { const h = (i, j) => { let n = Math.imul(i, 374761393) + Math.imul(j, 668265263); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; }; const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi; const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf); return (h(xi, yi) * (1 - u) + h(xi + 1, yi) * u) * (1 - v) + (h(xi, yi + 1) * (1 - u) + h(xi + 1, yi + 1) * u) * v; }
+const MAP = { x0: 0, y0: 8, w: 320, h: 104, lon0: -170, lat0: 78 };
+function mapXY(lon, lat) { if (lon < MAP.lon0) lon += 360; return [MAP.x0 + (lon - MAP.lon0) * 0.889, MAP.y0 + (MAP.lat0 - lat) * 0.775]; }
+let mapCanvas = null;
+function buildMap() {
+  const w = MAP.w, h = MAP.h + MAP.y0 + 4;
+  const m = document.createElement('canvas'); m.width = w; m.height = h; const mc = m.getContext('2d');
+  mc.fillStyle = '#fff';
+  const path = poly => { mc.beginPath(); poly.forEach(([lo, la], i) => { const [x, y] = mapXY(lo, la); i ? mc.lineTo(x, y) : mc.moveTo(x, y); }); mc.closePath(); mc.fill(); };
+  LAND.forEach(path); mc.fillStyle = '#000'; WATER.forEach(path);
+  const d = mc.getImageData(0, 0, w, h).data; const land = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4] > 127;
+  mapCanvas = document.createElement('canvas'); mapCanvas.width = w; mapCanvas.height = h;
+  drawTo(mapCanvas.getContext('2d'), () => {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const lat = MAP.lat0 - (y - MAP.y0) / 0.775, lon = MAP.lon0 + x / 0.889;
+      const b = BAYER[(y & 3) * 4 + (x & 3)];
+      if (land(x, y)) {
+        const coast = !land(x - 1, y) || !land(x + 1, y) || !land(x, y - 1) || !land(x, y + 1);
+        const n = vnoise(lon / 9, lat / 9) * 0.6 + vnoise(lon / 3, lat / 3) * 0.4;
+        let dz = 0; for (const [dl, dt, r] of DESERTS) { const dd = ((lon - dl) ** 2 + (lat - dt) ** 2) / (r * r); dz += Math.exp(-dd); }
+        dz += (n - 0.5) * 0.6;
+        const tl = lat + (n - 0.5) * 8;
+        let col;
+        if (tl > 66) col = b < 10 ? P.G5 : P.G4;
+        else if (tl > 60) col = b < 7 ? P.G4 : P.OL;
+        else if (dz > 0.62) col = b < 5 ? P.BR3 : P.TN;
+        else if (dz > 0.42) col = b < 8 ? P.TN : P.OL;
+        else if (tl > 50) col = b < 9 ? P.DG : P.GR;
+        else if (Math.abs(lat) < 10 + n * 6) col = b < 11 ? P.DG : P.GR;
+        else col = b < 5 ? P.DG : P.GR;
+        px(x, y, coast ? P.OL : col);
+      } else {
+        let near = false; for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2; dx++) if (land(x + dx, y + dy)) { near = true; break; }
+        px(x, y, near ? (b < 8 ? P.BL : P.NV) : (b < 2 ? P.BL : P.NV));
+      }
+    }
+    // graticule every 30 degrees
+    for (let lo = -150; lo <= 180; lo += 30) { const [x] = mapXY(lo, 0); for (let y = MAP.y0; y < h; y += 3) if (!land(x | 0, y)) px(x, y, P.BL2); }
+    for (const la of [60, 30, 0, -30]) { const [, y] = mapXY(0, la); for (let x = 0; x < w; x += 3) if (!land(x, y | 0)) px(x, y, la === 0 ? P.BL3 : P.BL2); }
+  });
+}
+
+// ---------- city skylines for the hub picture ----------
+function skyCols(hour) {
+  if (hour < 5 || hour >= 21) return [P.K, P.NV, P.BL];
+  if (hour < 8) return [P.NV, P.PU, P.OR];
+  if (hour >= 18) return [P.BL, P.MG, P.OR];
+  return [P.BL, P.BL2, P.BL3];
+}
+function drawCityScene(city, x, y, w, h, hour) {
+  const night = hour < 6 || hour >= 20;
+  vgrad(x, y, w, h, skyCols(hour));
+  if (night) { let s = 1; for (let i = 0; i < 40; i++) { s = (s * 16807) % 2147483647; px(x + s % w, y + (s >> 8) % (h / 2), i % 5 ? P.G4 : P.W); } disc(x + w - 40, y + 16, 5, P.CR); disc(x + w - 38, y + 15, 5, P.NV); }
+  else { disc(x + w - 46, y + 18, 7, hour >= 17 || hour < 9 ? P.OR : P.YE); }
+  // clouds
+  if (!night) for (let i = 0; i < 3; i++) { const cx = x + 30 + i * 100 + (city.id.charCodeAt(0) * 7 + i * 31) % 40, cy = y + 12 + i * 6; rect(cx, cy, 28, 3, P.G5); rect(cx + 5, cy - 2, 16, 2, P.W); rect(cx + 3, cy + 3, 24, 1, P.G4); }
+  const base = y + h - 14;
+  const bodyC = night ? P.D2 : P.G2, bodyC2 = night ? P.K : P.G1, win = night ? P.YE : P.G3;
+  // generic far skyline
+  let s = city.id.charCodeAt(1) * 131 + city.id.charCodeAt(2);
+  for (let bx = x; bx < x + w;) { s = (s * 16807) % 2147483647; const bw = 10 + s % 18, bh = 12 + (s >> 5) % 26; rect(bx, base - bh, bw, bh, night ? P.K : P.G3); bx += bw + 1; }
+  for (let bx = x + 4; bx < x + w;) {
+    s = (s * 16807) % 2147483647; const bw = 14 + s % 22, bh = 16 + (s >> 6) % 34;
+    rect(bx, base - bh, bw, bh, bodyC); rect(bx + bw - 2, base - bh, 2, bh, bodyC2);
+    for (let wy = base - bh + 3; wy < base - 3; wy += 4) for (let wx = bx + 2; wx < bx + bw - 3; wx += 3) if (((wx * 7 + wy * 13 + s) % 5) > (night ? 2 : 0)) px(wx, wy, win);
+    bx += bw + 3 + (s >> 9) % 14;
+  }
+  landmark(city.look, x, base, w, night);
+  // street
+  rect(x, base, w, 14, night ? P.K : P.D2); rect(x, base, w, 1, P.G3);
+  for (let i = x + 4; i < x + w; i += 16) rect(i, base + 7, 8, 1, night ? P.YE2 : P.YE);
+}
+function landmark(look, x, base, w, night) {
+  const c = night ? P.D2 : P.G4, c2 = night ? P.K : P.G3, lit = night ? P.YE2 : P.W, cx = x + (w * 0.3 | 0);
+  switch (look) {
+    case 'capitol': rect(cx - 30, base - 18, 60, 18, c); rect(cx - 12, base - 30, 24, 12, c); disc(cx, base - 32, 11, c); rect(cx - 12, base - 32, 24, 3, c); rect(cx - 1, base - 50, 3, 8, c); for (let i = -26; i < 28; i += 5) rect(cx + i, base - 15, 2, 14, c2); break;
+    case 'towers': for (const o of [-12, 6]) { rect(cx + o, base - 70, 12, 70, c); for (let yy = base - 68; yy < base; yy += 2) rect(cx + o + 1, yy, 10, 1, c2); } rect(cx - 7, base - 80, 1, 10, c); break;
+    case 'pyramid': for (let i = 0; i < 9; i++) rect(cx - 30 + i * 3, base - 4 - i * 4, 60 - i * 6, 4, i % 2 ? c : c2); rect(cx - 3, base - 38, 6, 36, c2); break;
+    case 'fort': rect(cx - 30, base - 12, 60, 12, c); for (let i = -30; i < 30; i += 6) rect(cx + i, base - 16, 3, 4, c); rect(cx + 14, base - 38, 8, 26, c); rect(cx + 12, base - 42, 12, 4, c2); disc(cx + 18, base - 46, 3, lit); rect(cx - 50, base - 30, 2, 30, P.BR); disc(cx - 49, base - 32, 7, night ? P.DG : P.GR); break;
+    case 'andes': for (let i = 0; i < 3; i++) { const mx = x + 40 + i * 110; for (let yy = 0; yy < 50; yy++) rect(mx - yy * 1.3, base - 60 + yy, yy * 2.6, 1, yy < 8 ? P.W : night ? P.K : P.G2); } break;
+    case 'sugarloaf': for (let yy = 0; yy < 60; yy++) { const ww = Math.sqrt(yy) * 6; rect(cx + 50 - ww / 2, base - 60 + yy, ww, 1, night ? P.DG : P.GR); } rect(cx - 60, base - 40, 3, 40, c); rect(cx - 70, base - 36, 23, 3, c); rect(cx - 60, base - 44, 3, 4, c); break;
+    case 'clock': rect(cx - 6, base - 70, 12, 70, c); rect(cx - 8, base - 50, 16, 14, c); disc(cx, base - 43, 5, lit); line(cx, base - 43, cx, base - 47, P.K); line(cx, base - 43, cx + 3, base - 43, P.K); for (let i = 0; i < 8; i++) rect(cx - 5 + i * 0.6, base - 78 + i, 10 - i * 1.2, 1, c); rect(cx + 10, base - 22, 70, 22, c); for (let i = cx + 14; i < cx + 80; i += 8) rect(i, base - 28, 3, 6, c); break;
+    case 'eiffel': for (let yy = 0; yy < 84; yy++) { const hw = yy > 60 ? 18 - (84 - yy) * 0.2 + (yy - 60) * 0.7 : 2 + yy * 0.22; if (yy > 60) { rect(cx - hw, base - 84 + yy, 5, 1, c); rect(cx + hw - 5, base - 84 + yy, 5, 1, c); } else rect(cx - hw, base - 84 + yy, hw * 2, 1, c); } rect(cx - 16, base - 32, 32, 3, c); rect(cx - 12, base - 58, 24, 2, c); rect(cx - 1, base - 92, 2, 8, c); break;
+    case 'colosseum': rect(cx - 40, base - 34, 80, 34, c); for (let r = 0; r < 3; r++) for (let i = -38; i < 38; i += 7) rect(cx + i, base - 30 + r * 10, 4, 6, c2); rect(cx + 20, base - 40, 20, 6, c); break;
+    case 'spire': rect(cx - 30, base - 26, 60, 26, c); rect(cx - 8, base - 50, 16, 24, c); for (let i = 0; i < 30; i++) rect(cx - 7 + i * 0.23, base - 80 + i, 14 - i * 0.46 < 1 ? 1 : 14 - (30 - i) * 0.4, 1, c); rect(cx - 30, base - 30, 60, 4, P.GR); break;
+    case 'tvtower': rect(cx - 2, base - 80, 4, 80, c); disc(cx, base - 58, 8, c); rect(cx - 8, base - 59, 16, 2, lit); rect(cx - 1, base - 96, 2, 16, P.RD); break;
+    case 'onion': for (const [o, s] of [[-20, 6], [0, 9], [20, 6]]) { rect(cx + o - s / 2, base - 36, s, 36, c); disc(cx + o, base - 40 - s / 2, s, [P.RD, P.GR, P.BL2][(o / 20 + 1)]); rect(cx + o, base - 52 - s, 1, 8, P.YE); } rect(cx - 36, base - 18, 72, 18, P.RD); break;
+    case 'minaret': disc(cx, base - 24, 18, c); rect(cx - 22, base - 24, 44, 24, c); for (const o of [-34, 34]) { rect(cx + o - 2, base - 60, 4, 60, c); rect(cx + o - 3, base - 46, 6, 2, c2); rect(cx + o - 1, base - 66, 2, 6, c); } break;
+    case 'pyramids': for (const [o, s] of [[-30, 38], [16, 30], [52, 16]]) for (let yy = 0; yy < s; yy++) { rect(cx + o - yy, base - s + yy, yy * 2, 1, night ? P.BR : P.TN); rect(cx + o, base - s + yy, yy, 1, night ? P.K : P.BR3); } break;
+    case 'harbour': rect(x, base - 6, w, 6, night ? P.NV : P.BL); for (let i = 0; i < 4; i++) { const hx = x + 20 + i * 70; rect(hx, base - 9, 22, 4, P.BR); rect(hx + 8, base - 22, 1, 14, P.TN); rect(hx + 9, base - 21, 9, 11, P.RD); } rect(cx + 40, base - 90, 14, 84, c); for (let yy = base - 88; yy < base - 6; yy += 6) line(cx + 40, yy, cx + 54, yy + 6, c2); break;
+    case 'tokyotower': for (let yy = 0; yy < 84; yy++) { const hw = 1 + yy * yy / 280; rect(cx - hw, base - 84 + yy, hw * 2, 1, (yy >> 3) % 2 ? P.W : P.OR); } rect(cx - 9, base - 50, 18, 3, P.W); break;
+  }
+}
+
+// ---------- agent portrait for the title / files ----------
+function drawAgent(sex, x, y) {
+  drawFace({ sex, skin: P.SK, hair: sex === 'f' ? P.BR2 : P.BR, hairStyle: sex === 'f' ? 5 : 3, beard: 0, glasses: 0, hat: false, jacket: P.G1, tie: P.NV, eyes: 0, bg: P.BL, jaw: 0 }, x, y, 52, 64);
+}
+
+// ---------- MicroProse-flavoured title logo ----------
+function drawLogo(cx, y, t) {
+  const s = 'COVERT ACTION', sc = 3, w = bigW(s, sc);
+  const x = cx - w / 2;
+  bigText(s, x + 2, y + 2, sc, P.K);
+  // metallic banding through the letters
+  const tmp = sprite('logo', w + 4, 9 * sc + 4, () => {
+    bigText(s, 0, 0, sc, P.W);
+    g.globalCompositeOperation = 'source-atop';
+    const bands = [P.W, P.G5, P.G4, P.G3, P.G4, P.G5, P.CY, P.BL3, P.BL2];
+    bands.forEach((c, i) => rect(0, i * 3, w + 4, 3, c));
+    g.globalCompositeOperation = 'source-over';
+  });
+  g.drawImage(tmp, x, y);
+}
+// ===================================================================
+// HUB: title, agent setup, briefing, city screen, travel, case file,
+// messages, arrests, interrogation, headlines
+// ===================================================================
+
+// ---------- reusable menu ----------
+function Menu(items, x, y, w, lh = 10) {
+  return {
+    items, x, y, w, lh, sel: Math.max(0, items.findIndex(i => !i.off)),
+    move(d) { const n = this.items.length; for (let k = 0; k < n; k++) { this.sel = (this.sel + d + n) % n; if (!this.items[this.sel].off) break; } sfx.blip(); },
+    key(k) {
+      if (k === 'up') this.move(-1); else if (k === 'down') this.move(1);
+      else if (k === 'select' || k === 'fire') { const it = this.items[this.sel]; if (it && !it.off) { sfx.select(); it.go(); } else sfx.deny(); return true; }
+      return false;
+    },
+    tap(tx, ty) {
+      for (let i = 0; i < this.items.length; i++) { const iy = this.y + i * this.lh; if (tx >= this.x - 4 && tx < this.x + this.w && ty >= iy - 1 && ty < iy + this.lh - 1) { this.sel = i; const it = this.items[i]; if (it.off) sfx.deny(); else { sfx.select(); it.go(); } return true; } }
+      return false;
+    },
+    hover(tx, ty) { for (let i = 0; i < this.items.length; i++) { const iy = this.y + i * this.lh; if (tx >= this.x - 4 && tx < this.x + this.w && ty >= iy - 1 && ty < iy + this.lh - 1 && !this.items[i].off) this.sel = i; } },
+    draw() {
+      this.items.forEach((it, i) => {
+        const iy = this.y + i * this.lh;
+        if (i === this.sel) { rect(this.x - 4, iy - 1, this.w, this.lh - 1, P.BL2); rect(this.x - 4, iy - 1, 2, this.lh - 1, P.YE); }
+        text(it.label, this.x, iy, it.off ? P.G2 : i === this.sel ? P.YE : P.G5);
+        if (it.right) textR(it.right, this.x + this.w - 8, iy, it.off ? P.G2 : P.CY);
+      });
+    },
+  };
+}
+// a scene that is just a menu over some art
+function menuScene(opts) {
+  return Object.assign({
+    t: 0, update(dt) { this.t += dt; },
+    onKey(k) { if (k === 'menu' && this.back) { sfx.blip(); this.back(); return; } this.menu.key(k); },
+    onTap(x, y) { this.menu.tap(x, y); }, onHover(x, y) { this.menu.hover(x, y); },
+  }, opts);
+}
+// full-screen message page: "press any key"
+function pageScene(drawFn, next, opts = {}) {
+  return {
+    t: 0, update(dt) { this.t += dt; }, draw() { drawFn(this.t); if (this.t > 0.6) { const blink = (this.t * 2 | 0) % 2; if (blink) textC(opts.prompt || 'Press OK to continue', W / 2, H - 10, P.G4); } },
+    onKey(k) { if (this.t > 0.4 && (k === 'select' || k === 'fire' || k === 'menu' || k === 'action')) { sfx.blip(); next(); } }, onTap() { if (this.t > 0.4) { sfx.blip(); next(); } },
+  };
+}
+
+// ---------- TITLE ----------
+function titleScene() {
+  const items = [
+    { label: 'Begin a new career', go: () => go(setupScene()) },
+    { label: 'Practice: Break into a building', go: () => practice('breakin') },
+    { label: 'Practice: Codebreaking', go: () => practice('crypto') },
+    { label: 'Practice: Wiretapping', go: () => practice('wiretap') },
+    { label: 'Practice: Tailing a car', go: () => practice('chase') },
+    { label: 'How to play', go: () => go(helpScene(() => go(titleScene()))) },
+  ];
+  return menuScene({
+    menu: Menu(items, 76, 124, 176),
+    enter() { sfx.jingle(); },
+    draw() {
+      vgrad(0, 0, W, 112, [P.K, P.NV, P.BL, P.PU]);
+      // searchlight beams over a night city
+      const t = this.t;
+      for (const [bx, sp] of [[70, 0.5], [250, -0.4]]) { const a = Math.sin(t * sp) * 0.5 - Math.PI / 2; for (let r = 10; r < 120; r += 2) { const w = r * 0.12; const xx = bx + Math.cos(a) * r, yy = 104 + Math.sin(a) * r; dither(xx - w, yy, w * 2, 2, 'rgba(0,0,0,0)', P.BL3, 3); } }
+      drawCityScene(cityById('WAS'), 0, 60, W, 52, 23);
+      drawLogo(W / 2, 22, t);
+      textC("A recreation of Sid Meier's 1990 espionage classic", W / 2, 52, P.CY, P.K);
+      rect(0, 112, W, 88, P.K); panel(62, 114, 196, 70);
+      this.menu.draw();
+      textC('Arrows/WASD + Enter, or tap.  M toggles sound.', W / 2, 190, P.G3);
+    },
+  });
+}
+function helpScene(back) {
+  const pages = [
+    ['THE JOB', 'You are Max (or Maxine) Remington, a freelance agent on contract to the CIA. Each case is a plot by a ring of criminals, spies and terrorists spread across a dozen cities. Identify them, find them and arrest them before the crime takes place.\n\nThe ring is a chain of command: operatives answer to lieutenants, who answer to the Mastermind. Every clue about one member points toward the people they work with.'],
+    ['GATHERING CLUES', 'BREAK-INS: search desks, files and safes for documents and photos. Grab the occupant to interrogate them. Get out through the door you came in.\nWIRETAPS: route current to the phone line without tripping an alarm. A bugged line keeps leaking messages.\nCODEBREAKING: crack substitution ciphers on intercepted messages.\nCAR TAILS: follow a car to its destination without being spotted.'],
+    ['CONTROLS', 'Move: arrows or WASD (or the pad).  OK: Enter.\nBreak-in: Space fires, E searches / opens / grabs, G throws a grenade, Tab changes grenade type.\nCodebreaking: pick a code letter, then type (or tap) your guess.\nWiretap: move the cursor, OK rotates a chip, Tab switches the current on.\nCar tail: steer with arrows; Tab changes car.\nEsc: back / pause.  M: sound on or off.'],
+  ];
+  let i = 0;
+  const s = pageScene(() => {
+    rect(0, 0, W, H, P.K); panel(8, 8, W - 16, H - 28);
+    const [h, b] = pages[i]; text(h, 20, 18, P.YE); textR((i + 1) + '/' + pages.length, W - 20, 18, P.G3); rect(20, 28, W - 40, 1, P.G2);
+    para(b, 20, 34, W - 40, P.G5, 10);
+  }, () => { i++; if (i >= pages.length) back(); });
+  return s;
+}
+
+// ---------- AGENT SETUP ----------
+function setupScene() {
+  let sex = 'm', step = 0;
+  const skills = [['combat', 'Combat', 'Better aim, more body armour'], ['driving', 'Driving', 'Faster, harder-to-spot cars'], ['crypto', 'Cryptography', 'More letters decoded for you'], ['electronics', 'Electronics', 'More time on circuits']];
+  let s;
+  const m1 = Menu([{ label: 'Max Remington', go: () => { sex = 'm'; step = 1; s.menu = m2; } }, { label: 'Maxine Remington', go: () => { sex = 'f'; step = 1; s.menu = m2; } }], 150, 70, 150, 12);
+  const m2 = Menu(skills.map(([k, n]) => ({ label: n, go: () => { game.agent = newAgent(sex, k); startCareer(); } })), 150, 70, 150, 12);
+  s = menuScene({
+    menu: m1, back: () => { if (step) { step = 0; s.menu = m1; } else go(titleScene()); },
+    draw() {
+      rect(0, 0, W, H, P.K); dither(0, 0, W, H, P.NV, P.K, 8); panel(8, 8, W - 16, H - 16);
+      text('CENTRAL INTELLIGENCE AGENCY', 20, 18, P.YE); text('Contract agent file', 20, 28, P.G4); rect(20, 38, W - 40, 1, P.G2);
+      const cur = step === 0 ? (this.menu.sel === 1 ? 'f' : 'm') : sex;
+      rect(28, 50, 56, 68, P.G4); drawAgent(cur, 30, 52); text('REMINGTON', 30, 122, P.G5); text(cur === 'f' ? 'Maxine' : 'Max', 30, 131, P.G4);
+      text(step === 0 ? 'Select your agent:' : 'Choose a specialty:', 150, 54, P.CY);
+      this.menu.draw();
+      if (step === 1) { const d = skills[this.menu.sel][2]; para(d, 150, 130, 150, P.G4); para('Your other skills are average. Each specialty makes one kind of mission easier.', 150, 150, 150, P.G3); }
+      else para('Both agents are equal in the field. The choice is yours.', 150, 130, 150, P.G3);
+    },
+  });
+  return s;
+}
+function startCareer() { game.level = 1; game.careerScore = 0; game.cases = []; newCase(); }
+function newCase() {
+  Object.assign(game, { day: 1, hour: 8, city: 'WAS', score: 0, messages: [], log: [], bugs: [] });
+  game.agent.health = game.agent.maxHealth;
+  game.plot = newPlot(game.level);
+  // opening intelligence: two leads
+  const pl = game.plot; const ops = shuffle(pl.people.filter(p => p.role.tier === 1));
+  ops[0].seen = true; reveal(ops[0], 'city'); reveal(ops[0], 'photo');
+  if (ops[1]) { ops[1].seen = true; reveal(ops[1], 'org'); }
+  go(briefingScene());
+}
+
+function briefingScene() {
+  const pl = game.plot, ops = pl.people.filter(p => p.seen);
+  const txt = 'Intelligence sources report that a hostile group is planning to ' + pl.crime.verb + ' in ' + cityById(pl.targetCity).name + '. We believe the ' + pl.orgs.map(o => o.name).join(' and the ') + (pl.orgs.length > 1 ? ' are' : ' is') + ' involved. The operation is expected to take place in about ' + (pl.deadline - game.day) + ' days.\n\nOur only leads: an operative codenamed ' + ops[0].code + ', seen in ' + cityById(ops[0].city).name + (ops[1] ? ', and a contact called ' + ops[1].code + ' who works for the ' + ops[1].org.name : '') + '.\n\nFind the Mastermind. Good luck, ' + game.agent.first + '.';
+  return pageScene(t => {
+    rect(0, 0, W, H, P.K);
+    // a manila folder on a desk
+    dither(0, 0, W, H, P.BR, P.BR2, 5);
+    rect(14, 10, W - 28, H - 24, P.TN); rect(14, 10, 70, 6, P.BR3); rect(18, 16, W - 36, H - 34, P.CR);
+    rect(W - 90, 20, 64, 12, P.RD); text('TOP SECRET', W - 86, 22, P.W);
+    text('CASE ' + game.level + ':  OPERATION ' + ['NIGHTFALL', 'SILENT GATE', 'IRON VEIL', 'BLACK TIDE', 'COLD HARBOR', 'RED LANTERN', 'GLASS KEY'][(game.level - 1) % 7], 26, 22, P.K);
+    text('Subject: ' + pl.crime.name, 26, 34, P.BR);
+    rect(26, 44, W - 52, 1, P.BR3);
+    para(txt, 26, 49, W - 60, P.D2, 9);
+  }, () => go(hubScene()));
+}
+
+// ---------- CITY HUB ----------
+function activityWord(cid) { const n = peopleIn(cid).length; return n === 0 ? ['Quiet', P.G3] : n === 1 ? ['Some activity', P.YE] : ['Heavy activity', P.OR]; }
+function hubScene() {
+  const city = cityById(game.city);
+  let s;
+  const items = () => [
+    { label: 'Break into a suspect building', go: () => startBreakin() },
+    { label: 'Tap a telephone line', go: () => startWiretap() },
+    { label: 'Stake out and tail a car', go: () => startChase() },
+    { label: 'Decode intercepted messages', right: game.messages.length ? String(game.messages.length) : '', off: !game.messages.length, go: () => go(messagesScene()) },
+    { label: 'Review the case file', go: () => go(caseFileScene(() => go(hubScene()))) },
+    { label: 'Arrest a suspect', off: !game.plot.people.some(p => p.status === 'free' && (p.known.name || p.known.photo) && p.known.city && p.city === game.city) && !game.plot.people.some(p => p.status === 'free' && (p.known.name || p.known.photo)), go: () => go(arrestScene()) },
+    { label: 'Travel to another city', go: () => go(travelScene()) },
+    { label: 'Contact CIA headquarters', go: () => go(hqScene()) },
+  ];
+  s = menuScene({
+    menu: Menu(items(), 14, 117, 190, 9),
+    enter() { if (checkCaseEnd()) return; },
+    back() { go(pauseScene(() => go(hubScene()))); },
+    draw() {
+      drawCityScene(city, 0, 0, W, 110, game.hour);
+      // caption plate
+      const cap = city.name + ', ' + city.country; const cw = textW(cap) + 12;
+      rect(4, 4, cw, 21, P.K); frame(4, 4, cw, 21, P.G3); text(cap, 10, 7, P.W); text(timeStr(), 10, 16, P.CY);
+      rect(0, 110, W, 90, P.K); panel(0, 110, 212, 90); panel(212, 110, 108, 90);
+      this.menu.draw();
+      // status
+      const pl = game.plot, left = pl.deadline - game.day;
+      text('CASE ' + game.level, 220, 117, P.YE); textR('Score ' + game.score, 312, 117, P.G4);
+      text('Days left', 220, 128, P.G4); textR(String(Math.max(0, left)), 312, 128, left <= 3 ? P.RD2 : P.W);
+      text('Plot', 220, 139, P.G4); const st = plotStrength(); rect(250, 140, 62, 5, P.K); rect(250, 140, 62 * st, 5, st > 0.6 ? P.RD2 : st > 0.35 ? P.OR : P.GR2);
+      text('Health', 220, 150, P.G4); for (let i = 0; i < game.agent.maxHealth; i++) rect(262 + i * 9, 151, 7, 5, i < game.agent.health ? P.RD2 : P.G1);
+      text('Suspects', 220, 161, P.G4); textR(pl.people.filter(p => isSuspect(p)).length + '/' + pl.people.length, 312, 161, P.W);
+      const [aw, ac] = activityWord(game.city); text('Local', 220, 175, P.G4); textR(aw, 312, 175, ac);
+    },
+  });
+  return s;
+}
+function pauseScene(back) {
+  return menuScene({
+    menu: Menu([
+      { label: 'Resume', go: back },
+      { label: () => 0, go: () => { sfx.toggle(); } },
+      { label: 'How to play', go: () => go(helpScene(() => go(pauseScene(back)))) },
+      { label: 'Abandon career', go: () => go(titleScene()) },
+    ].map(i => typeof i.label === 'function' ? Object.assign(i, { label: 'Sound on / off' }) : i), 110, 80, 110, 12),
+    back,
+    draw() { rect(0, 0, W, H, P.K); dither(0, 0, W, H, P.K, P.NV, 6); panel(96, 56, 128, 80); textC('PAUSED', W / 2, 66, P.YE); this.menu.draw(); },
+  });
+}
+
+// ---------- HQ ----------
+function hqScene() {
+  const pl = game.plot;
+  advanceTime(1);
+  // intelligence: which cities are busy, plus one fresh fact
+  const busy = CITIES.filter(c => peopleIn(c.id).length > 0).sort((a, b) => peopleIn(b.id).length - peopleIn(a.id).length).slice(0, 3);
+  const unk = pl.people.filter(p => p.status === 'free' && isSuspect(p) && knownCount(p) < 5);
+  let fact = null; if (unk.length && rnd() < 0.5) fact = reveal(pick(unk));
+  const arrested = pl.people.filter(p => p.status === 'arrested').length;
+  const lines = [
+    'Station reports list unusual activity in: ' + busy.map(c => c.name).join(', ') + '.',
+    fact ? 'Analysts have turned up something new: ' + fact : 'Analysts have nothing new for you today.',
+    arrested ? arrested + ' of the ring are in custody.' : 'No arrests yet. The Director is getting impatient.',
+    'Estimated ' + Math.max(0, pl.deadline - game.day) + ' days before the ' + pl.crime.name.toLowerCase() + '.',
+  ];
+  return pageScene(() => {
+    rect(0, 0, W, H, P.K); rect(0, 0, W, 40, P.NV); disc(28, 20, 14, P.G4); disc(28, 20, 11, P.BL); textC('CIA', 28, 16, P.W);
+    text('CIA HEADQUARTERS', 50, 10, P.W); text('Langley, Virginia  -  secure line', 50, 20, P.G4); text(timeStr(), 50, 29, P.CY);
+    panel(8, 46, W - 16, H - 62);
+    let y = 58; for (const l of lines) { y = para(l, 20, y, W - 40, P.G5, 10) + 5; }
+  }, () => go(hubScene()));
+}
+
+// ---------- TRAVEL ----------
+function travelScene() {
+  if (!mapCanvas) buildMap();
+  let sel = CITIES.findIndex(c => c.id !== game.city), flying = null;
+  const here = cityById(game.city);
+  const hoursTo = c => Math.round(3 + dist(here.lon, here.lat, c.lon, c.lat) / 9);
+  const pos = c => mapXY(c.lon, c.lat);
+  function nearestInDir(dx, dy) {
+    const [sx, sy] = pos(CITIES[sel]); let best = -1, bd = 1e9;
+    CITIES.forEach((c, i) => { if (i === sel) return; const [x, y] = pos(c); const vx = x - sx, vy = y - sy; const along = vx * dx + vy * dy; if (along <= 0) return; const d = along + Math.abs(vx * dy - vy * dx) * 2.5; if (d < bd) { bd = d; best = i; } });
+    if (best >= 0) { sel = best; sfx.blip(); }
+  }
+  function fly() { const c = CITIES[sel]; if (c.id === game.city) { go(hubScene()); return; } flying = { from: pos(here), to: pos(c), t: 0, dest: c, h: hoursTo(c) }; sfx.tone(300, 1.2, 'sawtooth', 0.03, 200); }
+  return {
+    t: 0,
+    update(dt) { this.t += dt; if (flying) { flying.t += dt / 1.8; if (flying.t >= 1) { advanceTime(flying.h); game.city = flying.dest.id; go(hubScene()); } } },
+    onKey(k) {
+      if (flying) return;
+      if (k === 'left') nearestInDir(-1, 0); else if (k === 'right') nearestInDir(1, 0); else if (k === 'up') nearestInDir(0, -1); else if (k === 'down') nearestInDir(0, 1);
+      else if (k === 'select' || k === 'fire') fly(); else if (k === 'menu') go(hubScene());
+    },
+    onTap(x, y) {
+      if (flying) return;
+      if (y > 150 && x > 230) { fly(); return; } if (y > 150 && x < 90) { go(hubScene()); return; }
+      let best = -1, bd = 14; CITIES.forEach((c, i) => { const [cx, cy] = pos(c); const d = dist(x, y, cx, cy); if (d < bd) { bd = d; best = i; } });
+      if (best >= 0) { if (best === sel) fly(); else { sel = best; sfx.blip(); } }
+    },
+    draw() {
+      rect(0, 0, W, H, P.K); g.drawImage(mapCanvas, 0, 0);
+      text('WORLD MAP', 4, 1, P.G4); textR(timeStr(), W - 4, 1, P.CY);
+      CITIES.forEach((c, i) => {
+        const [x, y] = pos(c); const active = c.id === game.city, s = i === sel;
+        rect(x - 1, y - 1, 3, 3, active ? P.YE : peopleIn(c.id).length && game.plot.people.some(p => p.city === c.id && p.known.city && p.status === 'free') ? P.RD2 : P.W); px(x, y, P.K);
+        if (s && ((this.t * 4 | 0) % 2 || flying)) { frame(x - 4, y - 4, 9, 9, P.YE); }
+      });
+      if (flying) {
+        const { from, to, t } = flying; const n = 30;
+        for (let i = 0; i <= n * t; i++) { const f = i / n; const x = from[0] + (to[0] - from[0]) * f, y = from[1] + (to[1] - from[1]) * f - Math.sin(f * Math.PI) * 10; if (i % 2 === 0) px(x, y, P.W); }
+        const x = from[0] + (to[0] - from[0]) * t, y = from[1] + (to[1] - from[1]) * t - Math.sin(t * Math.PI) * 10;
+        rect(x - 3, y, 7, 1, P.W); rect(x, y - 2, 1, 5, P.W); rect(x - 1, y - 2, 3, 1, P.G4);
+      }
+      rect(0, 116, W, 84, P.K); panel(0, 116, W, 84);
+      const c = CITIES[sel];
+      text('From ' + here.name + ' to', 14, 126, P.G4); bigText(c.name, 14, 136, 2, P.YE, P.K);
+      text(c.country + '   Flight time ' + hoursTo(c) + ' hours', 14, 158, P.G5);
+      const known = game.plot.people.filter(p => p.city === c.id && p.known.city && p.status === 'free');
+      text(known.length ? 'Suspects believed here: ' + known.map(p => p.code).join(', ') : 'No known suspects here.', 14, 168, known.length ? P.RD2 : P.G3);
+      bevel(14, 180, 64, 13, P.G2, P.G4, P.G1); textC('Cancel', 46, 183, P.W);
+      bevel(W - 90, 180, 76, 13, P.BL, P.BL3, P.NV); textC(flying ? 'In flight...' : 'Fly there', W - 52, 183, P.YE);
+    },
+  };
+}
+
+// ---------- CASE FILE ----------
+function caseFileScene(back) {
+  const pl = game.plot; let tab = 0, sel = 0, detail = null;
+  const list = () => pl.people.filter(p => isSuspect(p));
+  const COLS = 5, CW = 62, CH = 50;
+  return {
+    t: 0, update(dt) { this.t += dt; },
+    onKey(k) {
+      const L = list();
+      if (detail) { if (k === 'menu' || k === 'select' || k === 'fire') { detail = null; sfx.blip(); } else if (k === 'left' || k === 'right') { const i = L.indexOf(detail); detail = L[(i + (k === 'left' ? -1 : 1) + L.length) % L.length]; sfx.blip(); } return; }
+      if (k === 'menu') { back(); return; }
+      if (k === 'alt2' || k === 'alt') { tab = 1 - tab; sfx.blip(); return; }
+      if (tab === 0 && L.length) {
+        if (k === 'left') sel = Math.max(0, sel - 1); if (k === 'right') sel = Math.min(L.length - 1, sel + 1);
+        if (k === 'up') sel = Math.max(0, sel - COLS); if (k === 'down') sel = Math.min(L.length - 1, sel + COLS);
+        if (k === 'select' || k === 'fire') { detail = L[sel]; sfx.select(); }
+      }
+    },
+    onTap(x, y) {
+      if (detail) { detail = null; return; }
+      if (y < 16) { if (x < 110) tab = 0; else if (x < 200) tab = 1; else back(); return; }
+      if (tab === 0) { const L = list(); const i = Math.floor((y - 20) / CH) * COLS + Math.floor((x - 5) / CW); if (i >= 0 && i < L.length) { sel = i; detail = L[i]; sfx.select(); } }
+    },
+    draw() {
+      rect(0, 0, W, H, P.NV);
+      rect(0, 0, W, 15, P.K);
+      [['SUSPECTS', 4], ['CLUE LOG', 110]].forEach(([n, x], i) => { if (i === tab) rect(x, 1, 96, 13, P.BL); text(n, x + 6, 4, i === tab ? P.YE : P.G4); });
+      bevel(262, 2, 54, 11, P.G2, P.G4, P.G1); textC('Back', 289, 4, P.W);
+      if (tab === 0) {
+        const L = list();
+        L.slice(0, 15).forEach((p, i) => {
+          const x = 5 + (i % COLS) * CW, y = 20 + Math.floor(i / COLS) * CH;
+          rect(x, y, CW - 3, CH - 3, P.K); frame(x, y, CW - 3, CH - 3, i === sel ? P.YE : P.G1);
+          if (p.known.photo) drawFace(p.face, x + 2, y + 2, 20, 25); else { g.save(); g.translate(x + 2, y + 2); g.scale(20 / 26, 25 / 32); drawUnknownFace(0, 0); g.restore(); }
+          text(fitText(p.code, 34), x + 24, y + 3, P.YE);
+          text(p.known.role ? fitText(p.role.name, 34) : '?', x + 24, y + 12, P.G4);
+          text(p.known.city ? fitText(cityById(p.city).name, 34) : '?', x + 24, y + 21, P.CY);
+          text(p.known.org ? p.org.short : '?', x + 3, y + 29, P.G3);
+          text(p.known.name ? fitText(p.name, 54) : '', x + 3, y + 38, P.W);
+          if (p.status !== 'free') { rect(x + 1, y + 16, CW - 5, 9, P.RD); textC(p.status === 'arrested' ? 'ARRESTED' : 'DEAD', x + (CW - 3) / 2, y + 17, P.W); }
+        });
+        if (!L.length) textC('No suspects identified yet.', W / 2, 90, P.G4);
+        text('Tab: clue log   OK: open dossier', 6, 190, P.G3);
+      } else {
+        let y = 22; for (const e of game.log.slice(0, 16)) { text('Day ' + e.day, 8, y, P.CY); y = para(e.t, 50, y, 262, P.G5, 9) + 2; if (y > 186) break; }
+        if (!game.log.length) textC('No clues yet.', W / 2, 90, P.G4);
+      }
+      if (detail) drawDossier(detail);
+    },
+  };
+}
+function drawDossier(p) {
+  panel(20, 18, W - 40, 170);
+  rect(32, 30, 56, 68, P.G1); if (p.known.photo) drawFace(p.face, 34, 32, 52, 64); else { g.save(); g.translate(34, 32); g.scale(2, 2); drawUnknownFace(0, 0); g.restore(); }
+  bigText(p.code, 98, 30, 2, P.YE, P.K);
+  const rows = [['Name', p.known.name ? p.name : 'Unknown'], ['Role', p.known.role ? p.role.name : 'Unknown'], ['Group', p.known.org ? p.org.name : 'Unknown'], ['Location', p.known.city ? cityById(p.city).name + ' (day ' + p.cityDay + ')' : 'Unknown'], ['Status', p.status === 'free' ? 'At large' : p.status === 'arrested' ? 'In custody' : 'Deceased']];
+  rows.forEach(([k, v], i) => { text(k, 98, 52 + i * 10, P.G4); text(v, 146, 52 + i * 10, v === 'Unknown' ? P.G2 : P.W); });
+  const contacts = p.links.map(i => game.plot.people[i]).filter(q => isSuspect(q));
+  text('Known contacts:', 32, 108, P.G4);
+  para(contacts.length ? contacts.map(q => q.code).join(', ') : 'none identified', 32, 118, W - 70, P.CY);
+  const n = knownCount(p); text('File ' + (n * 20) + '% complete', 32, 150, P.G3); rect(32, 160, 120, 4, P.K); rect(32, 160, n * 24, 4, P.GR2);
+  para(canArrest(p) ? 'Enough evidence to arrest - and in this city.' : (p.known.name || p.known.photo) ? (p.known.city ? 'Travel to ' + cityById(p.city).name + ' to arrest.' : 'Location needed to make an arrest.') : 'Name or photograph needed to make an arrest.', 160, 150, 130, P.G5, 9);
+  text('◀ ▶ next  ·  OK close', 32, 176, P.G3);
+}
+
+// ---------- MESSAGES ----------
+function messagesScene() {
+  const items = game.messages.map((m, i) => ({ label: 'Day ' + m.day + '  ' + m.src, right: m.text.length + ' chars', go: () => startCrypto(i) }));
+  items.push({ label: 'Back', go: () => go(hubScene()) });
+  return menuScene({
+    menu: Menu(items, 24, 50, 272, 12), back: () => go(hubScene()),
+    draw() { rect(0, 0, W, H, P.K); panel(8, 8, W - 16, H - 16); text('INTERCEPTED MESSAGES', 20, 20, P.YE); para('Encrypted traffic from bugged lines and NSA intercepts. Decoding one takes about 2 hours.', 20, 30, W - 40, P.G4); this.menu.draw(); },
+  });
+}
+
+// ---------- ARREST ----------
+function arrestScene() {
+  const cands = game.plot.people.filter(p => p.status === 'free' && (p.known.name || p.known.photo));
+  const items = cands.map(p => ({ label: p.code + (p.known.name ? '  (' + p.name + ')' : ''), right: p.known.city ? cityById(p.city).name : 'location ?', off: !(p.known.city && p.city === game.city) && !(p.known.city === false), go: () => doArrest(p) }));
+  // suspects with a known city elsewhere are shown but disabled; unknown-location ones can be tried on a hunch
+  items.push({ label: 'Back', go: () => go(hubScene()) });
+  return menuScene({
+    menu: Menu(items, 24, 44, 272, 11), back: () => go(hubScene()),
+    draw() { rect(0, 0, W, H, P.K); panel(8, 8, W - 16, H - 16); text('ARREST A SUSPECT IN ' + cityById(game.city).name.toUpperCase(), 20, 18, P.YE); para('Local police will make the arrest if you can identify the suspect. Guessing wrong costs time.', 20, 28, W - 40, P.G4); this.menu.draw(); },
+  });
+}
+function doArrest(p) {
+  advanceTime(3);
+  if (p.city === game.city && p.status === 'free') {
+    p.status = 'arrested'; p.seen = true; FACETS.forEach(f => p.known[f] = true);
+    const pts = p.role.tier === 3 ? 60 : p.role.tier === 2 ? 25 : 10; game.score += pts; sfx.success();
+    go(interrogationScene(p, 'arrest', pts));
+  } else {
+    if (p.known.city) p.known.city = false;
+    sfx.fail(); go(pageScene(() => { rect(0, 0, W, H, P.K); panel(30, 60, W - 60, 70); textC('NO ARREST', W / 2, 72, P.RD2); para(p.code + ' was not found in ' + cityById(game.city).name + '. The trail has gone cold - the suspect may have moved on.', 44, 88, W - 88, P.G5); }, () => go(hubScene())));
+  }
+}
+function interrogationScene(p, how, pts = 0) {
+  const n = p.role.tier === 1 ? 2 : 3; const clues = [];
+  for (let i = 0; i < n + (how === 'capture' ? 1 : 0); i++) { const c = clueFrom(p, 0); if (c) clues.push(c); }
+  p.links.forEach(i => { game.plot.people[i].seen = true; });
+  return pageScene(() => {
+    rect(0, 0, W, H, P.K);
+    // bare bulb interrogation room
+    vgrad(0, 0, W, 90, [P.K, P.D2, P.G1]); disc(W / 2, 10, 4, P.YE); line(W / 2, 0, W / 2, 6, P.G3);
+    rect(W / 2 - 60, 70, 120, 6, P.BR2); rect(W / 2 - 56, 76, 4, 14, P.BR); rect(W / 2 + 52, 76, 4, 14, P.BR);
+    drawFace(p.face, W / 2 - 13, 34, 26, 32);
+    panel(8, 92, W - 16, 100);
+    text((how === 'arrest' ? 'ARRESTED: ' : how === 'capture' ? 'CAPTURED: ' : '') + p.name + ' (' + p.code + ')', 20, 102, P.YE);
+    text(p.role.name + ', ' + p.org.name + (pts ? '   +' + pts + ' points' : ''), 20, 112, P.G4);
+    let y = 124; if (!clues.length) para('Under questioning, the suspect tells you nothing you did not already know.', 20, y, W - 40, P.G5);
+    for (const c of clues) y = para('- ' + c, 20, y, W - 40, P.G5, 9) + 2;
+  }, () => go(hubScene()));
+}
+
+// ---------- CASE END / HEADLINES ----------
+function checkCaseEnd() {
+  const pl = game.plot; if (pl.over) return false;
+  const mm = pl.people[pl.mastermind];
+  if (mm.status !== 'free' || plotStrength() < 0.3) { pl.over = true; pl.foiled = true; go(headlineScene(true)); return true; }
+  if (game.day > pl.deadline) { pl.over = true; pl.foiled = false; go(headlineScene(false)); return true; }
+  return false;
+}
+function headlineScene(won) {
+  const pl = game.plot, mm = pl.people[pl.mastermind], city = cityById(pl.targetCity);
+  const caught = mm.status !== 'free';
+  let bonus = 0; if (won) bonus = 50 + Math.max(0, pl.deadline - game.day) * 3 + (caught ? 40 : 0);
+  game.score += bonus; game.careerScore += game.score;
+  game.cases.push({ level: game.level, won, score: game.score });
+  const head = won ? (caught ? 'MASTERMIND SEIZED' : 'TERROR RING SMASHED') : { Assassination: 'LEADER SLAIN', Kidnapping: 'DIPLOMAT SEIZED', Bombing: 'BLAST ROCKS', Hijacking: 'NUCLEAR CONVOY HIJACKED', 'Theft of Secrets': 'SECRETS STOLEN', Counterfeiting: 'FAKE DOLLAR FLOOD' }[pl.crime.name];
+  const sub = won ? 'Plot to ' + pl.crime.verb + ' foiled; ' + pl.people.filter(p => p.status === 'arrested').length + ' held' : 'Attack in ' + city.name + ' stuns world; ringleader "' + mm.code + '" still at large';
+  return pageScene(t => {
+    rect(0, 0, W, H, P.K);
+    // spinning-in newspaper
+    const k = Math.min(1, t * 1.6); g.save(); g.translate(W / 2, H / 2); g.rotate((1 - k) * 6); g.scale(k, k); g.translate(-W / 2, -H / 2);
+    rect(16, 6, W - 32, H - 22, P.CR); rect(16, 6, W - 32, 1, P.G4);
+    bigText('THE WORLD TRIBUNE', W / 2 - bigW('THE WORLD TRIBUNE', 2) / 2, 10, 2, P.K);
+    rect(24, 30, W - 48, 1, P.K); text('Day ' + game.day + '  ·  Late edition  ·  25 cents', 26, 33, P.G2); rect(24, 42, W - 48, 1, P.K);
+    const hw = bigW(head, 2); bigText(head, Math.max(24, W / 2 - hw / 2), 48, hw > W - 48 ? 1 : 2, won ? P.K : P.RD);
+    para(sub, 26, 72, W - 52, P.D2, 9);
+    rect(26, 96, 60, 74, P.G4); drawFace(won && caught ? mm.face : pl.people.find(p => p.status === 'arrested')?.face || mm.face, 30, 100, 52, 64);
+    para(won ? 'Sources credit a CIA contract agent, identified only as "' + game.agent.first + ' R.", with tracking the ring across ' + (n => n + (n === 1 ? ' city.' : ' cities.'))(new Set(pl.people.filter(p => p.status === 'arrested').map(p => p.city)).size) : 'Intelligence officials admit they were aware of the threat. "We were close," said one. "Not close enough."', 94, 98, W - 122, P.D2, 9);
+    if (t > 1) { rect(94, 150, W - 122, 22, P.K); text('Case score ' + game.score + (bonus ? '  (bonus ' + bonus + ')' : ''), 100, 153, P.YE); text('Career total ' + game.careerScore, 100, 162, P.CY); }
+    g.restore();
+  }, () => go(careerScene(won)), { prompt: 'Press OK' });
+}
+function rankFor(s) { return [[0, 'Trainee'], [100, 'Field Agent'], [300, 'Senior Agent'], [600, 'Station Chief'], [1000, 'Deputy Director'], [1600, 'Legend of the Agency']].filter(([m]) => s >= m).pop()[1]; }
+function careerScene(won) {
+  const items = [
+    { label: won ? 'Accept the next case (harder)' : 'Try another case at this level', go: () => { if (won) game.level++; newCase(); } },
+    { label: 'Retire to the title screen', go: () => go(titleScene()) },
+  ];
+  return menuScene({
+    menu: Menu(items, 40, 150, 240, 12),
+    draw() {
+      rect(0, 0, W, H, P.K); panel(8, 8, W - 16, H - 16);
+      text('SERVICE RECORD: ' + game.agent.first.toUpperCase() + ' REMINGTON', 20, 18, P.YE);
+      text('Rank: ' + rankFor(game.careerScore), 20, 30, P.CY); textR('Career score ' + game.careerScore, W - 20, 30, P.W);
+      rect(20, 40, W - 40, 1, P.G2);
+      game.cases.slice(-8).forEach((c, i) => { text('Case ' + c.level, 24, 46 + i * 11, P.G4); text(c.won ? 'Plot foiled' : 'Plot succeeded', 90, 46 + i * 11, c.won ? P.GR2 : P.RD2); textR(String(c.score), W - 24, 46 + i * 11, P.W); });
+      this.menu.draw();
+    },
+  });
+}
+// ===================================================================
+// BREAK-IN: top-down building infiltration
+// ===================================================================
+const TS = 8, VIEW_H = 168;
+const T_OUT = 0, T_FLOOR = 1, T_WALL = 2, T_DOOR = 3, T_GRASS = 4, T_ROAD = 5;
+const ROOM_KINDS = {
+  lobby: { name: 'Lobby', floor: 'marble' }, office: { name: 'Office', floor: 'carpet' }, exec: { name: 'Executive office', floor: 'wood' },
+  records: { name: 'Records room', floor: 'tile' }, lab: { name: 'Communications room', floor: 'lino' }, lounge: { name: 'Lounge', floor: 'carpet2' },
+  storage: { name: 'Storage', floor: 'concrete' }, guard: { name: 'Guard post', floor: 'concrete' }, hall: { name: 'Corridor', floor: 'lino' },
+};
+const FURN = {
+  desk: { w: 2, h: 1, search: 1.4, tall: false }, bigdesk: { w: 3, h: 2, search: 2, tall: false }, filecab: { w: 1, h: 1, search: 2, tall: true },
+  safe: { w: 1, h: 1, search: 4.5, tall: true }, shelf: { w: 2, h: 1, search: 1.6, tall: true }, computer: { w: 2, h: 1, search: 3, tall: false },
+  sofa: { w: 2, h: 1 }, plant: { w: 1, h: 1, tall: true }, table: { w: 2, h: 2 }, crate: { w: 1, h: 1, tall: true }, bigcrate: { w: 2, h: 2, tall: true },
+  cooler: { w: 1, h: 1, tall: true }, locker: { w: 1, h: 1, search: 1, tall: true }, bench: { w: 3, h: 1, search: 2 }, copier: { w: 1, h: 1, tall: true },
+};
+const WEAPONS = {
+  pistol: { name: 'Silenced 9mm', ammo: 24, rate: 0.35, dmg: 1, noise: 60, spread: 0.05, speed: 260 },
+  smg: { name: 'SMG', ammo: 60, rate: 0.09, dmg: 1, noise: 170, spread: 0.12, speed: 280 },
+  shotgun: { name: 'Shotgun', ammo: 12, rate: 0.8, dmg: 2, noise: 200, spread: 0.3, speed: 240, pellets: 5 },
+};
+const GREN = { stun: { name: 'Stun', col: P.W }, gas: { name: 'Gas', col: P.GR2 }, frag: { name: 'Frag', col: P.OR } };
+
+function genBuilding(level) {
+  const cols = 40 + ri(0, 14), rows = 26 + ri(0, 8), M = 3;
+  const MW = cols + M * 2, MH = rows + M + 6;
+  const T = [], R = [];
+  for (let y = 0; y < MH; y++) { T.push(new Array(MW).fill(T_GRASS)); R.push(new Array(MW).fill(-1)); }
+  const bx = M, by = M, bw = cols, bh = rows;
+  for (let y = by + bh; y < MH; y++) for (let x = 0; x < MW; x++) T[y][x] = y >= by + bh + 2 ? T_ROAD : T_OUT;
+  for (let y = by; y < by + bh; y++) for (let x = bx; x < bx + bw; x++) T[y][x] = (x === bx || y === by || x === bx + bw - 1 || y === by + bh - 1) ? T_WALL : T_FLOOR;
+  // BSP into rooms
+  const leaves = [];
+  (function split(r, depth) {
+    const canH = r.w >= 15, canV = r.h >= 12;
+    if ((!canH && !canV) || (depth > 2 && rnd() < 0.25 && r.w * r.h < 180)) { leaves.push(r); return; }
+    const horiz = canH && (!canV || r.w / r.h > 1.2 || (r.w / r.h > 0.8 && rnd() < 0.5));
+    if (horiz) { const sx = r.x + ri(6, r.w - 7); for (let y = r.y; y < r.y + r.h; y++) T[y][sx] = T_WALL; split({ x: r.x, y: r.y, w: sx - r.x, h: r.h }, depth + 1); split({ x: sx + 1, y: r.y, w: r.x + r.w - sx - 1, h: r.h }, depth + 1); }
+    else { const sy = r.y + ri(5, r.h - 6); for (let x = r.x; x < r.x + r.w; x++) T[sy][x] = T_WALL; split({ x: r.x, y: r.y, w: r.w, h: sy - r.y }, depth + 1); split({ x: r.x, y: sy + 1, w: r.w, h: r.y + r.h - sy - 1 }, depth + 1); }
+  })({ x: bx + 1, y: by + 1, w: bw - 2, h: bh - 2 }, 0);
+  const rooms = leaves.map((l, i) => { for (let y = l.y; y < l.y + l.h; y++) for (let x = l.x; x < l.x + l.w; x++) R[y][x] = i; return Object.assign({ id: i, kind: 'office', seen: false, doors: [] }, l); });
+  // door candidates between room pairs
+  const cand = {};
+  for (let y = by + 1; y < by + bh - 1; y++) for (let x = bx + 1; x < bx + bw - 1; x++) {
+    if (T[y][x] !== T_WALL) continue;
+    const pairs = [[R[y][x - 1], R[y][x + 1], 'v'], [R[y - 1][x], R[y + 1][x], 'h']];
+    for (const [a, b, o] of pairs) if (a >= 0 && b >= 0 && a !== b) { const k = Math.min(a, b) + ',' + Math.max(a, b); (cand[k] = cand[k] || []).push({ x, y, o, a, b }); }
+  }
+  const parent = rooms.map((_, i) => i); const find = i => parent[i] === i ? i : (parent[i] = find(parent[i]));
+  const doors = [];
+  const addDoor = c => { T[c.y][c.x] = T_DOOR; const d = { x: c.x, y: c.y, o: c.o, open: false, locked: false, a: c.a, b: c.b }; doors.push(d); rooms[c.a].doors.push(d); rooms[c.b].doors.push(d); };
+  const keys = shuffle(Object.keys(cand));
+  for (const k of keys) {
+    const list = cand[k].filter(c => { // not at the ends of a wall run
+      const dx = c.o === 'v' ? 0 : 1, dy = c.o === 'v' ? 1 : 0;
+      return T[c.y - dy][c.x - dx] === T_WALL && T[c.y + dy][c.x + dx] === T_WALL;
+    });
+    if (list.length < 1) continue;
+    const c = list[Math.floor(list.length / 2 + (rnd() - 0.5) * list.length * 0.6)];
+    const ra = find(c.a), rb = find(c.b);
+    if (ra !== rb) { parent[ra] = rb; addDoor(c); } else if (rnd() < 0.3) addDoor(c);
+  }
+  // entrance on the bottom wall
+  const bottom = rooms.filter(r => r.y + r.h === by + bh - 1 && r.w >= 5);
+  const lobby = bottom.length ? pick(bottom) : rooms[0];
+  const ex = lobby.x + Math.floor(lobby.w / 2), ey = by + bh - 1;
+  T[ey][ex] = T_DOOR; const entrance = { x: ex, y: ey, o: 'h', open: true, locked: false, a: lobby.id, b: -1, entrance: true }; doors.push(entrance); lobby.doors.push(entrance);
+  // walkway to the street
+  for (let y = ey + 1; y < by + bh + 2; y++) T[y][ex] = T_OUT;
+  // room roles, by distance from the lobby
+  const depth = bfsRooms(rooms, lobby.id);
+  lobby.kind = 'lobby';
+  const others = rooms.filter(r => r !== lobby).sort((a, b) => depth[b.id] - depth[a.id] || b.w * b.h - a.w * a.h);
+  if (others[0]) others[0].kind = 'exec';
+  const kinds = shuffle(['records', 'lab', 'guard', 'lounge', 'storage', 'office', 'office', 'office', 'records', 'office', 'storage', 'lab']);
+  others.slice(1).forEach((r, i) => { r.kind = (r.w <= 5 || r.h <= 4) ? 'hall' : kinds[i % kinds.length]; });
+  // locks: doors deep in the building
+  doors.forEach(d => { if (!d.entrance && (depth[d.a] >= 2 || depth[d.b] >= 2) && rnd() < 0.18 + level * 0.04) d.locked = true; });
+  const execDoorLocked = others[0] && others[0].doors.some(d => d.locked);
+  return { T, R, MW, MH, rooms, doors, lobby, entrance, exec: others[0] || lobby, depth, bx, by, bw, bh, execDoorLocked };
+}
+function bfsRooms(rooms, start) {
+  const dd = rooms.map(() => 99); dd[start] = 0; const q = [start];
+  while (q.length) { const r = q.shift(); for (const d of rooms[r].doors) { const o = d.a === r ? d.b : d.a; if (o >= 0 && dd[o] > dd[r] + 1) { dd[o] = dd[r] + 1; q.push(o); } } }
+  return dd;
+}
+
+function furnish(B, occupant, level) {
+  const F = []; const occ = B.T.map(r => r.map(() => -1));
+  const isDoorAdj = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const t = B.T[y + dy] && B.T[y + dy][x + dx]; if (t === T_DOOR) return true; } return false; };
+  function free(x, y, w, h, room) { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { if (B.T[yy] === undefined || B.T[yy][xx] !== T_FLOOR || B.R[yy][xx] !== room.id || occ[yy][xx] >= 0 || isDoorAdj(xx, yy)) return false; } return true; }
+  function reachable(room) {
+    const ds = room.doors; if (ds.length < 1) return true; const start = ds[0]; const seen = new Set([start.x + ',' + start.y]); const q = [[start.x, start.y]]; let floorN = 0;
+    while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (seen.has(k)) continue; const t = B.T[ny] && B.T[ny][nx]; if ((t === T_FLOOR && B.R[ny][nx] === room.id && occ[ny][nx] < 0) || (t === T_DOOR && room.doors.some(d => d.x === nx && d.y === ny))) { seen.add(k); q.push([nx, ny]); if (t === T_FLOOR) floorN++; } } }
+    let total = 0; for (let y = room.y; y < room.y + room.h; y++) for (let x = room.x; x < room.x + room.w; x++) if (occ[y][x] < 0) total++;
+    return ds.every(d => seen.has(d.x + ',' + d.y)) && floorN >= total * 0.85;
+  }
+  function place(type, room, x, y, extra = {}) {
+    const f = FURN[type]; if (!free(x, y, f.w, f.h, room)) return null;
+    const it = Object.assign({ type, x, y, w: f.w, h: f.h, room: room.id, searched: false, loot: null }, extra); const id = F.length; F.push(it);
+    for (let yy = y; yy < y + f.h; yy++) for (let xx = x; xx < x + f.w; xx++) occ[yy][xx] = id;
+    if (!reachable(room)) { for (let yy = y; yy < y + f.h; yy++) for (let xx = x; xx < x + f.w; xx++) occ[yy][xx] = -1; F.pop(); return null; }
+    return it;
+  }
+  const alongWalls = (room, type, n) => { let k = 0; for (let tries = 0; tries < 40 && k < n; tries++) { const side = ri(0, 3); const f = FURN[type]; let x, y; if (side === 0) { x = ri(room.x, room.x + room.w - f.w); y = room.y; } else if (side === 1) { x = ri(room.x, room.x + room.w - f.w); y = room.y + room.h - f.h; } else if (side === 2) { x = room.x; y = ri(room.y, room.y + room.h - f.h); } else { x = room.x + room.w - f.w; y = ri(room.y, room.y + room.h - f.h); } if (place(type, room, x, y)) k++; } return k; };
+  const center = (room, type, n) => { let k = 0; for (let tries = 0; tries < 40 && k < n; tries++) { const f = FURN[type]; const x = ri(room.x + 1, room.x + room.w - f.w - 1), y = ri(room.y + 1, room.y + room.h - f.h - 1); if (place(type, room, x, y)) k++; } return k; };
+  for (const room of B.rooms) {
+    const a = room.w * room.h;
+    switch (room.kind) {
+      case 'lobby': center(room, 'sofa', 1); alongWalls(room, 'plant', 2); center(room, 'desk', 1); alongWalls(room, 'cooler', 1); break;
+      case 'office': center(room, 'desk', Math.max(1, Math.floor(a / 30))); alongWalls(room, 'filecab', ri(1, 3)); alongWalls(room, 'plant', 1); if (rnd() < 0.5) alongWalls(room, 'computer', 1); break;
+      case 'exec': center(room, 'bigdesk', 1); alongWalls(room, 'safe', 1); alongWalls(room, 'shelf', 2); alongWalls(room, 'plant', 2); alongWalls(room, 'sofa', 1); break;
+      case 'records': alongWalls(room, 'filecab', Math.max(3, Math.floor(a / 8))); center(room, 'shelf', 2); break;
+      case 'lab': alongWalls(room, 'computer', 3); center(room, 'bench', 1); alongWalls(room, 'copier', 1); break;
+      case 'lounge': center(room, 'table', 1); alongWalls(room, 'sofa', 2); alongWalls(room, 'cooler', 1); alongWalls(room, 'plant', 1); break;
+      case 'storage': center(room, 'bigcrate', 1); alongWalls(room, 'crate', ri(3, 6)); alongWalls(room, 'locker', 1); break;
+      case 'guard': alongWalls(room, 'locker', ri(2, 4)); center(room, 'table', 1); break;
+      case 'hall': alongWalls(room, 'plant', 1); break;
+    }
+  }
+  // stash clues and items
+  const searchable = F.filter(f => FURN[f.type].search);
+  const nClues = occupant ? 3 + Math.min(3, Math.floor(level / 2)) : 1;
+  const byPriority = shuffle(searchable.slice()).sort((a, b) => (b.type === 'safe') - (a.type === 'safe') + ((B.rooms[b.room].kind === 'exec') - (B.rooms[a.room].kind === 'exec')) * 0.5);
+  byPriority.slice(0, nClues).forEach(f => f.loot = { kind: 'clue' });
+  shuffle(searchable.filter(f => !f.loot)).slice(0, 4).forEach((f, i) => f.loot = { kind: ['ammo', 'grenade', 'medkit', 'key'][i] });
+  if (B.execDoorLocked) { const k = searchable.find(f => f.loot && f.loot.kind === 'key'); if (!k) { const f = searchable.find(f => !f.loot && B.rooms[f.room].kind !== 'exec'); if (f) f.loot = { kind: 'key' }; } }
+  return { F, occ };
+}
+
+// ------------------------------------------------------------------
+function breakinScene(opts, done) {
+  const level = opts.level || 1, occupant = opts.occupant || null, org = opts.org || pick(ORGS);
+  const sk = game.agent ? game.agent.skills : { combat: 2 };
+  const B = genBuilding(level); const { F, occ } = furnish(B, occupant, level);
+  const MWpx = B.MW * TS, MHpx = B.MH * TS;
+  const W0 = WEAPONS[opts.weapon || 'pistol'];
+  const max = {
+    x: B.entrance.x * TS + 4, y: (B.entrance.y + 2) * TS + 6, dir: -Math.PI / 2, face: 2, walk: 0, hp: 3 + (sk.combat >= 4 ? 1 : 0) + (opts.armor ? 2 : 0), maxHp: 0,
+    weapon: W0, ammo: W0.ammo, cool: 0, gren: Object.assign({ stun: 0, gas: 0, frag: 0 }, opts.grenades || { stun: 2, gas: 1, frag: 0 }), gtype: 'stun',
+    keys: 0, captive: null, search: null, speed: opts.armor ? 34 : 40, hitFlash: 0,
+  };
+  max.maxHp = max.hp; if (!max.gren[max.gtype]) max.gtype = Object.keys(max.gren).find(k => max.gren[k]) || 'stun';
+  const people = [], bullets = [], grenades = [], clouds = [], fx = [];
+  const clues = [], loot = []; let msg = 'Get inside. Search the building and get out alive.', msgT = 6;
+  let alarm = false, alarmT = 0, police = 0, reinf = 0, reinfLeft = 3 + level, over = null, t = 0, kills = { guard: 0, civ: 0 };
+  const say = (m, d = 3.5) => { msg = m; msgT = d; };
+
+  // people
+  const tileFree = (tx, ty) => B.T[ty] && (B.T[ty][tx] === T_FLOOR) && occ[ty][tx] < 0;
+  function spot(room) { for (let i = 0; i < 60; i++) { const x = ri(room.x, room.x + room.w - 1), y = ri(room.y, room.y + room.h - 1); if (tileFree(x, y) && !people.some(p => Math.abs(p.x - x * TS - 4) < 8 && Math.abs(p.y - y * TS - 6) < 8)) return [x * TS + 4, y * TS + 6]; } return [room.x * TS + 4, room.y * TS + 6]; }
+  function addPerson(kind, room, extra = {}) {
+    const [x, y] = spot(room);
+    const p = Object.assign({ kind, x, y, dir: rnd() * Math.PI * 2, walk: 0, state: kind === 'guard' ? 'patrol' : 'idle', hp: kind === 'guard' ? 2 : 1, room: room.id, home: room.id, path: null, pathT: 0, cool: 1, stun: 0, seeT: 0, alertT: 0, target: null, turnT: rnd() * 3,
+      skin: pick([P.SK, P.SK, P.SK2, P.SK3]), hair: pick([P.K, P.BR, P.G3, P.TN]), torso: kind === 'guard' ? org.uni : pick([P.W, P.G4, P.BL3, P.CR, P.PK]), legs: kind === 'guard' ? org.uni2 : pick([P.G1, P.NV, P.BR, P.D2]) }, extra);
+    people.push(p); return p;
+  }
+  const nGuards = Math.min(14, 2 + level * 2 + Math.floor(B.rooms.length / 5));
+  const guardRooms = B.rooms.filter(r => r.kind !== 'lobby' || rnd() < 0.5);
+  for (let i = 0; i < nGuards; i++) { const r = i < 2 ? B.rooms.find(r => r.kind === 'guard') || pick(guardRooms) : pick(guardRooms); addPerson('guard', r, { state: rnd() < 0.6 ? 'patrol' : 'idle' }); }
+  B.rooms.forEach(r => { if ((r.kind === 'office' || r.kind === 'lab' || r.kind === 'lobby') && rnd() < 0.6) addPerson('civ', r); });
+  let target = null;
+  if (occupant) { target = addPerson('civ', B.exec, { vip: occupant, torso: occupant.face.jacket, legs: P.K, skin: occupant.face.skin, hair: occupant.face.hair }); }
+
+  // ---------- helpers ----------
+  const tileAt = (x, y) => { const tx = Math.floor(x / TS), ty = Math.floor(y / TS); return B.T[ty] ? B.T[ty][tx] : T_WALL; };
+  const doorAt = (tx, ty) => B.doors.find(d => d.x === tx && d.y === ty);
+  function solidTile(tx, ty, forBullet) {
+    const t = B.T[ty] && B.T[ty][tx]; if (t === undefined) return true; if (t === T_WALL) return true;
+    if (t === T_DOOR) { const d = doorAt(tx, ty); return !d.open; }
+    if (t === T_FLOOR && occ[ty][tx] >= 0) return forBullet ? FURN[F[occ[ty][tx]].type].tall : true;
+    return false;
+  }
+  function blocked(x, y, r = 3) { for (const [dx, dy] of [[-r, -r], [r, -r], [-r, 0], [r, 0]]) if (solidTile(Math.floor((x + dx) / TS), Math.floor((y + dy) / TS))) return true; return false; }
+  function opaque(tx, ty) { const t = B.T[ty] && B.T[ty][tx]; if (t === undefined || t === T_WALL) return true; if (t === T_DOOR) return !doorAt(tx, ty).open; return false; }
+  function los(x0, y0, x1, y1) { const d = dist(x0, y0, x1, y1), n = Math.ceil(d / 3); for (let i = 1; i < n; i++) { const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n; if (opaque(Math.floor(x / TS), Math.floor(y / TS))) return false; } return true; }
+  function roomOf(x, y) { const tx = Math.floor(x / TS), ty = Math.floor(y / TS); return B.R[ty] ? B.R[ty][tx] : -1; }
+  function moveEnt(e, vx, vy, dt) { const nx = e.x + vx * dt, ny = e.y + vy * dt; if (!blocked(nx, e.y)) e.x = nx; else openDoorNear(e, nx, e.y); if (!blocked(e.x, ny)) e.y = ny; else openDoorNear(e, e.x, ny); }
+  function openDoorNear(e, x, y) { if (e === max) return; for (const [dx, dy] of [[-3, -3], [3, -3], [-3, 0], [3, 0]]) { const tx = Math.floor((x + dx) / TS), ty = Math.floor((y + dy) / TS); const d = doorAt(tx, ty); if (d && !d.open && (!d.locked || e.kind === 'guard')) { d.open = true; staticDirty = true; } } }
+  function pathTo(sx, sy, gx, gy) { // BFS over tiles, returns list of tile centres
+    const s = [Math.floor(sx / TS), Math.floor(sy / TS)], goal = [Math.floor(gx / TS), Math.floor(gy / TS)];
+    const key = (x, y) => y * B.MW + x; const prev = new Map([[key(...s), -1]]); const q = [s]; let found = false, n = 0;
+    while (q.length && n++ < 4000) { const [x, y] = q.shift(); if (x === goal[0] && y === goal[1]) { found = true; break; }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, k = key(nx, ny); if (prev.has(k)) continue; const t = B.T[ny] && B.T[ny][nx]; if (t === undefined || t === T_WALL || (t === T_FLOOR && occ[ny][nx] >= 0)) continue; prev.set(k, key(x, y)); q.push([nx, ny]); } }
+    if (!found) return null; const out = []; let k = key(...goal); while (k !== -1 && k !== undefined) { out.unshift([(k % B.MW) * TS + 4, Math.floor(k / B.MW) * TS + 5]); k = prev.get(k); } return out;
+  }
+  function noise(x, y, r) { for (const p of people) { if (p.state === 'dead' || p.stun > 0 || p.tied) continue; if (dist(p.x, p.y, x, y) < r) { if (p.kind === 'guard' && p.state !== 'attack' && p.state !== 'hunt') { p.state = 'investigate'; p.target = [x, y]; p.path = null; } else if (p.kind === 'civ' && !p.surrender) p.state = 'flee'; } } }
+  function raiseAlarm(why) { if (alarm) return; alarm = true; alarmT = 0; police = 75; say(why + ' The alarm is sounding!', 4); sfx.alarm(); for (const p of people) if (p.kind === 'guard' && p.state !== 'dead') { p.state = 'hunt'; p.path = null; } }
+  function canSee(p, x, y, range = 95) { const d = dist(p.x, p.y - 5, x, y); if (d > range) return false; if (d > 14) { let a = Math.atan2(y - p.y, x - p.x) - p.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); if (Math.abs(a) > 1.05) return false; } return los(p.x, p.y - 5, x, y); }
+  function shoot(from, ang, w, friendly) {
+    const n = w.pellets || 1; for (let i = 0; i < n; i++) { const a = ang + (rnd() - 0.5) * w.spread * 2; bullets.push({ x: from.x + Math.cos(ang) * 5, y: from.y - 5 + Math.sin(ang) * 5, vx: Math.cos(a) * w.speed, vy: Math.sin(a) * w.speed, dmg: w.dmg, friendly, life: 0.8 }); }
+    fx.push({ k: 'flash', x: from.x + Math.cos(ang) * 6, y: from.y - 5 + Math.sin(ang) * 6, t: 0.06 }); sfx.shot(); noise(from.x, from.y, w.noise);
+  }
+  function hurtPerson(p, dmg) {
+    if (p.state === 'dead') return; p.hp -= dmg;
+    if (p.hp <= 0) { p.state = 'dead'; p.stun = 0; if (p.kind === 'guard') kills.guard++; else { kills.civ++; if (p.vip) say(p.vip.code + ' is dead. No interrogation now.', 4); else say('You shot an unarmed civilian. The Agency will not be pleased.', 4); } if (max.captive === p) max.captive = null; }
+    else if (p.kind === 'guard') { p.state = 'attack'; }
+    else { p.state = 'flee'; }
+  }
+  function stunPerson(p, s) { if (p.state === 'dead') return; p.stun = Math.max(p.stun, s); p.path = null; }
+  function explode(gr) {
+    const r = gr.type === 'frag' ? 22 : gr.type === 'stun' ? 30 : 0;
+    if (gr.type === 'gas') { clouds.push({ x: gr.x, y: gr.y, r: 4, t: 9 }); sfx.hiss(); noise(gr.x, gr.y, 50); return; }
+    fx.push({ k: 'boom', x: gr.x, y: gr.y, t: 0.5, r, type: gr.type }); sfx.boom(); noise(gr.x, gr.y, 200);
+    for (const p of people) { const d = dist(p.x, p.y - 4, gr.x, gr.y); if (d > r * 1.6 || !los(gr.x, gr.y, p.x, p.y - 4)) continue; if (gr.type === 'frag' && d < r) hurtPerson(p, 3); else stunPerson(p, gr.type === 'stun' ? 12 : 6); }
+    const d = dist(max.x, max.y - 4, gr.x, gr.y); if (d < r && los(gr.x, gr.y, max.x, max.y - 4)) { if (gr.type === 'frag') hurtMax(2); else { max.stun = 3; say('You are caught in your own blast!'); } }
+  }
+  function hurtMax(n) { if (over) return; max.hp -= n; max.hitFlash = 0.3; sfx.tone(120, 0.2, 'sawtooth', 0.08, -60); if (max.hp <= 0) { max.hp = 0; finish('dead'); } }
+  function nearestSearchable() {
+    let best = null, bd = 14;
+    for (const f of F) { if (!FURN[f.type].search) continue; const cx = Math.max(f.x * TS, Math.min(max.x, (f.x + f.w) * TS)), cy = Math.max(f.y * TS, Math.min(max.y - 3, (f.y + f.h) * TS)); const d = dist(max.x, max.y - 3, cx, cy); if (d < bd) { bd = d; best = f; } }
+    return best;
+  }
+  function nearestPerson(r = 12) { let best = null, bd = r; for (const p of people) { if (p.state === 'dead') continue; const d = dist(max.x, max.y, p.x, p.y); if (d < bd) { bd = d; best = p; } } return best; }
+  function nearestDoor() { const fx_ = max.x + Math.cos(max.dir) * 7, fy = max.y - 3 + Math.sin(max.dir) * 7; let best = null, bd = 12; for (const d of B.doors) { if (d.entrance) continue; const dd = dist(fx_, fy, d.x * TS + 4, d.y * TS + 4); if (dd < bd) { bd = dd; best = d; } } return best; }
+
+  function action() {
+    if (max.search) return;
+    const p = nearestPerson();
+    if (p && p !== max.captive) {
+      if (p.stun > 0 && !p.tied) { if (p.vip && !max.captive) { max.captive = p; p.tied = true; p.surrender = true; say('You drag ' + p.vip.code + ' along with you. Get to the exit!'); sfx.select(); return; } p.tied = true; p.stun = 9999; say('Tied and gagged.'); sfx.blip(); return; }
+      if (p.kind === 'civ' && !p.surrender) { p.surrender = true; p.state = 'surrender'; p.stun = 0; if (p.vip && !max.captive) { max.captive = p; say('"Don\'t shoot!" ' + p.vip.code + ' surrenders. Take them out of the building.', 4); } else { p.tied = true; p.stun = 9999; say('"Please... I have a family." You tie them up.'); } sfx.select(); return; }
+      if (p.kind === 'guard' && p.state !== 'attack' && p.state !== 'hunt' && !canSee(p, max.x, max.y - 5)) { stunPerson(p, 9999); p.tied = true; say('You knock the guard out from behind.'); sfx.noise(0.1, 0.1, 300); return; }
+    }
+    const d = nearestDoor();
+    if (d) {
+      if (d.locked) { if (max.keys > 0) { max.keys--; d.locked = false; d.open = true; staticDirty = true; say('The key card opens the door.'); sfx.select(); } else { max.search = { door: d, t: 0, need: 5 - Math.min(2, (sk.electronics || 2) - 2) }; say('Picking the lock...'); } return; }
+      d.open = !d.open; staticDirty = true; sfx.tone(d.open ? 220 : 180, 0.06); return;
+    }
+    const f = nearestSearchable();
+    if (f) { if (f.searched) { say('Already searched.'); return; } max.search = { f, t: 0, need: FURN[f.type].search }; say('Searching the ' + ({ filecab: 'filing cabinet', bigdesk: 'desk', computer: 'computer files', bench: 'workbench' }[f.type] || f.type) + '...'); return; }
+    say('Nothing here.', 1.2);
+  }
+  function finishSearch(s) {
+    if (s.door) { s.door.locked = false; s.door.open = true; staticDirty = true; say('Click. The lock gives.'); sfx.select(); return; }
+    const f = s.f; f.searched = true; staticDirty = true;
+    if (!f.loot) { say(pick(['Old invoices. Nothing useful.', 'Just stationery.', 'Empty.', 'Personal letters. Nothing useful.', 'Tax records. Boring.'])); sfx.blip(); return; }
+    const L = f.loot;
+    if (L.kind === 'clue') { const c = occupant ? clueFrom(occupant, 0.4) : null; if (c) { clues.push(c); say('CLUE: ' + c, 5); sfx.success(); } else { clues.push('Documents of no value'); say('Documents... but nothing you do not already know.'); } }
+    else if (L.kind === 'ammo') { max.ammo += Math.ceil(max.weapon.ammo / 2); say('Found ammunition.'); sfx.select(); }
+    else if (L.kind === 'grenade') { const k = pick(['stun', 'gas', 'frag']); max.gren[k]++; say('Found a ' + GREN[k].name.toLowerCase() + ' grenade.'); sfx.select(); }
+    else if (L.kind === 'medkit') { max.hp = Math.min(max.maxHp, max.hp + 1); say('A first-aid kit. You patch yourself up.'); sfx.select(); }
+    else if (L.kind === 'key') { max.keys++; say('A security key card!'); sfx.select(); }
+  }
+  function throwGrenade() {
+    if (max.gren[max.gtype] <= 0) { say('No ' + GREN[max.gtype].name.toLowerCase() + ' grenades left.'); sfx.deny(); return; }
+    max.gren[max.gtype]--; const d = 60; grenades.push({ x: max.x, y: max.y - 5, sx: max.x, sy: max.y - 5, tx: max.x + Math.cos(max.dir) * d, ty: max.y - 5 + Math.sin(max.dir) * d, t: 0, type: max.gtype }); sfx.tone(500, 0.1, 'triangle', 0.05, -200);
+  }
+  function finish(kind) {
+    if (over) return; over = { kind, t: 0 };
+    if (kind === 'escaped') { sfx.success(); } else sfx.fail();
+  }
+
+  // ---------- static layer (floors, walls, furniture) ----------
+  let staticCv = document.createElement('canvas'); staticCv.width = MWpx; staticCv.height = MHpx; let staticDirty = true;
+  function renderStatic() {
+    drawTo(staticCv.getContext('2d'), () => {
+      for (let y = 0; y < B.MH; y++) for (let x = 0; x < B.MW; x++) drawTile(x, y);
+      for (const f of F) drawFurn(f);
+      for (const d of B.doors) drawDoor(d);
+      // wall front faces for depth
+      for (let y = 0; y < B.MH - 1; y++) for (let x = 0; x < B.MW; x++) if (B.T[y][x] === T_WALL && B.T[y + 1][x] !== T_WALL) { rect(x * TS, y * TS + 5, TS, 3, P.G2); rect(x * TS, y * TS + 7, TS, 1, P.G1); }
+    });
+    staticDirty = false;
+  }
+  function drawTile(x, y) {
+    const t = B.T[y][x], X = x * TS, Y = y * TS;
+    if (t === T_GRASS) { rect(X, Y, TS, TS, P.GR); if ((x * 7 + y * 13) % 5 === 0) px(X + 3, Y + 4, P.GR2); if ((x * 3 + y * 5) % 7 === 0) px(X + 6, Y + 1, P.DG); return; }
+    if (t === T_ROAD) { rect(X, Y, TS, TS, P.D2); if (y === B.MH - 2 && x % 3 === 0) rect(X, Y + 3, 5, 1, P.YE2); return; }
+    if (t === T_OUT) { rect(X, Y, TS, TS, P.G3); rect(X, Y, TS, 1, P.G4); rect(X, Y, 1, TS, P.G4); return; }
+    if (t === T_WALL) { rect(X, Y, TS, TS, P.G4); rect(X, Y, TS, 1, P.G5); if ((x + y) % 2) px(X + 3, Y + 3, P.G3); return; }
+    if (t === T_DOOR) { rect(X, Y, TS, TS, P.G2); return; }
+    const room = B.rooms[B.R[y][x]], fl = ROOM_KINDS[room.kind].floor;
+    switch (fl) {
+      case 'marble': rect(X, Y, TS, TS, (x + y) % 2 ? P.CR : P.G5); break;
+      case 'carpet': dither(X, Y, TS, TS, P.BL, P.G2, 5); break;
+      case 'carpet2': dither(X, Y, TS, TS, P.RD, P.BR, 7); break;
+      case 'wood': rect(X, Y, TS, TS, P.BR2); rect(X, Y + ((x & 1) ? 3 : 7), TS, 1, P.BR); px(X + ((y * 5) % 8), Y + 1, P.BR3); break;
+      case 'tile': rect(X, Y, TS, TS, P.G4); rect(X, Y, TS, 1, P.G3); rect(X, Y, 1, TS, P.G3); break;
+      case 'lino': rect(X, Y, TS, TS, P.TN); if ((x + y) % 2 === 0) rect(X, Y, TS, TS, P.BR3); break;
+      case 'concrete': dither(X, Y, TS, TS, P.G3, P.G2, 3); break;
+    }
+  }
+  function drawDoor(d) {
+    const X = d.x * TS, Y = d.y * TS;
+    if (d.entrance) { rect(X, Y, TS, TS, P.G2); rect(X - 1, Y + 6, TS + 2, 2, P.YE2); return; }
+    if (d.open) { rect(X, Y, TS, TS, P.G2); if (d.o === 'v') { rect(X, Y, 1, 2, P.BR); } else { rect(X, Y, 2, 1, P.BR); } return; }
+    rect(X, Y, TS, TS, d.locked ? P.BR : P.BR2); rect(X + 1, Y + 1, TS - 2, TS - 2, d.locked ? P.BR2 : P.BR3);
+    if (d.o === 'v') rect(X + 3, Y + 1, 2, TS - 2, P.BR); else rect(X + 1, Y + 3, TS - 2, 2, P.BR);
+    px(X + 6, Y + 4, d.locked ? P.RD2 : P.YE);
+  }
+  function drawFurn(f) {
+    const X = f.x * TS, Y = f.y * TS, w = f.w * TS, h = f.h * TS;
+    switch (f.type) {
+      case 'desk': case 'bigdesk': rect(X, Y + 1, w, h - 1, P.BR); rect(X, Y, w, h - 3, P.BR3); rect(X + 1, Y + 1, w - 2, 1, P.TN); if (!f.searched) { rect(X + 2, Y + 2, 4, 3, P.W); rect(X + 3, Y + 3, 3, 1, P.G3); } else { rect(X + 2, Y + 2, 5, 3, P.W); rect(X + w - 7, Y + 3, 4, 2, P.CR); } rect(X + w - 4, Y + 1, 2, 3, P.YE); if (f.type === 'bigdesk') { rect(X + 6, Y + 6, 6, 4, P.K); rect(X + 7, Y + 7, 4, 2, P.G1); } break;
+      case 'filecab': rect(X, Y, w, h, P.G2); rect(X, Y, w, 2, P.G4); rect(X + 1, Y + 3, w - 2, 1, P.G1); rect(X + 1, Y + 6, w - 2, 1, P.G1); px(X + 3, Y + 2, P.W); if (f.searched) rect(X + 1, Y + 4, w - 2, 2, P.W); break;
+      case 'safe': rect(X, Y, w, h, P.D2); rect(X, Y, w, 2, P.G2); disc(X + 4, Y + 4, 2, P.G3); px(X + 4, Y + 4, P.K); if (f.searched) rect(X, Y + 2, 2, 6, P.G4); break;
+      case 'shelf': rect(X, Y, w, h, P.BR); for (let i = 0; i < w - 2; i += 2) rect(X + 1 + i, Y + 1, 1, h - 3, [P.RD, P.BL2, P.GR, P.YE2, P.CR][(i / 2 + f.x) % 5]); rect(X, Y + h - 2, w, 2, P.BR2); break;
+      case 'computer': rect(X, Y + 1, w, h - 1, P.G3); rect(X, Y, w, h - 3, P.G4); rect(X + 2, Y + 1, 7, 5, P.CR); rect(X + 3, Y + 2, 5, 3, f.searched ? P.K : P.DG); if (!f.searched) { px(X + 4, Y + 3, P.GR2); px(X + 6, Y + 3, P.GR2); } rect(X + 10, Y + 3, 5, 2, P.CR); break;
+      case 'sofa': rect(X, Y, w, h, P.RD); rect(X, Y, w, 3, P.BR); rect(X, Y, 2, h, P.BR); rect(X + w - 2, Y, 2, h, P.BR); break;
+      case 'plant': disc(X + 4, Y + 5, 2, P.BR2); disc(X + 4, Y + 3, 3, P.GR); px(X + 3, Y + 2, P.GR2); px(X + 5, Y + 4, P.DG); break;
+      case 'table': rect(X + 1, Y + 1, w - 2, h - 2, P.BR3); rect(X + 1, Y + h - 3, w - 2, 2, P.BR2); rect(X + 5, Y + 5, 3, 2, P.W); break;
+      case 'crate': case 'bigcrate': rect(X, Y, w, h, P.BR3); frame(X, Y, w, h, P.BR); line(X, Y, X + w - 1, Y + h - 1, P.BR2); line(X + w - 1, Y, X, Y + h - 1, P.BR2); break;
+      case 'cooler': rect(X + 1, Y + 3, 6, 5, P.W); rect(X + 2, Y, 4, 3, P.CY); break;
+      case 'locker': rect(X, Y, w, h, P.OL); rect(X, Y, w, 1, P.GR3); rect(X + 3, Y + 1, 1, h - 1, P.DG); px(X + 5, Y + 4, P.G4); break;
+      case 'bench': rect(X, Y + 1, w, h - 1, P.G2); rect(X, Y, w, h - 3, P.G4); for (let i = 2; i < w - 2; i += 5) { rect(X + i, Y + 1, 3, 2, [P.RD2, P.GR2, P.YE][i % 3]); } break;
+      case 'copier': rect(X, Y, w, h, P.CR); rect(X + 1, Y + 1, w - 2, 3, P.G3); rect(X + 1, Y + 5, 2, 1, P.GR2); break;
+    }
+  }
+
+  // ---------- people drawing ----------
+  function drawPerson(p, X, Y) {
+    const x = Math.round(X), y = Math.round(Y);
+    if (p.state === 'dead' || p.stun > 0) {
+      rect(x - 6, y - 3, 12, 4, p.torso); rect(x + 4, y - 3, 3, 4, p.skin); rect(x + 5, y - 3, 2, 1, p.hair); rect(x - 9, y - 2, 3, 2, p.legs);
+      if (p.state === 'dead') { rect(x - 3, y + 1, 7, 1, P.RD); px(x + 1, y + 2, P.RD); }
+      else if (p.tied) { rect(x - 2, y - 3, 1, 4, P.TN); rect(x + 1, y - 3, 1, 4, P.TN); }
+      else if ((t * 3 | 0) % 2) { px(x + 3, y - 7, P.YE); px(x + 6, y - 9, P.YE); }
+      return;
+    }
+    const d = p.face !== undefined ? p.face : faceIdx(p.dir); const ph = (p.walk * 8 | 0) % 2;
+    const ox = x - 4, oy = y - 12;
+    // legs
+    if (d === 0 || d === 2) { rect(ox + 2, oy + 9 - (ph ? 1 : 0), 2, 3 + (ph ? 1 : 0), p.legs); rect(ox + 4, oy + 9 - (ph ? 0 : 1), 2, 3 + (ph ? 0 : 1), p.legs); }
+    else { rect(ox + 3 - ph, oy + 9, 2, 3, p.legs); rect(ox + 3 + ph, oy + 9, 2, 3, p.legs); }
+    // torso & arms
+    if (d === 0 || d === 2) { rect(ox + 1, oy + 4, 6, 5, p.torso); rect(ox, oy + 5, 1, 4, p.torso); rect(ox + 7, oy + 5, 1, 4, p.torso); px(ox, oy + 9, p.skin); px(ox + 7, oy + 9, p.skin); if (d === 0 && p.kind !== 'guard' && p !== max) rect(ox + 3, oy + 4, 2, 3, p.vip ? P.RD : P.G1); }
+    else { rect(ox + 2, oy + 4, 4, 5, p.torso); rect(ox + (d === 1 ? 3 : 4), oy + 5, 1, 4, shade(p.torso)); }
+    if (p.surrender) { rect(ox - 1, oy + 1, 1, 4, p.torso); rect(ox + 8, oy + 1, 1, 4, p.torso); px(ox - 1, oy, p.skin); px(ox + 8, oy, p.skin); }
+    // head
+    rect(ox + 2, oy, 4, 4, d === 2 ? p.hair : p.skin);
+    if (d !== 2) { rect(ox + 2, oy, 4, 1, p.hair); if (d === 1) rect(ox + 4, oy, 2, 3, p.hair); if (d === 3) rect(ox + 2, oy, 2, 3, p.hair); if (d === 0) { px(ox + 3, oy + 2, P.K); px(ox + 4, oy + 2, P.K); } }
+    if (p.kind === 'guard') { rect(ox + 1, oy - 1, 6, 2, shade(p.torso)); if (d === 0) rect(ox + 2, oy + 1, 4, 1, P.K); }
+    if (p === max) { rect(ox + 2, oy - 1, 4, 1, P.K); }
+    // gun
+    if (p.kind === 'guard' || p === max) { const gx = x + Math.cos(p.dir) * 5, gy = y - 6 + Math.sin(p.dir) * 4; line(x + Math.cos(p.dir) * 2, y - 6, gx, gy, P.K); }
+  }
+  const faceIdx = a => { const s = Math.sin(a), c = Math.cos(a); return Math.abs(s) > Math.abs(c) ? (s > 0 ? 0 : 2) : (c > 0 ? 3 : 1); };
+  const shade = c => ({ [P.RD]: P.BR, [P.G2]: P.G1, [P.TN]: P.BR2, [P.D2]: P.K, [P.YE2]: P.BR, [P.OL]: P.DG, [P.BL]: P.NV, [P.W]: P.G4, [P.G4]: P.G3, [P.BL3]: P.BL2, [P.CR]: P.TN, [P.PK]: P.MG, [P.G1]: P.K })[c] || P.K;
+  max.kind = 'max'; max.torso = P.G1; max.legs = P.K; max.skin = P.SK; max.hair = game.agent && game.agent.sex === 'f' ? P.BR2 : P.BR; max.state = 'ok'; max.stun = 0;
+
+  // ---------- update ----------
+  const scene = {
+    t: 0, pauseMenu: null,
+    update(dt) {
+      if (this.pauseMenu) return;
+      t += dt;
+      if (over) { over.t += dt; return; }
+      if (msgT > 0) msgT -= dt;
+      // Max
+      if (max.stun > 0) max.stun -= dt;
+      max.hitFlash = Math.max(0, max.hitFlash - dt);
+      const ax = input.axis();
+      if (max.search) {
+        if (ax.x || ax.y) { max.search = null; say('Interrupted.', 1); }
+        else { max.search.t += dt; if ((max.search.t * 6 | 0) !== ((max.search.t - dt) * 6 | 0)) sfx.tick(); if (max.search.t >= max.search.need) { const s = max.search; max.search = null; finishSearch(s); } }
+      } else if (max.stun <= 0 && (ax.x || ax.y)) {
+        const l = Math.hypot(ax.x, ax.y); const sp = max.speed * (max.captive ? 0.75 : 1);
+        max.dir = Math.atan2(ax.y, ax.x); moveEnt(max, ax.x / l * sp, ax.y / l * sp, dt); max.walk += dt;
+      }
+      max.cool -= dt;
+      if (input.held('fire') && max.cool <= 0 && max.stun <= 0 && !max.search) {
+        if (max.ammo > 0) { max.ammo--; max.cool = max.weapon.rate; shoot(max, max.dir, Object.assign({}, max.weapon, { spread: max.weapon.spread * (sk.combat >= 4 ? 0.5 : 1) }), true); }
+        else { max.cool = 0.4; sfx.tick(); say('Out of ammunition!', 1.5); }
+      }
+      // captive follows
+      if (max.captive) { const c = max.captive; const d = dist(c.x, c.y, max.x, max.y); if (d > 10) { const a = Math.atan2(max.y - c.y, max.x - c.x); c.dir = a; c.stun = 0; c.state = 'captive'; moveEnt(c, Math.cos(a) * 44, Math.sin(a) * 44, dt); c.walk += dt; if (d > 40) { c.x = max.x - Math.cos(max.dir) * 8; c.y = max.y - Math.sin(max.dir) * 8; } } }
+      // rooms seen
+      const rid = roomOf(max.x, max.y - 3); if (rid >= 0) { max.inside = true; if (!B.rooms[rid].seen) B.rooms[rid].seen = true; }
+      // exit
+      if (max.inside && max.y > (B.by + B.bh) * TS + 4) {
+        finish('escaped');
+      }
+      // grenades
+      for (const gr of grenades) { gr.t += dt / 0.7; const k = Math.min(1, gr.t); const nx = gr.sx + (gr.tx - gr.sx) * k, ny = gr.sy + (gr.ty - gr.sy) * k; if (opaque(Math.floor(nx / TS), Math.floor(ny / TS))) { gr.t = 1; } else { gr.x = nx; gr.y = ny; } gr.z = Math.sin(k * Math.PI) * 14; if (gr.t >= 1.3) { gr.done = true; explode(gr); } }
+      for (let i = grenades.length - 1; i >= 0; i--) if (grenades[i].done) grenades.splice(i, 1);
+      for (const c of clouds) { c.t -= dt; c.r = Math.min(26, c.r + dt * 20); for (const p of people) if (dist(p.x, p.y, c.x, c.y) < c.r) stunPerson(p, 8); if (dist(max.x, max.y, c.x, c.y) < c.r * 0.8 && max.stun <= 0) { max.stun = 1.5; say('Gas! Get clear!', 1.5); } }
+      for (let i = clouds.length - 1; i >= 0; i--) if (clouds[i].t <= 0) clouds.splice(i, 1);
+      // bullets
+      for (const b of bullets) {
+        for (let s = 0; s < 4 && !b.dead; s++) {
+          b.x += b.vx * dt / 4; b.y += b.vy * dt / 4;
+          if (solidTile(Math.floor(b.x / TS), Math.floor(b.y / TS), true)) { b.dead = true; fx.push({ k: 'spark', x: b.x, y: b.y, t: 0.12 }); break; }
+          if (b.friendly) { for (const p of people) { if (p.state === 'dead' || (p.stun > 0 && rnd() < 0.5)) continue; if (Math.abs(p.x - b.x) < 4 && b.y > p.y - 12 && b.y < p.y) { b.dead = true; hurtPerson(p, b.dmg); fx.push({ k: 'hit', x: b.x, y: b.y, t: 0.15 }); break; } } }
+          else if (Math.abs(max.x - b.x) < 4 && b.y > max.y - 12 && b.y < max.y) { b.dead = true; hurtMax(1); fx.push({ k: 'hit', x: b.x, y: b.y, t: 0.15 }); }
+        }
+        b.life -= dt; if (b.life <= 0) b.dead = true;
+      }
+      for (let i = bullets.length - 1; i >= 0; i--) if (bullets[i].dead) bullets.splice(i, 1);
+      for (const f of fx) f.t -= dt; for (let i = fx.length - 1; i >= 0; i--) if (fx[i].t <= 0) fx.splice(i, 1);
+      // people AI
+      for (const p of people) ai(p, dt);
+      // alarm clock
+      if (alarm) {
+        alarmT += dt; police -= dt; if ((alarmT % 2.4) < dt) sfx.alarm();
+        reinf -= dt; if (reinf <= 0 && reinfLeft > 0) { reinf = 10; reinfLeft--; const g2 = addPerson('guard', B.lobby, { state: 'hunt' }); g2.x = B.entrance.x * TS + 4; g2.y = (B.entrance.y + 1) * TS + 4; say('Reinforcements at the entrance!', 2); }
+        if (police <= 0) finish('police');
+      }
+      if (staticDirty) renderStatic();
+    },
+  };
+  function ai(p, dt) {
+    if (p.state === 'dead' || p.tied || p === max.captive) return;
+    if (p.stun > 0) { p.stun -= dt; if (p.stun <= 0 && p.kind === 'guard') { p.state = alarm ? 'hunt' : 'investigate'; p.target = [max.x, max.y]; } return; }
+    const seesMax = max.hp > 0 && canSee(p, max.x, max.y - 5, p.kind === 'guard' ? 95 : 70);
+    const walkTo = (tx, ty, sp) => {
+      p.pathT -= dt; if (!p.path || p.pathT <= 0) { p.path = pathTo(p.x, p.y, tx, ty); p.pathT = 0.6; }
+      if (!p.path || !p.path.length) return true;
+      const [nx, ny] = p.path[0]; const d = dist(p.x, p.y, nx, ny); if (d < 2) { p.path.shift(); return !p.path.length; }
+      const a = Math.atan2(ny - p.y, nx - p.x); p.dir = a; moveEnt(p, Math.cos(a) * sp, Math.sin(a) * sp, dt); p.walk += dt; return false;
+    };
+    if (p.kind === 'civ') {
+      if (p.surrender) return;
+      if (seesMax && p.state !== 'flee') { p.state = 'flee'; p.alertT = 0; sfx.tone(1200, 0.25, 'triangle', 0.04, 400); noise(p.x, p.y, 90); }
+      if (p.state === 'flee') {
+        p.alertT += dt; if (p.alertT > 4 && !p.vip) raiseAlarm('A civilian reached a panic button.'); if (p.vip && p.alertT > 6) raiseAlarm(p.vip.code + ' triggered the alarm.');
+        const a = Math.atan2(p.y - max.y, p.x - max.x) + Math.sin(t * 2 + p.x) * 0.6; p.dir = a; moveEnt(p, Math.cos(a) * 30, Math.sin(a) * 30, dt); p.walk += dt;
+      } else { p.turnT -= dt; if (p.turnT <= 0) { p.turnT = 2 + rnd() * 4; p.dir = rnd() * Math.PI * 2; } }
+      return;
+    }
+    // guards
+    if (seesMax) {
+      p.seeT += dt; p.lastSeen = [max.x, max.y];
+      if (p.seeT > (alarm ? 0 : 0.45)) { if (p.state !== 'attack') { p.state = 'attack'; p.alertT = 0; sfx.tone(700, 0.08, 'square', 0.05); } }
+    } else p.seeT = Math.max(0, p.seeT - dt);
+    switch (p.state) {
+      case 'idle': if (p.idleT !== undefined) { p.idleT -= dt; if (p.idleT <= 0) { p.idleT = undefined; p.state = 'patrol'; } } p.turnT -= dt; if (p.turnT <= 0) { p.turnT = 2 + rnd() * 3; p.dir += (rnd() < 0.5 ? -1 : 1) * Math.PI / 2; } break;
+      case 'patrol': {
+        if (!p.wp) { const r = rnd() < 0.7 ? B.rooms[p.home] : pick(B.rooms); p.wp = spot(r); p.path = null; }
+        if (walkTo(p.wp[0], p.wp[1], 20)) { p.wp = null; p.state = rnd() < 0.3 ? 'idle' : 'patrol'; p.turnT = 2; p.idleT = 4; }
+        break; }
+      case 'investigate': if (!p.target || walkTo(p.target[0], p.target[1], 30)) { p.state = 'patrol'; p.target = null; p.wp = null; } break;
+      case 'hunt': if (walkTo(max.x, max.y, 34)) { if (!alarm) p.state = 'patrol'; else p.path = null; } break;
+      case 'attack': {
+        p.alertT += dt; if (p.alertT > 2.2 && !alarm) raiseAlarm('A guard has spotted you.');
+        if (seesMax) {
+          p.dir = Math.atan2(max.y - p.y, max.x - p.x); p.cool -= dt;
+          const d = dist(p.x, p.y, max.x, max.y);
+          if (d > 45) moveEnt(p, Math.cos(p.dir) * 22, Math.sin(p.dir) * 22, dt), p.walk += dt;
+          if (p.cool <= 0) { p.cool = Math.max(0.5, 1.4 - level * 0.12) + rnd() * 0.6; shoot(p, p.dir, { speed: 200, spread: Math.max(0.04, 0.16 - level * 0.015 + (sk.combat >= 4 ? 0.04 : 0)), dmg: 1, noise: 150 }, false); }
+        } else if (p.lastSeen) { if (walkTo(p.lastSeen[0], p.lastSeen[1], 34)) { p.state = alarm ? 'hunt' : 'investigate'; p.target = [max.x, max.y]; } }
+        break; }
+    }
+  }
+
+  // ---------- draw ----------
+  scene.draw = function () {
+    if (staticDirty) renderStatic();
+    const camX = clamp(max.x - W / 2, 0, Math.max(0, MWpx - W)), camY = clamp(max.y - VIEW_H / 2 - 6, 0, Math.max(0, MHpx - VIEW_H));
+    rect(0, 0, W, H, P.K);
+    g.save(); g.beginPath(); g.rect(0, 0, W, VIEW_H); g.clip(); g.translate(-Math.round(camX), -Math.round(camY));
+    g.drawImage(staticCv, 0, 0);
+    // fog over unseen rooms
+    for (const r of B.rooms) if (!r.seen) { rect(r.x * TS, r.y * TS, r.w * TS, r.h * TS, P.K); dither(r.x * TS, r.y * TS, r.w * TS, r.h * TS, P.K, P.D2, 2); }
+    // search highlight
+    const f = !max.search && nearestSearchable(); if (f && !f.searched && (t * 3 | 0) % 2) frame(f.x * TS - 1, f.y * TS - 1, f.w * TS + 2, f.h * TS + 2, P.YE);
+    // clouds under people
+    for (const c of clouds) { g.save(); g.globalAlpha = Math.min(1, c.t / 2) * 0.8; dither(c.x - c.r, c.y - c.r * 0.7, c.r * 2, c.r * 1.4, 'rgba(0,0,0,0)', P.GR2, 5 + ((t * 8 | 0) % 3)); g.restore(); }
+    // people, sorted by y
+    const vis = people.filter(p => p.state === 'dead' || p === max.captive || roomOf(p.x, p.y - 3) === roomOf(max.x, max.y - 3) || los(max.x, max.y - 5, p.x, p.y - 5) || dist(p.x, p.y, max.x, max.y) < 20);
+    const all = vis.concat([max]).sort((a, b) => a.y - b.y);
+    for (const p of all) {
+      if (p !== max && p.kind === 'guard' && (p.state === 'attack' || p.state === 'hunt') && p.stun <= 0 && p.state !== 'dead') { rect(p.x - 1, p.y - 18, 2, 3, P.RD2); px(p.x - 1 + 0.5, p.y - 14, P.RD2); }
+      if (p.vip && p.state !== 'dead') { const b = (t * 2 | 0) % 2; if (b) { rect(p.x - 3, p.y - 19, 7, 5, P.YE); text('!', p.x - 0.5, p.y - 20, P.K); } }
+      if (p === max && max.hitFlash > 0 && (t * 20 | 0) % 2) continue;
+      drawPerson(p, p.x, p.y);
+    }
+    for (const b of bullets) { rect(b.x, b.y, 1, 1, P.YE); px(b.x - b.vx * 0.008, b.y - b.vy * 0.008, P.OR); }
+    for (const gr of grenades) { px(gr.x, gr.y + 3, P.K); rect(gr.x - 1, gr.y - gr.z - 1, 3, 3, GREN[gr.type].col); }
+    for (const e of fx) {
+      if (e.k === 'flash') { rect(e.x - 1, e.y - 1, 3, 3, P.YE); px(e.x, e.y, P.W); }
+      else if (e.k === 'spark') { px(e.x, e.y, P.W); px(e.x + 1, e.y - 1, P.YE); }
+      else if (e.k === 'hit') { px(e.x, e.y, P.RD2); px(e.x - 1, e.y + 1, P.RD); }
+      else if (e.k === 'boom') { const k = 1 - e.t / 0.5; const r = e.r * (0.4 + k); disc(e.x, e.y, r, e.type === 'frag' ? P.OR : P.W); disc(e.x, e.y, r * 0.6, P.YE); if (k > 0.5) dither(e.x - r, e.y - r, r * 2, r * 2, 'rgba(0,0,0,0)', P.G3, 6); }
+    }
+    // search progress
+    if (max.search) { const k = max.search.t / max.search.need; rect(max.x - 8, max.y - 20, 16, 3, P.K); rect(max.x - 8, max.y - 20, 16 * k, 3, P.GR2); }
+    g.restore();
+    if (max.stun > 0) dither(0, 0, W, VIEW_H, 'rgba(0,0,0,0)', P.W, 3);
+    drawStatus();
+    if (msgT > 0 || over) { const m = over ? '' : msg; if (m) { const ls = wrap(m, 300); rect(0, VIEW_H - 2 - ls.length * 9, W, ls.length * 9 + 2, 'rgba(0,0,0,0.7)'); ls.forEach((l, i) => text(l, 10, VIEW_H - ls.length * 9 + i * 9, P.YE)); } }
+    if (over) drawOver();
+    if (this.pauseMenu) { rect(90, 50, 140, 70, P.K); panel(90, 50, 140, 70); textC('MISSION PAUSED', W / 2, 60, P.YE); this.pauseMenu.draw(); }
+  };
+  function drawStatus() {
+    const y = VIEW_H; rect(0, y, W, H - y, P.K); bevel(0, y, W, H - y, P.G2, P.G4, P.G1); rect(3, y + 3, W - 6, H - y - 6, P.D2);
+    // health
+    text('HEALTH', 7, y + 5, P.G4); for (let i = 0; i < max.maxHp; i++) rect(7 + i * 7, y + 14, 5, 5, i < max.hp ? P.RD2 : P.G1);
+    text(max.weapon.name, 58, y + 5, P.W); text('Ammo ' + max.ammo, 58, y + 14, max.ammo ? P.CY : P.RD2);
+    const gs = Object.keys(GREN); let gx = 124; gs.forEach(k => { const sel = k === max.gtype; rect(gx, y + 5, 36, 18, sel ? P.BL : P.D2); if (sel) frame(gx, y + 5, 36, 18, P.YE); rect(gx + 3, y + 9, 3, 3, GREN[k].col); text(GREN[k].name, gx + 8, y + 7, sel ? P.YE : P.G4); text('x' + max.gren[k], gx + 8, y + 15, max.gren[k] ? P.W : P.G2); gx += 38; });
+    text('Clues ' + clues.length, 7, y + 22, P.YE2); if (max.keys) text('Key', 40, y + 22, P.YE);
+    if (max.captive) text('Captive!', 58, y + 22, P.GR2);
+    // minimap
+    const mx = 244, my = y + 4, sc = Math.min(72 / B.bw, 24 / B.bh);
+    rect(mx - 1, my - 1, B.bw * sc + 2, B.bh * sc + 2, P.K);
+    for (const r of B.rooms) if (r.seen) rect(mx + (r.x - B.bx) * sc, my + (r.y - B.by) * sc, r.w * sc, r.h * sc, r === B.exec ? P.BR2 : P.G2);
+    px(mx + (B.entrance.x - B.bx) * sc, my + (B.entrance.y - B.by) * sc, P.GR2);
+    if ((t * 4 | 0) % 2) rect(mx + (max.x / TS - B.bx) * sc - 1, my + (max.y / TS - B.by) * sc - 1, 2, 2, P.YE);
+    if (alarm) { const on = (t * 3 | 0) % 2; rect(160, y - 11, 80, 10, on ? P.RD : P.K); textC('ALARM  ' + Math.max(0, Math.ceil(police)), 200, y - 10, on ? P.W : P.RD2); }
+  }
+  function drawOver() {
+    const k = over.kind, lines = { escaped: ['YOU GOT OUT', P.GR2], dead: ['YOU WERE OVERPOWERED', P.RD2], police: ['THE POLICE HAVE ARRIVED', P.RD2], abort: ['MISSION ABORTED', P.YE] }[k];
+    panel(40, 30, W - 80, 110); textC(lines[0], W / 2, 40, lines[1]);
+    let yy = 54; text('Clues found: ' + clues.filter(c => c !== 'Documents of no value').length, 54, yy, P.W); yy += 10;
+    text(target ? (max.captive && k === 'escaped' ? 'Captured: ' + target.vip.code : target.state === 'dead' ? target.vip.code + ' was killed' : target.vip.code + ' was not taken') : 'No suspect in the building', 54, yy, P.W); yy += 10;
+    text('Guards down: ' + kills.guard + '   Civilians killed: ' + kills.civ, 54, yy, kills.civ ? P.RD2 : P.W); yy += 12;
+    para(k === 'escaped' ? 'Clean getaway.' : k === 'dead' ? 'You wake up in a hospital two days later. Whatever you carried is gone.' : k === 'police' ? 'You are held for questioning until the embassy gets you out. It costs you a day.' : 'You slip away before anyone notices.', 54, yy, W - 110, P.G4);
+    if (over.t > 1 && (over.t * 2 | 0) % 2) textC('Press OK', W / 2, 128, P.G4);
+  }
+  function end() {
+    const k = over.kind;
+    const res = { kind: k, success: k === 'escaped', clues: k === 'dead' ? [] : clues, captured: k === 'escaped' && max.captive ? max.captive.vip : null, killedTarget: target && target.state === 'dead' ? target.vip : null, kills };
+    done(res);
+  }
+  scene.onKey = function (k) {
+    if (over) { if (over.t > 0.8 && (k === 'select' || k === 'fire' || k === 'action' || k === 'menu')) end(); return; }
+    if (this.pauseMenu) { if (k === 'menu') this.pauseMenu = null; else this.pauseMenu.key(k); return; }
+    if (k === 'menu') { this.pauseMenu = Menu([{ label: 'Continue', go: () => { this.pauseMenu = null; } }, { label: 'Sound on / off', go: () => sfx.toggle() }, { label: 'Abort mission', go: () => { this.pauseMenu = null; finish('abort'); } }], 110, 76, 100, 12); return; }
+    if (max.stun > 0) return;
+    if (k === 'action' || k === 'select') action();
+    if (k === 'alt') throwGrenade();
+    if (k === 'alt2') { const ks = Object.keys(GREN); max.gtype = ks[(ks.indexOf(max.gtype) + 1) % ks.length]; sfx.blip(); }
+  };
+  scene.onTap = function (x, y) {
+    if (over) { if (over.t > 0.8) end(); return; }
+    if (this.pauseMenu) { this.pauseMenu.tap(x, y); return; }
+    if (y > VIEW_H && x > 122 && x < 238) { const ks = Object.keys(GREN); const i = Math.floor((x - 124) / 38); if (ks[i]) { max.gtype = ks[i]; sfx.blip(); } return; }
+    // tap in the world: face that way
+    const camX = clamp(max.x - W / 2, 0, Math.max(0, MWpx - W)), camY = clamp(max.y - VIEW_H / 2 - 6, 0, Math.max(0, MHpx - VIEW_H));
+    if (y < VIEW_H) max.dir = Math.atan2(y + camY - (max.y - 5), x + camX - max.x);
+  };
+  renderStatic();
+  scene.dbg = { max, people, B, F, raiseAlarm };
+  return scene;
+}
+
+// ---------- equipment selection ----------
+function loadoutScene(brief, start, back) {
+  const sk = game.agent ? game.agent.skills : { combat: 2 };
+  const wk = ['pistol', 'smg', 'shotgun'], gk = [['Stun pack', { stun: 3, gas: 0, frag: 0 }], ['Gas pack', { stun: 1, gas: 2, frag: 0 }], ['Assault pack', { stun: 1, gas: 0, frag: 2 }], ['Mixed pack', { stun: 1, gas: 1, frag: 1 }]];
+  let wi = 0, gi = 3, armor = sk.combat >= 4, row = 0;
+  const rows = 4;
+  function change(d) {
+    if (row === 0) wi = (wi + d + 3) % 3; else if (row === 1) gi = (gi + d + 4) % 4; else if (row === 2) armor = !armor;
+    sfx.blip();
+  }
+  const go_ = () => start({ weapon: wk[wi], grenades: Object.assign({}, gk[gi][1]), armor });
+  return {
+    t: 0, update(dt) { this.t += dt; },
+    onKey(k) { if (k === 'up') { row = (row + rows - 1) % rows; sfx.blip(); } else if (k === 'down') { row = (row + 1) % rows; sfx.blip(); } else if (k === 'left') change(-1); else if (k === 'right') change(1); else if (k === 'select' || k === 'fire') { if (row === 3) { sfx.select(); go_(); } else change(1); } else if (k === 'menu') back(); },
+    onTap(x, y) { const r = Math.floor((y - 104) / 16); if (r >= 0 && r < 3) { row = r; change(x < 160 ? -1 : 1); } else if (y > 160 && y < 180) { if (x > 160) go_(); else back(); } },
+    draw() {
+      rect(0, 0, W, H, P.K); dither(0, 0, W, H, P.K, P.D2, 4);
+      panel(6, 6, W - 12, 88); text('MISSION BRIEFING', 16, 14, P.YE); para(brief, 16, 25, W - 32, P.G5, 9);
+      panel(6, 96, W - 12, 98);
+      const W0 = WEAPONS[wk[wi]];
+      const lines = [['Weapon', W0.name, W0 === WEAPONS.pistol ? 'quiet, accurate' : W0 === WEAPONS.smg ? 'rapid fire, loud' : 'spread shot, very loud'], ['Grenades', gk[gi][0], Object.entries(gk[gi][1]).filter(([, n]) => n).map(([k, n]) => n + ' ' + k).join(', ')], ['Body armour', armor ? 'Yes' : 'No', armor ? '+2 hits, slower' : 'faster on your feet']];
+      lines.forEach(([k, v, d], i) => { const y = 106 + i * 16; if (row === i) rect(12, y - 2, W - 24, 14, P.BL); text(k, 18, y + 2, P.G4); text('◀ ' + v + ' ▶', 100, y + 2, row === i ? P.YE : P.W); text(d, 200, y + 2, P.G3); });
+      bevel(18, 164, 90, 14, P.G2, P.G4, P.G1); textC('Back out', 63, 167, P.W);
+      bevel(W - 128, 164, 110, 14, row === 3 ? P.BL2 : P.BL, P.BL3, P.NV); textC('Go in  ▶', W - 73, 167, P.YE);
+      text('Up/down choose, left/right change, OK to enter.', 18, 182, P.G3);
+    },
+  };
+}
+// ===================================================================
+// CODEBREAKING: letter-substitution cipher against the clock
+// ===================================================================
+function cryptoScene(plain, opts, done) {
+  const sk = game.agent ? game.agent.skills.crypto : 2;
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  // derangement key: no letter maps to itself
+  let key; do { key = shuffle(A.split('')); } while (key.some((c, i) => c === A[i]));
+  const enc = ch => A.includes(ch) ? key[A.indexOf(ch)] : ch;
+  const cipher = plain.split('').map(enc).join('');
+  const used = [...new Set(cipher.split('').filter(c => A.includes(c)))];
+  const guess = {}; // cipher letter -> plain guess
+  const given = new Set();
+  // the analysts give you the most common letters
+  const freq = {}; for (const c of cipher) if (A.includes(c)) freq[c] = (freq[c] || 0) + 1;
+  const byFreq = used.slice().sort((a, b) => freq[b] - freq[a]);
+  const nGiven = { 1: 1, 2: 3, 3: 4, 4: 6 }[sk] + (opts.practice ? 1 : 0);
+  byFreq.slice(0, nGiven).forEach(c => { guess[c] = A[key.indexOf(c)]; given.add(c); });
+  const time0 = 150 + sk * 25; let time = time0, over = null, t = 0;
+  // layout lines of cells, breaking on spaces
+  const CW = 8, maxCols = 37;
+  const lines = []; { let cur = ''; for (const word of cipher.split(' ')) { if ((cur + (cur ? ' ' : '') + word).length > maxCols) { lines.push(cur); cur = word; } else cur = cur ? cur + ' ' + word : word; } if (cur) lines.push(cur); }
+  const cells = []; lines.forEach((l, r) => { for (let i = 0; i < l.length; i++) cells.push({ ch: l[i], r, c: i }); });
+  const letterCells = cells.filter(c => A.includes(c.ch));
+  let cur = letterCells.findIndex(c => !given.has(c.ch)); if (cur < 0) cur = 0;
+  const LH = 22, LY = 34 + Math.max(0, 5 - lines.length) * 10;
+  const solved = () => used.every(c => guess[c] === A[key.indexOf(c)]);
+  function setGuess(p) {
+    const c = letterCells[cur].ch; if (given.has(c)) { sfx.deny(); return; }
+    if (p) { for (const k in guess) if (guess[k] === p && k !== c && !given.has(k)) delete guess[k]; guess[c] = p; } else delete guess[c];
+    sfx.tone(700 + A.indexOf(p || 'A') * 20, 0.04);
+    // hop to the next unsolved letter
+    if (p) { for (let i = 1; i <= letterCells.length; i++) { const j = (cur + i) % letterCells.length; if (!guess[letterCells[j].ch]) { cur = j; break; } } }
+    if (solved()) { over = { win: true, t: 0 }; sfx.success(); }
+  }
+  function move(dx, dy) {
+    const c = letterCells[cur];
+    if (dy) { let best = -1, bd = 1e9; letterCells.forEach((o, i) => { if (o.r === c.r + dy) { const d = Math.abs(o.c - c.c); if (d < bd) { bd = d; best = i; } } }); if (best >= 0) cur = best; }
+    else cur = (cur + dx + letterCells.length) % letterCells.length;
+    sfx.blip();
+  }
+  const KY = 148, KW = 22, KH = 13;
+  const keyAt = (x, y) => { if (y < KY || y >= KY + KH * 2 + 2) return null; const r = y < KY + KH + 1 ? 0 : 1; const i = Math.floor((x - 10) / KW); if (i < 0 || i > 12) return null; return A[r * 13 + i]; };
+  return {
+    typing: true,
+    update(dt) { t += dt; if (over) { over.t += dt; return; } time -= dt; if (time <= 0) { time = 0; over = { win: false, t: 0 }; sfx.fail(); } else if (time < 20 && (time * 2 | 0) !== ((time + dt) * 2 | 0)) sfx.tick(); },
+    onChar(ch) { if (over) return; setGuess(ch); },
+    onKey(k) {
+      if (over) { if (over.t > 0.6 && (k === 'select' || k === 'fire' || k === 'menu')) done({ success: over.win }); return; }
+      if (k === 'left') move(-1, 0); else if (k === 'right') move(1, 0); else if (k === 'up') move(0, -1); else if (k === 'down') move(0, 1);
+      else if (k === 'menu') { over = { win: false, t: 1, gaveUp: true }; }
+    },
+    onTap(x, y) {
+      if (over) { if (over.t > 0.6) done({ success: over.win }); return; }
+      const kk = keyAt(x, y); if (kk) { setGuess(kk); return; }
+      if (y >= KY && y < KY + 30 && x > 10 + 13 * KW) { setGuess(''); return; }
+      if (y > 186 && x > 250) { over = { win: false, t: 1, gaveUp: true }; return; }
+      letterCells.forEach((c, i) => { const cx = 12 + c.c * CW, cy = LY + c.r * LH; if (x >= cx - 1 && x < cx + CW - 1 && y >= cy - 2 && y < cy + LH - 2) { cur = i; sfx.blip(); } });
+    },
+    draw() {
+      rect(0, 0, W, H, P.K);
+      // printout paper
+      rect(4, 4, W - 8, 138, P.CR); for (let y = 4; y < 142; y += 20) rect(4, y + 10, W - 8, 10, '#dce8c8');
+      for (let y = 8; y < 140; y += 8) { disc(9, y, 1, P.G4); disc(W - 10, y, 1, P.G4); }
+      rect(4, 4, W - 8, 20, P.NV); text('CRYPTANALYSIS  -  ' + (opts.source || 'Intercepted message'), 12, 8, P.W);
+      const k = time / time0; rect(12, 17, 200, 3, P.K); rect(12, 17, 200 * k, 3, k > 0.3 ? P.GR2 : P.RD2); textR(Math.ceil(time) + 's', W - 12, 12, k > 0.3 ? P.CY : P.RD2);
+      const selC = letterCells[cur] && letterCells[cur].ch;
+      cells.forEach(c => {
+        const x = 12 + c.c * CW, y = LY + c.r * LH;
+        if (!A.includes(c.ch)) { text(c.ch, x + 2, y, P.G2); return; }
+        const isSel = c.ch === selC;
+        if (isSel) rect(x - 1, y - 2, CW - 1, 19, (letterCells[cur] === c) ? P.YE : P.G5);
+        text(c.ch, x + 1, y, P.G2);
+        const gch = guess[c.ch]; rect(x, y + 15, CW - 3, 1, P.G3);
+        if (gch) text(gch, x + 1, y + 8, given.has(c.ch) ? P.BL : over && !over.win && gch !== A[key.indexOf(c.ch)] ? P.RD : P.K);
+      });
+      // keyboard
+      rect(0, 143, W, 57, P.K); bevel(4, 144, W - 8, 44, P.G2, P.G4, P.G1);
+      for (let i = 0; i < 26; i++) { const r = Math.floor(i / 13), c = i % 13, x = 10 + c * KW, y = KY + r * (KH + 1); const usedBy = Object.keys(guess).find(k => guess[k] === A[i]); bevel(x, y, KW - 2, KH, usedBy ? P.G3 : P.G4, P.W, P.G2); textC(A[i], x + (KW - 2) / 2, y + 3, usedBy ? P.G2 : P.K); }
+      bevel(10 + 13 * KW, KY, 20, KH * 2 + 1, P.RD, P.RD2, P.BR); textC('DEL', 10 + 13 * KW + 10, KY + 10, P.W);
+      // frequency of the selected letter
+      if (selC) text('Code ' + selC + ' appears ' + freq[selC] + 'x.  Most common: E T A O I N S', 8, 191, P.G4);
+      if (over) {
+        panel(30, 40, W - 60, 80);
+        textC(over.win ? 'MESSAGE DECODED' : over.gaveUp ? 'DECODING ABANDONED' : 'OUT OF TIME', W / 2, 50, over.win ? P.GR2 : P.RD2);
+        para(over.win ? plain : 'The message will be passed on to the analysts, but the trail will have gone cold.', 44, 64, W - 88, P.G5, 9);
+        if (over.t > 0.6) textC('Press OK', W / 2, 110, P.G3);
+      }
+    },
+  };
+}
+// ===================================================================
+// WIRETAP: route current to the phone line, keep it off the alarms
+// ===================================================================
+// tile openings as bitmask: 1=N 2=E 4=S 8=W
+const rotMask = (m, r) => { for (let i = 0; i < r; i++) m = ((m << 1) | (m >> 3)) & 15; return m; };
+const DIRS = [[0, -1, 1, 4], [1, 0, 2, 8], [0, 1, 4, 1], [-1, 0, 8, 2]]; // dx, dy, myBit, theirBit
+function wiretapScene(opts, done) {
+  const sk = game.agent ? game.agent.skills.electronics : 2, level = opts.level || 1;
+  const CO = Math.min(9, 7 + Math.floor(level / 2)), RO = 6, TW = 24, TH = 20, OX = 48, OY = 26;
+  const grid = [];
+  for (let y = 0; y < RO; y++) { grid.push([]); for (let x = 0; x < CO; x++) grid[y].push({ base: 0, rot: 0, fixed: false, path: false }); }
+  // choose inputs/outputs
+  const srcRow = ri(0, RO - 1);
+  const rows = shuffle([...Array(RO).keys()]);
+  const phoneRow = rows.find(r => Math.abs(r - srcRow) >= 2) ?? rows[0];
+  const alarmRows = rows.filter(r => r !== phoneRow).slice(0, 2 + Math.min(2, Math.floor(level / 2)));
+  // random self-avoiding walk from (0,srcRow) entering from W to (CO-1, phoneRow) exiting E
+  function walk() {
+    const seen = new Set(); const path = [[0, srcRow]]; seen.add('0,' + srcRow);
+    function step(x, y) {
+      if (x === CO - 1 && y === phoneRow) return true;
+      const opts2 = shuffle(DIRS.slice()).sort((a, b) => (b[0] - a[0]) * (rnd() < 0.6 ? 1 : 0));
+      for (const [dx, dy] of opts2) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= CO || ny >= RO || seen.has(nx + ',' + ny)) continue; if (path.length > CO * 2.4) continue; seen.add(nx + ',' + ny); path.push([nx, ny]); if (step(nx, ny)) return true; path.pop(); seen.delete(nx + ',' + ny); }
+      return false;
+    }
+    return step(0, srcRow) ? path : null;
+  }
+  let path = null; for (let i = 0; i < 20 && !path; i++) path = walk();
+  if (!path) { path = []; const mid = ri(1, CO - 2); for (let x = 0; x <= mid; x++) path.push([x, srcRow]); const sy = Math.sign(phoneRow - srcRow); for (let y = srcRow + sy; y !== phoneRow; y += sy) path.push([mid, y]); for (let x = mid; x < CO; x++) path.push([x, phoneRow]); }
+  // set path tiles to the exact connecting shape
+  path.forEach(([x, y], i) => {
+    const prev = i === 0 ? [x - 1, y] : path[i - 1], next = i === path.length - 1 ? [x + 1, y] : path[i + 1];
+    let m = 0; for (const [px_, py] of [prev, next]) { const dx = px_ - x, dy = py - y; m |= dx === 1 ? 2 : dx === -1 ? 8 : dy === 1 ? 4 : 1; }
+    const c = grid[y][x]; c.path = true; c.sol = m;
+  });
+  // shapes: straight 5 (N+S), elbow 3 (N+E), tee 7, cross 15
+  const shapes = [5, 3, 7, 15, 3, 5];
+  for (let y = 0; y < RO; y++) for (let x = 0; x < CO; x++) {
+    const c = grid[y][x];
+    if (c.path) { c.base = (c.sol === 5 || c.sol === 10) ? 5 : 3; const need = c.sol; c.solRot = [0, 1, 2, 3].find(r => rotMask(c.base, r) === need); c.rot = ri(0, 3); if (rnd() < 0.15) { c.fixed = true; c.rot = c.solRot; } }
+    else { c.base = pick(shapes); c.rot = ri(0, 3); if (rnd() < 0.12) c.fixed = true; }
+  }
+  let time = 80 + sk * 15 - level * 3, strikes = 0, cur = [0, srcRow], powered = null, pulse = 0, over = null, t = 0, flash = 0;
+  function flow() { // BFS from the source through matching openings
+    const on = grid.map(r => r.map(() => false)); const q = [];
+    const s = grid[srcRow][0]; if (rotMask(s.base, s.rot) & 8) { on[srcRow][0] = true; q.push([0, srcRow]); }
+    const hits = { phone: false, alarm: [] };
+    while (q.length) {
+      const [x, y] = q.shift(); const m = rotMask(grid[y][x].base, grid[y][x].rot);
+      for (const [dx, dy, my, their] of DIRS) {
+        if (!(m & my)) continue; const nx = x + dx, ny = y + dy;
+        if (nx === CO) { if (ny === phoneRow) hits.phone = true; if (alarmRows.includes(ny)) hits.alarm.push(ny); continue; }
+        if (nx < 0 || ny < 0 || ny >= RO) continue;
+        if (on[ny][nx]) continue; if (!(rotMask(grid[ny][nx].base, grid[ny][nx].rot) & their)) continue;
+        on[ny][nx] = true; q.push([nx, ny]);
+      }
+    }
+    return { on, hits };
+  }
+  function powerOn() {
+    if (powered || over) return; const f = flow(); powered = { f, t: 0 }; sfx.tone(60, 1.2, 'sawtooth', 0.05, 40);
+  }
+  function resolvePower() {
+    const { hits } = powered.f;
+    if (hits.alarm.length) { strikes++; flash = 1; sfx.alarm(); if (strikes >= 2) { over = { win: false, t: 0, why: 'The second alarm brings security running. You pull out.' }; sfx.fail(); } else { time -= 15; } }
+    else if (hits.phone) { over = { win: true, t: 0 }; sfx.success(); }
+    else { sfx.deny(); }
+    powered = null;
+  }
+  function rotate(x, y) { const c = grid[y][x]; if (c.fixed) { sfx.deny(); return; } c.rot = (c.rot + 1) % 4; sfx.tone(1000, 0.02); }
+  return {
+    update(dt) {
+      t += dt; flash = Math.max(0, flash - dt);
+      if (over) { over.t += dt; return; }
+      if (powered) { powered.t += dt; if (powered.t > 1.4) resolvePower(); return; }
+      time -= dt; if (time <= 0) { time = 0; over = { win: false, t: 0, why: 'The phone company engineer is coming back. Time is up.' }; sfx.fail(); }
+      pulse += dt;
+    },
+    onKey(k) {
+      if (over) { if (over.t > 0.6 && (k === 'select' || k === 'fire' || k === 'menu')) done({ success: over.win }); return; }
+      if (powered) return;
+      if (k === 'left') cur[0] = Math.max(0, cur[0] - 1); else if (k === 'right') cur[0] = Math.min(CO - 1, cur[0] + 1);
+      else if (k === 'up') cur[1] = Math.max(0, cur[1] - 1); else if (k === 'down') cur[1] = Math.min(RO - 1, cur[1] + 1);
+      else if (k === 'select' || k === 'fire' || k === 'action') rotate(cur[0], cur[1]);
+      else if (k === 'alt2' || k === 'alt') powerOn();
+      else if (k === 'menu') { over = { win: false, t: 1, why: 'You pack up your tools and leave.' }; }
+      if (['left', 'right', 'up', 'down'].includes(k)) sfx.blip();
+    },
+    onTap(x, y) {
+      if (over) { if (over.t > 0.6) done({ success: over.win }); return; }
+      if (powered) return;
+      const gx = Math.floor((x - OX) / TW), gy = Math.floor((y - OY) / TH);
+      if (gx >= 0 && gy >= 0 && gx < CO && gy < RO) { cur = [gx, gy]; rotate(gx, gy); return; }
+      if (y > 160 && x > 200) powerOn(); else if (y > 160 && x < 90) { over = { win: false, t: 1, why: 'You pack up your tools and leave.' }; }
+    },
+    draw() {
+      rect(0, 0, W, H, P.K);
+      // junction box housing
+      bevel(2, 2, W - 4, 154, P.G3, P.G5, P.G1); rect(8, 8, W - 16, 142, P.G1);
+      text('TELEPHONE JUNCTION BOX  -  ' + (opts.label || 'Suspect line'), 12, 11, P.W);
+      const k = time / (80 + sk * 15); textR(Math.ceil(time) + 's', W - 12, 11, k > 0.3 ? P.CY : P.RD2);
+      // circuit board
+      rect(OX - 4, OY - 4, CO * TW + 8, RO * TH + 8, P.DG); dither(OX - 4, OY - 4, CO * TW + 8, RO * TH + 8, P.DG, P.GR, 2);
+      const on = powered ? powered.f.on : null; const prog = powered ? Math.min(1, powered.t / 1.1) : 0;
+      // source
+      rect(10, OY + srcRow * TH + 3, 30, 14, P.K); frame(10, OY + srcRow * TH + 3, 30, 14, P.YE); text('LINE', 14, OY + srcRow * TH + 6, P.YE);
+      rect(40, OY + srcRow * TH + 9, 8, 2, powered ? P.YE : P.BR3);
+      for (let y = 0; y < RO; y++) for (let x = 0; x < CO; x++) {
+        const c = grid[y][x], X = OX + x * TW, Y = OY + y * TH, m = rotMask(c.base, c.rot);
+        rect(X + 1, Y + 1, TW - 2, TH - 2, c.fixed ? P.G1 : P.D2); frame(X + 1, Y + 1, TW - 2, TH - 2, c.fixed ? P.G2 : P.K);
+        if (c.fixed) { px(X + 3, Y + 3, P.G4); px(X + TW - 4, Y + 3, P.G4); px(X + 3, Y + TH - 4, P.G4); px(X + TW - 4, Y + TH - 4, P.G4); }
+        const lit = on && on[y][x] && (Math.abs(x - 0) + Math.abs(y - srcRow)) / (CO + RO) < prog + 0.1;
+        const col = lit ? ((t * 12 | 0) % 2 ? P.W : P.YE) : P.BR3;
+        const cx = X + TW / 2, cy = Y + TH / 2;
+        if (m & 1) rect(cx - 1, Y, 3, TH / 2 + 1, col); if (m & 4) rect(cx - 1, cy, 3, TH / 2, col);
+        if (m & 8) rect(X, cy - 1, TW / 2 + 1, 3, col); if (m & 2) rect(cx, cy - 1, TW / 2, 3, col);
+        rect(cx - 2, cy - 2, 5, 5, lit ? P.YE : P.G2); px(cx, cy, P.K);
+      }
+      // outputs
+      for (let y = 0; y < RO; y++) {
+        const Y = OY + y * TH, X = OX + CO * TW + 6;
+        if (y === phoneRow) { rect(X, Y + 3, 40, 14, P.BL); frame(X, Y + 3, 40, 14, P.CY); text('PHONE', X + 4, Y + 6, P.W); }
+        else if (alarmRows.includes(y)) { const a = flash > 0 && (t * 10 | 0) % 2; rect(X, Y + 3, 40, 14, a ? P.RD2 : P.RD); frame(X, Y + 3, 40, 14, P.OR); text('ALARM', X + 4, Y + 6, P.W); }
+        else { rect(X, Y + 7, 12, 6, P.G2); px(X + 3, Y + 9, P.K); }
+        rect(OX + CO * TW, Y + 9, 6, 2, P.BR3);
+      }
+      // cursor
+      if (!over) { const X = OX + cur[0] * TW, Y = OY + cur[1] * TH; if ((t * 4 | 0) % 2) frame(X, Y, TW, TH, P.YE); frame(X - 1, Y - 1, TW + 2, TH + 2, P.K); }
+      // footer
+      rect(0, 156, W, 44, P.K); panel(0, 156, W, 44);
+      bevel(12, 168, 70, 14, P.G2, P.G4, P.G1); textC('Give up', 47, 171, P.W);
+      bevel(W - 118, 168, 106, 14, P.RD, P.RD2, P.BR); textC(powered ? 'CURRENT ON' : 'Switch on current', W - 65, 171, P.YE);
+      text('Alarms tripped: ' + strikes + '/2', 96, 164, strikes ? P.RD2 : P.G4);
+      text('Feed the PHONE, not an ALARM.', 96, 176, P.G3);
+      if (over) {
+        panel(40, 50, W - 80, 64);
+        textC(over.win ? 'TAP INSTALLED' : 'NO TAP', W / 2, 60, over.win ? P.GR2 : P.RD2);
+        para(over.win ? 'The bug is live. Anything said on this line will now reach the Agency.' : over.why, 54, 74, W - 108, P.G5, 9);
+        if (over.t > 0.6) textC('Press OK', W / 2, 104, P.G3);
+      }
+    },
+  };
+}
+// ===================================================================
+// CAR TAIL: follow the suspect across the city without being made
+// ===================================================================
+function chaseScene(opts, done) {
+  const sk = game.agent ? game.agent.skills.driving : 2, level = opts.level || 1;
+  const VH = 168, NX = 8, NY = 6, X0 = 12, Y0 = 10, DX = 42, DY = 30;
+  const nodeXY = (i, j) => [X0 + i * DX, Y0 + j * DY];
+  // edges: key "i,j,d" d:0=E 1=S ; remove some to make the grid irregular
+  const edge = new Set();
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { if (i < NX - 1) edge.add(i + ',' + j + ',0'); if (j < NY - 1) edge.add(i + ',' + j + ',1'); }
+  const nodes = []; for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) nodes.push([i, j]);
+  function connected() { const seen = new Set(['0,0']); const q = [[0, 0]]; while (q.length) { const [i, j] = q.shift(); for (const [ni, nj] of nbrs(i, j)) { const k = ni + ',' + nj; if (!seen.has(k)) { seen.add(k); q.push([ni, nj]); } } } return seen.size === NX * NY; }
+  function hasEdge(i, j, ni, nj) { if (ni < 0 || nj < 0 || ni >= NX || nj >= NY) return false; if (nj === j) return edge.has(Math.min(i, ni) + ',' + j + ',0'); return edge.has(i + ',' + Math.min(j, nj) + ',1'); }
+  function nbrs(i, j) { return [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]].filter(([ni, nj]) => hasEdge(i, j, ni, nj)); }
+  const ek = shuffle([...edge]);
+  for (const k of ek.slice(0, Math.floor(ek.length * 0.16))) { edge.delete(k); if (!connected()) edge.add(k); }
+  // parks: a couple of blocks
+  const parks = new Set([ri(0, NX - 2) + ',' + ri(0, NY - 2), ri(0, NX - 2) + ',' + ri(0, NY - 2)]);
+  const night = game.hour < 6 || game.hour >= 20;
+  // ---- static city ----
+  const city = document.createElement('canvas'); city.width = W; city.height = VH;
+  drawTo(city.getContext('2d'), () => {
+    rect(0, 0, W, VH, P.G3);
+    // blocks
+    for (let j = -1; j < NY; j++) for (let i = -1; i < NX; i++) {
+      const [x0, y0] = nodeXY(i, j); const bx = x0 + 5, by = y0 + 5, bw = DX - 10, bh = DY - 10;
+      if (parks.has(i + ',' + j)) { rect(bx, by, bw, bh, P.GR); dither(bx, by, bw, bh, P.GR, P.DG, 3); rect(bx, by + bh / 2 - 1, bw, 2, P.TN); for (let k = 0; k < 7; k++) disc(bx + 4 + ((k * 13 + i * 7) % (bw - 8)), by + 4 + ((k * 7 + j * 5) % (bh - 8)), 2, P.DG); continue; }
+      let s = (i + 3) * 97 + (j + 3) * 31;
+      for (let yy = by; yy < by + bh - 2;) {
+        s = (s * 16807) % 2147483647; const h = Math.min(by + bh - yy, 7 + s % 6);
+        for (let xx = bx; xx < bx + bw - 2;) {
+          s = (s * 16807) % 2147483647; const w = Math.min(bx + bw - xx, 8 + s % 12);
+          const roof = [P.G4, P.BR2, P.RD, P.G2, P.TN, P.BR3][s % 6];
+          rect(xx, yy, w - 1, h - 1, roof); rect(xx + w - 2, yy + 1, 1, h - 1, P.K); rect(xx + 1, yy + h - 2, w - 2, 1, P.D2);
+          if (s % 3 === 0) rect(xx + 2, yy + 2, 2, 2, P.G5);
+          xx += w;
+        }
+        yy += h;
+      }
+    }
+    // roads
+    for (const k of edge) {
+      const [i, j, d] = k.split(',').map(Number); const [x, y] = nodeXY(i, j);
+      if (d === 0) { rect(x - 4, y - 4, DX + 8, 8, P.G1); rect(x - 4, y - 5, DX + 8, 1, P.G3); rect(x - 4, y + 4, DX + 8, 1, P.G3); for (let xx = x + 5; xx < x + DX - 4; xx += 4) rect(xx, y, 2, 1, P.YE2); }
+      else { rect(x - 4, y - 4, 8, DY + 8, P.G1); rect(x - 5, y - 4, 1, DY + 8, P.G3); rect(x + 4, y - 4, 1, DY + 8, P.G3); for (let yy = y + 5; yy < y + DY - 4; yy += 4) rect(x, yy, 1, 2, P.YE2); }
+    }
+    for (const [i, j] of nodes) { const [x, y] = nodeXY(i, j); if (nbrs(i, j).length) rect(x - 4, y - 4, 8, 8, P.G1); }
+    if (night) { dither(0, 0, W, VH, 'rgba(0,0,0,0)', P.K, 9); for (let n = 0; n < 160; n++) px((n * 73) % W, (n * 151) % VH, n % 3 ? P.YE2 : P.YE); }
+  });
+  // ---- cars ----
+  const cars = [];
+  function mkCar(i, j, kind, col, speed) { const nb = nbrs(i, j); const [ni, nj] = pick(nb); const c = { a: [i, j], b: [ni, nj], s: rnd() * 10, v: speed, vmax: speed, kind, col, route: null, wait: 0 }; cars.push(c); return c; }
+  const len = () => 0;
+  function edgeLen(c) { return c.a[0] === c.b[0] ? DY : DX; }
+  function carPos(c) { const [ax, ay] = nodeXY(...c.a), [bx, by] = nodeXY(...c.b); const L = edgeLen(c), k = c.s / L; const dx = Math.sign(bx - ax), dy = Math.sign(by - ay); return [ax + (bx - ax) * k - dy * 2, ay + (by - ay) * k + dx * 2, dx, dy]; }
+  function route(from, to, noise = 0.5) { // Dijkstra with jittered weights
+    const key = n => n[0] + ',' + n[1]; const D = new Map([[key(from), 0]]), prev = new Map(); const q = [[0, from]];
+    while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, n] = q.shift(); if (key(n) === key(to)) break; for (const m of nbrs(...n)) { const nd = d + 1 + rnd() * noise; if (nd < (D.get(key(m)) ?? 1e9)) { D.set(key(m), nd); prev.set(key(m), n); q.push([nd, m]); } } }
+    const out = []; let n = to; while (n && key(n) !== key(from)) { out.unshift(n); n = prev.get(key(n)); } return out;
+  }
+  const start = [ri(0, 2), ri(0, NY - 1)];
+  let dest; do { dest = [ri(NX - 3, NX - 1), ri(0, NY - 1)]; } while (Math.abs(dest[0] - start[0]) + Math.abs(dest[1] - start[1]) < 6);
+  if (rnd() < 0.5) { start[0] = NX - 1 - start[0]; dest[0] = NX - 1 - dest[0]; }
+  const sus = mkCar(start[0], start[1], 'suspect', P.RD2, 22 + level);
+  sus.route = route(start, dest, 1.2); sus.b = sus.route.shift(); sus.s = 0; sus.a = start.slice();
+  const agentsN = sk >= 4 ? 3 : 2; const agents = [];
+  for (let n = 0; n < agentsN; n++) {
+    let st; do { st = [clamp(start[0] + ri(-2, 2), 0, NX - 1), clamp(start[1] + ri(-2, 2), 0, NY - 1)]; } while ((st[0] === start[0] && st[1] === start[1]) || !nbrs(...st).length);
+    const c = mkCar(st[0], st[1], 'agent', n === 0 ? P.CY : P.BL3, 30 + sk * 1.5); c.s = 0; c.fam = 0; c.idx = n; agents.push(c);
+  }
+  for (let n = 0; n < 12 + level * 2; n++) mkCar(ri(0, NX - 1), ri(0, NY - 1), 'civ', pick([P.W, P.YE, P.G4, P.BR3, P.PU2, P.GR3, P.TN]), 16 + rnd() * 10);
+  let ctrl = 0, susp = 0, made = false, lostT = 0, t = 0, over = null, arrived = false, rams = 0, ramCool = 0, want = null, msg = 'Tail the red car. Keep close enough to follow, far enough not to be seen.', msgT = 5;
+  const say = (m, d = 3) => { msg = m; msgT = d; };
+  const me = () => agents[ctrl];
+
+  function atNode(c) {
+    const here = c.b; const opts2 = nbrs(...here); const back = c.a;
+    let next = null;
+    if (c.kind === 'suspect') {
+      if (made) { const ahead = opts2.filter(n => !(n[0] === back[0] && n[1] === back[1])); next = pick(ahead.length ? ahead : opts2); }
+      else if (c.route && c.route.length) next = c.route.shift();
+      else { arrived = true; c.v = 0; c.parked = true; return; }
+    } else if (c.kind === 'civ') { const ahead = opts2.filter(n => !(n[0] === back[0] && n[1] === back[1])); next = pick(ahead.length ? ahead : opts2); }
+    else {
+      if (agents[ctrl] !== c) { c.v = 0; c.parked = true; return; }
+      const dx = here[0] - back[0], dy = here[1] - back[1];
+      const w = want || [dx, dy];
+      const cand = [[here[0] + w[0], here[1] + w[1]], [here[0] + dx, here[1] + dy]];
+      next = cand.find(n => opts2.some(o => o[0] === n[0] && o[1] === n[1]));
+      if (!next) { c.s = edgeLen(c); c.v = 0; c.stopped = true; return; }
+    }
+    c.a = here; c.b = next; c.s = 0; c.stopped = false;
+  }
+  function ahead(c) { // nearest car in front on the same edge
+    let best = null, bd = 1e9; for (const o of cars) { if (o === c) continue; if (o.a[0] === c.a[0] && o.a[1] === c.a[1] && o.b[0] === c.b[0] && o.b[1] === c.b[1] && o.s > c.s) { const d = o.s - c.s; if (d < bd) { bd = d; best = o; } } } return best ? [best, bd] : null;
+  }
+  function finish(win, why) { if (over) return; over = { win, why, t: 0 }; win ? sfx.success() : sfx.fail(); }
+  const scene = {
+    update(dt) {
+      t += dt; if (msgT > 0) msgT -= dt; ramCool -= dt;
+      if (over) { over.t += dt; return; }
+      const ax = input.axis(); if (ax.x || ax.y) want = ax.x ? [ax.x, 0] : [0, ax.y];
+      const c0 = me();
+      // reversing on the spot
+      if (want && !c0.stopped) { const dx = c0.b[0] - c0.a[0], dy = c0.b[1] - c0.a[1]; if (want[0] === -dx && want[1] === -dy && (dx || dy)) { const L = edgeLen(c0); [c0.a, c0.b] = [c0.b, c0.a]; c0.s = L - c0.s; want = null; } }
+      if (c0.stopped && want) { c0.stopped = false; atNode(c0); }
+      if (c0.parked) { c0.parked = false; c0.v = c0.vmax * 0.5; }
+      for (const c of cars) {
+        if (c.parked) continue; if (c.stopped) continue;
+        let target = c.vmax * (c === c0 && input.held('fire') ? 0.35 : 1) * (c.kind === 'suspect' && made ? 1.45 : 1);
+        if (c.kind === 'agent' && c !== c0) target = 0;
+        const a = ahead(c); if (a) { const [o, d] = a; if (d < 12) target = Math.min(target, o.v * 0.9); if (d < 7) target = 0; if (d < 6 && c === c0 && o === sus && ramCool <= 0) { rams++; ramCool = 1; sfx.noise(0.15, 0.2, 200); susp = 100; if (!made) { made = true; say('You rammed them! They know they are being followed.'); } if (rams >= 3) { finish(true, 'captured'); } } }
+        c.v += (target - c.v) * Math.min(1, dt * 3);
+        c.s += c.v * dt; if (c.s >= edgeLen(c)) { c.s = edgeLen(c); atNode(c); }
+      }
+      // suspicion and range
+      const [sx, sy] = carPos(sus); const [mx, my] = carPos(c0); const d = dist(sx, sy, mx, my);
+      let nearest = 1e9; for (const a2 of agents) { const [ax2, ay2] = carPos(a2); nearest = Math.min(nearest, dist(sx, sy, ax2, ay2)); }
+      if (!made) {
+        if (d < 36) { const rate = (36 - d) * (1.6 - sk * 0.15) * (1 + c0.fam / 40); susp = Math.min(100, susp + rate * dt); c0.fam = Math.min(100, c0.fam + dt * 8); }
+        else susp = Math.max(0, susp - dt * 4);
+        if (susp >= 100) { made = true; say('They have spotted you! Stop them or lose them.', 4); sfx.alarm(); }
+      }
+      if (nearest > 100) { lostT += dt; if (lostT > 6) finish(false, 'lost'); } else lostT = 0;
+      if (arrived && !over) { if (nearest < 90) finish(true, 'followed'); else finish(false, 'late'); }
+      if (made && t > 0 && lostT > 3 && nearest > 140) finish(false, 'lost');
+    },
+    onKey(k) {
+      if (over) { if (over.t > 0.6 && (k === 'select' || k === 'fire' || k === 'menu')) done({ success: over.win, how: over.why }); return; }
+      if (k === 'alt2' || k === 'alt') { ctrl = (ctrl + 1) % agents.length; want = null; sfx.select(); say('Now driving car ' + (ctrl + 1) + '.', 1.5); }
+      if (k === 'menu') finish(false, 'abort');
+    },
+    onTap(x, y) {
+      if (over) { if (over.t > 0.6) done({ success: over.win, how: over.why }); return; }
+      if (y > VH) { if (x > 250) { ctrl = (ctrl + 1) % agents.length; want = null; sfx.select(); } return; }
+      // tap on the map: steer toward it
+      const [mx, my] = carPos(me()); const dx = x - mx, dy = y - my; want = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)];
+    },
+    draw() {
+      rect(0, 0, W, H, P.K); g.drawImage(city, 0, 0);
+      if (arrived || over) { const [x, y] = nodeXY(...dest); frame(x - 8, y - 8, 16, 16, P.YE); text('X', x - 2, y - 3, P.YE); }
+      for (const c of cars) {
+        const [x, y, dx, dy] = carPos(c); const hor = dx !== 0;
+        const w = hor ? 6 : 3, h = hor ? 3 : 6; const X = Math.round(x - w / 2), Y = Math.round(y - h / 2);
+        rect(X, Y, w, h, c.col); if (hor) rect(X + (dx > 0 ? 3 : 1), Y, 2, h, P.G1); else rect(X, Y + (dy > 0 ? 3 : 1), w, 2, P.G1);
+        if (night) px(x + dx * 4, y + dy * 4, P.YE);
+        if (c === me() && (t * 4 | 0) % 2) frame(X - 1, Y - 1, w + 2, h + 2, P.W);
+        if (c.kind === 'agent' && c !== me()) text(String(c.idx + 1), X + w, Y - 7, P.BL3);
+      }
+      const [sx, sy] = carPos(sus); if ((t * 3 | 0) % 2) { px(sx, sy - 5, P.RD2); rect(sx - 1, sy - 7, 3, 1, P.RD2); }
+      // status
+      const y = VH; rect(0, y, W, H - y, P.K); bevel(0, y, W, H - y, P.G2, P.G4, P.G1); rect(3, y + 3, W - 6, H - y - 6, P.D2);
+      text('Tailing ' + (opts.label || 'the courier'), 8, y + 5, P.W);
+      text('Suspicion', 8, y + 15, P.G4); rect(56, y + 16, 80, 5, P.K); rect(56, y + 16, 80 * susp / 100, 5, susp > 70 ? P.RD2 : susp > 35 ? P.OR : P.GR2);
+      const [mx, my] = carPos(me()); const d = dist(sx, sy, mx, my);
+      text('Range', 146, y + 15, P.G4); text(d < 36 ? 'TOO CLOSE' : d < 90 ? 'Good' : 'Losing them', 180, y + 15, d < 36 ? P.OR : d < 90 ? P.GR2 : P.RD2);
+      bevel(250, y + 5, 64, 20, P.BL, P.BL3, P.NV); textC('Car ' + (ctrl + 1) + '/' + agents.length, 282, y + 8, P.YE); textC('Tab: swap', 282, y + 16, P.G4);
+      if (msgT > 0 && !over) { const ls = wrap(msg, 300); rect(0, 0, W, ls.length * 9 + 3, 'rgba(0,0,0,0.75)'); ls.forEach((l, i) => text(l, 8, 2 + i * 9, P.YE)); }
+      if (over) {
+        panel(40, 46, W - 80, 70);
+        const [h, c] = { followed: ['DESTINATION FOUND', P.GR2], captured: ['CAR STOPPED', P.GR2], lost: ['YOU LOST THEM', P.RD2], late: ['TOO FAR BEHIND', P.RD2], abort: ['TAIL ABANDONED', P.YE] }[over.why];
+        textC(h, W / 2, 56, c);
+        para({ followed: 'The car pulls up and the driver meets someone. Your camera catches everything.', captured: 'You force the car to the kerb and drag the driver out.', lost: 'The car disappears into the traffic.', late: 'By the time you arrive the meeting is over.', abort: 'You give up the tail.' }[over.why], 54, 70, W - 108, P.G5, 9);
+        if (over.t > 0.6) textC('Press OK', W / 2, 104, P.G3);
+      }
+    },
+  };
+  return scene;
+}
+// ===================================================================
+// MAIN: glue between the city hub and the minigames
+// ===================================================================
+let practiceMode = false;
+function afterMission(hours, next) { advanceTime(hours); if (practiceMode) { go(titleScene()); return; } if (!checkCaseEnd()) next(); }
+
+// who is the break-in / wiretap / tail target in this city?
+function localTarget(preferMobile) {
+  const here = peopleIn(game.city); if (!here.length) return null;
+  const pool = preferMobile ? here.filter(p => p.role.mobile) : here;
+  return pick(pool.length ? pool : here);
+}
+const FRONTS = ['Import-Export', 'Travel Agency', 'Shipping Co.', 'Trading House', 'Consulting', 'Holdings', 'Freight Services'];
+
+function startBreakin() {
+  const p = localTarget(false);
+  const org = p ? p.org : pick(ORGS);
+  const front = (p ? p.name.split(' ')[1] : pick(NAMES[cityById(game.city).names][2])) + ' ' + pick(FRONTS);
+  const brief = p
+    ? 'Target: the offices of "' + front + '", ' + cityById(game.city).name + '. Local sources say the building is used by ' + (p.known.org ? 'the ' + p.org.name : 'a hostile group') + '. The occupant' + (p.known.name || p.known.photo ? ' is believed to be ' + p.code : '') + ' works on the top floor.\n\nSearch desks, files and safes. Bring the occupant out alive if you can. Leave by the door you came in.'
+    : 'Target: "' + front + '", ' + cityById(game.city).name + '. Our informants have seen nothing here lately, but it is the best lead we have. It may be a dry hole.\n\nSearch what you can and get out.';
+  go(loadoutScene(brief, kit => {
+    go(breakinScene(Object.assign({ level: game.level, occupant: p, org }, kit), res => {
+      let hours = 5;
+      if (res.kind === 'dead') { hours = 48; game.agent.health = Math.max(1, game.agent.health - 1); }
+      if (res.kind === 'police') hours = 24;
+      if (res.kills.civ) game.score -= 15 * res.kills.civ;
+      game.score += res.clues.length * 3;
+      if (p) p.seen = true;
+      if (res.killedTarget) { res.killedTarget.status = 'dead'; FACETS.forEach(f => res.killedTarget.known[f] = true); game.score -= 10; }
+      if (res.captured) { const c = res.captured; c.status = 'arrested'; const pts = c.role.tier === 3 ? 60 : c.role.tier === 2 ? 25 : 10; game.score += pts; FACETS.forEach(f => c.known[f] = true); afterMission(hours, () => go(interrogationScene(c, 'capture', pts))); return; }
+      afterMission(hours, () => go(missionReport('BREAK-IN', res.clues.length ? res.clues : ['Nothing of value was recovered.'])));
+    }));
+  }, () => go(hubScene())));
+}
+function startWiretap() {
+  const p = localTarget(false);
+  go(wiretapScene({ level: game.level, label: p ? (p.known.name ? p.name : 'suspect') + "'s line" : 'Front company line' }, res => {
+    const out = [];
+    if (res.success) {
+      game.score += 5;
+      if (p) { p.seen = true; if (!game.bugs.some(b => b.pid === p.id)) game.bugs.push({ pid: p.id }); const c = clueFrom(p, 0.2); if (c) out.push('Phone company records: ' + c); queueMessage(p); out.push('A message has already been recorded. Decode it from the city menu.'); }
+      else out.push('The line is live but carries nothing but family gossip. No one in the ring uses it.');
+    } else out.push('The tap was not installed.');
+    afterMission(4, () => go(missionReport('WIRETAP', out)));
+  }));
+}
+function startChase() {
+  const p = localTarget(true);
+  const label = p ? (p.known.name || p.known.photo ? p.code : 'a suspect') + "'s car" : 'a delivery van';
+  go(chaseScene({ level: game.level, label }, res => {
+    const out = [];
+    if (p) {
+      p.seen = true;
+      if (res.how === 'captured') { p.status = 'arrested'; FACETS.forEach(f => p.known[f] = true); const pts = p.role.tier === 3 ? 60 : p.role.tier === 2 ? 25 : 10; game.score += pts; afterMission(4, () => go(interrogationScene(p, 'capture', pts))); return; }
+      if (res.success) {
+        game.score += 8; out.push(reveal(p, 'photo') || 'You get a clear look at the driver: ' + p.code + '.');
+        const contact = game.plot.people[pick(p.links)]; if (contact) { contact.seen = true; const a = reveal(contact, 'photo'); const b = reveal(contact, 'city'); if (a) out.push(a); if (b) out.push(b); if (!a && !b) out.push('The driver met ' + contact.code + ' - someone you already know about.'); }
+      } else out.push(res.how === 'abort' ? 'You called off the tail.' : 'The car got away.');
+    } else out.push(res.success ? 'The van delivers vegetables to a restaurant. A waste of an afternoon.' : 'You lose the van. Probably just as well.');
+    afterMission(4, () => go(missionReport('CAR TAIL', out)));
+  }));
+}
+function startCrypto(i) {
+  const m = game.messages[i]; if (!m) { go(hubScene()); return; }
+  go(cryptoScene(m.text, { source: m.src + ', day ' + m.day }, res => {
+    const out = [];
+    if (res.success) {
+      game.messages.splice(i, 1); game.score += 4;
+      const from = game.plot.people[m.from], to = game.plot.people[m.to]; from.seen = to.seen = true;
+      const a = reveal(from, 'city'); if (a) out.push(a); const b = reveal(to); if (b) out.push(b);
+      if (!out.length) out.push('The message confirms what you already knew about ' + from.code + ' and ' + to.code + '.');
+    } else { out.push('The message remains unreadable. It is dropped from the queue.'); game.messages.splice(i, 1); }
+    afterMission(2, () => go(missionReport('CODEBREAKING', out)));
+  }));
+}
+function missionReport(title, lines) {
+  return pageScene(() => {
+    rect(0, 0, W, H, P.K); dither(0, 0, W, H, P.K, P.NV, 5); panel(16, 20, W - 32, H - 50);
+    text(title + ' REPORT', 28, 30, P.YE); textR(timeStr(), W - 28, 30, P.CY); rect(28, 40, W - 56, 1, P.G2);
+    let y = 46; for (const l of lines) { y = para('- ' + l, 28, y, W - 56, P.G5, 9) + 3; if (y > 160) break; }
+  }, () => go(hubScene()));
+}
+function practice(kind) {
+  practiceMode = true;
+  if (!game.agent) game.agent = newAgent('m', null);
+  const saved = game.plot; game.plot = newPlot(1); game.level = 1;
+  const back = () => { practiceMode = false; game.plot = saved; go(titleScene()); };
+  const occ = game.plot.people.find(p => p.role.tier === 1);
+  if (kind === 'breakin') go(loadoutScene('PRACTICE: A training building at the Farm. Guards carry live ammunition anyway. Find the occupant, search the files, get out.', kit => go(breakinScene(Object.assign({ level: 1, occupant: occ, org: occ.org }, kit), back)), back));
+  if (kind === 'crypto') go(cryptoScene('FROM ' + occ.code + ' TO RAVEN. ' + pick(MSG_BODIES), { source: 'Training exercise', practice: true }, back));
+  if (kind === 'wiretap') go(wiretapScene({ level: 1, label: 'Training board' }, back));
+  if (kind === 'chase') go(chaseScene({ level: 1, label: 'the instructor' }, back));
+}
+// boot
+fit();
+go(titleScene());
+requestAnimationFrame(t => { last = t; requestAnimationFrame(frameLoop); });
+</script>
+</body>
+</html>

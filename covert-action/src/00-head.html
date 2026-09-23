@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Covert Action</title>
+<meta name="description" content="A from-memory recreation of the 1990 espionage classic: break-ins, codebreaking, wiretaps and car tails across a randomly generated international plot.">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    touch-action: none; -webkit-user-select: none; user-select: none;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box; font-family: monospace;
+  }
+  #screen {
+    display: block; image-rendering: pixelated; image-rendering: crisp-edges;
+    background: #000; outline: none;
+  }
+  #pad { display: none; width: 100%; max-width: 640px; box-sizing: border-box; padding: 10px 16px 14px; gap: 12px;
+    justify-content: space-between; align-items: center; }
+  body.touch #pad { display: flex; }
+  body.touch { justify-content: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+  .dpad { position: relative; width: 132px; height: 132px; flex: none; }
+  .dpad button { position: absolute; width: 44px; height: 44px; }
+  .dpad [data-k="up"] { left: 44px; top: 0; }
+  .dpad [data-k="down"] { left: 44px; bottom: 0; }
+  .dpad [data-k="left"] { left: 0; top: 44px; }
+  .dpad [data-k="right"] { right: 0; top: 44px; }
+  .btns { display: grid; grid-template-columns: repeat(2, 60px); gap: 10px; }
+  #pad button {
+    font: bold 11px/1 monospace; letter-spacing: .05em; color: #d8d8e0;
+    background: linear-gradient(#5c5c6c, #3c3c48); border: 2px solid #8c8c9c; border-bottom-color: #1c1c24; border-right-color: #1c1c24;
+    border-radius: 3px; padding: 0; touch-action: none;
+  }
+  #pad button.on { background: #2034a8; color: #f8e030; }
+  .btns button { height: 48px; }
+  .mid { display: flex; flex-direction: column; gap: 8px; }
+  .mid button { width: 56px; height: 30px; }
+</style>
+</head>
+<body>
+<canvas id="screen" width="320" height="200" tabindex="0" aria-label="Covert Action game screen"></canvas>
+<div id="pad" aria-hidden="true">
+  <div class="dpad">
+    <button data-k="up" id="k-up">▲</button>
+    <button data-k="left" id="k-left">◀</button>
+    <button data-k="right" id="k-right">▶</button>
+    <button data-k="down" id="k-down">▼</button>
+  </div>
+  <div class="mid">
+    <button data-k="menu" id="k-menu">ESC</button>
+    <button data-k="alt2" id="k-alt2">TAB</button>
+  </div>
+  <div class="btns">
+    <button data-k="alt" id="k-alt">GREN</button>
+    <button data-k="fire" id="k-fire">FIRE</button>
+    <button data-k="action" id="k-action">SEARCH</button>
+    <button data-k="select" id="k-select">OK</button>
+  </div>
+</div>
+<script>
+"use strict";
