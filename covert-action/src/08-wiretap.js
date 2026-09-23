@@ -68,7 +68,7 @@ function wiretapScene(opts, done) {
   const time0 = (tracer ? 60 : 150) + sk * 20 - level * 10 - (opts.alert || 0) * 15; let time = time0, cur = [0, 0], over = null, t = 0, flash = 0;
   const need = tracer ? Math.min(5, ends.filter(e => e === 'setting').length) : 0;
   const cutCount = () => simulate(grid).final.filter((v, i) => !v && ends[i] !== 'alarm').length;
-  const X0 = 30, Y0 = 26, DXc = 32, DYr = 26, CW = 14, CH = 16;
+  const X0 = 34, Y0 = 12, DXc = 32, DYr = 31, CW = 16, CH = 16;
   const chipXY = (c, r) => [X0 + c * DXc, Y0 + r * DYr];
   const laneY = (r, l) => Y0 + r * DYr + 4 + l * 8;
   function check() {
@@ -109,14 +109,14 @@ function wiretapScene(opts, done) {
     },
     draw() {
       rect(0, 0, W, H, P.K);
-      rect(0, 14, W, 146, P.BL);
-      // board with cyan grid
-      rect(2, 16, W - 4, 142, P.GR);
-      for (let x = 2; x < W - 2; x += 8) rect(x, 16, 1, 142, P.TL); for (let y = 16; y < 158; y += 8) rect(2, y, W - 4, 1, P.TL);
+      rect(0, 0, W, 168, P.BL);
+      // board with a cyan grid every 8 px
+      rect(2, 1, W - 4, 166, P.GR);
+      for (let x = 2; x < W - 2; x += 8) rect(x, 1, 1, 166, P.TL); for (let y = 1; y < 167; y += 8) rect(2, y, W - 4, 1, P.TL);
       const sim = simulate(grid); const dash = (t * 8 | 0) % 2;
       const wire = (x0, y0, x1, y1, on) => { if (!on) { line(x0, y0, x1, y1, P.GR2); return; } const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)); for (let i = 0; i <= n; i++) { const xx = Math.round(x0 + (x1 - x0) * i / n), yy = Math.round(y0 + (y1 - y0) * i / n); px(xx, yy, ((i >> 1) + dash) % 2 ? P.RD2 : P.W); } };
       // inputs from the +5V bus up the left side
-      for (let l = 0; l < LANES; l++) { const r = l >> 1, y = laneY(r, l & 1), on = inputs[l]; const bx = 6 + (l % 5) * 3; wire(bx, 158, bx, y, on); wire(bx, y, X0 - 2, y, on); }
+      for (let l = 0; l < LANES; l++) { const r = l >> 1, y = laneY(r, l & 1), on = inputs[l]; const bx = 6 + (l % 5) * 3; wire(bx, 167, bx, y, on); wire(bx, y, X0 - 2, y, on); }
       // chip-to-chip wiring
       for (let c = 0; c < COLS - 1; c++) for (let l = 0; l < LANES; l++) {
         const to = links[c][l]; const [x0] = chipXY(c, 0), [x1] = chipXY(c + 1, 0);
@@ -126,7 +126,7 @@ function wiretapScene(opts, done) {
       // to the phones and alarms
       for (let l = 0; l < LANES; l++) {
         const [x0] = chipXY(COLS - 1, 0); const y = laneY(l >> 1, l & 1), on = sim.final[l];
-        const ex = l % 2 ? 292 : 262, ey = 20 + l * 13.4 | 0;
+        const ex = l % 2 ? 294 : 266, ey = 6 + l * 15.6 | 0;
         wire(x0 + CW + 1, y, ex - 12, y, on); wire(ex - 12, y, ex - 12, ey + 7, on); wire(ex - 12, ey + 7, ex - 1, ey + 7, on);
         rect(ex, ey, 16, 15, P.G1); rect(ex, ey, 16, 1, P.G3); rect(ex, ey, 1, 15, P.G3); rect(ex - 1, ey + 3, 1, 1, P.W); rect(ex - 1, ey + 11, 1, 1, P.W);
         if (ends[l] === 'setting') { rect(ex + 4, ey + 4, 8, 7, on ? P.W : P.G3); text(String(1 + (l >> 1)), ex + 6, ey + 4, P.K); }
@@ -135,15 +135,14 @@ function wiretapScene(opts, done) {
       }
       for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) { const [x, y] = chipXY(c, r); drawChip(hidden[c][r] ? '?' : grid[c][r], x, y, fixed[c][r], !over && cur[0] === c && cur[1] === r); }
       // bottom bar: bus strip, +5V / GND, chip in hand, clock
-      rect(0, 158, W, 1, P.G3); for (let x = 56; x < 250; x += 4) { rect(x, 158, 2, 3, P.YE); rect(x + 2, 158, 2, 3, P.GR); }
-      rect(4, 161, W - 8, 24, P.G1); rect(4, 161, W - 8, 1, P.G3);
-      rect(56, 162, 7, 22, P.BL2); rect(64, 162, 7, 22, P.BL2);
-      g.save(); g.translate(62, 183); g.rotate(-Math.PI / 2); text('+5V.', 0, -6, P.CY); text('GND.', 0, 2, P.CY); g.restore();
-      drawChip(hand, 153, 165, false, false);
-      rect(252, 166, 60, 13, P.K); frame(252, 166, 60, 13, P.G3);
-      const mm = Math.floor(time / 60), ss = Math.floor(time % 60); text('00:' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0'), 257, 169, P.G4);
-      text(tracer ? 'Car tracer' : 'Junction box: ' + (opts.label || 'suspect line'), 4, 3, P.G4); textR(tracer ? 'Cut power to ' + need + ' settings: ' + cutCount() + '/' + need : 'Phones cut: ' + cutCount() + '/' + ends.filter(e => e === 'phone').length, W - 4, 3, P.G3);
-      text('ESC: leave', 4, 189, P.G2);
+      rect(0, 168, W, 32, P.BL); for (let x = 36; x < 284; x += 4) { rect(x, 168, 2, 4, P.YE); rect(x + 2, 168, 2, 4, P.GR); }
+      rect(4, 172, W - 8, 27, P.G1); rect(4, 172, W - 8, 1, P.G3); rect(4, 172, 1, 27, P.G3);
+      rect(57, 173, 7, 26, P.BL2); rect(65, 173, 7, 26, P.BL2);
+      g.save(); g.translate(63, 197); g.rotate(-Math.PI / 2); text('+5V.', 0, -6, P.CY); text('GND.', 0, 2, P.CY); g.restore();
+      drawChip(hand, 151, 177, false, false);
+      rect(250, 178, 62, 13, P.K); frame(250, 178, 62, 13, P.G3);
+      const mm = Math.floor(time / 60), ss = Math.floor(time % 60); text('00:' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0'), 256, 181, P.G3);
+      text(tracer ? 'Tracer: cut ' + need + ' settings  ' + cutCount() + '/' + need : 'Phones cut ' + cutCount() + '/' + ends.filter(e => e === 'phone').length, 80, 176, P.W); text('Esc: leave', 80, 186, P.G3);
       if (over) {
         rect(40, 56, W - 80, 58, P.K); frame(40, 56, W - 80, 58, P.W); frame(42, 58, W - 84, 54, P.G3);
         textC(over.win ? (tracer ? 'TRACER SET' : 'ALL PHONES TAPPED') : over.alarm ? 'ALARM!' : (!tracer && cutCount() ? cutCount() + ' PHONES TAPPED' : 'NO TAP'), W / 2, 64, over.win || (!tracer && !over.alarm && cutCount()) ? P.GR2 : P.RD2);

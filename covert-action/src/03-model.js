@@ -72,7 +72,7 @@ const ORGS = [
   ['Shining Way', 'ShnWy', ['americas'], 'terror'], ['Amazon Cartel', 'AmzCt', ['americas'], 'crime'], ['Stassi', 'Stasi', ['europe'], 'espionage'],
   ['Tupamaros', 'Tupam', ['americas'], 'crime'], ['Unione Corsique', 'UnCor', ['europe'], 'crime'],
 ].map(([name, short, regions, focus], i) => ({ id: i, name, short, regions, focus, uni: [EGA.brown, EGA.dgray, EGA.green, EGA.blue, EGA.red, EGA.magenta, EGA.cyan][i % 7], mastermindFree: true }));
-const AGENCIES = ['KGB', 'MI-6', 'Mossad'];
+const AGENCIES = ['KGB', 'MI6', 'Mossad'];
 
 const RANKS = ['Recruit', 'Operative', 'Technician', 'Agent', 'Organizer', 'Special Agent', 'Group Leader', 'Mastermind'];
 const DIFFICULTY = [
@@ -81,7 +81,7 @@ const DIFFICULTY = [
   { name: 'Regional Conflict', people: [8, 9], clueRate: 0.6, guards: 2, days: 13 },
   { name: 'Global Crisis', people: [9, 10], clueRate: 0.5, guards: 3, days: 12 },
 ];
-const SKILL_NAMES = ['Average', 'Good', 'Excellent', 'Superior', 'Superior'];
+const SKILL_NAMES = ['Average', 'Good', 'Excellent', 'Awesome', 'Awesome'];
 
 // crime templates: the object that names the case, and the roles that make it happen
 const CRIMES = [
@@ -133,8 +133,8 @@ function newCrime() {
   const orgs = [mmOrg, ...allies];
   // each org keeps a hideout in 2-4 cities of the region
   const buildings = {};
-  for (const o of orgPool) { for (const c of shuffle(cities.slice()).slice(0, ri(2, 4))) { const key = o.id + '@' + c.id; buildings[key] = { key, org: o, city: c.id, address: mkAddress(c.lang), known: false, orgKnown: false, alert: 0, suspect: null, layout: null }; } }
-  for (const c of cities) for (const a of AGENCIES) if (rnd() < (a === 'Mossad' ? 0.5 : 0.8)) { const key = a + '@' + c.id; buildings[key] = { key, agency: a, city: c.id, address: mkAddress(c.lang), known: true, orgKnown: true, alert: 0 }; }
+  for (const o of orgPool) { for (const c of shuffle(cities.slice()).slice(0, ri(2, 4))) { const key = o.id + '@' + c.id; buildings[key] = { key, org: o, city: c.id, address: mkAddress(c.lang), type: pick(['hideout', 'hideout', 'office', 'active cel', 'agent']), known: false, orgKnown: false, alert: 0, suspect: null, layout: null }; } }
+  for (const c of cities) for (const a of AGENCIES) if (rnd() < (a === 'Mossad' ? 0.5 : 0.8)) { const key = a + '@' + c.id; buildings[key] = { key, agency: a, city: c.id, address: mkAddress(c.lang), type: a === 'Mossad' ? 'active cel' : 'office', known: true, orgKnown: true, alert: 0 }; }
   const crime = CRIMES[Math.floor(rnd() * CRIMES.length)];
   const n = ri(D.people[0], D.people[1]);
   const used = new Set(); const people = [];
@@ -143,7 +143,7 @@ function newCrime() {
     // one suspect per organization per city
     const free = hideoutsOf(org).filter(b => !b.suspect);
     let b = free.length ? pick(free) : null;
-    if (!b) { const c = pick(cities.filter(c => !buildings[org.id + '@' + c.id])) || pick(cities); const key = org.id + '@' + c.id; b = buildings[key] = buildings[key] || { key, org, city: c.id, address: mkAddress(c.lang), known: false, orgKnown: false, alert: 0, suspect: null }; if (b.suspect) return null; }
+    if (!b) { const c = pick(cities.filter(c => !buildings[org.id + '@' + c.id])) || pick(cities); const key = org.id + '@' + c.id; b = buildings[key] = buildings[key] || { key, org, city: c.id, address: mkAddress(c.lang), type: 'hideout', known: false, orgKnown: false, alert: 0, suspect: null }; if (b.suspect) return null; }
     const city = cityById(b.city), sex = rnd() < 0.15 ? 'f' : 'm';
     const p = { id: people.length, name: mkName(city.lang, sex, used), sex, org, role, rank, city: b.city, building: b.key, face: makeFace(sex, city.lang), parent: parent ? parent.id : null, kids: [],
       known: { face: false, name: false, org: false, city: false, hideout: false, role: false }, status: 'free', exists: false, tasks: 0 };
@@ -255,14 +255,15 @@ function plotDay(d) {
 }
 const dayToT = d => d * 1440 - 8 * 60 + 9 * 60;
 
-// ---------- scoring (1000 points = 100% efficiency) ----------
+// ---------- scoring: Efficiency Points, as on the original report ----------
+function epMax(p) { return p.role === 'Mastermind' ? 200 : p.rank >= 5 ? 35 : 25 + (p.rank % 4) * 5; }
 function efficiency() {
-  const cr = game.crime; let got = 0, max = 0;
+  const cr = game.crime, rows = []; let got = 0, max = 0;
   for (const p of cr.people) {
-    const v = 10 + p.rank * 6;
-    max += v * 5; got += v * ['name', 'org', 'city', 'hideout'].filter(f => p.known[f]).length;
-    if (p.status === 'arrested' || p.status === 'turned') got += v;
+    const m = epMax(p); let e = Math.round(m * ['name', 'org', 'city', 'hideout'].filter(f => p.known[f]).length / 8);
+    if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
   }
-  max += 250; if (cr.prevented) got += 150; if (cr.people[cr.mastermind].status === 'arrested') got += 100;
-  return Math.round(Math.min(1000, got / max * 1000));
+  cr.items.forEach((it, i) => { const ok = i < cr.evidenceTaken; rows.push({ status: ok ? 'Captured' : 'Not Found', label: it.replace(/\b\w/g, c => c.toUpperCase()), ep: ok ? 50 : 0, max: 50 }); got += ok ? 50 : 0; max += 50; });
+  rows.push({ status: '', label: cr.kind, ep: cr.prevented ? 120 : 0, max: 120, crime: true }); got += cr.prevented ? 120 : 0; max += 120;
+  return { rows, got, max, pts: Math.round(got / max * 1000) };
 }

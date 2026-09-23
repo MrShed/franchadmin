@@ -149,12 +149,12 @@ function breakinScene(opts, done) {
   function spot(room) { for (let i = 0; i < 80; i++) { const x = ri(room.x, room.x + room.w - 1), y = ri(room.y, room.y + room.h - 1); if (B.T[y][x] === T_FLOOR && occ[y][x] < 0 && !people.some(p => Math.abs(p.x - x * TS - 4) < 8 && Math.abs(p.y - y * TS - 4) < 8)) return [x * TS + 4, y * TS + 4]; } return [room.x * TS + 4, room.y * TS + 4]; }
 
   // ---------- people ----------
-  function addGuard(room, st = 'patrol') { const [x, y] = spot(room); const g2 = { kind: 'guard', x, y, dir: rnd() * 7, walk: 0, state: st, out: false, stun: 0, cool: 1 + rnd(), home: room.id, path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.15 * level, gren: rnd() < 0.3 ? 1 : 0, col: org.uni || P.BR }; people.push(g2); return g2; }
+  function addGuard(room, st = 'patrol') { const [x, y] = spot(room); const g2 = { kind: 'guard', x, y, dir: rnd() * 7, walk: 0, state: st, out: false, stun: 0, cool: 1 + rnd(), home: room.id, path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.15 * level, gren: rnd() < 0.3 ? 1 : 0, col: P.YE }; people.push(g2); return g2; }
   const important = B.rooms.filter(r => ['file', 'computer', 'cipher', 'exec'].includes(r.kind));
   const nGuards = Math.min(12, 3 + level * 2 + (opts.alert || 0) * 2 + Math.floor(B.rooms.length / 6));
   for (let i = 0; i < nGuards; i++) addGuard(rnd() < 0.5 && important.length ? pick(important) : pick(B.rooms), rnd() < 0.7 ? 'patrol' : 'idle');
   let target = null;
-  if (occupant) { const seat = F.find(f => f.seat); const [x, y] = seat ? [seat.x * TS + 4, seat.y * TS + 4] : spot(B.exec); target = { kind: 'suspect', x, y, dir: -Math.PI / 2, walk: 0, state: 'seated', out: false, stun: 0, col: occupant.face.jacket === P.K ? P.G1 : occupant.face.jacket, path: null, pathT: 0, seeT: 0 }; people.push(target); }
+  if (occupant) { const seat = F.find(f => f.seat); const [x, y] = seat ? [seat.x * TS + 4, seat.y * TS + 4] : spot(B.exec); target = { kind: 'suspect', x, y, dir: -Math.PI / 2, walk: 0, state: 'seated', out: false, stun: 0, col: pick([P.W, P.MG, P.BL2]), path: null, pathT: 0, seeT: 0 }; people.push(target); }
 
   // ---------- entry ----------
   function enterAt(d) { entryDoor = d; d.open = true; const dx = d.side === 'W' ? 1 : d.side === 'E' ? -1 : 0, dy = d.side === 'N' ? 1 : d.side === 'S' ? -1 : 0; max.x = (d.x + dx) * TS + 4; max.y = (d.y + dy) * TS + 4; max.dir = Math.atan2(dy, dx); B.rooms[d.a].seen = true; say('Inside. Close the door behind you (E): guards notice open doors.'); sfx.select(); }
@@ -187,7 +187,7 @@ function breakinScene(opts, done) {
   }
   function knockOut(p) { if (p.out) return; p.out = true; p.stun = 0; if (p === target) say((occupant.known.name ? occupant.name : 'The suspect') + ' is out cold. Walk over him to grab him.'); }
   function stunP(p, s) { if (!p.out) p.stun = Math.max(p.stun, s); }
-  function hurtMax() { if (over) return; max.hits++; sfx.tone(120, 0.2, 'sawtooth', 0.08, -60); say('You are hit!'); if (max.hits >= max.maxHits) finish('captured'); }
+  function hurtMax() { if (over) return; max.hits++; hitFlash = 3; sfx.tone(120, 0.2, 'sawtooth', 0.08, -60); say('You are hit!'); if (max.hits >= max.maxHits) finish('captured'); }
   function explode(gr) {
     if (gr.type === 'gas') { clouds.push({ x: gr.x, y: gr.y, r: 3, t: 12, room: roomOf(gr.x, gr.y) }); sfx.hiss(); return; }
     fx.push({ k: 'boom', x: gr.x, y: gr.y, t: 0.5, type: gr.type }); sfx.boom(); if (gr.type === 'frag') { noise(gr.x, gr.y, 300); raiseAlarm('The explosion was heard.'); }
@@ -365,134 +365,164 @@ function breakinScene(opts, done) {
     },
   };
 
-  // ---------- drawing ----------
-  const RX = 2, RY = 30, RW = 172, RH = 168;
-  function roomCam() { const r = B.rooms[roomOf(max.x, max.y)] || B.rooms[entryDoor ? entryDoor.a : 0]; const w = (r.w + 2) * TS, h = (r.h + 2) * TS; const Z = Math.max(1, Math.min(3, Math.floor(Math.min(RW / w, RH / h)))); return { r, Z, ox: RX + Math.floor((RW - w * Z) / 2) - (r.x - 1) * TS * Z, oy: RY + Math.floor((RH - h * Z) / 2) - (r.y - 1) * TS * Z }; }
-  function drawFurn(f, ox, oy) {
-    const X = ox + f.x * TS, Y = oy + f.y * TS, w = f.w * TS, h = f.h * TS;
+  // ---------- drawing: the Break-In Display ----------
+  const VX0 = 8, VX1 = 163, VY0 = 42, VY1 = 172;
+  let hitFlash = 0;
+  function roomView() {
+    const r = B.rooms[roomOf(max.x, max.y)] || B.rooms[entryDoor ? entryDoor.a : 0];
+    const S = Math.max(6, Math.min(16, Math.floor(Math.min((VX1 - VX0 - 8) / r.w, (VY1 - VY0 - 8) / r.h))));
+    const w = r.w * S, h = r.h * S; const ox = Math.floor((VX0 + VX1) / 2 - w / 2) - r.x * S, oy = Math.floor((VY0 + VY1) / 2 - h / 2) - r.y * S;
+    return { r, S, ox, oy, sx: wx => ox + wx / TS * S, sy: wy => oy + wy / TS * S };
+  }
+  function drawRoom(v) {
+    const { r, S, ox, oy } = v; const X0 = ox + r.x * S, Y0 = oy + r.y * S, w = r.w * S, h = r.h * S;
+    // light cyan outline, 3-px light gray wall with mitred dark corners
+    rect(X0 - 4, Y0 - 4, w + 8, h + 8, P.CY); rect(X0 - 3, Y0 - 3, w + 6, h + 6, P.G3);
+    for (const [cx, cy, dx, dy] of [[X0 - 3, Y0 - 3, 1, 1], [X0 + w + 2, Y0 - 3, -1, 1], [X0 - 3, Y0 + h + 2, 1, -1], [X0 + w + 2, Y0 + h + 2, -1, -1]]) for (let k = 0; k < 3; k++) px(cx + dx * k, cy + dy * k, P.G1);
+    // checkerboard floor
+    for (let yy = 0; yy < h; yy++) { g.fillStyle = P.G1; g.fillRect(X0, Y0 + yy, w, 1); g.fillStyle = P.BL2; for (let xx = (yy & 1); xx < w; xx += 2) g.fillRect(X0 + xx, Y0 + yy, 1, 1); }
+    for (const d of r.doors) {
+      const horizWall = d.o === 'h'; let dx, dy, dw, dh;
+      if (horizWall) { dx = ox + d.x * S - S / 2; dw = S * 2; dy = d.y < r.y ? Y0 - 3 : Y0 + h; dh = 3; } else { dy = oy + d.y * S - S / 2; dh = S * 2; dx = d.x < r.x ? X0 - 3 : X0 + w; dw = 3; }
+      rect(dx, dy - (horizWall ? 1 : 0), dw, dh + (horizWall ? 2 : 0), d.open ? P.BL : d.outside ? P.GR2 : P.G1);
+      if (d.open) dither(dx, dy, dw, dh, P.BL, P.BL2, 8); else px(dx + dw / 2, dy + dh / 2, P.W);
+    }
+  }
+  function drawFurn(f, v) {
+    const S = v.S, X = v.ox + f.x * S, Y = v.oy + f.y * S, w = f.w * S, h = f.h * S, q = Math.max(1, S / 8);
+    const box = (x, y, ww, hh, c) => { rect(x, y, ww, hh, P.K); rect(x + 1, y + 1, ww - 2, hh - 2, c); rect(x + 1, y + 1, ww - 2, 1, P.W); };
     switch (f.type) {
-      case 'desk': rect(X, Y + 1, w, h - 1, P.K); rect(X + 2, Y + 2, 5, 3, P.W); rect(X + 9, Y + 2, 4, 2, f.opened ? P.W : P.G1); break;
-      case 'chair': rect(X + 1, Y + 2, 6, 5, P.K); rect(X + 1, Y + 6, 6, 1, P.G1); break;
-      case 'file': rect(X, Y, w, h, P.K); rect(X + 1, Y + 2, 6, 1, P.G1); rect(X + 1, Y + 5, 6, 1, P.G1); if (f.opened) rect(X + 1, Y + 6, 6, 2, P.W); break;
-      case 'wallsafe': rect(X + 1, Y + 1, 6, 6, P.G1); frame(X + 1, Y + 1, 6, 6, P.K); px(X + 4, Y + 4, f.opened ? P.K : P.W); break;
-      case 'floorsafe': rect(X + 1, Y + 1, 6, 6, P.G1); frame(X, Y, 8, 8, P.K); if (f.opened) rect(X + 2, Y + 2, 4, 4, P.K); break;
-      case 'plant': rect(X + 3, Y + 5, 3, 3, P.BR); line(X + 1, Y + 1, X + 4, Y + 5, P.K); line(X + 7, Y + 1, X + 4, Y + 5, P.K); line(X + 4, Y, X + 4, Y + 5, P.K); line(X, Y + 4, X + 4, Y + 5, P.K); line(X + 8, Y + 3, X + 4, Y + 5, P.K); break;
-      case 'typewriter': rect(X + 1, Y + 2, 6, 5, P.K); rect(X + 2, Y + 1, 4, 2, P.W); break;
-      case 'couch': rect(X, Y + 1, w, 6, P.K); rect(X + 2, Y + 2, w - 4, 4, P.G1); break;
-      case 'picture': rect(X + 1, Y, 6, 3, P.K); rect(X + 2, Y, 4, 2, P.BL); break;
-      case 'computer': rect(X, Y, w, h, P.K); for (let i = 0; i < 4; i++) px(X + 2 + i * 3, Y + 3, ((t * 4 | 0) + i) % 2 ? P.RD2 : P.GR2); break;
-      case 'terminal': rect(X + 1, Y + 1, 6, 5, P.K); rect(X + 2, Y + 2, 4, 3, P.GR); break;
-      case 'table': rect(X + 1, Y + 1, w - 2, h - 2, P.K); rect(X + 3, Y + 3, 3, 2, P.W); break;
-      case 'toilet': rect(X + 2, Y + 1, 4, 6, P.W); frame(X + 2, Y + 1, 4, 6, P.K); break;
-      case 'sink': rect(X + 1, Y + 1, 6, 4, P.W); frame(X + 1, Y + 1, 6, 4, P.K); break;
-      case 'evidence': if (f.content) { rect(X + 1, Y + 1, 6, 6, P.BR); frame(X + 1, Y + 1, 6, 6, P.K); line(X + 1, Y + 1, X + 6, Y + 6, P.K); } break;
+      case 'desk': box(X, Y + 1, w, h - 2, P.BR); rect(X + 3 * q, Y + 3 * q, 5 * q, 3 * q, f.opened ? P.W : P.G3); rect(X + w - 6 * q, Y + 2 * q, 2 * q, 2 * q, P.RD2); rect(X + w / 2, Y + 3 * q, 3 * q, 2 * q, P.W); break;
+      case 'chair': box(X + 1, Y + 1, w - 2, h - 2, P.BL2); rect(X + 2, Y + h - 3, w - 4, 1, P.BL); break;
+      case 'file': box(X, Y, w, h, P.G3); rect(X + w / 2 - 1, Y + h / 2 - 1, 2, 1, P.TL); if (f.opened) rect(X + 2, Y + h - 3, w - 4, 2, P.W); break;
+      case 'wallsafe': box(X + 1, Y + 1, w - 2, h - 2, f.opened ? P.K : P.G1); px(X + w / 2, Y + h / 2, P.W); break;
+      case 'floorsafe': rect(X + 1, Y + 1, w - 2, h - 2, f.opened ? P.RD : P.RD2); line(X + 3, Y + 3, X + w - 4, Y + h - 4, P.YE); line(X + w - 4, Y + 3, X + 3, Y + h - 4, P.YE); break;
+      case 'plant': { const cx = X + w / 2, cy = Y + h / 2; for (let k = 0; k < 8; k++) { const a = k * 0.8; line(cx, cy, cx + Math.cos(a) * w / 2, cy + Math.sin(a) * h / 2, k % 2 ? P.GR : P.GR2); } px(cx - 2, cy - 1, P.W); px(cx + 2, cy + 2, P.BL2); break; }
+      case 'typewriter': box(X + 1, Y + 1, w - 2, h - 2, P.K); rect(X + 2, Y + 2, w - 4, 2, P.W); rect(X + 3, Y + h / 2, w - 6, 1, P.CY); break;
+      case 'couch': box(X, Y + 1, w, h - 2, P.RD); rect(X + 2, Y + 3, w - 4, h - 6, P.RD2); break;
+      case 'picture': rect(X + 1, Y, w - 2, 3, P.BR); rect(X + 2, Y, w - 4, 2, P.BL2); break;
+      case 'computer': box(X, Y, w, h, P.W); rect(X + 1, Y + h / 2, w - 2, 2, P.TL); for (let i = 0; i < 4; i++) px(X + 3 + i * 3, Y + 3, ((t * 4 | 0) + i) % 2 ? P.RD2 : P.K); break;
+      case 'terminal': box(X + 1, Y + 1, w - 2, h - 2, P.G3); rect(X + 3, Y + 3, w - 6, h - 7, P.TL); rect(X + 3, Y + h - 3, w - 6, 1, P.W); break;
+      case 'table': { rect(X + 2, Y + 1, w - 4, h - 2, P.BR); rect(X + 1, Y + 2, w - 2, h - 4, P.BR); rect(X + w / 2 - 2, Y + h / 2 - 1, 4, 3, P.YE); break; }
+      case 'toilet': box(X + 2, Y + 1, w - 4, h - 2, P.W); break;
+      case 'sink': box(X + 1, Y + 1, w - 2, h - 3, P.W); rect(X + w / 2 - 1, Y + 3, 2, 2, P.CY); break;
+      case 'evidence': if (f.content) { box(X + 1, Y + 1, w - 2, h - 2, P.BR); line(X + 2, Y + 2, X + w - 3, Y + h - 3, P.K); } break;
     }
   }
   function drawGuy(p, X, Y) {
     const x = Math.round(X), y = Math.round(Y);
-    if (p.out) { if (p.hidden) return; rect(x - 3, y - 1, 7, 3, p.col); px(x + 3, y, P.SK); return; }
-    const c = p.kind === 'max' ? (max.disguised ? org.uni || P.BR : P.K) : p.col; const ph = (p.walk * 8 | 0) % 2;
-    rect(x - 2, y - 2, 5, 4, c); rect(x - 1, y - 3, 3, 3, p.kind === 'max' ? P.K : P.SK); px(x, y - 3, p.kind === 'max' ? P.G1 : P.K);
-    px(x + Math.round(Math.cos(p.dir) * 3), y + Math.round(Math.sin(p.dir) * 3), P.K);
-    px(ph ? x - 1 : x + 1, y + 2, c);
-    if (p.stun > 0) px(x, y - 5, (t * 6 | 0) % 2 ? P.YE : P.W);
-    if (p === target && p.state === 'seated') rect(x - 1, y - 6, 3, 1, P.YE);
+    if (p.out) { if (p.hidden) return; const c = p.col || P.YE; line(x - 5, y - 4, x + 5, y + 4, c); line(x - 5, y + 4, x + 5, y - 4, c); line(x - 4, y - 4, x + 4, y + 4, P.BR); rect(x - 1, y - 1, 3, 3, P.K); return; }
+    const ph = (p.walk * 8 | 0) % 2, dx = Math.round(Math.cos(p.dir) * 5), dy = Math.round(Math.sin(p.dir) * 5);
+    if (p.kind === 'max') {
+      const c = max.disguised ? P.YE : P.K; rect(x - 3, y - 4, 7, 9, c); rect(x - 2, y - 3, 5, 7, max.crouch ? P.K : P.G1); rect(x - 1, y - 2, 3, 3, P.BR);
+      if (!max.crouch) { line(x, y, x + dx, y + dy, P.K); px(x + dx, y + dy, max.cool > (max.gun === 'uzi' ? 0.15 : 0.4) ? P.W : P.G3); }
+    } else {
+      const c = p.col || P.YE, shade = p.kind === 'guard' ? P.GR : P.G1;
+      rect(x - 4, y - 4, 9, 9, c); rect(x + 2, y - 3, 2, 7, shade); rect(x - 2, y - 2, 5, 5, P.K); px(x, y - 1, p.kind === 'guard' ? P.G1 : P.BR);
+      if (p.kind === 'guard') { px(x + Math.round(dx * 0.8), y + Math.round(dy * 0.8), P.PK); line(x + Math.round(dx * 0.8), y + Math.round(dy * 0.8), x + dx + Math.sign(dx), y + dy + Math.sign(dy), P.K); if (p.state === 'attack' && p.cool > 1) { px(x + dx * 2, y + dy * 2, P.YE); px(x + dx * 2 + 1, y + dy * 2, P.W); } }
+      px(ph ? x - 4 : x + 4, y + 4, c);
+      if (p.stun > 0) px(x, y - 7, (t * 6 | 0) % 2 ? P.YE : P.W);
+      if (p === target && p.state === 'seated') rect(x - 1, y - 8, 3, 1, P.YE);
+    }
   }
   scene.draw = function () {
-    rect(0, 0, W, H, P.K);
-    if (!entryDoor) { drawDoorMenu(); return; }
-    const cam = roomCam(), r = cam.r, ox = 0, oy = 0;
-    frame(RX - 1, RY - 1, RW + 2, RH + 2, alarm && (t * 4 | 0) % 2 ? P.RD2 : P.G3);
-    g.save(); g.beginPath(); g.rect(RX, RY, RW, RH); g.clip(); g.translate(cam.ox, cam.oy); g.scale(cam.Z, cam.Z);
-    rect(ox + r.x * TS, oy + r.y * TS, r.w * TS, r.h * TS, P.G3);
-    rect(ox + (r.x - 1) * TS + 5, oy + (r.y - 1) * TS + 5, (r.w + 2) * TS - 10, 3, P.W); rect(ox + (r.x - 1) * TS + 5, oy + (r.y + r.h) * TS, (r.w + 2) * TS - 10, 3, P.W);
-    rect(ox + (r.x - 1) * TS + 5, oy + (r.y - 1) * TS + 5, 3, (r.h + 2) * TS - 10, P.W); rect(ox + (r.x + r.w) * TS, oy + (r.y - 1) * TS + 5, 3, (r.h + 2) * TS - 10, P.W);
-    for (const d of r.doors) { const X = ox + d.x * TS, Y = oy + d.y * TS; rect(X, Y, TS, TS, d.open ? P.G3 : P.K); if (d.o === 'h') { if (d.open) rect(X, Y + 3, 1, 3, P.BR); else rect(X + 1, Y + 3, 6, 2, P.BR); } else { if (d.open) rect(X + 3, Y, 3, 1, P.BR); else rect(X + 3, Y + 1, 2, 6, P.BR); } if (d.outside) px(X + 4, Y + 4, P.YE); }
-    for (const f of F) if (f.room === r.id) drawFurn(f, ox, oy);
-    for (const c of clouds) if (c.room === r.id) dither(ox + c.x - c.r, oy + c.y - c.r, c.r * 2, c.r * 2, 'rgba(0,0,0,0)', P.GR2, 5);
+    // left: black/blue scan-lines; right: blue panel; white divider
+    rect(0, 0, 171, H, P.K); for (let y = 1; y < H; y += 2) rect(0, y, 171, 1, P.BL);
+    rect(171, 0, 1, H, P.W); rect(172, 0, 1, H, P.K); rect(173, 0, 145, H, P.BL); rect(318, 0, 1, H, P.K); rect(319, 0, 1, H, P.W);
+    drawEquip();
+    drawBuildingWindow(179, 99, 122, 98);
+    if (!entryDoor) { drawDoorMenu(); postFlash(); return; }
+    const v = roomView(), r = v.r;
+    drawRoom(v);
+    for (const f of F) if (f.room === r.id) drawFurn(f, v);
+    for (const c of clouds) if (c.room === r.id) { const cr = c.r / TS * v.S; dither(v.sx(c.x) - cr, v.sy(c.y) - cr, cr * 2, cr * 2, 'rgba(0,0,0,0)', P.GR2, 6); }
     const here = people.filter(p => roomOf(p.x, p.y) === r.id || p === max.prisoner).concat([max]).sort((a, b) => a.y - b.y);
-    for (const p of here) drawGuy(p, ox + p.x, oy + p.y);
-    for (const b of bullets) if (roomOf(b.x, b.y) === r.id) px(ox + b.x, oy + b.y, b.mine ? P.W : P.RD2);
-    for (const gr of grenades) if (roomOf(gr.x, gr.y) === r.id) rect(ox + gr.x - 1, oy + gr.y - gr.z - 1, 2, 2, GREN[gr.type].col);
-    for (const e of fx) { const X = ox + e.x, Y = oy + e.y; if (e.k === 'boom') { disc(X, Y, 8 + (0.5 - e.t) * 30, e.type === 'frag' ? P.RD2 : P.W); disc(X, Y, 6, P.YE); } else px(X, Y, e.k === 'hit' ? P.RD2 : P.YE); }
-    if (max.busy) { rect(ox + max.x - 6, oy + max.y - 9, 12, 2, P.K); rect(ox + max.x - 6, oy + max.y - 9, 12 * max.busy.t / max.busy.need, 2, P.GR2); }
-    g.restore();
+    for (const p of here) drawGuy(p, v.sx(p.x), v.sy(p.y));
+    for (const b of bullets) if (roomOf(b.x, b.y) === r.id) rect(v.sx(b.x), v.sy(b.y), 1, 1, b.mine ? P.W : P.YE);
+    for (const gr of grenades) if (roomOf(gr.x, gr.y) === r.id) rect(v.sx(gr.x) - 1, v.sy(gr.y) - gr.z - 1, 3, 3, GREN[gr.type].col);
+    for (const e of fx) { const X = v.sx(e.x), Y = v.sy(e.y); if (e.k === 'boom') { disc(X, Y, 6 + (0.5 - e.t) * 40, e.type === 'frag' ? P.RD2 : P.W); disc(X, Y, 5, P.YE); } else px(X, Y, e.k === 'hit' ? P.RD2 : P.YE); }
+    if (max.busy) { const X = v.sx(max.x), Y = v.sy(max.y); rect(X - 8, Y - 10, 16, 2, P.K); rect(X - 8, Y - 10, 16 * max.busy.t / max.busy.need, 2, P.GR2); }
     const tgt = people.find(p => p.kind === 'guard' && !p.out && roomOf(p.x, p.y) === r.id && Math.abs(Math.atan2(Math.sin(Math.atan2(p.y - max.y, p.x - max.x) - max.dir), Math.cos(Math.atan2(p.y - max.y, p.x - max.x) - max.dir))) < 0.3 && los(max.x, max.y, p.x, p.y));
-    // movement window (Max side view)
-    frame(1, 1, 26, 27, P.W); rect(2, 2, 24, 25, P.K); drawMaxSide(3, 3, tgt);
-    if (max.stun > 0 || max.gassed > 0.4) { const k = Math.min(1, Math.max(max.stun / 6, max.gassed / 2.5)); rect(2, 2 + 25 * (1 - k), 24, 25 * k, max.gassed > 0.4 ? P.BR : P.G1); }
-    // information bar
-    frame(29, 1, 146, 27, P.W); rect(30, 2, 144, 25, P.K);
-    const blink = max.disguised && (t * 1.5 | 0) % 2;
-    text(fitText(ROOM_NAMES[r.kind] + (people.some(p => roomOf(p.x, p.y) === r.id && !p.out && p !== max.prisoner) ? ' - Occupied' : ''), 92), 34, 4, P.W);
+    // Max portrait, x0..24 y0..39
+    rect(0, 0, 25, 40, P.G3); rect(1, 1, 23, 38, P.BL2); drawMaxSide(3, 10, tgt);
+    if (max.stun > 0 || max.gassed > 0.4) { const k = Math.min(1, Math.max(max.stun / 6, max.gassed / 2.5)); rect(1, 1 + 38 * (1 - k), 23, 38 * k, max.gassed > 0.4 ? P.BR : P.G1); }
+    // information bar, x26..170 y0..18
+    rect(26, 0, 145, 19, P.G3); rect(27, 1, 142, 17, P.BL); rect(169, 1, 1, 17, P.K);
+    text(fitText(ROOM_NAMES[r.kind], 78), 30, 2, P.W);
     const hh = Math.floor(clock / 3600) % 24, mm = Math.floor(clock / 60) % 60, ss = Math.floor(clock) % 60;
-    textR(blink ? 'Disguised' : [hh, mm, ss].map(v => String(v).padStart(2, '0')).join(':'), 172, 4, blink ? P.YE : P.W);
-    wrap(msg, 138).slice(-2).forEach((l, i) => text(l, 34, 12 + i * 8, P.G4));
-    drawEquip(178, 1);
-    drawBuildingWindow(178, 104, 140, 94, r);
+    if (max.disguised || max.gassed > 0.4) text(max.gassed > 0.4 ? 'GAS' : 'Disguise', 102, 2, P.RD2);
+    textR([hh, mm, ss].map(v2 => String(v2).padStart(2, '0')).join(':'), 167, 2, P.W);
+    textC(fitText(msg, 138), 98, 10, P.W);
+    if (msgLong()) { const ls = wrap(msg, 146); msgBox(12, 20, 150, ls.length * 8 + 6); ls.forEach((l, i) => text(l, 16, 23 + i * 8, P.W)); }
+    if (alarm && (t * 4 | 0) % 2) { frame(v.ox + r.x * v.S - 5, v.oy + r.y * v.S - 5, r.w * v.S + 10, r.h * v.S + 10, P.RD2); }
     if (comp) drawComputer();
     if (over) drawOver();
-    if (pauseMenu) { msgBox(60, 56, 200, 84); textC('MISSION PAUSED', W / 2, 62, P.YE); pauseMenu.draw(); }
+    if (pauseMenu) { msgBox(30, 50, 136, 70); text('Do you want to...', 36, 53, P.W); pauseMenu.draw(); }
+    postFlash();
   };
+  let lastMsg = '', msgT0 = 0;
+  function msgLong() { if (msg !== lastMsg) { lastMsg = msg; msgT0 = t; } return textW(msg) > 138 && t - msgT0 < 4; }
+  function postFlash() { // being hit turns every light gray pixel light red for a moment
+    if (hitFlash <= 0) return; hitFlash--;
+    const d = g.getImageData(0, 0, W, H), a = d.data; for (let i = 0; i < a.length; i += 4) if (a[i] === 0xAA && a[i + 1] === 0xAA && a[i + 2] === 0xAA) { a[i] = 0xFF; a[i + 1] = 0x55; a[i + 2] = 0x55; } g.putImageData(d, 0, 0);
+  }
   function drawMaxSide(x, y, tgt) {
-    const c = max.disguised ? org.uni || P.BR : P.G1, mv = input.axis(); const walk = (mv.x || mv.y) ? (t * 6 | 0) % 2 : 0; const top = max.crouch ? 7 : 0;
-    rect(x + 9, y + 1 + top, 5, 5, P.SK); rect(x + 9, y + 1 + top, 5, 2, P.K);
-    rect(x + 8, y + 6 + top, 7, 9, c); rect(x + 15, y + 8 + top, 5, 2, c); rect(x + 19, y + 7 + top, 3, 2, P.G3);
-    if (!max.crouch) { rect(x + 8, y + 15, 3, 7 - walk, P.K); rect(x + 12, y + 15, 3, 6 + walk, P.K); } else rect(x + 7, y + 17, 9, 4, P.K);
-    if (tgt) { const q = Math.min(1, (0.3 + sk * 0.2) * (max.gun === 'uzi' ? 1.4 : 1)); const col = q > 0.8 ? P.W : q > 0.5 ? P.G3 : q > 0.3 ? P.G1 : P.K; frame(x + 16, y, 6, 6, col); px(x + 19, y + 3, col); }
+    const mv = input.axis(); const walk = (mv.x || mv.y) ? (t * 6 | 0) % 2 : 0; const top = max.crouch ? 8 : 0;
+    rect(x + 7, y + top, 5, 5, P.RD2); rect(x + 7, y + top, 5, 2, P.BR); rect(x + 11, y + 2 + top, 1, 2, P.RD);
+    rect(x + 5, y + 5 + top, 9, 11 - top / 2, max.disguised ? P.YE : P.K); rect(x + 6, y + 6 + top, 2, 8, P.G1); rect(x + 13, y + 7 + top, 5, 2, P.K); rect(x + 17, y + 6 + top, 3, 2, P.G3);
+    if (!max.crouch) { rect(x + 6, y + 16, 3, 10 - walk, P.K); rect(x + 10, y + 16, 3, 9 + walk, P.K); } else rect(x + 5, y + 18, 11, 6, P.K);
+    if (tgt) { const q = Math.min(1, (0.3 + sk * 0.2) * (max.gun === 'uzi' ? 1.4 : 1)); const col = q > 0.8 ? P.W : q > 0.5 ? P.G3 : q > 0.3 ? P.G1 : P.K; frame(x + 5, y + 2, 9, 9, col); px(x + 9, y + 6, col); }
   }
-  function drawEquip(x, y) {
-    const cx = x + 96;
-    for (let yy = 0; yy < 98; yy += 2) { const w = yy < 18 ? 16 : yy < 26 ? 8 : Math.min(34, 24 + (yy - 26) / 3); rect(cx - w / 2, y + 2 + yy, w, 1, P.BL); }
-    rect(cx - 30, y + 32, 22, 3, P.BL); rect(cx - 44, y + 29, 16, 4, P.G3); rect(cx - 40, y + 33, 3, 5, P.G3); if (max.gun === 'uzi') { rect(cx - 48, y + 28, 22, 5, P.G1); rect(cx - 38, y + 33, 3, 7, P.G1); }
-    if (kit.kevlar) { rect(cx - 12, y + 30, 24, 30, P.G1); for (let i = 0; i < 4; i++) rect(cx - 10, y + 34 + i * 7, 20, 1, P.G3); }
-    if (kit.gasmask) { rect(cx - 5, y + 10, 10, 6, P.G3); disc(cx, y + 14, 2, P.K); }
-    if (kit.detector) { rect(cx - 9, y + 5, 2, 9, P.YE); rect(cx + 8, y + 5, 2, 9, P.YE); rect(cx - 8, y + 3, 17, 1, P.YE); }
-    if (kit.safekit) { rect(cx - 14, y + 70, 28, 12, P.G1); frame(cx - 14, y + 70, 28, 12, P.G3); text('KIT', cx - 6, y + 72, P.W); }
-    for (let i = 0; i < max.hits; i++) rect(cx - 6 + i * 5, y + 44, 3, 3, P.RD2);
-    ['frag', 'stun', 'gas'].forEach((k, i) => { const yy = y + 4 + i * 8; if (max.gtype === k) rect(x + 1, yy - 1, 46, 8, P.BL2); for (let n = 0; n < Math.min(6, max.gren[k]); n++) { disc(x + 6 + n * 7, yy + 3, 2, GREN[k].col); px(x + 6 + n * 7, yy, P.G3); } if (!max.gren[k]) text('-', x + 5, yy, P.G1); });
-    for (let n = 0; n < max.clip; n++) rect(x + 4 + n * 4, y + 32, 2, 5, P.YE);
-    for (let n = 0; n < Math.min(4, max.clips); n++) { rect(x + 4 + n * 8, y + 40, 6, 10, P.G3); for (let k = 0; k < 4; k++) rect(x + 5 + n * 8, y + 41 + k * 2, 4, 1, P.G1); }
-    if (kit.camera) { rect(x + 4, y + 56, 10, 7, P.G3); disc(x + 9, y + 59, 2, P.K); text(String(max.film), x + 17, y + 56, P.W); }
-    for (let n = 0; n < max.bugs; n++) { disc(x + 6 + (n % 4) * 7, y + 72, 2, P.RD); px(x + 6 + (n % 4) * 7, y + 71, P.W); }
-    if (alarm && (t * 4 | 0) % 2) text('ALARM', x + 2, y + 88, P.RD2);
+  function drawEquip() {
+    // Max's silhouette: dark gray / blue stripes, brown lit edge
+    const sil = (y) => { if (y < 26) return [262, 286]; if (y < 34) return [266, 282]; return [248 - Math.min(6, (y - 34) / 8), 310]; };
+    for (let y = 0; y < H; y++) { const [a, b] = sil(y); rect(a, y, b - a, 1, y % 2 ? P.G1 : P.BL); px(a, y, P.BR); }
+    rect(240, 36, 12, 8, P.G1);
+    if (kit.kevlar) { rect(252, 30, 48, 66, P.G3); dither(252, 30, 48, 66, P.G3, P.G1, 5); rect(266, 30, 20, 10, P.BL); for (let i = 0; i < max.hits; i++) { const hx = 262 + (i * 17) % 30, hy = 50 + (i * 11) % 30; px(hx, hy, P.K); px(hx - 1, hy - 1, P.G1); px(hx + 1, hy + 1, P.G1); px(hx + 1, hy - 1, P.K); } }
+    else for (let i = 0; i < max.hits; i++) rect(266 + i * 8, 56, 4, 4, P.RD2);
+    if (kit.gasmask) { rect(266, 12, 20, 10, P.G3); disc(276, 17, 3, P.BR); disc(276, 17, 1, P.YE); }
+    if (kit.detector) { rect(262, 6, 2, 12, P.YE); rect(288, 6, 2, 12, P.YE); rect(263, 3, 26, 2, P.YE); }
+    // the gun, held at shoulder height
+    if (max.gun === 'uzi') { rect(178, 44, 54, 7, P.K); rect(184, 45, 44, 2, P.G1); rect(200, 51, 6, 8, P.K); rect(214, 51, 5, 10, P.G1); } else { rect(186, 44, 40, 6, P.K); rect(190, 45, 32, 2, P.G1); rect(206, 50, 6, 8, P.K); }
+    px(max.gun === 'uzi' ? 178 : 186, 46, P.G3); rect(226, 44, 18, 4, P.G1);
+    // grenade rack
+    rect(177, 2, 57, 15, P.BL2); ['frag', 'stun', 'gas'].forEach((k2, row) => { const y = 3 + row * 5; if (max.gtype === k2) rect(177, y - 1, 57, 5, P.CY); for (let n = 0; n < Math.min(8, max.gren[k2]); n++) { rect(179 + n * 7, y, 5, 4, P.K); rect(180 + n * 7, y, 3, 3, GREN[k2].col); } });
+    // bugs
+    for (let n = 0; n < max.bugs; n++) { const bx = 236 + (n % 2) * 9, by = 8 + Math.floor(n / 2) * 8; rect(bx, by, 7, 5, P.RD); rect(bx + 1, by + 1, 5, 3, P.RD2); }
+    // bullets and magazines
+    for (let n = 0; n < max.clip; n++) { rect(178 + n * 5, 71, 3, 6, P.W); rect(178 + n * 5, 75, 3, 2, P.G1); }
+    for (let n = 0; n < Math.min(4, max.clips); n++) { rect(178 + n * 10, 80, 7, 14, P.G3); for (let k2 = 0; k2 < 7; k2++) rect(178 + n * 10, 81 + k2 * 2, 7, 1, P.G1); }
+    if (kit.camera) { rect(226, 73, 19, 11, P.W); rect(227, 74, 17, 2, P.G3); disc(235, 79, 3, P.TL); rect(223, 86, 14, 8, P.K); text(String(max.film).padStart(2, '0'), 224, 86, P.GR2); rect(238, 86, 6, 6, P.BL2); }
+    if (kit.safekit) { rect(248, 73, 45, 24, P.K); frame(248, 73, 45, 24, P.G3); textC('SAFE', 270, 74, P.G1); textC('CRACKING', 270, 81, P.G1); textC('KIT', 270, 88, P.G1); }
   }
-  function drawBuildingWindow(x, y, w, h, cur) {
-    frame(x, y, w, h, P.W); rect(x + 1, y + 1, w - 2, h - 2, P.G1);
-    const sc = Math.min((w - 6) / B.bw, (h - 6) / B.bh), ox = x + 3 - B.bx * sc, oy = y + 3 - B.by * sc;
-    for (const r of B.rooms) if (r.seen || opts.plan) { rect(ox + r.x * sc, oy + r.y * sc, r.w * sc, r.h * sc, P.G3); if (r.bugged) px(ox + (r.x + r.w / 2) * sc, oy + (r.y + r.h / 2) * sc, P.RD); }
-    if (cur.w) frame(ox + (cur.x - 0.5) * sc, oy + (cur.y - 0.5) * sc, (cur.w + 1) * sc, (cur.h + 1) * sc, P.W);
-    for (const d of B.outer) rect(ox + d.x * sc - 1, oy + d.y * sc - 1, 3, 3, P.YE);
-    for (const p of people) { if (p.out) continue; const near = kit.detector && dist(p.x, p.y, max.x, max.y) < 90; const rr = B.rooms[roomOf(p.x, p.y)]; if ((near || (rr && rr.bugged)) && (t * 3 | 0) % 2 === 0) px(ox + p.x / TS * sc, oy + p.y / TS * sc, P.W); }
-    if (entryDoor && (t * 3 | 0) % 2) px(ox + max.x / TS * sc, oy + max.y / TS * sc, P.K);
+  function drawBuildingWindow(x, y, w, h) {
+    frame(x, y, w, h, P.G3); rect(x + 1, y + 1, w - 2, h - 2, P.K);
+    const sc = Math.min((w - 6) / B.bw, (h - 6) / B.bh), ox = x + 3 - B.bx * sc + ((w - 6) - B.bw * sc) / 2, oy = y + 3 - B.by * sc;
+    if (opts.plan) rect(ox + B.bx * sc, oy + B.by * sc, B.bw * sc, B.bh * sc, P.YE);
+    for (const r of B.rooms) if (r.seen) { rect(ox + r.x * sc, oy + r.y * sc, r.w * sc, r.h * sc, P.TL); frame(ox + r.x * sc - 1, oy + r.y * sc - 1, r.w * sc + 2, r.h * sc + 2, P.CY); for (const f of F) if (f.room === r.id) rect(ox + f.x * sc, oy + f.y * sc, Math.max(1, f.w * sc - 1), Math.max(1, f.h * sc - 1), { desk: P.BR, file: P.G1, chair: P.BL, couch: P.RD, computer: P.W, terminal: P.W, floorsafe: P.RD2 }[f.type] || P.G1); }
+    for (const d of B.outer) rect(ox + d.x * sc - 1, oy + d.y * sc - 1, 2, 2, P.G1);
+    for (const p of people) { if (p.out || p.kind !== 'guard') continue; const near = kit.detector && dist(p.x, p.y, max.x, max.y) < 110; const rr = B.rooms[roomOf(p.x, p.y)]; if (near || (rr && rr.bugged)) rect(ox + p.x / TS * sc, oy + p.y / TS * sc, 2, 1, P.YE); }
+    if (entryDoor && (t * 3 | 0) % 2) rect(ox + max.x / TS * sc - 1, oy + max.y / TS * sc - 1, 2, 2, P.K);
   }
-  const doorMenu = Menu(B.outer.map((d, i) => ({ label: 'Door #' + (i + 1) + '  (' + { N: 'north', S: 'south', E: 'east', W: 'west' }[d.side] + ' side)', go: () => enterAt(d) })), 100, 44, 140, 10);
-  function drawDoorMenu() {
-    textC('Select Entry Door', W / 2, 20, P.W); rect(W / 2 - 40, 29, 80, 1, P.W);
-    drawBuildingWindow(90, 96, 140, 94, { x: 0, y: 0, w: 0, h: 0 });
-    const sc = Math.min(134 / B.bw, 88 / B.bh); B.outer.forEach((d, i) => text(String(i + 1), 93 - B.bx * sc + d.x * sc + 2, 99 - B.by * sc + d.y * sc - 3, P.YE, P.K));
-    doorMenu.draw();
-  }
+  const doorMenu = Menu(B.outer.map((d, i) => ({ label: 'Door #' + (i + 1), go: () => enterAt(d) })), 46, 70, 80);
+  function drawDoorMenu() { msgBox(28, 58, 110, 16 + B.outer.length * 8); text('Which door?', 34, 61, P.W); doorMenu.draw(); const sc = Math.min(116 / B.bw, 92 / B.bh), ox = 182 - B.bx * sc + (116 - B.bw * sc) / 2, oy = 102 - B.by * sc; B.outer.forEach((d, i) => text(String(i + 1), ox + d.x * sc - 2, oy + d.y * sc - 4, P.YE, P.K)); }
   function drawComputer() {
-    rect(RX + 2, RY + 2, RW - 4, RH - 4, P.K); frame(RX + 2, RY + 2, RW - 4, RH - 4, P.GR2);
-    let y = RY + 6; for (const l of comp.lines) { y = para(l, RX + 6, y, RW - 14, P.GR2, 8) + 1; if (y > RY + 96) break; }
+    rect(VX0, VY0 - 20, VX1 - VX0, VY1 - VY0 + 26, P.K); frame(VX0, VY0 - 20, VX1 - VX0, VY1 - VY0 + 26, P.CY);
+    let y = VY0 - 16; for (const l of comp.lines) { y = para(l, VX0 + 4, y, VX1 - VX0 - 8, P.GR2, 8) + 1; if (y > VY0 + 70) break; }
     const prompt = comp.stage === 'pw' ? 'PASSWORD: ' : 'SEARCH: ';
-    if (comp.stage !== 'result') text(prompt + comp.input + ((t * 3 | 0) % 2 ? '_' : ''), RX + 6, RY + 104, P.YE);
-    else text(comp.last ? 'Enter: log off' : 'Type again, or Esc: log off', RX + 6, RY + 104, P.G3);
-    // touch keyboard
+    if (comp.stage !== 'result') text(prompt + comp.input + ((t * 3 | 0) % 2 ? '_' : ''), VX0 + 4, VY0 + 76, P.YE);
+    else text(comp.last ? 'Enter: log off' : 'Type again, or Esc: log off', VX0 + 4, VY0 + 76, P.G3);
     const K = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (let i = 0; i < 29; i++) { const x = 8 + (i % 13) * 12, yy = 148 + Math.floor(i / 13) * 12; if (i >= 26 && i > 28) continue; rect(x, yy, 11, 11, i < 26 ? P.GR : P.G1); textC(i < 26 ? K[i] : ['_', '<', 'OK'][i - 26], x + 5, yy + 2, i < 26 ? P.K : P.W); }
+    for (let i = 0; i < 29; i++) { const x = 10 + (i % 13) * 12, yy = 148 + Math.floor(i / 13) * 12; rect(x, yy, 11, 11, i < 26 ? P.GR : P.G1); textC(i < 26 ? K[i] : ['_', '<', 'OK'][i - 26], x + 5, yy + 2, i < 26 ? P.K : P.W); }
   }
   function drawOver() {
-    const k = over.kind; msgBox(20, 50, W - 40, 96);
-    textC({ escaped: 'YOU ARE OUT', captured: 'KNOCKED OUT AND CAPTURED', abort: 'MISSION ABORTED' }[k], W / 2, 58, k === 'escaped' ? P.GR2 : P.RD2);
-    const lines = [];
-    if (max.prisoner && k === 'escaped') lines.push('You bring out a prisoner: ' + (occupant.known.name ? occupant.name : 'the suspect') + '.');
-    if (k === 'captured' && max.prisoner) lines.push('Your prisoner escaped.');
-    lines.push('Clues photographed: ' + out.clues.length + (out.messages ? '.  Coded messages: ' + out.messages : '.'));
+    const k = over.kind; const lines = [{ escaped: 'You quickly slip out of the building.', captured: 'You slump to the ground, overcome by your wounds.', abort: 'You abandon the mission.' }[k]];
+    if (max.prisoner && k === 'escaped') lines.push('Your prisoner comes with you: ' + (occupant.known.name ? occupant.name : 'the suspect') + '.');
+    if (k === 'captured' && max.prisoner) lines.push('Your prisoner escapes.');
+    lines.push('Clues photographed: ' + out.clues.length + (out.messages ? '. Coded messages: ' + out.messages : '.'));
     if (out.plan) lines.push('Master plan recovered.'); if (out.personnel) lines.push('Personnel file recovered.'); if (out.evidence) lines.push('Evidence taken: ' + out.evidence + '.'); if (out.bugged) lines.push('The building is bugged.');
-    let y = 72; for (const l of lines) y = para(l, 32, y, W - 64, P.W, 9) + 1;
-    if (over.t > 0.8) textC('Press a key', W / 2, 136, P.G3);
+    const ls = lines.flatMap(l => wrap(l, 136)); msgBox(14, 60, 144, ls.length * 8 + 20); ls.forEach((l, i) => text(l, 18, 64 + i * 8, P.W));
+    if (over.t > 0.8) text('Press a key', 18, 66 + ls.length * 8, P.G3);
   }
   function end() {
     const k = over.kind, lost = k === 'captured';
@@ -505,7 +535,7 @@ function breakinScene(opts, done) {
     if (!entryDoor) { if (k === 'menu') { over = { kind: 'abort', t: 1 }; end(); return; } doorMenu.key(k); return; }
     if (over) { if (over.t > 0.8 && (k === 'select' || k === 'fire' || k === 'action' || k === 'menu')) end(); return; }
     if (pauseMenu) { if (k === 'menu') pauseMenu = null; else pauseMenu.key(k); return; }
-    if (k === 'menu') { pauseMenu = Menu([{ label: 'Continue', go: () => { pauseMenu = null; } }, { label: 'Photograph (P / F2)', go: () => { pauseMenu = null; photo(); } }, { label: 'Plant a bug (B / F3)', go: () => { pauseMenu = null; bug(); } }, { label: 'Crouch / stand (C)', go: () => { pauseMenu = null; max.crouch = !max.crouch; } }, { label: 'Throw grenade long (F7)', go: () => { pauseMenu = null; throwG(2); } }, { label: 'Abort (lose everything)', go: () => { pauseMenu = null; finish('abort'); } }], 76, 74, 170, 10); return; }
+    if (k === 'menu') { pauseMenu = Menu([{ label: 'Continue', go: () => { pauseMenu = null; } }, { label: 'Photograph (P)', go: () => { pauseMenu = null; photo(); } }, { label: 'Plant a bug (B)', go: () => { pauseMenu = null; bug(); } }, { label: 'Crouch/stand (C)', go: () => { pauseMenu = null; max.crouch = !max.crouch; } }, { label: 'Long throw (F7)', go: () => { pauseMenu = null; throwG(2); } }, { label: 'Abort mission', go: () => { pauseMenu = null; finish('abort'); } }], 44, 62, 118); return; }
     if (max.stun > 0) return;
     if (k === 'action' || k === 'select') examine();
     if (k === 'alt') throwG(1);
@@ -516,11 +546,11 @@ function breakinScene(opts, done) {
     if (!entryDoor) { doorMenu.tap(x, y); return; }
     if (over) { if (over.t > 0.8) end(); return; }
     if (pauseMenu) { pauseMenu.tap(x, y); return; }
-    if (x > 178 && y < 28) { const ks = ['frag', 'stun', 'gas']; const i = Math.floor((y - 3) / 8); if (ks[i]) { max.gtype = ks[i]; sfx.blip(); } return; }
-    if (x > 178 && x < 230 && y > 52 && y < 66) { photo(); return; }
-    if (x > 178 && x < 230 && y >= 66 && y < 80) { bug(); return; }
-    if (x < 28 && y < 30) { max.crouch = !max.crouch; say(max.crouch ? 'Crouching.' : 'Standing.'); return; }
-    const cam = roomCam(); if (x >= RX && x < RX + RW && y >= RY && y < RY + RH) max.dir = Math.atan2((y - cam.oy) / cam.Z - max.y, (x - cam.ox) / cam.Z - max.x);
+    if (x > 176 && x < 234 && y < 18) { const ks = ['frag', 'stun', 'gas']; const i = Math.floor((y - 2) / 5); if (ks[i]) { max.gtype = ks[i]; sfx.blip(); } return; }
+    if (x > 220 && x < 247 && y > 70 && y < 96) { photo(); return; }
+    if (x > 234 && x < 254 && y < 44) { bug(); return; }
+    if (x < 26 && y < 40) { max.crouch = !max.crouch; say(max.crouch ? 'Crouching.' : 'Standing.'); return; }
+    const v = roomView(); if (x < 170 && y > 20) max.dir = Math.atan2((y - v.oy) / v.S * TS - max.y, (x - v.ox) / v.S * TS - max.x);
   };
   scene.rawKey = e => {
     const c = e.code; if (!entryDoor || over || pauseMenu || comp) return false;

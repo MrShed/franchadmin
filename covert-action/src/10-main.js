@@ -8,39 +8,37 @@ function buildingName(b) { return b.agency ? 'the ' + b.agency + ' office' : b.o
 
 function buildingScene(b) {
   const back = () => go(buildingScene(b));
-  const items = [{ label: 'Place Wiretap', go: () => startWiretap(b) }];
-  if (!b.agency) items.push({ label: 'Break Into The Building', go: () => startBreakin(b) }, { label: 'Watch The Building', go: () => go(watchScene(b)) });
+  const items = [{ label: 'Place wiretap', go: () => startWiretap(b) }];
+  if (!b.agency) items.push({ label: 'Break into building', go: () => startBreakin(b) }, { label: 'Watch the building', go: () => go(watchScene(b)) });
   items.push({ label: 'Check Data', go: () => go(dataSection(back)) }, { label: 'Leave', go: () => go(cityScene()) });
-  return locationScreen({ lines: ['You are at ' + buildingName(b) + ',', b.address + '.', guardWords(b), 'Do you ...'], items, art: (x, y, w, h) => buildingArt(x, y, w, h, b), back: () => go(cityScene()) });
+  const who_ = b.agency ? b.agency + ' ' + b.type : (b.orgKnown ? b.org.name : 'unknown') + ' ' + (b.orgKnown ? b.type : 'building');
+  const header = ['You are at the', who_, guardWords(b), 'Do you ...'].flatMap(l => wrap(l, 118));
+  return menuScene({ menu: Menu(items, 13, 38 + header.length * 8, 108), back: () => go(cityScene()),
+    draw() { rect(0, 0, W, H, P.K); buildingArt(130, 35, 190, 165, b); statusBox(4); header.forEach((l, i) => text(l, 7, 38 + i * 8, P.W)); this.menu.draw(); } });
 }
 
-// ---------- WATCH THE BUILDING ----------
+// ---------- WATCH THE BUILDING (binoculars) ----------
 function watchScene(b) {
-  let face = null, target = null, note = 'You settle down across the street and watch the door.';
+  let face = null, target = null, s;
   const next = () => {
     advance(ri(30, 90)); const p = occupantOf(b);
     if (p && rnd() < 0.35 + (b.watchT = (b.watchT || 0) + 0.1)) { target = p; face = p.face; b.watchT = 0; }
-    else { target = null; const sex = rnd() < 0.3 ? 'f' : 'm'; face = makeFace(sex, cityById(b.city).lang); }
-    note = (face.sex === 'f' ? 'A woman' : 'A man') + ' comes out of the building and walks to a car.';
-    sfx.tone(300, 0.06);
+    else { target = null; face = makeFace(rnd() < 0.3 ? 'f' : 'm', cityById(b.city).lang); }
+    sfx.tone(300, 0.06); s.menu = mk();
   };
-  let s;
   const mk = () => Menu([
-    { label: 'Wait', go: () => { next(); s.menu = mk(); } },
-    { label: face && face.sex === 'f' ? 'Follow Her' : 'Follow Him', off: !face, go: () => startChase(b, target, face) },
-    { label: 'Trace The Car', off: !face, go: () => startTracer(b, target) },
-    { label: 'Leave', go: () => go(buildingScene(b)) },
-  ], 14, 88, 128, 9);
-  s = menuScene({
-    menu: null, back: () => go(buildingScene(b)),
-    enter() { s.menu = mk(); },
+    { label: 'Wait', go: next },
+    { label: 'Follow car.', off: !face, go: () => startChase(b, target, face) },
+    { label: 'Trace car.', off: !face, go: () => startTracer(b, target) },
+    { label: 'Check Data', go: () => go(dataSection(() => go(s))) },
+  ], 16, 44, 96);
+  s = menuScene({ menu: null, back: () => go(buildingScene(b)), enter() { if (!s.menu) s.menu = mk(); },
     draw() {
-      rect(0, 0, W, H, P.K); watchArt(150, 30, 170, 170, b, face, this.t); locPlate(cityById(b.city).name + ', ' + cityById(b.city).country);
-      text('Watching ' + buildingName(b) + '.', 10, 34, P.W); para(note, 10, 46, 134, P.G3, 9);
-      this.menu && this.menu.draw();
-      if (face) text('Compare the face with your files.', 10, 136, P.G1);
-    },
-  });
+      rect(0, 0, W, H, P.K); binocularArt(120, 0, 200, 200, b, face);
+      msgBox(3, 20, 116, 62); const hd = face ? ['You notice someone', 'leaving the building.', 'Do you ...'] : ['You watch the', 'building. Do you ...'];
+      hd.forEach((l, i) => text(l, 8, 23 + i * 8 - (face ? 0 : 0), P.W)); s.menu.y = 23 + hd.length * 8; s.menu.draw();
+      statusBox(174);
+    } });
   return s;
 }
 
@@ -105,7 +103,7 @@ function startBreakin(b) {
       if (res.personnel) { game.inside.push(personnelFile(b.org)); out.push('A personnel file of the ' + b.org.name + '. See Inside Information.'); }
       if (res.messages) for (let i = 0; i < res.messages; i++) { const st = pick(game.crime.steps.filter(s => s.kind !== 'item' && p && (s.from === p.id || s.to === p.id))) || pick(game.crime.steps.filter(s => s.kind !== 'item')); if (st) { game.messages.push(Object.assign(makeMessage(st), { src: 'Wall safe, ' + b.address })); out.push('A coded message from the safe - take it to the Crypto Branch.'); } }
       const mins = 45 + Math.round(res.seconds / 2);
-      if (res.kind === 'captured') { afterMission(mins + 12 * 60, () => go(report('Captured', ['You were knocked out and taken prisoner. After hours of questioning you manage to steal a gun, loosen your bonds and slip away.', ...out], () => go(cityScene())))); return; }
+      if (res.kind === 'captured') { afterMission(mins + 6 * 60, () => go(capturedScene(out))); return; }
       if (res.prisoner) { afterMission(mins, () => go(arrestResult(res.prisoner, 'breakin'))); return; }
       if (!out.length) out.push('You found nothing of value.');
       afterMission(mins, () => go(report('Break-In', out, () => go(cityScene()))));
@@ -126,16 +124,16 @@ function startCrypto(m) {
   go(cryptoScene(m.text, { msgNo: m.id, level: game.diff }, res => {
     const cr = game.crime, from = cr.people[m.from], to = cr.people[m.to];
     advance(Math.max(30, Math.round(res.seconds || 60)) * 2 + (res.hints || 0) * 120);
-    if (!res.success) { go(report('Crypto Branch', ['The message is still unreadable. It stays in the pile.'], () => go(ciaScene()))); return; }
+    if (!res.success) { go(report('Crypto Branch', ['The message is still unreadable. It stays in the pile.'], () => go(cryptoBranch(() => go(ciaFloors()))))); return; }
     m.decoded = true; const st = cr.steps.find(s => s.from === m.from && s.to === m.to); if (st) st.known = true;
     [from, to].forEach(p => { learn(p, 'role'); learn(p, 'org'); learn(p, 'city'); p.exists = true; });
     const R = (k, v) => [k, v];
     const rows = [R('Message Source', who(from)), R("Source's Organization", from.org.name), R('Evidence Against Source', from.role), R('Message Recipient', who(to)), R("Recipient's Organization", to.org.name), R('Location of Recipient', cityById(to.city).name), R('Evidence Against Recipient', to.role)];
     go(pageScene(() => {
-      rect(0, 0, W, H, P.K); msgBox(4, 4, W - 8, H - 8); text('Message Decode', 14, 12, P.YE); text('Msg# ' + m.id, 240, 12, P.G3);
-      rows.forEach(([k, v], i) => { text(k, 14, 28 + i * 11, P.G3); text(fitText(v, 150), 150, 28 + i * 11, P.W); });
-      text('Paraphrased Decoded Message:', 14, 110, P.G3); para(m.text.split('. ').slice(1).join('. ').toLowerCase().replace(/(^|\. )([a-z])/g, (a, b, c) => b + c.toUpperCase()), 14, 122, W - 28, P.CY, 9);
-    }, () => go(ciaScene())));
+      folder(P.G3, 'Message Decode'); text('Msg# ' + m.id, 14, 20, P.G1);
+      rows.forEach(([k, v], i) => { text(k, 14, 30 + i * 10, P.K); text(fitText(v, 150), 150, 30 + i * 10, k.startsWith('Evidence') ? P.RD : P.BL); });
+      text('Paraphrased Decoded Message:', 14, 108, P.K); para(m.text.split('. ').slice(1).join('. ').toLowerCase().replace(/(^|\. )([a-z])/g, (a, b, c) => b + c.toUpperCase()), 14, 118, W - 28, P.G1, 8);
+    }, () => go(cryptoBranch(() => go(ciaFloors())))));
   }));
 }
 
@@ -143,9 +141,18 @@ function startCrypto(m) {
 function afterMission(minutes, next) { if (practiceMode) { practiceMode = false; go(optionsScene()); return; } advance(minutes); if (!checkCaseEnd()) next(); }
 function report(title, lines, next) {
   return pageScene(() => {
-    rect(0, 0, W, H, P.K); msgBox(8, 20, W - 16, H - 40); text(title, 18, 28, P.YE); textR(clockStr(), W - 18, 28, P.G3); rect(18, 37, W - 36, 1, P.G1);
-    let y = 44; for (const l of lines) { y = para(l, 18, y, W - 36, P.W, 9) + 4; if (y > 160) break; }
+    rect(0, 0, W, H, P.K); text(title, 15, 12, P.YE);
+    let y = 24; for (const l of lines) { y = para(l, 15, y, 290, P.W, 8) + 4; if (y > 160) break; }
+    statusBox(174);
   }, next);
+}
+function capturedScene(out) {
+  const held = game.crime.people.filter(p => p.status === 'arrested' && p.role !== 'Mastermind');
+  const escape = () => go(pageScene(() => { rect(0, 0, W, H, P.K); rect(225, 0, 95, 200, P.RD); dither(225, 0, 95, 200, P.RD, P.K, 4); rect(240, 70, 60, 20, P.G3); disc(250, 80, 10, P.G3); disc(290, 80, 10, P.G3); disc(250, 80, 6, P.RD); disc(290, 80, 6, P.RD); rect(230, 110, 90, 40, P.K); para('After hours of effort, you manage to work your hands free of the cuffs. You slip out past a sleeping guard and make your way back to the CIA office.', 15, 20, 200, P.W, 8); statusBox(174); }, () => go(report('Break-in', out.length ? out : ['You lost everything you were carrying.'], () => go(cityScene())))));
+  return menuScene({
+    menu: Menu([{ label: 'No thanks, Squinty.', go: () => { advance(18 * 60); escape(); } }, { label: 'Agree to exchange.', off: !held.length, go: () => { const p = pick(held); p.status = 'free'; go(report('Exchange', ['You are traded for ' + p.name + ', who walks free and rejoins the plot.'], () => go(ciaFloors()))); } }], 23, 120, 200),
+    draw() { rect(0, 0, W, H, P.K); captureArt(225, 0, 95, 200); para('Your captors question you, but you refuse to talk. "So you are the famous CIA agent Max Remington." "We have lots of time, soon you will tell us what you know." "Perhaps we should exchange you for one of our agents?"', 15, 20, 200, P.W, 8); this.menu.draw(); statusBox(174); },
+  });
 }
 function practice(kind, diff) {
   practiceMode = true; game.diff = diff;

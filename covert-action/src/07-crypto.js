@@ -17,7 +17,7 @@ function cryptoScene(plain, opts, done) {
   const msgNo = opts.msgNo || 'M' + ri(100, 399); let hints = 0;
   let time = 0, over = null, t = 0, picker = false; // the workstation clock counts up
   // text layout: 6px cells, lines broken at spaces, hyphenated like the original if a word won't fit
-  const CW = 6, X0 = 52, maxCols = 42, LH = 17, LY = 16;
+  const CW = 6, X0 = 45, maxCols = 44, LH = 16, LY = 16;
   const lines = []; { let cur = ''; for (const word of cipher.split(' ')) { const cand = cur ? cur + ' ' + word : word; if (cand.length > maxCols) { lines.push(cur); cur = word; } else cur = cand; } if (cur) lines.push(cur); }
   for (let i = 0; i < lines.length; i++) if (lines[i].length > maxCols) lines.splice(i, 1, lines[i].slice(0, maxCols), lines[i].slice(maxCols));
   const cells = []; lines.forEach((l, r) => { for (let i = 0; i < l.length; i++) cells.push({ ch: l[i], r, c: i }); });
@@ -65,13 +65,13 @@ function cryptoScene(plain, opts, done) {
     draw() {
       rect(0, 0, W, H, P.K);
       // title bar
-      rect(0, 0, W, 9, P.GR2); textC('CRYPTO WORKSTATION, Msg#' + msgNo, 150, 1, P.K); textR(clock(time), W - 4, 1, P.K);
+      rect(34, 0, 286, 9, P.GR2); text('CRYPTO WORKSTATION, Msg#' + msgNo, 40, 1, P.K); textR(clock(time), W - 4, 1, P.W);
       // frequency column
-      rect(14, 10, 30, 189, P.GR2); rect(16, 12, 26, 185, P.K);
+      rect(0, 0, 33, 200, P.GR); rect(2, 2, 29, 196, P.K);
       A.split('').forEach((c, i) => {
-        const y = 14 + i * 7; const n = freq[c] || 0;
-        if (guess[c]) text(guess[c], 4, y - 1, P.W);
-        text(c, 18, y - 1, n ? P.GR2 : P.GR); if (n) textR(String(n), 41, y - 1, P.CY);
+        const y = 5 + i * 7.4; const n = freq[c] || 0;
+        if (guess[c]) text(guess[c], 4, y - 1, P.CY);
+        text(c, 12, y - 1, n ? P.GR2 : P.GR); if (n) textR(String(n), 30, y - 1, P.GR2);
       });
       const selC = letterCells[cur] && letterCells[cur].ch;
       cells.forEach((c, i) => {
@@ -83,7 +83,7 @@ function cryptoScene(plain, opts, done) {
         const gch = guess[c.ch];
         if (gch) text(gch, x + 1, y + 8, given.has(c.ch) ? P.W : over && !over.win && gch !== A[key.indexOf(c.ch)] ? P.RD2 : P.CY);
       });
-      text('Arrows move, type a letter. E: hint (costs time). Esc quits.', X0, 189, P.GR);
+      text('Type letters. E: hint (costs time). Esc: quit', X0, 189, P.GR);
       if (picker && !over) {
         rect(PX - 4, PY - 12, 13 * PW + 8, 2 * PH + 30, P.K); frame(PX - 4, PY - 12, 13 * PW + 8, 2 * PH + 30, P.GR2);
         text('Code letter ' + selC + ' stands for...', PX, PY - 9, P.GR2);

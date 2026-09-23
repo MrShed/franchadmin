@@ -3,43 +3,44 @@
 // City Close-Up (bottom right). Tail the suspect, or ram him head-on.
 // ===================================================================
 const CARS = [
-  { name: 'Sedan', speed: 60, handling: 'Fair', consp: 'Moderate', tracking: false, col: P.G3 },
-  { name: 'Sports car', speed: 80, handling: 'Fair', consp: 'High', tracking: true, col: P.RD2 },
-  { name: 'Old truck', speed: 40, handling: 'Fair', consp: 'Low', tracking: false, col: P.BR },
-  { name: 'Van', speed: 40, handling: 'Excellent', consp: 'Moderate', tracking: true, col: P.W },
-  { name: 'Coupe', speed: 80, handling: 'Excellent', consp: 'Extreme', tracking: false, col: P.YE },
+  { name: 'Countach', speed: 80, handling: 'Excellent', consp: 'High', tracking: true, col: P.W, body: 'wedge' },
+  { name: 'Coupe', speed: 80, handling: 'Excellent', consp: 'Low', tracking: false, col: P.G1, body: 'wedge' },
+  { name: 'Sports car', speed: 80, handling: 'Fair', consp: 'Moderate', tracking: true, col: P.GR2, body: 'wedge' },
+  { name: 'Hatchback', speed: 40, handling: 'Excellent', consp: 'Low', tracking: true, col: P.CY, body: 'box' },
 ];
 const CONSP = { Low: 0.6, Moderate: 1, High: 1.5, Extreme: 2.2 };
+function drawCarSide(x, y, c) {
+  const body = c.col, dark = c.col === P.G1 ? P.K : P.G1;
+  if (c.body === 'wedge') { g.fillStyle = body; g.beginPath(); g.moveTo(x, y + 20); g.lineTo(x + 40, y + 6); g.lineTo(x + 70, y + 4); g.lineTo(x + 104, y + 14); g.lineTo(x + 108, y + 24); g.lineTo(x + 2, y + 26); g.fill(); rect(x + 42, y + 7, 26, 6, P.K); rect(x + 44, y + 8, 10, 4, P.CY); rect(x + 90, y + 4, 16, 3, dark); }
+  else { rect(x + 4, y + 12, 100, 14, body); rect(x + 24, y + 2, 56, 12, body); rect(x + 28, y + 4, 22, 8, P.CY); rect(x + 54, y + 4, 22, 8, P.CY); rect(x + 60, y + 18, 28, 3, P.RD2); }
+  rect(x, y + 24, 108, 2, P.K); for (const wx of [x + 22, x + 86]) { disc(wx, y + 27, 7, P.K); disc(wx, y + 27, 4, P.G3); disc(wx, y + 27, 1, P.K); }
+}
 function carSelectScene(start) {
   const picks = []; let sel = 0;
-  const choose = () => { if (picks.includes(sel)) { picks.splice(picks.indexOf(sel), 1); sfx.blip(); return; } picks.push(sel); sfx.select(); if (picks.length === 2) start(picks.map(i => CARS[i])); };
+  const choose = () => { if (picks.includes(sel)) { picks.splice(picks.indexOf(sel), 1); sfx.blip(); return; } picks.push(sel); sfx.select(); if (picks.length === 2) setTimeout(() => start(picks.map(i => CARS[i])), 300); };
+  const labCol = [P.CY, P.RD2, P.PK, P.YE];
   return {
     t: 0, update(dt) { this.t += dt; },
-    onKey(k) { if (k === 'left' || k === 'up') { sel = (sel + CARS.length - 1) % CARS.length; sfx.blip(); } else if (k === 'right' || k === 'down') { sel = (sel + 1) % CARS.length; sfx.blip(); } else if (k === 'select' || k === 'fire') choose(); },
-    onTap(x, y) { const i = Math.floor((x - 4) / 63); if (y > 30 && y < 170 && i >= 0 && i < CARS.length) { sel = i; choose(); } },
+    onKey(k) { if (k === 'up' || k === 'left') { sel = (sel + 3) % 4; sfx.blip(); } else if (k === 'down' || k === 'right') { sel = (sel + 1) % 4; sfx.blip(); } else if (k === 'select' || k === 'fire') choose(); },
+    onTap(x, y) { const i = Math.floor(y / 50); if (i >= 0 && i < 4) { sel = i; choose(); } },
     draw() {
-      rect(0, 0, W, H, P.K); textC('Chase Cars', W / 2, 6, P.W); rect(W / 2 - 26, 15, 52, 1, P.W); textC('Choose two cars. The suspect is pulling away...', W / 2, 20, P.G3);
+      rect(0, 0, W, H, P.K);
       CARS.forEach((c, i) => {
-        const x = 4 + i * 63, y = 32, on = i === sel, taken = picks.includes(i);
-        rect(x, y, 60, 136, on ? P.BL2 : P.BL); frame(x, y, 60, 136, taken ? P.YE : P.W);
-        // the car, side view
-        rect(x + 8, y + 26, 44, 10, c.col); rect(x + 16, y + 18, 24, 9, c.col); rect(x + 18, y + 20, 9, 6, P.CY); rect(x + 29, y + 20, 9, 6, P.CY); disc(x + 17, y + 37, 4, P.K); disc(x + 43, y + 37, 4, P.K); disc(x + 17, y + 37, 1, P.G3); disc(x + 43, y + 37, 1, P.G3);
-        if (c.name === 'Old truck') { rect(x + 30, y + 16, 22, 10, P.BR); } if (c.name === 'Van') { rect(x + 12, y + 14, 38, 13, c.col); rect(x + 40, y + 16, 8, 7, P.CY); }
-        textC(c.name, x + 30, y + 48, P.W);
-        text('Max. Speed', x + 4, y + 62, P.G3); text(c.speed + ' mph', x + 8, y + 71, P.YE);
-        text('Handling', x + 4, y + 83, P.G3); text(c.handling, x + 8, y + 92, P.YE);
-        text('Conspicuous', x + 4, y + 104, P.G3); text(c.consp, x + 8, y + 113, P.YE);
-        text(c.tracking ? '(Tracking)' : '', x + 4, y + 125, P.CY);
-        if (taken) textC('#' + (picks.indexOf(i) + 1), x + 30, y + 4, P.YE);
+        const y = i * 50; rect(0, y, W, 46, i === sel ? P.BL2 : P.BL); rect(0, y + 46, W, 1, P.G3); rect(0, y + 49, W, 1, P.G3);
+        drawCarSide(12, y + 8, c);
+        if (c.tracking) textR('(Tracking)', 312, y + 3, P.W);
+        text('Max. Speed:', 150, y + 12, labCol[i]); text(c.speed + ' mph', 244, y + 12, P.W);
+        text('Handling:', 150, y + 20, labCol[i]); text(c.handling, 244, y + 20, P.W);
+        text('Conspicuousity:', 150, y + 28, labCol[i]); text(c.consp, 244, y + 28, P.W);
+        if (picks.includes(i)) text('Car #' + (picks.indexOf(i) + 1), 12, y + 2, P.YE);
       });
-      text('Arrows choose, Enter picks.', 8, 184, P.G1);
     },
   };
 }
 
 function chaseScene(opts, done) {
   const sk = skillLevel('driving'), level = opts.level || 0;
-  const N = 16, SP = 12, MX = 4, MY = 4; // 16x16 intersections, 12px blocks
+  const N = 25, SP = 8, MX = 5, MY = 5; // streets every 8 px, 2 px wide, 6-px blocks
   const nodeXY = (i, j) => [MX + i * SP, MY + j * SP];
   const edge = new Set(); const ek = (i, j, d) => i + ',' + j + ',' + d;
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { if (i < N - 1) edge.add(ek(i, j, 0)); if (j < N - 1) edge.add(ek(i, j, 1)); }
@@ -55,16 +56,16 @@ function chaseScene(opts, done) {
   const night = !!opts.night, sight = night ? 2 : 6;
   // ---- cars ----
   const cars = [];
-  const mph2px = v => v * 0.16;
+  const mph2px = v => v * 0.12;
   function mk(i, j, kind, col, speed) { const nb = nbrs(i, j); const [a, b] = pick(nb); const c = { a: [i, j], b: [a, b], s: 0, v: 0, target: mph2px(speed), kind, col, order: null, stopped: false, seen: false, susp: 0 }; cars.push(c); return c; }
   const len = () => SP;
-  const pos = c => { const [ax, ay] = nodeXY(...c.a), [bx, by] = nodeXY(...c.b); const k = c.s / SP; const dx = Math.sign(bx - ax), dy = Math.sign(by - ay); return [ax + (bx - ax) * k - dy, ay + (by - ay) * k + dx, dx, dy]; };
+  const pos = c => { const [ax, ay] = nodeXY(...c.a), [bx, by] = nodeXY(...c.b); const k = c.s / SP; const dx = Math.sign(bx - ax), dy = Math.sign(by - ay); return [ax + (bx - ax) * k + 0.5, ay + (by - ay) * k + 0.5, dx, dy]; };
   function route(from, to) { const key = n => n[0] + ',' + n[1]; const D = new Map([[key(from), 0]]), prev = new Map(); const q = [[0, from]]; while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, n] = q.shift(); if (key(n) === key(to)) break; for (const m of nbrs(...n)) { const nd = d + 1 + rnd() * 0.6; if (nd < (D.get(key(m)) ?? 1e9)) { D.set(key(m), nd); prev.set(key(m), n); q.push([nd, m]); } } } const out = []; let n = to; while (n && key(n) !== key(from)) { out.unshift(n); n = prev.get(key(n)); } return out; }
-  const start = [ri(4, N - 5), ri(4, N - 5)];
-  let dest; do { dest = [ri(0, N - 1), ri(0, N - 1)]; } while (Math.abs(dest[0] - start[0]) + Math.abs(dest[1] - start[1]) < 12);
+  const start = [ri(6, N - 7), ri(6, N - 7)];
+  let dest; do { dest = [ri(0, N - 1), ri(0, N - 1)]; } while (Math.abs(dest[0] - start[0]) + Math.abs(dest[1] - start[1]) < 18);
   labels.push({ name: '', i: dest[0], j: dest[1], dest: true });
-  const sus = mk(start[0], start[1], 'suspect', P.GR2, 40 + level * 5); sus.route = route(start, dest); sus.b = sus.route.shift(); sus.a = start.slice(); sus.path = [start.slice()];
-  const mine = opts.cars.map((cd, n) => { const c = mk(start[0], start[1], 'agent', n ? P.MG : P.CY, cd.speed); c.def = cd; c.n = n + 1; c.follow = true; c.a = start.slice(); c.b = sus.b.slice(); c.s = -8 - n * 10; c.wait = 2 + n * 2; c.target = mph2px(40); return c; });
+  const sus = mk(start[0], start[1], 'suspect', P.PK, 40 + level * 5); sus.route = route(start, dest); sus.b = sus.route.shift(); sus.a = start.slice(); sus.path = [start.slice()];
+  const mine = opts.cars.map((cd, n) => { const c = mk(start[0], start[1], 'agent', P.GR2, cd.speed); c.def = cd; c.n = n + 1; c.follow = true; c.a = start.slice(); c.b = sus.b.slice(); c.s = 0; c.wait = 2 + n * 2; c.target = mph2px(40); return c; });
   for (let n = 0; n < 14; n++) mk(ri(0, N - 1), ri(0, N - 1), 'civ', pick([P.G3, P.W, P.BR, P.YE, P.RD, P.BL2]), 30 + rnd() * 20).target = mph2px(25 + rnd() * 20);
   let ctrl = 0, t = 0, over = null, aware = false, arrivedT = -1, lostT = 0, prompt = 0, msg = 'The suspect pulls away. Both your cars are following (F).', msgT = 4, lastSeen = null;
   const me = () => mine[ctrl];
@@ -137,27 +138,21 @@ function chaseScene(opts, done) {
     },
     draw() {
       rect(0, 0, W, H, P.K);
-      // ---- city map ----
-      rect(0, 0, 198, 200, P.BL); rect(1, 1, 196, 196, P.G1);
-      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const [x, y] = nodeXY(i, j); if (i < N - 1 && !has(i, j, i + 1, j)) rect(x + 1, y - 1, SP - 2, 3, P.G1); }
-      for (let j = 0; j < N - 1; j++) for (let i = 0; i < N - 1; i++) { const [x, y] = nodeXY(i, j); rect(x + 2, y + 2, SP - 3, SP - 3, P.K); }
-      // streets are the lighter channels
-      for (const k of edge) { const [i, j, d] = k.split(',').map(Number); const [x, y] = nodeXY(i, j); if (d === 0) rect(x - 1, y - 1, SP + 3, 3, P.G3); else rect(x - 1, y - 1, 3, SP + 3, P.G3); }
-      for (const l of labels) { if (l.dest && !over && arrivedT < 0) continue; const [x, y] = nodeXY(l.i, l.j); rect(x - 1, y - 1, 3, 3, l.dest ? P.YE : P.W); if (l.name) text(l.name, x + 3, y - 4, P.W, P.K); }
-      for (const c of cars) {
-        if (c === sus) continue; if (c.wait) continue; const [x, y] = pos(c);
-        if (c.kind === 'agent') { const on = c === me(); if (!on || (t * 4 | 0) % 2) rect(x - 1, y - 1, 3, 3, c.col); text(String(c.n), x + 3, y - 3, c.col); }
-        else rect(x - 1, y - 1, 2, 2, c.col);
-      }
+      // ---- city map: light gray blocks by day, dark gray at night, 2-px black streets ----
+      rect(0, 0, 200, 200, P.BL); rect(1, 1, 199, 199, night ? P.G1 : P.G3);
+      for (const k of edge) { const [i, j, d] = k.split(',').map(Number); const [x, y] = nodeXY(i, j); if (d === 0) rect(x - 1, y - 1, SP + 2, 2, P.K); else rect(x - 1, y - 1, 2, SP + 2, P.K); }
+      for (const l of labels) { if (l.dest && !over && arrivedT < 0) continue; const [x, y] = nodeXY(l.i, l.j); rect(x, y, 2, 2, l.dest ? P.YE : P.W); if (l.name) text(l.name, x + 3, y - 3, P.BL2); }
+      for (const c of cars) { if (c === sus || c.wait) continue; const [x, y, dx] = pos(c); const hor = dx !== 0; if (c.kind === 'agent') { if (c !== me() || (t * 4 | 0) % 2) rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, c.col); } else rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, night ? P.G3 : P.G1); }
       const seenNow = mine.some(m => m.seen);
-      if (seenNow) { const [x, y] = pos(sus); rect(x - 1, y - 1, 3, 3, (t * 6 | 0) % 2 ? P.GR2 : P.W); } else if (lastSeen) rect(lastSeen[0] - 1, lastSeen[1] - 1, 3, 3, P.GR);
+      if (seenNow) { const [x, y, dx] = pos(sus); rect(x - 0.5, y - 0.5, dx ? 2 : 1, dx ? 1 : 2, P.PK); } else if (lastSeen) rect(lastSeen[0] - 0.5, lastSeen[1] - 0.5, 1, 1, P.MG);
+      rect(200, 0, 1, 200, P.W); rect(319, 0, 1, 200, P.W); rect(200, 98, 120, 1, P.W); rect(200, 99, 120, 1, P.YE);
       // ---- windshield ----
-      drawWindshield(200, 0, 120, 98);
+      drawWindshield(201, 0, 118, 98);
       // ---- close-up ----
-      drawCloseUp(200, 100, 120, 100);
-      if (msgT > 0 && !over) { const ls = wrap(msg, 190); rect(0, 0, 198, ls.length * 9 + 2, P.K); ls.forEach((l, i) => text(l, 4, 1 + i * 9, P.YE)); }
-      if (prompt > 0 && !over && (t * 6 | 0) % 2) { msgBox(10, 86, 180, 18); textC('Press F1 now to make arrest', 100, 91, P.YE); }
-      if (over) { msgBox(12, 60, 176, 70); const [h, c] = { followed: ['DESTINATION FOUND', P.GR2], arrest: ['ARREST!', P.GR2], lost: ['YOU LOST HIM', P.RD2], late: ['TOO LATE', P.RD2], abort: ['CHASE ABANDONED', P.YE] }[over.kind]; textC(h, 100, 68, c); para({ followed: 'He parks and goes inside. You note the address.', arrest: 'You cut him off head-on and drag him out of the car.', lost: 'The car disappears into the city.', late: 'By the time you get there the car is empty.', abort: 'You give up the chase.' }[over.kind], 22, 82, 156, P.W, 9); if (over.t > 0.6) textC('Press a key', 100, 118, P.G3); }
+      drawCloseUp(201, 100, 118, 100);
+      if (msgT > 0 && !over) { const ls = wrap(msg, 180); msgBox(6, 4, 188, ls.length * 8 + 6); ls.forEach((l, i) => text(l, 10, 7 + i * 8, P.W)); }
+      if (prompt > 0 && !over && (t * 6 | 0) % 2) { msgBox(10, 86, 180, 16); textC('Press F1 now to make arrest', 100, 90, P.W); }
+      if (over) { msgBox(12, 60, 176, 70); rect(12, 60, 176, 70, P.K); frame(12, 60, 176, 70, P.W); const [h, c] = { followed: ['DESTINATION FOUND', P.GR2], arrest: ['ARREST!', P.GR2], lost: ['YOU LOST HIM', P.RD2], late: ['TOO LATE', P.RD2], abort: ['CHASE ABANDONED', P.YE] }[over.kind]; textC(h, 100, 68, c); para({ followed: 'He parks and goes inside. You note the address.', arrest: 'You cut him off head-on and drag him out of the car.', lost: 'The car disappears into the city.', late: 'By the time you get there the car is empty.', abort: 'You give up the chase.' }[over.kind], 22, 82, 156, P.W, 9); if (over.t > 0.6) textC('Press a key', 100, 118, P.G3); }
     },
   };
   function drawWindshield(x, y, w, h) {
@@ -180,21 +175,26 @@ function chaseScene(opts, done) {
     if (c.def.tracking) { const [sx, sy] = pos(sus); const a = Math.atan2(sy - my, sx - mx); if ((t * 3 | 0) % 2) text(Math.abs(Math.cos(a)) > Math.abs(Math.sin(a)) ? (Math.cos(a) > 0 ? '▶' : '◀') : (Math.sin(a) > 0 ? '▼' : '▲'), x + 96, y + 68, P.YE); }
     const hh = hourOf(game.t || 0); rect(x + 72, y + 80, 44, 11, P.K); text((hh % 12 || 12) + ':' + String(Math.floor(t / 60 * 5) % 60).padStart(2, '0') + ':' + String(Math.floor(t * 5) % 60).padStart(2, '0'), x + 74, y + 82, P.G3);
     text('#' + c.n, x + 2, y + 58, P.W); text('- +', x + 44, y + 58, P.G3);
-    g.restore(); frame(x, y, w, h, P.W);
+    g.restore();
   }
   function drawCloseUp(x, y, w, h) {
     const c = me(); const [mx, my] = pos(c); const Z = 4;
     g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
-    rect(x, y, w, h, P.G1);
+    rect(x, y, w, h, P.K);
     const ox = x + w / 2 - mx * Z, oy = y + h / 2 - my * Z;
     for (let j = -1; j < N; j++) for (let i = -1; i < N; i++) {
-      const [bx, by] = nodeXY(i, j); const X = ox + (bx + 2) * Z, Y = oy + (by + 2) * Z, S = (SP - 3) * Z; if (X > x + w || Y > y + h || X + S < x || Y + S < y) continue;
+      const [bx, by] = nodeXY(i, j); const X = ox + (bx + 1) * Z, Y = oy + (by + 1) * Z, S = (SP - 2) * Z; if (X > x + w || Y > y + h || X + S < x || Y + S < y) continue;
       const s = ((i + 3) * 31 + (j + 5) * 17) % 7;
-      const roof = [P.RD, P.G3, P.BL2, P.W, P.GR, P.MG, P.BR][s]; rect(X, Y, S, S, roof); frame(X + 3, Y + 3, S - 6, S - 6, P.K); frame(X + 6, Y + 6, S - 12, S - 12, [P.YE, P.CY, P.W, P.PK][s % 4]); rect(X + S / 2 - 3, Y + S / 2 - 3, 6, 6, P.K);
+      const kind = s % 6;
+      if (kind === 0) { rect(X, Y, S, S, P.GR); g.fillStyle = P.GR2; g.beginPath(); g.ellipse(X + S / 2, Y + S / 2, S / 2 - 2, S / 3, 0, 0, 7); g.fill(); g.strokeStyle = P.W; g.beginPath(); g.ellipse(X + S / 2, Y + S / 2, S / 2 - 5, S / 3 - 3, 0, 0, 7); g.stroke(); }
+      else if (kind === 1) { rect(X, Y, S, S, P.W); rect(X + 3, Y + 3, S - 6, S - 6, P.CY); dither(X + 3, Y + 3, S - 6, S - 6, P.CY, P.BL2, 3); }
+      else if (kind === 2) { rect(X, Y, S, S, P.G1); disc(X + S / 2, Y + S / 2, S / 2 - 3, P.G3); text('H', X + S / 2 - 2, Y + S / 2 - 3, P.YE); }
+      else if (kind === 3) { rect(X, Y, S, S, P.G1); for (let q = 2; q < S - 2; q += 5) { rect(X + 2, Y + q, 5, 3, [P.RD, P.YE, P.W, P.BL2][q % 4]); rect(X + S - 7, Y + q, 5, 3, [P.YE, P.W, P.RD, P.GR2][q % 4]); } }
+      else { const roof = kind === 4 ? P.RD : P.PK; rect(X, Y, S, S, roof); for (let q = 0; q < S; q += 3) rect(X, Y + q, S, 1, kind === 4 ? P.RD2 : P.W); rect(X + S / 2 - 1, Y, 2, S, P.K); disc(X + 4, Y + S - 4, 3, P.GR); }
     }
-    for (const k of edge) { const [i, j, d] = k.split(',').map(Number); const [bx, by] = nodeXY(i, j); if (d === 0) { rect(ox + (bx - 1) * Z, oy + (by - 1) * Z, (SP + 3) * Z, 3 * Z, P.G1); for (let q = 0; q < SP * Z; q += 6) rect(ox + bx * Z + q, oy + by * Z + 1, 3, 1, P.YE); } else { rect(ox + (bx - 1) * Z, oy + (by - 1) * Z, 3 * Z, (SP + 3) * Z, P.G1); for (let q = 0; q < SP * Z; q += 6) rect(ox + bx * Z + 1, oy + by * Z + q, 1, 3, P.YE); } }
+    for (const k of edge) { const [i, j, d] = k.split(',').map(Number); const [bx, by] = nodeXY(i, j); if (d === 0) { rect(ox + (bx - 1) * Z, oy + (by - 1) * Z, (SP + 2) * Z, 2 * Z, P.K); for (let q = 0; q < SP * Z; q += 6) rect(ox + bx * Z + q, oy + by * Z + 1, 3, 1, P.YE); } else { rect(ox + (bx - 1) * Z, oy + (by - 1) * Z, 2 * Z, (SP + 2) * Z, P.K); for (let q = 0; q < SP * Z; q += 6) rect(ox + bx * Z + 1, oy + by * Z + q, 1, 3, P.YE); } }
     for (const o of cars) { if (o.wait) continue; if (o === sus && !mine.some(m => m.seen)) continue; const [px_, py, dx, dy] = pos(o); const X = ox + px_ * Z, Y = oy + py * Z; const hor = dx !== 0; rect(X - (hor ? 4 : 2), Y - (hor ? 2 : 4), hor ? 8 : 4, hor ? 4 : 8, o === sus ? P.GR2 : o.col); if (o === c && (t * 4 | 0) % 2) frame(X - 6, Y - 6, 12, 12, P.W); }
-    g.restore(); frame(x, y, w, h, P.W);
+    g.restore();
   }
   return scene;
 }
