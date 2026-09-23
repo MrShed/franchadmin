@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sling Atlas</title>
+<meta name="description" content="An orbital slingshot puzzle drawn as a minimal Swiss star chart: aim a probe, read the dotted trajectory preview, and bend its path around planets to hit every beacon across ten charts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&family=Martian+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#fbfbfa;
+  --ink:#111111;
+  --grey:#8c8c8c;
+  --rule:#d9d9d6;
+  --faint:#ececea;
+  --red:#e2231a;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Schibsted Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  min-height:100vh; overflow-x:hidden;
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left));
+}
+a.back{font-family:"Martian Mono", ui-monospace, monospace; font-size:11px; color:var(--ink); text-decoration:none; letter-spacing:.02em}
+a.back:hover{color:var(--red)}
+:focus-visible{outline:2px solid var(--red); outline-offset:2px}
+.page{max-width:1280px; margin:0 auto}
+.mast{display:grid; grid-template-columns:repeat(12,1fr); gap:0 20px; border-bottom:2px solid var(--ink); padding:6px 0 14px; align-items:end}
+.mast .meta{grid-column:1/4; font-family:"Martian Mono",monospace; font-size:11px; line-height:1.7; color:var(--ink)}
+.mast h1{grid-column:4/10; margin:0; font-weight:900; font-size:clamp(46px,8.4vw,120px); line-height:.82; letter-spacing:-.045em}
+.mast h1 span{color:var(--red)}
+.mast .idx{grid-column:10/13; text-align:right; font-family:"Martian Mono",monospace; font-size:11px; line-height:1.7}
+.body{display:grid; grid-template-columns:repeat(12,1fr); gap:20px; margin-top:20px}
+.chart{grid-column:1/10; position:relative}
+.side{grid-column:10/13; display:flex; flex-direction:column; gap:18px}
+#sky{display:block; width:100%; aspect-ratio:1000/620; touch-action:none; cursor:crosshair; background:#fff; border:1px solid var(--ink)}
+.caption{display:flex; justify-content:space-between; gap:10px; font-family:"Martian Mono",monospace; font-size:10.5px; color:var(--grey); margin-top:8px; flex-wrap:wrap}
+.lvnum{font-weight:900; font-size:clamp(90px,10vw,150px); line-height:.78; letter-spacing:-.06em; margin:0}
+.lvnum small{font-size:14px; letter-spacing:0; font-weight:500; display:block; margin-top:12px; font-family:"Martian Mono",monospace}
+.side h2{font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0; line-height:1.05}
+.brief{font-size:15px; line-height:1.5; margin:6px 0 0; color:#333}
+.stats{display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--ink)}
+.stats div{padding:8px 0; border-bottom:1px solid var(--rule)}
+.stats div:nth-child(odd){padding-right:10px; border-right:1px solid var(--rule)}
+.stats div:nth-child(even){padding-left:10px}
+.stats span{display:block; font-family:"Martian Mono",monospace; font-size:10px; color:var(--grey); text-transform:uppercase; letter-spacing:.06em}
+.stats b{font-size:28px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.stats b.red{color:var(--red)}
+.ctl{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.btn{font-family:"Martian Mono",monospace; font-size:12px; background:var(--paper); color:var(--ink); border:1px solid var(--ink); padding:10px 8px; cursor:pointer; min-height:42px; text-align:left}
+.btn:hover{background:var(--ink); color:var(--paper)}
+.btn.primary{background:var(--red); color:#fff; border-color:var(--red); grid-column:1/-1; font-size:14px; font-weight:500}
+.btn.primary:hover{background:var(--ink); border-color:var(--ink)}
+.btn[aria-pressed="true"]{background:var(--faint); color:var(--grey)}
+.aim{font-family:"Martian Mono",monospace; font-size:11px; display:grid; grid-template-columns:auto 1fr auto; gap:6px 10px; align-items:center}
+.aim input{width:100%; accent-color:var(--red)}
+.charts{display:grid; grid-template-columns:repeat(5,1fr); gap:0; border-top:1px solid var(--ink); border-left:1px solid var(--ink)}
+.charts button{font-family:"Schibsted Grotesk",sans-serif; font-weight:700; font-size:18px; background:var(--paper); border:0; border-right:1px solid var(--ink); border-bottom:1px solid var(--ink); aspect-ratio:1.2; cursor:pointer; position:relative; color:var(--ink); padding:0}
+.charts button small{position:absolute; bottom:3px; left:0; right:0; font-family:"Martian Mono",monospace; font-weight:400; font-size:8.5px; color:var(--grey)}
+.charts button.done{color:var(--red)}
+.charts button[aria-current="true"]{background:var(--ink); color:var(--paper)}
+.charts button[aria-current="true"] small{color:#bbb}
+.charts button:disabled{color:#c9c9c6; cursor:not-allowed}
+.legend{font-family:"Martian Mono",monospace; font-size:10.5px; line-height:1.9; color:#333; border-top:1px solid var(--ink); padding-top:8px}
+.legend i{display:inline-block; width:14px; vertical-align:middle; margin-right:8px}
+.toast{position:absolute; left:16px; top:16px; background:var(--ink); color:var(--paper); font-family:"Martian Mono",monospace; font-size:12px; padding:8px 12px; opacity:0; transition:opacity .25s; pointer-events:none; max-width:calc(100% - 32px)}
+.toast.show{opacity:1}
+.toast.red{background:var(--red)}
+.foot{margin-top:26px; border-top:2px solid var(--ink); padding-top:10px; display:grid; grid-template-columns:repeat(12,1fr); gap:20px; font-family:"Martian Mono",monospace; font-size:10.5px; line-height:1.7; color:#444}
+.foot div:nth-child(1){grid-column:1/5} .foot div:nth-child(2){grid-column:5/9} .foot div:nth-child(3){grid-column:9/13}
+@media (max-width:980px){
+  .mast .idx{display:none}
+  .mast .meta{grid-column:1/-1; margin-bottom:10px}
+  .mast h1{grid-column:1/-1}
+  .chart, .side{grid-column:1/-1}
+  .side{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+  .side > .full{grid-column:1/-1}
+  .foot div{grid-column:1/-1 !important}
+}
+@media (max-width:560px){ .side{grid-template-columns:1fr} .lvnum{font-size:88px} }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="mast">
+    <div class="meta"><a class="back" href="index.html">← Showcase</a><br>Epoch 2026.7 · Sheet 1 of 10<br>Scale 1 : 4.2 × 10⁹ km</div>
+    <h1>Sling<br>Atlas<span>.</span></h1>
+    <div class="idx">Gravity assist trainer<br>Kepler Institute of Navigation<br>Probe class: Sparrow III</div>
+  </div>
+
+  <div class="body">
+    <section class="chart" aria-label="Star chart">
+      <canvas id="sky" width="1000" height="620" tabindex="0" aria-label="Chart. Drag away from the launch pad to aim, release to launch. Arrow keys aim, Space launches."></canvas>
+      <div class="toast" id="toast" role="status"></div>
+      <div class="caption"><span id="cap-l">Drag from the launch pad. Release to fire.</span><span id="cap-r">Aim 0° · Power 50%</span></div>
+    </section>
+
+    <aside class="side">
+      <div class="full">
+        <p class="lvnum" id="lvnum">01<small id="lvsub">Chart 1 / 10</small></p>
+      </div>
+      <div class="full">
+        <h2 id="lvname">First Light</h2>
+        <p class="brief" id="brief"></p>
+      </div>
+      <div class="stats">
+        <div><span>Launches</span><b id="s-att">0</b></div>
+        <div><span>Chart best</span><b id="s-best">—</b></div>
+        <div><span>Beacons</span><b id="s-bea" class="red">0/1</b></div>
+        <div><span>Total score</span><b id="s-total">0</b></div>
+      </div>
+      <div>
+        <div class="aim">
+          <label for="ang">Aim</label><input type="range" id="ang" min="-180" max="180" step="0.5" value="0"><output id="ang-o">0°</output>
+          <label for="pow">Power</label><input type="range" id="pow" min="0" max="100" step="0.5" value="50"><output id="pow-o">50%</output>
+        </div>
+        <div class="ctl" style="margin-top:10px">
+          <button class="btn primary" id="launch">Launch probe →</button>
+          <button class="btn" id="reset">Reset chart</button>
+          <button class="btn" id="mute" aria-pressed="false">Sound on</button>
+        </div>
+      </div>
+      <div class="full">
+        <div class="charts" id="charts"></div>
+      </div>
+      <div class="legend full">
+        <div><i style="border-top:1px solid #111"></i>Flight path</div>
+        <div><i style="border-top:2px dotted #e2231a"></i>Computed preview (partial)</div>
+        <div><i style="height:10px;border:2px solid #e2231a;border-radius:50%"></i>Beacon: pass through it</div>
+        <div><i style="height:10px;background:#111;border-radius:50%"></i>Body: collision ends flight</div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="foot">
+    <div>Method. The probe feels every body at once, with acceleration proportional to mass over distance squared. The dotted preview integrates the first moments of flight with the same physics; on later charts it gets shorter, so read the curve and extrapolate.</div>
+    <div>Scoring. A chart solved on the first launch earns 1000 points; each extra launch costs 150, down to a floor of 100. Your best result per chart and your total are kept on this device.</div>
+    <div>Keys. ← → aim (hold Shift for fine), ↑ ↓ power, Space or Enter launch, R reset, M mute, N next chart. On touch, drag anywhere on the chart.</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const LEVELS = [{"name": "First Light", "preview": 2.2, "launch": [90, 420], "planets": [[500, 300, 28, 2400000.0]], "bodies": ["Halden"], "targets": [[880, 190, 20]], "brief": "One body, one beacon. Aim a little wide of Halden and let its pull draw the probe up towards the beacon.", "aim": -0.35, "power": 0.45}, {"name": "Slingshot", "preview": 2.0, "launch": [90, 310], "planets": [[500, 310, 46, 5500000.0]], "bodies": ["Ostra"], "targets": [[900, 310, 20]], "brief": "Ostra sits directly between the pad and the beacon. Fly past its edge and let gravity swing you round to the far side.", "aim": -0.5, "power": 0.5}, {"name": "Around the Back", "preview": 1.6, "launch": [90, 310], "planets": [[520, 310, 42, 5000000.0]], "bodies": ["Veil"], "targets": [[640, 300, 16]], "brief": "The beacon hides in Veil's shadow. A slow, close pass curls the probe behind the planet.", "aim": -0.3, "power": 0.3}, {"name": "Binary", "preview": 1.4, "launch": [90, 500], "planets": [[400, 240, 30, 3000000.0], [640, 430, 34, 3600000.0]], "bodies": ["Kessler", "Mira"], "targets": [[900, 200, 18]], "brief": "Two bodies pull against each other. Thread the saddle between them, where their pulls almost cancel.", "aim": -0.6, "power": 0.5}, {"name": "Return Flight", "preview": 1.2, "launch": [180, 470], "planets": [[700, 300, 40, 6000000.0]], "bodies": ["Tamsin"], "targets": [[160, 150, 18]], "brief": "The beacon is behind you. Fly out to Tamsin, loop around it and come home.", "aim": -0.2, "power": 0.5}, {"name": "Moon Gate", "preview": 1.0, "launch": [90, 120], "planets": [[500, 330, 50, 6500000.0], [430, 200, 12, 400000.0], [580, 200, 12, 400000.0]], "bodies": ["Castellan", "Lune I", "Lune II"], "targets": [[500, 480, 14]], "brief": "Two small moons guard Castellan. Slip between or around them and fall to the beacon below.", "aim": 0.1, "power": 0.4}, {"name": "Needle", "preview": 0.8, "launch": [90, 310], "planets": [[480, 250, 30, 3200000.0], [480, 380, 30, 3200000.0], [760, 310, 26, 2000000.0]], "bodies": ["Brenn", "Ivo", "Solace"], "targets": [[920, 420, 15]], "brief": "A narrow gap between Brenn and Ivo, then Solace pulls you off line. The preview is short now, so trust the curve.", "aim": 0, "power": 0.5}, {"name": "Three Body", "preview": 0.7, "launch": [90, 560], "planets": [[300, 300, 30, 3000000.0], [560, 180, 34, 4000000.0], [720, 460, 32, 3500000.0]], "bodies": ["Aster", "Corvin", "Delphine"], "targets": [[930, 80, 15]], "brief": "The beacon is in the far corner, behind three bodies. Each one bends the path a different way.", "aim": -0.6, "power": 0.55}, {"name": "Two Beacons", "preview": 0.6, "launch": [90, 310], "planets": [[560, 310, 36, 4200000.0]], "bodies": ["Harrow"], "targets": [[560, 180, 18], [860, 310, 18]], "brief": "Pass through both beacons on one flight: over Harrow's north pole, then out to the east.", "aim": -0.4, "power": 0.3}, {"name": "Grand Tour", "preview": 0.5, "launch": [90, 500], "planets": [[300, 300, 28, 2600000.0], [560, 200, 36, 4400000.0], [800, 420, 30, 3000000.0]], "bodies": ["Quill", "Oriel", "Fenn"], "targets": [[420, 420, 16], [700, 300, 16], [920, 160, 16]], "brief": "Three beacons, three bodies, one launch. The whole atlas in a single flight.", "aim": -0.2, "power": 0.8}];
+  const $ = id => document.getElementById(id);
+  const store = { get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v);}catch(e){return d;} }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const WW=1000, WH=620, DT=1/240, TMAX=14, VMIN=110, VMAX=460;
+  const GREEK=['α','β','γ','δ','ε','ζ'];
+
+  // ---------------- audio ----------------
+  let ac=null, muted=store.get('atlas.muted',false);
+  function A(){ if(muted) return null; if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){return null;} } if(ac.state==='suspended') ac.resume(); return ac; }
+  function ping(f, d=.6, v=.08, when=0){ const a=A(); if(!a) return; const t=a.currentTime+when; const o=a.createOscillator(), g=a.createGain(); o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.005); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g).connect(a.destination); o.start(t); o.stop(t+d+.02); }
+  function sweep(){ const a=A(); if(!a) return; const t=a.currentTime; const n=Math.floor(a.sampleRate*.5); const b=a.createBuffer(1,n,a.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n);
+    const s=a.createBufferSource(); s.buffer=b; const f=a.createBiquadFilter(); f.type='bandpass'; f.Q.value=2; f.frequency.setValueAtTime(300,t); f.frequency.exponentialRampToValueAtTime(3000,t+.4); const g=a.createGain(); g.gain.value=.15; s.connect(f).connect(g).connect(a.destination); s.start(t); ping(220,.3,.05); }
+  function crash(){ const a=A(); if(!a) return; const t=a.currentTime; const n=Math.floor(a.sampleRate*.6); const b=a.createBuffer(1,n,a.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);
+    const s=a.createBufferSource(); s.buffer=b; const f=a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=500; const g=a.createGain(); g.gain.value=.3; s.connect(f).connect(g).connect(a.destination); s.start(t); }
+  const muteBtn=$('mute');
+  function paintMute(){ muteBtn.setAttribute('aria-pressed',String(muted)); muteBtn.textContent=muted?'Sound off':'Sound on'; }
+  paintMute(); muteBtn.addEventListener('click',()=>{ muted=!muted; store.set('atlas.muted',muted); paintMute(); if(!muted) ping(880,.3); });
+
+  // ---------------- state ----------------
+  let li=Math.min(store.get('atlas.level',0), LEVELS.length-1);
+  let best=store.get('atlas.best',{});
+  let L, aim=0, power=.5, attempts=0, flight=null, trails=[], hitSet=new Set(), solved=false;
+  const cvs=$('sky'), ctx=cvs.getContext('2d'); let S=1, dpr=1;
+  function size(){ dpr=Math.min(2,window.devicePixelRatio||1); const r=cvs.getBoundingClientRect(); cvs.width=Math.round(r.width*dpr); cvs.height=Math.round(r.width*WH/WW*dpr); S=cvs.width/WW; }
+  function unlocked(){ let u=0; while (u in best) u++; return u; }
+  function scoreFor(n){ return Math.max(100, 1000-150*(n-1)); }
+  function total(){ return Object.values(best).reduce((a,b)=>a+scoreFor(b),0); }
+
+  function load(i){
+    li=i; store.set('atlas.level',li); L=LEVELS[i];
+    attempts=0; flight=null; trails=[]; hitSet=new Set(); solved=false;
+    aim = L.aim ?? 0; power = L.power ?? .5; syncAim();
+    $('lvnum').firstChild.textContent=String(i+1).padStart(2,'0');
+    $('lvsub').textContent=`Chart ${i+1} / ${LEVELS.length} · preview ${L.preview}s`;
+    $('lvname').textContent=L.name; $('brief').textContent=L.brief;
+    paintStats(); paintCharts();
+  }
+  function paintStats(){
+    $('s-att').textContent=attempts; $('s-best').textContent = best[li]!=null ? `${best[li]} · ${scoreFor(best[li])}` : '—';
+    $('s-bea').textContent=`${hitSet.size}/${L.targets.length}`; $('s-total').textContent=total();
+  }
+  function paintCharts(){
+    const el=$('charts'); el.innerHTML=''; const u=unlocked();
+    LEVELS.forEach((lv,i)=>{ const b=document.createElement('button'); b.id='chart-'+(i+1); b.textContent=String(i+1).padStart(2,'0');
+      b.innerHTML += `<small>${best[i]!=null? scoreFor(best[i]) : i>u ? 'locked' : '—'}</small>`;
+      b.disabled=i>u; if (i===li) b.setAttribute('aria-current','true'); if (best[i]!=null) b.classList.add('done');
+      b.setAttribute('aria-label', `Chart ${i+1}: ${lv.name}${b.disabled?' (locked)':''}`);
+      b.addEventListener('click',()=>load(i)); el.appendChild(b); });
+  }
+  function syncAim(){
+    $('ang').value=(aim*180/Math.PI).toFixed(1); $('pow').value=(power*100).toFixed(1);
+    $('ang-o').textContent=Math.round(-aim*180/Math.PI)+'°'; $('pow-o').textContent=Math.round(power*100)+'%';
+    $('cap-r').textContent=`Aim ${Math.round(-aim*180/Math.PI)}° · Power ${Math.round(power*100)}% · v₀ ${Math.round(VMIN+(VMAX-VMIN)*power)} u/s`;
+  }
+
+  // ---------------- physics ----------------
+  function accel(x,y){ let ax=0, ay=0; for (const [px,py,r,mu] of L.planets){ const dx=px-x, dy=py-y, d2=dx*dx+dy*dy+25, d=Math.sqrt(d2); ax+=mu*dx/(d2*d); ay+=mu*dy/(d2*d); } return [ax,ay]; }
+  function initState(){ const v=VMIN+(VMAX-VMIN)*power; return {x:L.launch[0], y:L.launch[1], vx:Math.cos(aim)*v, vy:Math.sin(aim)*v, t:0}; }
+  function step(s){ const [ax,ay]=accel(s.x,s.y); s.vx+=ax*DT; s.vy+=ay*DT; s.x+=s.vx*DT; s.y+=s.vy*DT; s.t+=DT; }
+  function status(s){
+    for (const [px,py,r] of L.planets) if ((s.x-px)**2+(s.y-py)**2 < r*r) return 'crash';
+    if (s.x<-40||s.x>WW+40||s.y<-40||s.y>WH+40) return 'out';
+    if (s.t>TMAX) return 'time';
+    return null;
+  }
+  function preview(){
+    const s=initState(), pts=[[s.x,s.y]]; const n=Math.round(L.preview/DT);
+    for (let i=0;i<n;i++){ step(s); if (status(s)) break; if (i%6===0) pts.push([s.x,s.y]); }
+    return pts;
+  }
+  function launch(){
+    if (flight || solved) return;
+    attempts++; hitSet=new Set(); flight={s:initState(), path:[[L.launch[0],L.launch[1]]], hit:new Set()};
+    sweep(); paintStats(); toast('');
+  }
+  function endFlight(result){
+    trails.push({path:flight.path, result}); if (trails.length>4) trails.shift();
+    const f=flight; flight=null;
+    if (result==='win'){
+      solved=true; [523.25,659.25,783.99,1046.5].forEach((fq,i)=>ping(fq,1.2,.06,i*.09));
+      const prev=best[li]; if (prev==null || attempts<prev){ best[li]=attempts; store.set('atlas.best',best); }
+      toast(`Chart ${li+1} complete · ${attempts} launch${attempts>1?'es':''} · ${scoreFor(attempts)} pts${li<LEVELS.length-1?' · press N or pick the next chart':' · atlas complete'}`, false, 6000);
+      paintCharts();
+    } else {
+      if (result==='crash'){ crash(); toast(`Impact on ${f.crashName||'a body'}. Adjust and relaunch.`, true); }
+      else if (result==='out') toast('Probe left the chart. Adjust and relaunch.', true);
+      else toast('Fuel exhausted in orbit. Adjust and relaunch.', true);
+      hitSet=new Set();
+    }
+    paintStats();
+  }
+  let toastT;
+  function toast(msg, red, ms=2600){ const t=$('toast'); clearTimeout(toastT); if(!msg){ t.classList.remove('show'); return; } t.textContent=msg; t.classList.toggle('red', !!red); t.classList.add('show'); toastT=setTimeout(()=>t.classList.remove('show'), ms); }
+
+  // ---------------- draw ----------------
+  function draw(time){
+    const c=ctx; c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cvs.width,cvs.height); c.setTransform(S,0,0,S,0,0);
+    const K=Math.min(2.4, Math.max(1, .8/(S/dpr))); const F=(px)=>Math.round(px*K);
+    c.fillStyle='#fff'; c.fillRect(0,0,WW,WH);
+    // grid
+    c.lineWidth=1/S; c.strokeStyle='#ececea';
+    for (let x=50;x<WW;x+=50){ c.beginPath(); c.moveTo(x,0); c.lineTo(x,WH); c.stroke(); }
+    for (let y=50;y<WH;y+=50){ c.beginPath(); c.moveTo(0,y); c.lineTo(WW,y); c.stroke(); }
+    c.strokeStyle='#d0d0cc'; c.lineWidth=1/S;
+    for (let x=0;x<=WW;x+=250){ c.beginPath(); c.moveTo(x,0); c.lineTo(x,WH); c.stroke(); }
+    // edge ticks + labels (RA / Dec)
+    c.fillStyle='#8c8c8c'; c.font=F(10)+'px "Martian Mono", ui-monospace, monospace';
+    for (let x=0;x<=WW;x+=50){ c.fillRect(x,0,1/S*1.5, x%250===0?10:5); c.fillRect(x,WH-(x%250===0?10:5),1/S*1.5,10); if (x%250===0 && x>0 && x<WW){ c.fillText(String(Math.round(x/1000*24)).padStart(2,'0')+'h', x+4, 20); } }
+    for (let y=0;y<=WH;y+=50){ c.fillRect(0,y,y%150===0?10:5,1/S*1.5); if (y>0 && y<WH && y%150===0){ c.fillText((y<310?'+':'−')+Math.abs(Math.round((310-y)/310*60))+'°', 14, y+3); } }
+    // gravity wells + bodies
+    L.planets.forEach(([px,py,r,mu],i)=>{
+      const rings=[1.8,2.8,4.2,6];
+      rings.forEach((k,j)=>{ c.beginPath(); c.arc(px,py,r*k,0,Math.PI*2); c.setLineDash(j%2?[2,4]:[1,3]); c.strokeStyle=`rgba(17,17,17,${.28-j*.05})`; c.lineWidth=.8; c.stroke(); });
+      c.setLineDash([]);
+      c.beginPath(); c.arc(px,py,r,0,Math.PI*2); c.fillStyle='#111'; c.fill();
+      // label leader
+      c.strokeStyle='#111'; c.lineWidth=.8; c.beginPath(); c.moveTo(px+r*.7,py-r*.7); c.lineTo(px+r+18,py-r-18); c.lineTo(px+r+70,py-r-18); c.stroke();
+      c.fillStyle='#111'; c.font='600 '+F(13)+'px "Schibsted Grotesk", Helvetica, Arial, sans-serif'; c.fillText(`${GREEK[i]} ${L.bodies?.[i] || 'Body'}`, px+r+20, py-r-18-F(5));
+      c.fillStyle='#8c8c8c'; c.font=F(9.5)+'px "Martian Mono", monospace'; c.fillText(`μ ${(mu/1e6).toFixed(1)}·10⁶`, px+r+20, py-r-18+F(12));
+    });
+    // targets
+    L.targets.forEach(([tx,ty,tr],i)=>{
+      const hit = hitSet.has(i) || (flight && flight.hit.has(i));
+      c.strokeStyle='#e2231a'; c.lineWidth=2;
+      c.beginPath(); c.arc(tx,ty,tr,0,Math.PI*2); c.stroke();
+      if (hit){ c.fillStyle='#e2231a'; c.beginPath(); c.arc(tx,ty,tr-5,0,Math.PI*2); c.fill(); }
+      else { const pulse = reduced?0:(time/900)%1; c.globalAlpha=1-pulse; c.beginPath(); c.arc(tx,ty,tr+pulse*14,0,Math.PI*2); c.lineWidth=1; c.stroke(); c.globalAlpha=1; }
+      c.lineWidth=1; c.beginPath(); c.moveTo(tx-tr-8,ty); c.lineTo(tx-tr+4,ty); c.moveTo(tx+tr-4,ty); c.lineTo(tx+tr+8,ty); c.moveTo(tx,ty-tr-8); c.lineTo(tx,ty-tr+4); c.moveTo(tx,ty+tr-4); c.lineTo(tx,ty+tr+8); c.stroke();
+      c.fillStyle='#e2231a'; c.font='500 '+F(10)+'px "Martian Mono", monospace'; c.fillText('B'+(i+1), tx+tr+6, ty+tr+F(10));
+    });
+    // old trails
+    trails.forEach((tr,k)=>{ c.strokeStyle=`rgba(17,17,17,${.3+.15*k})`; c.lineWidth=1; c.beginPath(); tr.path.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y)); c.stroke();
+      const e=tr.path[tr.path.length-1]; if (tr.result==='crash'){ c.beginPath(); c.moveTo(e[0]-5,e[1]-5); c.lineTo(e[0]+5,e[1]+5); c.moveTo(e[0]+5,e[1]-5); c.lineTo(e[0]-5,e[1]+5); c.stroke(); } });
+    // launch pad
+    const [lx,ly]=L.launch;
+    c.fillStyle='#111'; c.beginPath(); c.moveTo(lx-10,ly+12); c.lineTo(lx+10,ly+12); c.lineTo(lx,ly-6); c.closePath(); c.fill();
+    c.font='500 '+F(10)+'px "Martian Mono", monospace'; c.fillText('L0', lx-12-F(10), ly+14+F(10));
+    // aim & preview
+    if (!flight && !solved){
+      const v=VMIN+(VMAX-VMIN)*power, len=30+power*70;
+      c.strokeStyle='#111'; c.lineWidth=1.2; c.beginPath(); c.moveTo(lx,ly); c.lineTo(lx+Math.cos(aim)*len, ly+Math.sin(aim)*len); c.stroke();
+      c.beginPath(); c.arc(lx,ly,len,aim-.25,aim+.25); c.stroke();
+      const pts=preview(); c.fillStyle='#e2231a';
+      pts.forEach(([x,y],i)=>{ if (i%2) return; c.globalAlpha = 1 - i/pts.length*.7; c.beginPath(); c.arc(x,y,1.8,0,Math.PI*2); c.fill(); });
+      c.globalAlpha=1;
+    }
+    // flight
+    if (flight){
+      c.strokeStyle='#111'; c.lineWidth=1.4; c.beginPath(); flight.path.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y)); c.lineTo(flight.s.x,flight.s.y); c.stroke();
+      c.fillStyle='#e2231a'; c.beginPath(); c.arc(flight.s.x,flight.s.y,5,0,Math.PI*2); c.fill();
+      // velocity vector
+      c.strokeStyle='#e2231a'; c.lineWidth=1; c.beginPath(); c.moveTo(flight.s.x,flight.s.y); c.lineTo(flight.s.x+flight.s.vx*.08, flight.s.y+flight.s.vy*.08); c.stroke();
+      c.fillStyle='#111'; c.font=F(10)+'px "Martian Mono", monospace'; c.fillText(`t+${flight.s.t.toFixed(1)}s  |v| ${Math.round(Math.hypot(flight.s.vx,flight.s.vy))}`, flight.s.x+10, flight.s.y-10);
+    }
+    if (solved){
+      c.fillStyle='#e2231a'; c.font='900 64px "Schibsted Grotesk", Helvetica, Arial, sans-serif'; c.fillText('Solved.', 40, WH-40);
+      c.fillStyle='#111'; c.font=F(12)+'px "Martian Mono", monospace'; c.fillText(`${attempts} launch${attempts>1?'es':''} · ${scoreFor(attempts)} points`, 44, WH-20);
+    }
+  }
+
+  let last=performance.now();
+  function frame(now){
+    const dt=Math.min(.05,(now-last)/1000); last=now;
+    if (flight){
+      const speedup = 1; let n=Math.round(dt*speedup/DT);
+      while (n-- > 0 && flight){
+        step(flight.s);
+        if (Math.round(flight.s.t/DT)%4===0) flight.path.push([flight.s.x,flight.s.y]);
+        L.targets.forEach(([tx,ty,tr],i)=>{ if (!flight.hit.has(i) && (flight.s.x-tx)**2+(flight.s.y-ty)**2<tr*tr){ flight.hit.add(i); hitSet.add(i); ping(1320+i*220,.5,.08); paintStats(); } });
+        if (flight.hit.size===L.targets.length){ flight.path.push([flight.s.x,flight.s.y]); endFlight('win'); break; }
+        const st=status(flight.s);
+        if (st){ if (st==='crash'){ const p=L.planets.findIndex(([px,py,r])=>(flight.s.x-px)**2+(flight.s.y-py)**2<r*r); flight.crashName=(GREEK[p]||'')+' '+(L.bodies?.[p]||''); } flight.path.push([flight.s.x,flight.s.y]); endFlight(st); break; }
+      }
+    }
+    draw(now);
+    requestAnimationFrame(frame);
+  }
+
+  // ---------------- input ----------------
+  function toWorld(e){ const r=cvs.getBoundingClientRect(); return [(e.clientX-r.left)/r.width*WW, (e.clientY-r.top)/r.height*WH]; }
+  let dragging=false;
+  function aimAt(x,y){ const dx=x-L.launch[0], dy=y-L.launch[1]; if (Math.hypot(dx,dy)<6) return; aim=Math.atan2(dy,dx); power=Math.max(0,Math.min(1,(Math.hypot(dx,dy)-30)/260)); syncAim(); }
+  cvs.addEventListener('pointerdown', e=>{ if (flight) return; if (solved){ return; } dragging=true; cvs.setPointerCapture(e.pointerId); aimAt(...toWorld(e)); });
+  cvs.addEventListener('pointermove', e=>{ if (dragging) aimAt(...toWorld(e)); });
+  cvs.addEventListener('pointerup', e=>{ if (!dragging) return; dragging=false; aimAt(...toWorld(e)); launch(); });
+  cvs.addEventListener('pointercancel', ()=>{ dragging=false; });
+  $('ang').addEventListener('input', e=>{ aim=+e.target.value*Math.PI/180; syncAim(); });
+  $('pow').addEventListener('input', e=>{ power=+e.target.value/100; syncAim(); });
+  $('launch').addEventListener('click', launch);
+  $('reset').addEventListener('click', ()=>load(li));
+  window.addEventListener('keydown', e=>{
+    if (e.ctrlKey||e.metaKey||e.altKey) return;
+    if (e.target.tagName==='INPUT') return;
+    const k=e.key.toLowerCase(), fine=e.shiftKey?.1:1;
+    if (k==='arrowleft'){ e.preventDefault(); aim-=Math.PI/180*fine; syncAim(); }
+    else if (k==='arrowright'){ e.preventDefault(); aim+=Math.PI/180*fine; syncAim(); }
+    else if (k==='arrowup'){ e.preventDefault(); power=Math.min(1,power+.01*fine); syncAim(); }
+    else if (k==='arrowdown'){ e.preventDefault(); power=Math.max(0,power-.01*fine); syncAim(); }
+    else if ((k===' '||k==='enter') && !(e.target.closest && e.target.closest('button'))){ e.preventDefault(); launch(); }
+    else if (k==='r'){ load(li); }
+    else if (k==='m'){ muteBtn.click(); }
+    else if (k==='n'){ if (li<LEVELS.length-1 && li+1<=unlocked()) load(li+1); }
+  });
+  window.addEventListener('resize', size);
+  size(); load(li <= unlocked() ? li : 0);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
