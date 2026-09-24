@@ -141,11 +141,12 @@ function UIparts(x) {
 }
 function UIbody(blocks) {
   return (blocks || []).map(function (b) {
-    if (b.k === 'table') return '<div class="m-tbl"><table>' + (b.head ? '<thead><tr>' + b.head.map(function (h) { return '<th>' + UIesc(h) + '</th>'; }).join('') + '</tr></thead>' : '') + '<tbody>' + b.rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + UIparts(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
-    if (b.k === 'q' || b.k === 'quote') return '<blockquote>' + (b.who ? '<cite>' + UIesc(b.who) + '</cite>' : '') + UIparts(b.x) + '</blockquote>';
+    if (b.k === 'table') return '<div class="m-tbl"><table>' + (b.head ? '<thead><tr>' + b.head.map(function (h) { return '<th>' + (typeof h === 'string' ? UIesc(h) : UIparts([h])) + '</th>'; }).join('') + '</tr></thead>' : '') + '<tbody>' + b.rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + UIparts(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+    if (b.k === 'q' || b.k === 'quote') return '<blockquote>' + (b.who ? '<cite>' + (typeof b.who === 'string' ? UIesc(b.who) : UIparts([b.who])) + '</cite>' : '') + UIparts(b.x) + '</blockquote>';
     if (b.k === 'h') return '<h5>' + UIparts(b.x) + '</h5>';
+    if (b.k === 'm') return '<pre class="m-mono">' + UIparts(b.x) + '</pre>';
+    if (b.k === 'n') return '<p class="m-note">' + UIparts(b.x) + '</p>';
     if (b.k === 'li') return '<p class="m-li">' + UIparts(b.x) + '</p>';
-    if (b.k === 'say' || b.who) return '<p class="m-say"><b>' + UIesc(b.who || '') + '</b> ' + UIparts(b.x) + '</p>';
     return '<p>' + UIparts(b.x) + '</p>';
   }).join('');
 }
@@ -238,7 +239,9 @@ UI.resourceSheet = function () {
     row('Analysts', H.analysts.left, H.analysts.max, 'var(--ice)', 'Record reviews, trials, briefings') + '</div>' +
     '<div class="eyebrow sh-sec">Laboratory</div><div class="rgrid">' + row('Tests', r.tests.left, r.tests.max, 'var(--teal)', 'PCR capacity left today') + row('Sequencing', r.seq.left, r.seq.max, 'var(--violet)', 'Genome slots today') + '</div>' +
     '<div class="eyebrow sh-sec">Hospitals</div><div class="rgrid">' + row('Beds occupied', r.beds.used, r.beds.max, 'var(--amber)', 'All acute sites') + row('Intensive care', r.icu.used, r.icu.max, 'var(--red)', 'Ventilated beds') + '</div>' +
-    '<div class="eyebrow sh-sec">Budget</div><p style="margin:0;font:600 26px var(--f-mono)">' + UIfmt.money(r.funding) + '</p><p class="note">Hours refill each morning. Tests and sequencing grow as the council funds capacity.</p>' +
+    '<div class="eyebrow sh-sec">Money</div><div class="grid2"><div class="stat"><b>' + UIfmt.money(r.funding) + '</b><span>public-health budget left</span></div><div class="stat"><b>' + UIfmt.money(r.spent) + '</b><span>spent so far</span></div>' + (r.economy ? '<div class="stat"><b style="color:var(--amber)">' + UIfmt.money(r.economy) + '</b><span>cost of orders to the local economy</span></div>' : '') + (r.credibility !== null ? '<div class="stat"><b>' + Math.round(r.credibility * 100) + '</b><span>your credibility</span></div>' : '') + '</div>' +
+    (r.vaccine ? '<div class="eyebrow sh-sec">Vaccine</div><p style="margin:0">' + UIesc(UIcap(r.vaccine.status || '')) + (r.vaccine.eta !== undefined && r.vaccine.eta !== null ? ' · expected ' + UIesc(UIA.dateLabel(r.vaccine.eta)) : '') + (r.vaccine.done !== undefined ? ' · ' + UIfmt.n(r.vaccine.done) + ' vaccinated' : '') + '</p>' : '') +
+    '<p class="note">Hours refill each morning. Tests and sequencing grow as the council funds capacity. Counts are simulated residents; one resident stands for about ' + Math.round(UIA.city().scale) + ' people in the city.</p>' +
     (trust.length ? '<div class="eyebrow sh-sec">Trust by district — lowest first</div><div class="tgrid">' + trust.map(function (x) { return '<button class="trow" data-ref="district" data-id="' + UIesc(x.d.id) + '"><span>' + UIesc(x.d.name) + '</span><span class="bar"><i style="width:' + Math.round(x.t * 100) + '%;background:' + (x.t < .4 ? 'var(--red)' : x.t < .55 ? 'var(--amber)' : 'var(--ice)') + '"></i></span><b>' + Math.round(x.t * 100) + '</b></button>'; }).join('') + '</div>' : '')
   });
 };
@@ -289,20 +292,22 @@ UI.confirmEndDay = function () {
     '<li><b>' + r.tests.left + '</b>' + (r.tests.left ? 'tests unused today' : 'no tests left today') + '</li>' +
     (pend ? '<li><b>' + pend + '</b>result' + (pend > 1 ? 's' : '') + ' pending at the lab</li>' : '') +
     (unread ? '<li><b>' + unread + '</b>unread in the briefing</li>' : '') +
-    '</ul><div class="row"><button class="btn sm ghost" data-x="no">Keep working</button><button class="btn sm pri" data-x="yes" id="pop-end">' + UIICON.moon + 'End day</button></div></div>');
+    '</ul><div class="row"><button class="btn sm ghost" data-x="no">Keep working</button><button class="btn sm pri" data-x="yes" id="pop-end">' + UIICON.moon + 'End day</button></div>' +
+    (UIA.canAdvance() && UIA.actNo() >= 3 ? '<button class="btn xs ghost block" data-x="week" style="margin-top:8px">Advance up to a week — stops for anything urgent</button>' : '') + '</div>');
   document.body.appendChild(pop);
   UI.emit('endpop');
   pop.addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
     pop.remove();
     if (b.dataset.x === 'yes') UI.endDay();
+    else if (b.dataset.x === 'week') UI.endDay(7);
     UI.emit('endpopclose');
   });
   setTimeout(function () {
     document.addEventListener('pointerdown', function off(e) { if (!pop.contains(e.target) && !e.target.closest('#tb-end') && !e.target.closest('#coach')) { pop.remove(); UI.emit('endpopclose'); } document.removeEventListener('pointerdown', off, true); }, true);
   }, 0);
 };
-UI.endDay = function () {
+UI.endDay = function (nDays) {
   if (UI.busy) return; UI.busy = true;
   var n = UI$('#night'), d0 = UIA.day();
   UIsheet.close();
@@ -315,7 +320,7 @@ UI.endDay = function () {
   var before = { cases: UIA.cases().length, adm: UIsum(UIA.curve().admissions), deaths: UIsum(UIA.curve().deaths) };
   setTimeout(function () {
     var res;
-    try { res = UIA.endDay(); } catch (e) { UI.busy = false; n.classList.remove('on'); UItoast('The night went wrong: ' + e.message, { err: true, ms: 5000 }); console.error(e); return; }
+    try { res = UIA.endDay(nDays); } catch (e) { UI.busy = false; n.classList.remove('on'); UItoast('The night went wrong: ' + e.message, { err: true, ms: 5000 }); console.error(e); return; }
     UIS.dayOpen = {};
     UI.save();
     var d1 = UIA.day(), cv = UIA.curve();

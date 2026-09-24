@@ -108,56 +108,76 @@ var UICases = UI.views.cases = {
   },
 
   // ------------------------------------------------------------ person sheet
+  VIA: { alert: 'In the first alert', hospital: 'Reported by the hospital', gp: 'Reported by a GP', tracing: 'Found by contact tracing', household: 'Found in a household study', testing: 'Found by testing', review: 'Found in the record review', serosurvey: 'Found in the serosurvey', press: 'First heard of in the press' },
   personSheet: function (pid, o) {
     o = o || {};
-    var self = this, p = UIA.person(pid), day = UIA.day(), d = UIA.district(p.district), S = UIstatus(p.status);
+    var self = this, p = UIA.person(pid), c = p.c, day = UIA.day(), d = UIA.district(p.district), S = UIstatus(p.status);
     var died = p.status === 'died';
-    var html = '<div class="ps-head"><div class="ps-face">' + UIPortrait.svg(p) + '</div><div class="ps-id"><div class="ps-meta">' + UIfmt.age(p) + (p.job ? ' · ' + UIesc(p.job) : '') + '</div>' +
-      (d ? '<div class="ps-meta"><span class="lnk dt" data-ref="district" data-id="' + UIesc(d.id) + '">' + UIesc(d.name) + '</span></div>' : '') + '<div style="margin-top:6px"><span class="pill ' + S.c + '">' + S.l + '</span></div></div></div>';
-    html += this.timeline(p, day);
-    if (died) html += '<div class="ps-died">' + UIesc(p.name.split(' ')[0]) + ' died' + (p.raw.died !== undefined ? ' on ' + UIesc(UIA.dateLabel(p.raw.died)) : '') + '. ' + (p.age !== null && p.age !== undefined ? UIesc(p.age) + ' years old.' : '') + '</div>';
+    function pref(pid2) { var cc = UIA.caseOf(pid2); var nm = cc ? cc.name : (UIA.contacts().filter(function (x) { return x.pid === pid2; })[0] || {}).name || pid2; return '<span class="lnk p" data-ref="person" data-id="' + UIesc(pid2) + '">' + UIesc(nm) + '</span>'; }
+    var html = '<div class="ps-head"><div class="ps-face">' + UIPortrait.svg(p) + '</div><div class="ps-id"><div class="ps-meta">' + UIfmt.age(p) + (p.occupation ? ' · ' + UIesc(p.occupation) : '') + '</div>' +
+      (d ? '<div class="ps-meta">' + (p.address ? UIesc(p.address) + ', ' : '') + '<span class="lnk dt" data-ref="district" data-id="' + UIesc(d.id) + '">' + UIesc(d.name) + '</span></div>' : '') +
+      '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="pill ' + S.c + '">' + S.l + '</span>' + (c && c.caseStatus !== c.status && c.caseStatus !== 'discarded' ? '<span class="pill st-sus">' + UIesc(UIcap(c.caseStatus)) + '</span>' : '') + '</div>' +
+      (c && c.via ? '<div class="ps-via">' + UIesc(this.VIA[c.via] || UIcap(c.via)) + (c.reported !== null ? ' · ' + UIesc(UIA.dateShort(c.reported)) : '') + '</div>' : '') + '</div></div>';
+    html += this.timeline(p, c, day);
+    if (died) html += '<div class="ps-died">' + UIesc(p.name) + ' died' + (c && c.died !== null ? ' on ' + UIesc(UIA.dateLong(c.died)) : '') + '. ' + (p.age !== null && p.age !== undefined ? UIesc(p.age) + ' years old.' : '') + '</div>';
+    if (p.follow) html += '<div class="ps-follow">' + UIICON.people + '<span>Contact of ' + p.follow.of.map(pref).join(', ') + ' · ' + UIesc(p.follow.setting || '') + (p.follow.exposure !== null ? ', exposed ' + UIesc(UIA.dateShort(p.follow.exposure)) : '') + '. <b>' + UIesc(UIcap(p.follow.status)) + '</b>' + (p.follow.followUntil !== null ? ' · followed until ' + UIesc(UIA.dateShort(p.follow.followUntil)) : '') + '</span></div>';
     // what we know
     var know = '';
-    if (p.symptoms && p.symptoms.length) know += '<div class="kn"><span class="eyebrow">Symptoms</span><div class="sym">' + p.symptoms.map(function (s) { return '<span>' + UIesc(typeof s === 'string' ? s : s.name || s.id) + '</span>'; }).join('') + '</div></div>';
-    if (p.exposures) know += '<div class="kn"><span class="eyebrow">Where they had been</span>' + (p.exposures.length ? '<div class="list">' + p.exposures.map(function (e) {
-      return UIli({ attrs: e.place ? 'data-ref="place" data-id="' + UIesc(e.place) + '"' : '', ic: UIICON.pin, icStyle: 'color:var(--teal2);background:rgba(63,208,170,.1)', label: UIesc(e.name || 'Somewhere'), small: (e.day !== null ? UIesc(UIA.dateLabel(e.day)) : '') + (e.note ? ' · ' + UIesc(e.note) : '') });
+    var facts = [];
+    if (p.workplace) facts.push(['Works at', UIparts([p.workplace])]);
+    if (p.school) facts.push(['School', UIparts([p.school])]);
+    if (p.habits.length) facts.push(['Habits', UIesc(p.habits.join(', '))]);
+    if (p.household.length) facts.push(['Household', p.household.map(pref).join(', ')]);
+    if (facts.length) know += '<dl class="kv ps-kv">' + facts.map(function (f) { return '<dt>' + f[0] + '</dt><dd>' + f[1] + '</dd>'; }).join('') + '</dl>';
+    if (c && c.exposures) know += '<div class="kn"><span class="eyebrow">Exposures in the 14 days before onset</span>' + (c.exposures.length ? '<div class="list">' + c.exposures.map(function (e) {
+      var pl = e.place ? (typeof e.place === 'object' ? e.place : { t: 'place', id: e.place, d: (UIA.place(e.place) || {}).name || e.place }) : null, pe = e.person && typeof e.person === 'object' ? e.person : null;
+      var attrs = pl ? 'data-ref="place" data-id="' + UIesc(pl.id) + '"' : pe ? 'data-ref="person" data-id="' + UIesc(pe.id) + '"' : '';
+      var lbl = pl ? (pl.d || pl.text) : pe ? (pe.d || pe.text) : UIcap(e.setting || 'Somewhere');
+      return UIli({ attrs: attrs, ic: pe ? UIICON.person : UIICON.pin, icStyle: pe ? '' : 'color:var(--teal2);background:rgba(63,208,170,.1)', label: UIesc(lbl), small: (e.day !== null && e.day !== undefined ? UIesc(UIA.dateLabel(e.day)) : '') + (e.setting && (pl || pe) ? ' · ' + UIesc(UIplaceKind(e.setting)[0]) : '') + (e.note ? ' · ' + UIesc(e.note) : ''), right: attrs ? undefined : '' });
     }).join('') + '</div>' : '<p class="note">Could not recall anywhere in particular.</p>') + '</div>';
-    if (p.interview && p.interview.length) know += '<div class="kn"><span class="eyebrow">Interview notes</span><div class="iv">' + UIbody(p.interview) + '</div></div>';
-    if (p.contacts) know += '<div class="kn"><span class="eyebrow">Named contacts · ' + p.contacts.length + '</span>' + (p.contacts.length ? '<div class="list">' + p.contacts.map(function (c) {
-      var cc = UIA.caseOf(c.pid); var st = cc ? UIstatus(cc.status) : { l: UIcap(c.status || 'contact'), c: 'st-con' };
-      return UIli({ attrs: 'data-ref="person" data-id="' + UIesc(c.pid) + '"', ic: '<span class="mini-face">' + UIPortrait.svg({ pid: c.pid, age: cc ? cc.age : c.age, sex: cc ? cc.sex : c.sex }) + '</span>', icStyle: 'background:none;padding:0;overflow:hidden', label: UIesc(c.name), small: UIesc(UIcap(c.rel)) + ' · <span class="pill ' + st.c + '">' + st.l + '</span>' });
-    }).join('') + '</div>' : '<p class="note">No contacts named.</p>') + '</div>';
-    if (p.tests.length) know += '<div class="kn"><span class="eyebrow">Tests</span><div class="tests">' + p.tests.map(function (t) {
-      var r = String(t.result || t.r || 'pending'), cls = /pos/i.test(r) ? 'pos' : /neg/i.test(r) ? 'neg' : 'pend';
-      var lbl = cls === 'pos' ? 'Positive' : cls === 'neg' ? (/known/i.test(r) ? 'Negative for known pathogens' : 'Negative') : 'Awaiting result';
-      return '<div class="tst ' + cls + '"><b>' + lbl + '</b><span>' + (t.day !== undefined ? 'sampled ' + UIesc(UIA.dateShort(t.day)) : '') + (t.kind ? ' · ' + UIesc(t.kind) : '') + '</span></div>';
+    var docs = UIA.msgsAbout(pid).slice().reverse();
+    var iv = docs.filter(function (m) { return m.kind === 'interview'; })[0];
+    if (iv) know += '<div class="kn"><span class="eyebrow">Interview · ' + UIesc(UIA.dateShort(iv.day)) + '</span><div class="iv">' + UIbody(iv.body) + '</div></div>';
+    if (c && c.contacts) know += '<div class="kn"><span class="eyebrow">Named contacts · ' + c.contacts.length + '</span>' + (c.contacts.length ? '<div class="list">' + c.contacts.map(function (cp) {
+      var cc = UIA.caseOf(cp), fl = UIA.contacts().filter(function (x) { return x.pid === cp; })[0];
+      var st = cc ? UIstatus(cc.status) : { l: UIcap(fl ? fl.status : 'contact'), c: fl && fl.status === 'ill' ? 'st-prob' : 'st-con' };
+      return UIli({ attrs: 'data-ref="person" data-id="' + UIesc(cp) + '"', ic: '<span class="mini-face">' + UIPortrait.svg({ pid: cp, age: cc ? cc.age : null, sex: cc ? cc.sex : '' }) + '</span>', icStyle: 'background:none;padding:0;overflow:hidden', label: UIesc(cc ? cc.name : fl ? fl.name : cp), small: (fl ? UIesc(UIcap(fl.setting)) + ' · ' : '') + '<span class="pill ' + st.c + '">' + st.l + '</span>' });
+    }).join('') + '</div>' : '<p class="note">No contacts found.</p>') + '</div>';
+    if (c && c.tests.length) know += '<div class="kn"><span class="eyebrow">Tests</span><div class="tests">' + c.tests.map(function (t) {
+      var cls = t.result === 'pos' ? 'pos' : t.result === 'pending' ? 'pend' : t.result === 'neg' && t.kind === 'panel' ? 'pneg' : 'neg';
+      return '<div class="tst ' + cls + '"><b>' + UIesc(UIA.testLabel(t)) + '</b><span>' + (t.kind ? UIesc(t.kind === 'panel' ? 'Extended panel' : t.kind.toUpperCase()) + ' · ' : '') + (t.day !== null ? 'sampled ' + UIesc(UIA.dateShort(t.day)) : '') + (t.resultDay !== null ? ' · result ' + UIesc(UIA.dateShort(t.resultDay)) : '') + '</span></div>';
     }).join('') + '</div></div>';
-    if (p.seq) know += '<div class="kn"><span class="eyebrow">Genome</span><p style="margin:4px 0 0">' + (p.seq === 'pending' || String(p.seq).charAt(0) === 'q' ? 'Sample is on the sequencer.' : 'Sequenced — <span class="lnk" data-tree="' + UIesc(pid) + '">show on the genome tree</span>.') + '</p></div>';
-    for (var i = 0; i < p.notes.length; i++) know += '<p class="note">' + (typeof p.notes[i] === 'string' ? UIesc(p.notes[i]) : UIparts(p.notes[i].x || [p.notes[i].text])) + '</p>';
-    if (!know) know = '<p class="note" style="margin:6px 0 0">Nothing beyond the report yet. Interview them to learn their symptoms, when they fell ill, and where they have been.</p>';
+    if (c && c.seq) know += '<div class="kn"><span class="eyebrow">Genome</span><p style="margin:4px 0 0">' + (c.seq === 'pending' ? 'Sample is on the sequencer.' : 'Sequenced — <span class="lnk" data-tree="' + UIesc(pid) + '">show on the genome tree</span>.') + '</p></div>';
+    p.notes.forEach(function (n) { know += '<p class="note">' + (typeof n === 'string' ? UIesc(n) : UIparts(n.x || [n.text])) + '</p>'; });
+    if (!know) know = '<p class="note" style="margin:6px 0 0">' + (c ? 'Nothing beyond the report yet. Interview them to learn their symptoms, when they fell ill and where they have been.' : 'Not on the line list. Test them to find out whether they are infected.') + '</p>';
     html += '<div class="eyebrow sh-sec">What we know</div>' + know;
     // actions
-    var acts = UIA.actions().filter(function (a) { return a.target === 'case' || a.target === 'person'; });
-    if (!died || acts.some(function (a) { return /seq|record/.test(a.id); })) html += UIActions.targetActionsHTML(died ? acts.filter(function (a) { return /seq|record/.test(a.id); }) : acts, pid, 'Act on this ' + (p.known ? 'case' : 'person'));
+    var acts = UIA.actions().filter(function (a) { return a.target === 'case' ? !!c : a.target === 'person'; });
+    if (died) acts = acts.filter(function (a) { return /seq|record/.test(a.id); });
+    html += UIActions.targetActionsHTML(acts, pid, 'Act on ' + (c ? 'this case' : 'this person'));
+    var other = docs.filter(function (m) { return m !== iv; });
+    if (other.length) html += '<div class="eyebrow sh-sec">In the briefing · ' + other.length + '</div><div class="list">' + other.slice(0, 8).map(function (m) { var K = UIKINDS[m.kind] || UIKINDS.report; return UIli({ attrs: 'data-openmsg="' + UIesc(m.id) + '"', ic: UIICON[K.ic], label: UIesc(m.title), small: UIesc(K.l) + ' · ' + UIesc(UIA.dateShort(m.day)) }); }).join('') + '</div>';
     html += '<div class="ps-foot"><button class="btn sm" data-mapfocus>' + UIICON.map + 'Show on map</button></div>';
-    UIsheet.open({ eyebrow: p.known ? 'Case · ' + UIesc(p.pid) : 'Person', title: p.name, push: o.push, tag: 'person', html: html, reopen: function () { self.personSheet(pid); },
+    UIsheet.open({ eyebrow: c ? 'Case ' + UIesc(p.pid) : 'Person', title: p.name, push: o.push, tag: 'person', html: html, reopen: function () { self.personSheet(pid); },
       mount: function (b) {
         UIActions.bindTargetActions(b, pid, 'person');
         b.addEventListener('click', function (e) {
           if (e.target.closest('[data-mapfocus]')) { UIsheet.close(); UIMap.focus(UIMapR.homePos(UIA.city(), pid, p.district, p.pos)); }
           var t = e.target.closest('[data-tree]'); if (t) { UIsheet.close(); UI.go('lab'); UILab.openTree(pid); }
+          var m = e.target.closest('[data-openmsg]'); if (m) { UIsheet.close(); UIBrief.openMsg(m.dataset.openmsg); }
         });
       } });
     UIS.seen[pid] = 1;
   },
-  timeline: function (p, day) {
+  timeline: function (p, c, day) {
     var ev = [];
-    if (p.onset !== null && p.onset !== undefined) ev.push({ d: p.onset, l: 'Onset', c: '#ff7a45' });
-    if (p.reported !== null && p.reported !== undefined) ev.push({ d: p.reported, l: 'Reported', c: '#8fcbff' });
-    p.tests.forEach(function (t) { if (t.day !== undefined) { var r = String(t.result || ''); ev.push({ d: t.day, l: /pos/i.test(r) ? 'Test +' : /neg/i.test(r) ? 'Test −' : 'Test …', c: '#3fd0aa' }); } });
-    if (p.raw.admitted !== undefined && p.raw.admitted !== null) ev.push({ d: p.raw.admitted, l: 'Admitted', c: '#f2b640' });
-    if (p.raw.died !== undefined && p.raw.died !== null) ev.push({ d: p.raw.died, l: 'Died', c: '#d9d3c7' });
-    if (p.exposures) p.exposures.forEach(function (e) { if (e.day !== null) ev.push({ d: e.day, l: 'Exposure?', c: '#8ce8cf', hollow: true }); });
+    if (!c) return '';
+    if (c.onset !== null) ev.push({ d: c.onset, l: 'Onset', c: '#ff7a45' });
+    if (c.reported !== null) ev.push({ d: c.reported, l: 'Reported', c: '#8fcbff' });
+    c.tests.forEach(function (t) { if (t.day !== null) ev.push({ d: t.resultDay !== null ? t.resultDay : t.day, l: t.result === 'pos' ? 'Test +' : t.result === 'pending' ? 'Test …' : t.result === 'flu' ? 'Flu' : 'Test −', c: '#3fd0aa' }); });
+    if (c.admitted !== null) ev.push({ d: c.admitted, l: 'Admitted', c: '#f2b640' });
+    if (c.died !== null) ev.push({ d: c.died, l: 'Died', c: '#d9d3c7' });
+    if (c.exposures) c.exposures.forEach(function (e) { if (e.day !== null && e.day !== undefined) ev.push({ d: e.day, l: 'Exposed?', c: '#8ce8cf', hollow: true }); });
     if (!ev.length) return '';
     var d0 = Math.min.apply(null, ev.map(function (e) { return e.d; }).concat([day - 6])), d1 = day, W = 100;
     var x = function (d) { return 4 + (d - d0) / Math.max(1, d1 - d0) * 92; };

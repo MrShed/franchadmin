@@ -1,9 +1,10 @@
-// Loads the engine files (src/01-09) into a vm context, as the browser would, and returns IX.
+// Loads the engine files (src/01-09) as the browser would (concatenated, in order) and returns IX.
+// Evaluated in this context (not a vm sandbox, whose global lookups are slow) inside a function scope.
 var fs = require('fs'), path = require('path'), vm = require('vm');
 module.exports = function load() {
   var dir = path.join(__dirname, '..', 'src');
   var files = fs.readdirSync(dir).filter(function (f) { return /^0\d-.*\.js$/.test(f); }).sort();
-  var ctx = vm.createContext({ console: console, Math: Math, JSON: JSON, Date: Date, Buffer: Buffer });
-  files.forEach(function (f) { vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f }); });
-  return ctx.IX;
+  var code = files.map(function (f) { return fs.readFileSync(path.join(dir, f), 'utf8'); }).join('\n;\n');
+  var fn = vm.runInThisContext('(function () {\n' + code + '\n;return IX; })', { filename: 'indexcase-engine.js' });
+  return fn();
 };

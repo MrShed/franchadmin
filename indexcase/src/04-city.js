@@ -28,7 +28,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   // per setting: hours, air changes/h, m3 per person, activity (emission), close contacts/day, close weight
   var SP = IX.SET_PARAMS = {};
   function sp(code, hours, ach, m3, act, k, dur) { SP[code] = { hours: hours, ach: ach, m3: m3, act: act, k: k, dur: dur }; }
-  sp(SET.HOME, 10, 1, 40, 1, 0, 1.0);
+  sp(SET.HOME, 10, 1, 40, 1, 0, 0.6);
   sp(SET.CARE, 10, 2, 30, 1, 5, 0.5);
   sp(SET.WORK, 8, 3, 30, 1, 3, 0.22);
   sp(SET.SCHOOL, 6, 2, 7, 1, 5, 0.25);
@@ -54,6 +54,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   sp(SET.LAB, 8, 10, 40, 0.8, 2, 0.15);
   IX.roomFactor = function (code, ach, m3) { var p = SP[code]; return p.act * p.hours / ((ach || p.ach) * (m3 || p.m3)); };
 
+  var FLAG = IX.FLAG = { CARE_RES: 1, HCW: 2, CARE_WORKER: 4, FOOD: 8, DELIVERY: 16, COMMUTER: 32, VULNERABLE: 64, TRAVELLER: 128, STUDENT: 256, TEACHER: 512, SHIELD: 1024, ANIMAL: 2048, LAB: 4096, WFH: 8192 };
   var OCC = IX.OCC = { NONE: 0, OFFICE: 1, FACTORY: 2, HCW: 3, HOSP_SUPPORT: 4, CARE: 5, TEACHER: 6, NURSERY_WORKER: 7, RETAIL: 8, HOSPITALITY: 9, TRANSPORT: 10,
       DELIVERY: 11, TRADES: 12, LAB: 13, MARKET: 14, FARM: 15, MEAT: 16, STUDENT: 17, PUPIL: 18, NURSERY_CHILD: 19, CARE_RES: 20, HOME: 21, RETIRED: 22, GP_STAFF: 23, UNEMPLOYED: 24, OUT: 25, UNI_STAFF: 26, HOTEL: 27, CHILD_HOME: 28 };
 
@@ -202,7 +203,6 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (Array.isArray(s)) return sex ? s[0] : s[1];
       return s;
     }
-    var FLAG = IX.FLAG = { CARE_RES: 1, HCW: 2, CARE_WORKER: 4, FOOD: 8, DELIVERY: 16, COMMUTER: 32, VULNERABLE: 64, TRAVELLER: 128, STUDENT: 256, TEACHER: 512, SHIELD: 1024, ANIMAL: 2048, LAB: 4096, WFH: 8192 };
 
     function addPerson(hid, di, her, sex, age, last) {
       var i = A.age.length;
@@ -672,9 +672,13 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var nG = G.place.length;
     C.nG = nG; C.gPlace = Int32Array.from(G.place); C.gSet = Uint8Array.from(G.set); C.gK = Uint8Array.from(G.k); C.gDur = Float32Array.from(G.dur);
     C.gRoom = Float32Array.from(G.room); C.gDay = Int32Array.from(G.day); C.gLabel = G.label; C.gAlt = Uint8Array.from(G.alt);
-    C.gStart = new Int32Array(nG + 1); var gm = [];
-    for (i = 0; i < nG; i++) { C.gStart[i] = gm.length; G.mem[i].forEach(function (x) { gm.push(x); }); }
-    C.gStart[nG] = gm.length; C.gMem = Int32Array.from(gm);
+    C.gStart = new Int32Array(nG + 1); var gm = [], gmask = [], maskOf = {};
+    MS.forEach(function (m) { maskOf[m[0] * nG + m[1]] = (maskOf[m[0] * nG + m[1]] || 0) | m[2]; });
+    for (i = 0; i < nG; i++) {
+      C.gStart[i] = gm.length; var seen = {};
+      G.mem[i].forEach(function (x) { if (seen[x]) return; seen[x] = 1; gm.push(x); gmask.push(maskOf[x * nG + i] || 127); });
+    }
+    C.gStart[nG] = gm.length; C.gMem = Int32Array.from(gm); C.gMask = Uint8Array.from(gmask);
     // memberships CSR by agent
     MS.sort(function (x, y) { return x[0] - y[0] || x[1] - y[1]; });
     C.mStart = new Int32Array(N + 1); C.mGroup = new Int32Array(MS.length); C.mMask = new Uint8Array(MS.length);

@@ -289,6 +289,7 @@ var UIMap = UI.views.map = {
     ctx.restore();
   },
   anim: function () {
+    if (this._anim) return; this._anim = true;
     var self = this, last = 0;
     function loop(ts) {
       requestAnimationFrame(loop);

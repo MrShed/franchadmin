@@ -34,10 +34,13 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
 
   /** counter-based uniform [0,1): key (uint32) + up to three integers */
   function u(key, a, b, c) {
-    var h = mix((key ^ Math.imul((a | 0) + 0x632BE5AB, 0x9E3779B1)) >>> 0);
-    h = mix((h ^ Math.imul((b | 0) + 0x5BD1E995, 0x85EBCA77)) >>> 0);
-    h = mix((h ^ Math.imul((c | 0) + 0x27D4EB2F, 0xC2B2AE3D)) >>> 0);
-    return h / 4294967296;
+    var h = key ^ Math.imul((a | 0) + 0x632BE5AB, 0x9E3779B1);
+    var hb = Math.imul((b | 0) + 0x5BD1E995, 0x85EBCA77);
+    h ^= (hb << 16) | (hb >>> 16);
+    h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15; h = Math.imul(h, 0x846ca68b); h ^= h >>> 16;
+    h ^= Math.imul((c | 0) + 0x27D4EB2F, 0xC2B2AE3D);
+    h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15; h = Math.imul(h, 0x846ca68b); h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
   }
   IX.u = u;
   /** integer hash (for ids, portraits, labels) */

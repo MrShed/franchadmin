@@ -27,13 +27,15 @@ var UISTATUS = {
 function UIstatus(s) { return UISTATUS[s] || { l: UIcap(s), c: 'st-sus' }; }
 
 var UIKINDS = {
-  report: { l: 'Report', ic: 'report' }, lab: { l: 'Laboratory', ic: 'flask' }, council: { l: 'Council', ic: 'gavel' }, press: { l: 'Press', ic: 'paper' },
+  alert: { l: 'Alert', ic: 'warn' }, report: { l: 'Report', ic: 'report' }, result: { l: 'Result', ic: 'check' }, interview: { l: 'Interview', ic: 'mic' }, death: { l: 'Death', ic: 'candle' }, lab: { l: 'Laboratory', ic: 'flask' }, council: { l: 'Council', ic: 'gavel' }, press: { l: 'Press', ic: 'paper' },
   mayor: { l: 'Mayor', ic: 'phone' }, rumour: { l: 'Rumour', ic: 'rumour' }, mentor: { l: 'Dr Okonjo', ic: 'mentor' }, system: { l: 'Incident room', ic: 'bell' }
 };
 var UIPLACEKIND = {
   hospital: ['Hospital', 'H'], carehome: ['Care home', 'C'], care: ['Care home', 'C'], school: ['School', 'S'], pub: ['Pub', 'P'], bar: ['Bar', 'P'], gym: ['Gym', 'G'],
   church: ['Church', '†'], mosque: ['Mosque', 'M'], temple: ['Temple', 'T'], faith: ['Place of worship', 'W'], choir: ['Choir', '♪'], stadium: ['Football ground', 'F'], football: ['Football ground', 'F'],
   market: ['Market', 'Mk'], farm: ['Farm', 'Fa'], meat: ['Meat plant', 'Mp'], lab: ['Laboratory', 'L'], hub: ['Transport hub', 'Tr'], station: ['Station', 'Tr'], transport: ['Transport hub', 'Tr'],
+  gp: ['GP surgery', 'GP'], care_home: ['Care home', 'C'], nursery: ['Nursery', 'N'], university: ['University', 'U'], factory: ['Factory', 'F'], supermarket: ['Supermarket', 'S'],
+  restaurant: ['Restaurant', 'R'], gurdwara: ['Gurdwara', 'G'], meat_plant: ['Meat plant', 'Mp'], hotel: ['Hotel', 'H'], community_hall: ['Community hall', 'CH'],
   work: ['Workplace', 'W'], workplace: ['Workplace', 'W'], office: ['Office', 'O'], venue: ['Venue', 'V'], event: ['Event venue', 'V'], shop: ['Shop', 'Sh'], home: ['Household', 'h'], household: ['Household', 'h']
 };
 function UIplaceKind(k) { return (UIPLACEKIND[k] || [UIcap(k || 'Place'), (k || 'P').charAt(0).toUpperCase()]); }
@@ -43,7 +45,8 @@ var UIAREAS = [
   { id: 'lab', l: 'Laboratory', sub: 'Tests, sequencing, the novel-agent screen, trials', ic: 'flask' },
   { id: 'contain', l: 'Contain', sub: 'Isolation, closures, limits, masks, lockdown', ic: 'shield' },
   { id: 'protect', l: 'Protect', sub: 'Hospital surge, shielding, care homes, vaccines', ic: 'heart' },
-  { id: 'communicate', l: 'Communicate', sub: 'Briefings, guidance, answering rumours', ic: 'mic' }
+  { id: 'communicate', l: 'Communicate', sub: 'Briefings, guidance, answering rumours', ic: 'mic' },
+  { id: 'admin', l: 'Resources', sub: 'Funding requests and hiring staff', ic: 'coin' }
 ];
 
 /* stroke icons, 24px grid */
@@ -95,6 +98,7 @@ var UIICON = (function () {
     bed: s('<path d="M3 18V7M3 14h18v4M21 14v-2.5a2.5 2.5 0 00-2.5-2.5H11v5"/><circle cx="7" cy="11" r="1.8"/>'),
     coin: s('<circle cx="12" cy="12" r="8.5"/><path d="M14.5 8.5c-.5-1-1.5-1.5-2.8-1.5-1.6 0-2.7 1-2.7 2.3 0 3 5.8 1.7 5.8 4.8 0 1.3-1.2 2.4-3 2.4-1.4 0-2.5-.6-3-1.7M12 5.5V7M12 17v1.5"/>'),
     spark: s('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/>'),
+    candle: s('<path d="M9.5 10h5v10.5h-5z"/><path d="M12 10V8M12 3.5c1.5 1.6 1.7 3 0 4.5-1.7-1.5-1.5-2.9 0-4.5z"/><path d="M7 20.5h10"/>'),
     ww: s('<path d="M3 9c3 0 3-2.5 6-2.5S12 9 15 9s3-2.5 6-2.5M3 15c3 0 3-2.5 6-2.5s3 2.5 6 2.5 3-2.5 6-2.5"/>')
   };
 })();
