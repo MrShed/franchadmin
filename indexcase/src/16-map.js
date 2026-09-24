@@ -324,7 +324,7 @@ var UIMap = UI.views.map = {
     }
     // cases
     var vp = this.visiblePts();
-    if (!anim) UIMapR.dots(ctx, T, vp);
+    if (!anim) { var dens = UIclamp(Math.sqrt(400 / Math.max(1, vp.length)), .18, 1); vp.forEach(function (q) { q.a = dens * (q.b === 3 ? .6 : 1); }); UIMapR.dots(ctx, T, vp); }
     ctx.save();
     vp.forEach(function (q) {
       var c = UIMapR.toScreen(T, q.p);
