@@ -68,10 +68,12 @@ var UIDebrief = {
     var cv = UIcanvas(host, function (ctx, w, h) {
       var T = UIMapR.base(ctx, w, h, { city: city, view: view });
       UIMapR.labels(ctx, T, city, {});
-      var pts = [], arcs = [];
-      fr.forEach(function (f) { if (f.day > cur) return; var age = cur - f.day; pts.push({ p: pos[f.pid], b: UIMapR.bucket(age), a: age > 21 ? .5 : 1 }); if (age <= 3 && f.by && pos[f.by]) arcs.push([pos[f.by], pos[f.pid], age]); });
+      var pts = [], arcs = [], nOn = 0;
+      fr.forEach(function (f) { if (f.day <= cur && cur - f.day <= 21) nOn++; });
+      var base = UIclamp(Math.sqrt(220 / Math.max(1, nOn)), 0.14, 1);
+      fr.forEach(function (f) { if (f.day > cur) return; var age = cur - f.day; pts.push({ p: pos[f.pid], b: UIMapR.bucket(age), a: base * (age > 21 ? .25 : 1) }); if (age <= 3 && f.by && pos[f.by] && arcs.length < 400) arcs.push([pos[f.by], pos[f.pid], age]); });
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      arcs.forEach(function (a) { var p = UIMapR.toScreen(T, a[0]), q = UIMapR.toScreen(T, a[1]); var mx = (p[0] + q[0]) / 2 - (q[1] - p[1]) * .2, my = (p[1] + q[1]) / 2 + (q[0] - p[0]) * .2; ctx.strokeStyle = 'rgba(255,150,90,' + (0.5 - a[2] * .11).toFixed(2) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.quadraticCurveTo(mx, my, q[0], q[1]); ctx.stroke(); });
+      arcs.forEach(function (a) { var p = UIMapR.toScreen(T, a[0]), q = UIMapR.toScreen(T, a[1]); var mx = (p[0] + q[0]) / 2 - (q[1] - p[1]) * .2, my = (p[1] + q[1]) / 2 + (q[0] - p[0]) * .2; ctx.strokeStyle = 'rgba(255,150,90,' + ((0.5 - a[2] * .11) * Math.max(.3, base)).toFixed(3) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.quadraticCurveTo(mx, my, q[0], q[1]); ctx.stroke(); });
       ctx.restore();
       UIMapR.dots(ctx, T, pts, { scale: .8 });
     });
@@ -106,10 +108,11 @@ var UIDebrief = {
       ctx.fillStyle = '#060a0f'; ctx.fillRect(0, 0, w, h);
       var L = 14, R = w - 14, T = 12, B = h - 22;
       var X = function (d) { return view.x + (L + (d - d0) / Math.max(1, d1 - d0) * (R - L)) * view.k; }, Y = function (v) { return view.y + (T + v / ny * (B - T)) * view.k; };
-      ctx.lineWidth = Math.max(0.6, 0.8 * Math.sqrt(view.k));
-      nodes.forEach(function (n) { var p = n.parent && by[n.parent]; if (!p) return; ctx.strokeStyle = col(n); ctx.globalAlpha = .55; ctx.beginPath(); ctx.moveTo(X(p.day), Y(p.y)); ctx.lineTo(X(p.day), Y(n.y)); ctx.lineTo(X(n.day), Y(n.y)); ctx.stroke(); });
+      ctx.lineWidth = Math.max(0.5, 0.8 * Math.sqrt(view.k) * (nodes.length > 1500 ? .7 : 1));
+      var la = nodes.length > 1500 ? UIclamp(.25 * Math.sqrt(view.k), .2, .6) : .55;
+      nodes.forEach(function (n) { var p = n.parent && by[n.parent]; if (!p) return; ctx.strokeStyle = col(n); ctx.globalAlpha = la; ctx.beginPath(); ctx.moveTo(X(p.day), Y(p.y)); ctx.lineTo(X(p.day), Y(n.y)); ctx.lineTo(X(n.day), Y(n.y)); ctx.stroke(); });
       ctx.globalAlpha = 1;
-      var r = UIclamp(1.2 * Math.sqrt(view.k) + (nodes.length < 300 ? 1.2 : 0), 1, 5);
+      var r = UIclamp((nodes.length > 1500 ? .7 : 1.2) * Math.sqrt(view.k) + (nodes.length < 300 ? 1.2 : 0), .8, 5);
       nodes.forEach(function (n) { ctx.fillStyle = n.died ? '#d9d3c7' : col(n); ctx.beginPath(); ctx.arc(X(n.day), Y(n.y), n === sel ? r + 3 : r, 0, Math.PI * 2); ctx.fill(); n.sx = X(n.day); n.sy = Y(n.y); });
       roots.forEach(function (n) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(n.day), Y(n.y), r + 4, 0, Math.PI * 2); ctx.stroke(); });
       ctx.fillStyle = 'rgba(164,179,192,.8)'; ctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--f-mono'); ctx.textAlign = 'left'; ctx.fillText(UIA.dateShort(d0), L, h - 7); ctx.textAlign = 'right'; ctx.fillText(UIA.dateShort(d1), R, h - 7);

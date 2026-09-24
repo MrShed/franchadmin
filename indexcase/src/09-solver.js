@@ -15,129 +15,168 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   var SINGLE_DAY = { 'celebration': 1, 'social visit': 1, 'choir': 1, 'pub': 1, 'restaurant': 1, 'place of worship': 1, 'football ground': 1, 'gym': 1, 'funeral': 1, 'doorstep delivery': 1, 'market': 1 };
 
   // ================================================================ estimators (observable data only)
+  function erf(x) { var t = 1 / (1 + 0.3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; }
+  IX.erf = erf;
+  function robustMean(L) {
+    if (!L.length) return NaN;
+    var m = IX.median(L), keep = L.filter(function (v) { return v <= 2 * m + 2; });
+    return IX.mean(keep.length ? keep : L);
+  }
+  IX.robustMean = robustMean;
+  /** R from a growth rate r and a gamma generation interval (mean mu, sd 0.45 mu) */
+  function rFromGrowth(r, mu) { var sd = 0.45 * mu, k = mu * mu / (sd * sd), th = sd * sd / mu; return Math.pow(1 + r * th, k); }
+  IX.rFromGrowth = rFromGrowth;
+
   IX.estimate = function (g) {
-    var S = g.S, ll = g.lineList(), byPid = {};
+    var S = g.S, ll = g.lineList(), byPid = {}, C = g.C;
     ll.forEach(function (c) { byPid[c.pid] = c; });
     var cons = g.contacts();
     var E = { n: {} };
     var live = ll.filter(function (c) { return c.status === 'confirmed' || c.status === 'probable'; });
 
-    // --- incubation: ill contacts with a single-day exposure (events, visits, venues)
-    var inc = [];
-    cons.forEach(function (c) {
-      if (c.onset === undefined || !SINGLE_DAY[c.setting]) return;
-      var cs = byPid[c.pid]; if (!cs || cs.status === 'discarded') return;
-      var d = c.onset - c.exposure;
-      if (d >= 1 && d <= 21) inc.push(d);
-    });
-    // interviewed cases whose only link to a known earlier case is one event day
-    ll.forEach(function (c) {
-      if (!c.exposures || c.onset === null || c.status === 'discarded') return;
-      if ((c.illContacts || []).some(function (i) { return i.relation === 'household'; })) return;
-      var evDays = [];
-      c.exposures.forEach(function (e) { if (e.kind === 'place' && e.setting === 'celebration' && e.days.length === 1) evDays.push(e.days[0]); });
-      if (evDays.length === 1) { var d = c.onset - evDays[0]; if (d >= 1 && d <= 21) inc.push(d); }
-    });
-    E.n.incubation = inc.length;
-    if (inc.length >= 4) E.incubation = IX.round(IX.mean(inc), 1);
-
-    // --- presymptomatic transmission: when were ill contacts exposed, relative to their source's onset?
-    var pre = 0, post = 0, si = [];
+    // --- pairs from tracing with a single-day, out-of-home exposure (an event, a visit, a night out)
+    var pairs = [];
     cons.forEach(function (c) {
       if (c.onset === undefined || c.setting === 'household') return;
-      var cs = byPid[c.pid]; if (!cs || cs.status === 'discarded') return;
+      var cs = byPid[c.pid]; if (!cs || cs.status === 'discarded' || cs.status === 'suspected') return;
       c.of.forEach(function (src) {
-        var s = byPid[src]; if (!s || s.onset === null || s.status === 'discarded') return;
-        if (c.onset < s.onset) return;   // probably not infected by them
-        if (c.exposure < s.onset) pre++; else post++;
-        si.push(c.onset - s.onset);
+        var s = byPid[src]; if (!s || s.onset === null || s.status === 'discarded' || s.status === 'suspected') return;
+        var days = (c.days && c.days[src]) || [c.exposure];
+        if (days.length !== 1) return;       // only one exposure: the day is known
+        var inc = c.onset - days[0];
+        if (inc < 1 || inc > 16) return;
+        pairs.push({ day: days[0], inc: inc, si: c.onset - s.onset, pre: days[0] < s.onset });
       });
     });
-    ll.forEach(function (c) {
-      if (c.infectorGuess === undefined || c.onset === null) return;
-      var s = byPid[c.infectorGuess]; if (s && s.onset !== null && c.onset >= s.onset) si.push(c.onset - s.onset);
-    });
-    E.n.presym = pre + post;
-    if (pre + post >= 6) E.presym = Math.round(100 * pre / (pre + post));
+    // early pairs are the cleanest: later, contacts are as likely to have caught it somewhere else
+    var early0 = (S.recognizedDay || 0) + 12;
+    pairs = pairs.filter(function (p) { return p.day <= early0; });
+    // incubation: point-source events (questionnaire onset curves) and single-exposure pairs
+    var inc = [];
+    S.quests.forEach(function (q) { (q.onsets || []).forEach(function (v) { if (v >= 1 && v <= 14) inc.push(v); }); });
+    pairs.forEach(function (p) { inc.push(p.inc); });
+    E.n.incubation = inc.length;
+    if (inc.length >= 8) E.incubation = IX.round(robustMean(inc), 1);
+    // serial interval: households and early pairs
+    var si = [];
+    S.hhStudies.forEach(function (st) { if (st.result && st.result.si) st.result.si.forEach(function (v) { if (v >= -5 && v <= 21) si.push(v); }); });
+    pairs.forEach(function (p) { if (p.si >= -5 && p.si <= 21) si.push(p.si); });
     E.n.si = si.length;
-    if (si.length >= 5) E.serial = IX.round(IX.mean(si), 1);
+    if (si.length >= 6) E.serial = IX.round(IX.mean(si), 1);
+    // presymptomatic transmission: time of infection relative to the source's onset is (serial interval - incubation);
+    // its mean and spread come from the two distributions (He et al. / Ganyani et al. method)
+    var pre = 0, post = 0;
+    pairs.forEach(function (p) { if (p.si >= 0) { if (p.pre) pre++; else post++; } });
+    E.n.presym = si.length;
+    if (si.length >= 10 && inc.length >= 8) {
+      var mSi = IX.mean(si), vSi = Math.pow(IX.sd(si), 2), mIn = robustMean(inc), vIn = Math.pow(IX.sd(inc.filter(function (v) { return v <= 2 * IX.median(inc) + 2; })), 2);
+      var mt = mSi - mIn, sdt = Math.sqrt(Math.max(1, vSi - vIn));
+      var z = -mt / sdt, phi = 0.5 * (1 + erf(z / Math.SQRT2));
+      E.presymModel = Math.round(100 * phi);
+      E.presym = E.presymModel;
+      if (pre + post >= 15) E.presym = Math.round((E.presymModel + 100 * pre / (pre + post)) / 2);
+    } else if (pre + post >= 12) E.presym = Math.round(100 * pre / (pre + post));
 
-    // --- hidden (never symptomatic) infections: household studies
-    var hi = 0, ha = 0;
-    S.hhStudies.forEach(function (st) { if (st.result) { hi += st.result.infected; ha += st.result.asym; } });
+    // --- hidden infections: household studies
+    var hi = 0, ha = 0, hs = 0;
+    S.hhStudies.forEach(function (st) { if (st.result) { hi += st.result.infected; ha += st.result.asym; hs++; } });
     E.n.asym = hi;
-    if (hi >= 8) E.asym = Math.round(100 * ha / hi);
+    if (hi >= 10) E.asym = Math.round(100 * ha / hi);
 
-    // --- R: growth of admissions+cases, and the serial interval
-    var ec = g.epiCurve();
-    var n = ec.byOnset.length, lag = 7;
-    var series = [];
-    for (var i = 0; i < n; i++) series.push(ec.byOnset[i] + 0);
-    var r = growth(series, n - lag - 21, n - lag);
-    var Tg = E.serial || E.incubation || 5;
-    E.growth = r;
-    if (r !== null && live.length >= 25) E.R = IX.round(Math.max(0.5, Math.exp(r * Tg)), 2);
-    // offspring counts in fully traced chains (early, before restrictions)
-    var off = [], asymF = E.asym !== undefined ? E.asym / 100 : 0.2;
-    ll.forEach(function (c) {
-      if (!c.traced || c.onset === null) return;
-      var kids = cons.filter(function (q) { return q.of.indexOf(c.pid) >= 0 && q.onset !== undefined && q.onset >= c.onset && q.status === 'ill'; }).length;
-      if (S.day - c.onset >= 20) off.push(kids / Math.max(0.3, 1 - asymF));
-    });
-    E.n.traceR = off.length;
-    if (off.length >= 12) E.Rtrace = IX.round(IX.mean(off) * 1.25, 2);
-    if (E.R === undefined && E.Rtrace !== undefined) E.R = E.Rtrace;
+    // --- R: early growth (wastewater if we have it: it does not depend on testing), and the generation time
+    var ec = g.epiCurve(), ww = g.wastewater();
+    var mu = E.serial || E.incubation || 5;
+    var rW = wwGrowth(ww), rC = null;
+    var rd = (S.recognizedDay || 0) - ec.from;
+    rC = growth(ec.byOnset, rd - 3, Math.min(ec.byOnset.length - 7, rd + 21));
+    E.growth = rW !== null ? rW : rC;
+    E.growthFrom = rW !== null ? 'wastewater' : 'cases';
+    if (E.growth !== null && (rW !== null || live.length >= 30)) E.R = IX.round(Math.max(0.5, rFromGrowth(E.growth, mu)), 2);
 
-    // --- severity: serosurvey (infections) against deaths
-    var sero = S.seroResults.filter(function (q) { return q.pos >= 5; });
-    var deaths = 0; ec.deaths.forEach(function (d2) { deaths += d2; });
-    if (sero.length) {
-      var q = sero[sero.length - 1];
-      var infections = q.pos / q.n / 0.9 * g.C.N;
-      // deaths lag infections by ~3-4 weeks: count deaths reported up to 14 days after the survey
-      var dUpTo = 0; for (var k = 0; k < ec.deaths.length && ec.from + k <= q.day + 21; k++) dUpTo += ec.deaths[k];
-      if (infections > 0 && S.day >= q.day + 10) E.ifr = IX.round(100 * dUpTo / infections, 2);
-      var adm = 0; for (k = 0; k < ec.admissions.length && ec.from + k <= q.day + 10; k++) adm += ec.admissions[k];
-      if (infections > 0) E.ihr = IX.round(100 * adm / infections, 1);
+    // --- severity: antibodies (all infections) against deaths
+    var deathsTot = 0; ec.deaths.forEach(function (d2) { deathsTot += d2; });
+    E.deaths = deathsTot;
+    var best = null;
+    S.seroResults.forEach(function (q) { if (S.day >= q.day + 7 && q.pos >= 4 && (!best || q.pos > best.pos)) best = q; });
+    E.n.ifr = best ? best.pos : 0;
+    if (best) {
+      var prev = Math.max(0.0005, (best.pos / best.n - 0.005) / 0.895);
+      var infections = prev * C.N;
+      var dUpTo = 0, admUpTo = 0;
+      for (var k = 0; k < ec.deaths.length && ec.from + k <= best.day + 7; k++) dUpTo += ec.deaths[k];
+      for (k = 0; k < ec.admissions.length && ec.from + k <= best.day; k++) admUpTo += ec.admissions[k];
+      if (dUpTo >= 3) E.ifr = IX.round(100 * dUpTo / infections, 2);
+      E.ihr = IX.round(100 * admUpTo / infections, 1);
     }
-    E.n.ifr = sero.length;
-    E.deaths = deaths;
 
-    // --- who it hits: admissions and deaths per case, by age
-    var ba = ec.byAge, rate = [];
-    for (var b = 0; b < 7; b++) rate.push((ba.admitted[b] + 2 * ba.died[b] + 0.5) / (ba.cases[b] + 3));
-    var totAdm = ba.admitted.reduce(function (s, v) { return s + v; }, 0) + ba.died.reduce(function (s, v) { return s + v; }, 0);
-    S.reviews.forEach(function () { });
-    E.n.ageRisk = totAdm;
-    if (totAdm >= 8) {
-      var kids = (rate[0] + rate[1]) / 2, young = rate[2], mid = (rate[3] + rate[4]) / 2, old = (rate[5] + rate[6]) / 2;
-      if (old > 3 * mid && old > 3 * young) E.ageRisk = 'elderly';
-      else if (kids > 1.5 * mid && kids > young) E.ageRisk = 'children';
-      else if (young > 1.4 * mid && young > kids) E.ageRisk = 'young-adult';
-      else E.ageRisk = 'even';
-    }
+    // --- who it hits: which age shape explains admissions (and deaths) by age best
+    E.ageRisk = ageShape(g, ec, best);
+    E.n.ageRisk = ec.byAge.admitted.reduce(function (s2, v) { return s2 + v; }, 0);
 
     // --- route
     E.route = routeGuess(g, ll, E);
 
     // --- case definition from confirmed cases' symptoms
     var symN = {}, nSym = 0;
-    ll.forEach(function (c) { if (c.status === 'confirmed' && c.symptoms && c.symptoms.length) { nSym++; c.symptoms.forEach(function (s) { symN[s] = (symN[s] || 0) + 1; }); } });
-    if (nSym >= 6) E.caseDef = Object.keys(symN).filter(function (s) { return symN[s] / nSym >= 0.35; }).sort(function (a, b) { return symN[b] - symN[a]; }).slice(0, 5);
+    ll.forEach(function (c) { if (c.status === 'confirmed' && c.symptoms && c.symptoms.length) { nSym++; c.symptoms.forEach(function (sy) { symN[sy] = (symN[sy] || 0) + 1; }); } });
+    if (nSym >= 6) E.caseDef = Object.keys(symN).filter(function (sy) { return symN[sy] / nSym >= 0.35; }).sort(function (a2, b2) { return symN[b2] - symN[a2]; }).slice(0, 5);
 
     // --- source & first case: earliest known onsets, animal exposure, travel
-    var early = ll.filter(function (c) { return c.status !== 'discarded' && c.onset !== null; }).sort(function (a, b) { return a.onset - b.onset; });
+    var early = ll.filter(function (c) { return c.status !== 'discarded' && c.onset !== null; }).sort(function (a2, b2) { return a2.onset - b2.onset; });
     if (early.length) {
       var first = early[0];
       E.originCase = first.pid;
       var ex = first.exposures || [];
       if (ex.some(function (e) { return e.kind === 'travel'; })) E.source = 'traveller';
-      else if (ex.some(function (e) { return e.kind === 'animal'; })) { var pl = ex.filter(function (e) { return e.kind === 'animal'; })[0].place; E.source = pl && g.C.places[g.placeIdx(pl.id)].kind === 'market' ? 'market' : 'farm'; }
+      else if (ex.some(function (e) { return e.kind === 'animal'; })) { var pl = ex.filter(function (e) { return e.kind === 'animal'; })[0].place; E.source = pl && C.places[g.placeIdx(pl.id)].kind === 'market' ? 'market' : 'farm'; }
     }
-    if (S.animalFound !== undefined) E.source = g.C.places[S.animalFound].kind === 'market' ? 'market' : 'farm';
+    if (S.animalFound !== undefined) E.source = C.places[S.animalFound].kind === 'market' ? 'market' : 'farm';
     if (S.trial && S.trial.result) { var T = S.trial.result; E.treatment = T.hi < 1 ? (T.rr < 0.6 ? 'good' : 'partial') : 'none'; }
     return E;
   };
+
+  /** growth rate of total wastewater signal over its first three weeks of samples */
+  function wwGrowth(ww) {
+    var ids = Object.keys(ww.byDistrict); if (!ids.length) return null;
+    var n = ww.byDistrict[ids[0]].length, pts = [];
+    for (var i = 0; i < n; i++) {
+      var tot = 0, any = false;
+      ids.forEach(function (d) { var v = ww.byDistrict[d][i]; if (v !== null) { any = true; tot += v; } });
+      if (any) pts.push([i, Math.log(tot + 50)]);
+    }
+    if (pts.length < 6) return null;
+    pts = pts.slice(0, 10);
+    if (pts[pts.length - 1][0] - pts[0][0] < 10) return null;
+    var sx = 0, sy = 0, sxx = 0, sxy = 0, m = pts.length;
+    pts.forEach(function (p) { sx += p[0]; sy += p[1]; sxx += p[0] * p[0]; sxy += p[0] * p[1]; });
+    return (m * sxy - sx * sy) / (m * sxx - sx * sx);
+  }
+
+  /** age shape by Poisson likelihood: admissions (and deaths) per band against infections per band */
+  function ageShape(g, ec, sero) {
+    var ba = ec.byAge, C = g.C;
+    var adm = ba.admitted, died = ba.died, nA = 0, nD = 0, b;
+    for (b = 0; b < 7; b++) { nA += adm[b]; nD += died[b]; }
+    if (nA < 8) return undefined;
+    // exposure: infections by band from the antibody survey if we have one, else confirmed cases (which under-count children)
+    var pop = [0, 0, 0, 0, 0, 0, 0]; for (var a = 0; a < C.N; a++) pop[D.ageBand(C.age[a])]++;
+    var ex = [];
+    for (b = 0; b < 7; b++) ex.push(sero && sero.byAge ? pop[b] * (sero.byAge[b][1] + 0.5) / (sero.byAge[b][0] + 1) : ba.cases[b] + 1);
+    var bestS = null, bestL = -Infinity;
+    D.AGE_SHAPES.forEach(function (sh) {
+      var ifr = D.AGE_RISK[sh], ihr = ifr.map(function (f, i) { return f / D.FH_BASE[i]; });
+      var L = pois(adm, ex, ihr) + (nD >= 5 ? pois(died, ex, ifr) : 0);
+      if (L > bestL) { bestL = L; bestS = sh; }
+    });
+    return bestS;
+  }
+  function pois(obs, ex, rel) {
+    var so = 0, se = 0, i;
+    for (i = 0; i < obs.length; i++) { so += obs[i]; se += ex[i] * rel[i]; }
+    var k = so / se, L = 0;
+    for (i = 0; i < obs.length; i++) { var mu = Math.max(1e-9, k * ex[i] * rel[i]); L += obs[i] * Math.log(mu) - mu; }
+    return L;
+  }
 
   /** exponential growth rate by least squares on log(counts+1) over [a, b) */
   function growth(y, a, b) {
@@ -166,21 +205,23 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (nC >= 5 && bleed / nC > 0.2) ev.contact += 1;
     // questionnaires
     S.quests.forEach(function (q) {
-      var cats = q.cats, close = cats['Close contact (<2 m, 15 min+) with someone who fell ill'], room = cats['Same room, not close to anyone ill'];
-      var ate = cats['Ate food prepared on site'], nate = cats['Did not eat'];
-      if (ate && nate && ate.n >= 5 && nate.n >= 3) { var ra = ate.ill / ate.n, rn = (nate.ill + 0.5) / (nate.n + 1); if (ra > 2.5 * rn && ra > 0.15) ev.gut += 2; }
-      if (close && room && close.n >= 3 && room.n >= 8 && q.ill >= 3) {
-        var rc = close.ill / close.n, rr = room.ill / room.n;
-        if (rr >= 0.08 && rr > 0.25 * rc) ev.airborne += 2;
-        else if (rc > 0.2 && rr < 0.05) { ev.droplet += 1; ev.contact += 0.6; }
+      var cats = q.cats, close = cats[IX.QCAT.close], near = cats[IX.QCAT.near], far = cats[IX.QCAT.far];
+      var ate = cats[IX.QCAT.ate], nate = cats[IX.QCAT.nate];
+      if (ate && nate && ate.n >= 5 && nate.n >= 3) { var ra = ate.ill / ate.n, rn = (nate.ill + 0.5) / (nate.n + 1); if (ra > 2.5 * rn && ra > 0.15) ev.gut += 2.5; }
+      if (close && far && close.n >= 3 && far.n >= 6 && q.ill >= 3) {
+        var rc = close.ill / close.n, rf = far.ill / far.n;
+        if (rf >= 0.1 && rf > 0.3 * rc) ev.airborne += 2;
+        else if (rc >= 0.12 && rf < 0.25 * rc) { ev.droplet += 1.2; ev.contact += 0.8; }
       }
     });
     // cluster settings
     var cl = g.clusters(), venue = 0, hh = 0, care = 0;
     cl.forEach(function (c) { if (c.kind === 'household') hh++; else if (c.kind === 'care_home' || c.kind === 'hospital') care += c.size; else venue += c.size >= 3 ? 1 : 0; });
-    if (venue === 0 && hh + care >= 4 && E.presym !== undefined && E.presym < 10) ev.contact += 1.5;
-    if (E.presym !== undefined && E.presym < 8) ev.contact += 0.7;
-    if (E.presym !== undefined && E.presym > 20) { ev.airborne += 0.4; ev.droplet += 0.4; }
+    if (venue <= 1 && hh + care >= 4 && E.presym !== undefined && E.presym < 10) ev.contact += 1.5;
+    if (E.presym !== undefined && E.presym < 8) ev.contact += 1;
+    if (E.presym !== undefined && E.presym > 15) { ev.droplet += 0.8; ev.contact -= 1; }
+    if (E.serial !== undefined && E.incubation !== undefined && E.serial > E.incubation + 1.5) ev.contact += 0.6;
+    if (nC >= 5 && gutS / nC > 0.6) ev.airborne -= 1;
     // animal: positive animal samples, or early cases with animal exposure and no human source
     if (S.animalFound !== undefined) ev.animal += 3;
     var an = 0; ll.forEach(function (c) { if ((c.exposures || []).some(function (e) { return e.kind === 'animal'; }) && !(c.illContacts || []).length) an++; });
@@ -221,6 +262,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
         if (!S.declared && act('declare_novel')) rep.declaredDay = S.day;
         if (S.day - lastReview >= 5 && act('record_review')) lastReview = S.day;
       } else {
+        if (!g.ordersOf('wastewater').length) g.order('wastewater');
         var live = ll.filter(function (c) { return c.status === 'confirmed' || c.status === 'probable'; });
         live.sort(function (a, b) { return (b.onset === null ? -99 : b.onset) - (a.onset === null ? -99 : a.onset); });
         // household studies are the only way to count hidden cases

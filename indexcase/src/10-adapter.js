@@ -36,10 +36,10 @@ var UIA = (function () {
     if (opts.tutorial) o.tutorial = true;
     A.g = IX.newGame(String(seed), o);
     A.seed = String(seed); A.grade = grade; A.tutorial = !!opts.tutorial;
-    A.cache = {}; A.bump();
+    A.cache = {}; A._her = {}; A._names = {}; A.bump();
     return A.g;
   };
-  A.restore = function (json) { A.g = IX.load(json); A.cache = {}; A.bump(); return A.g; };
+  A.restore = function (json) { A.g = IX.load(json); A.cache = {}; A._her = {}; A._names = {}; A.bump(); return A.g; };
   A.serialize = function () { var s = A.g.save(); return typeof s === 'string' ? s : JSON.stringify(s); };
   A.readSave = function () { try { var s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } };
   A.writeSave = function (ui) {
@@ -177,6 +177,12 @@ var UIA = (function () {
     var p = null; try { p = call('person', String(pid)); } catch (e) { /* ignore */ }
     return (A._names[pid] = p && p.name ? p.name : String(pid));
   };
+  A.heritageOf = function (pid) {
+    if (pid === null || pid === undefined || !/^\d+$/.test(String(pid))) return null;
+    A._her = A._her || {}; if (A._her[pid] !== undefined) return A._her[pid];
+    var p = null; try { p = call('person', String(pid)); } catch (e) { /* ignore */ }
+    return (A._her[pid] = p && p.heritage ? String(p.heritage) : null);
+  };
   A.contacts = function () { return cached('contacts', function () { return arr(call('contacts')).map(function (c) { return { pid: String(c.pid), name: c.name, of: arr(c.of).map(String), exposure: num(c.exposure, null), setting: c.setting || '', followUntil: num(c.followUntil, null), status: c.status || 'monitoring', tested: c.tested }; }); }); };
   A.person = function (pid) {
     var p = call('person', String(pid)) || {};
@@ -298,8 +304,9 @@ var UIA = (function () {
     return cached('est', function () {
       var e = call('estimates') || {};
       var traits = arr(e.traits).map(function (t) {
-        var pct = isPct(t), ty = pct ? 'pct' : t.id === 'originCase' || t.type === 'person' ? 'person' : t.id === 'caseDef' || t.type === 'multi' ? 'multi' : t.options ? 'choice' : t.type === 'number' ? 'number' : t.type || 'number';
-        var opts = t.options ? arr(t.options).map(function (o) { return typeof o === 'object' ? { id: String(o.id), label: o.label || String(o.id) } : { id: String(o), label: String(o) }; }) : null;
+        var pct = isPct(t), ty = pct ? 'pct' : t.id === 'originCase' || t.type === 'person' ? 'person' : t.id === 'caseDef' || t.type === 'multi' || t.type === 'symptoms' ? 'multi' : t.options ? 'choice' : t.type === 'number' ? 'number' : t.type || 'number';
+        var opts = t.options ? arr(t.options).map(function (o) { return typeof o === 'object' ? { id: String(o.id), label: o.label || String(o.id) } : { id: String(o), label: String(o).replace(/-/g, ' ') }; }) : null;
+        if (ty === 'multi' && !opts && typeof IX !== 'undefined' && IX.DATA && IX.DATA.SYMPTOMS) opts = IX.DATA.SYMPTOMS.map(function (x) { return { id: String(x.id), label: x.label || String(x.id).replace(/_/g, ' ') }; });
         var o = { id: t.id, label: t.label || t.id, type: ty, options: opts, unit: t.unit || '', key: !!t.key, min: t.min, max: t.max, step: t.step };
         if (pct) { o.min = t.min !== undefined ? t.min / 100 : 0; o.max = t.max !== undefined ? t.max / 100 : 1; o.step = t.step !== undefined ? t.step / 100 : 0.01; }
         return o;
@@ -366,12 +373,12 @@ var UIA = (function () {
     });
     function fmtT(t, v) {
       if (v === undefined || v === null) return '—';
-      if (t.type === 'person') { var c = A.caseOf(v); return c ? c.name : String(v); }
+      if (t.type === 'person') return A.nameOf(v);
       if (Array.isArray(v)) return v.map(function (x) { var o = (t.options || []).filter(function (y) { return y.id === String(x); })[0]; return o ? o.label : x; }).join(', ');
       if (t.type === 'pct') return UIfmt.pct(v, v < 0.01 ? 2 : v < 0.1 ? 1 : 0);
       if (t.type === 'number' || typeof v === 'number') return (+v).toFixed(Math.abs(v) < 10 && v % 1 ? 1 : 0) + (t.unit ? ' ' + t.unit : '');
       var op = (t.options || []).filter(function (y) { return y.id === String(v); })[0];
-      return op ? op.label : UIcap(String(v));
+      return UIcap(op ? op.label : String(v).replace(/-/g, ' '));
     }
     var cv = D.curves || {}, act = cv.actual || {}, gh = cv.ghost || {};
     var dth = D.deaths || {}, costs = D.costs || {};

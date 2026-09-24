@@ -168,7 +168,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     // other unexplained admissions the hospital had already flagged
     S.preFlags.forEach(function (f) { if (!S.cases[f.pid]) self.addCase(f.pid, 'hospital', 'suspected'); });
     this.alertMessage(al, pids);
-    this.msg('system', 'Day 0: ' + this.dateLong(0), 'Incident room', [
+    this.msg('system', 'Day 1: ' + this.dateLong(0), 'Incident room', [
       'You are the Director of Public Health for ' + C.name + ' (population ' + IX.fmt(C.population) + '). This morning something landed on your desk that might be nothing.',
       { k: 'n', x: ['ACT 1 — DETECT. Is this something new? Test the patients against everything we know (the extended panel), talk to them, find out what links them. If three or more ill people test negative for everything, you can ask the lab to look for a new agent. Nobody else will.'] }]);
     S.act = 1;
@@ -343,9 +343,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var inc = [], asym = 0, tot = 0, pre = 0, symT = 0, off = new Int32Array(Math.max(1, n));
     for (var x = 0; x < n; x++) { if (sim.xby[x] >= 0) off[sim.xby[x]]++; }
     var early = Math.min(n, Math.max(40, Math.round(0.03 * C.N)));
+    var earlyT = Math.max(300, Math.round(0.06 * C.N));   // traits are measured on the early epidemic, as the player sees it
     var sumOff = 0, cntOff = 0;
     for (x = 0; x < n; x++) {
       if (sim.xday[x] > sim.sd - 25) continue;   // not yet complete
+      if (x >= earlyT && tot >= 300) continue;
       tot++;
       if (sim.xonset[x] < 0) asym++; else inc.push(sim.xonset[x] - sim.xday[x]);
       if (x < early) { sumOff += off[x]; cntOff++; }
@@ -357,10 +359,19 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     card.presym = pre + symT >= 30 ? Math.round(100 * pre / (pre + symT)) : Math.round(100 * P.presym);
     card.R = this.S.R0 || (cntOff >= 30 ? IX.round(sumOff / cntOff, 2) : P.R);
     // fatality: expected deaths at normal capacity for the people actually infected (age mix of this outbreak)
-    var ef = 0, eh = 0, m = 0;
-    for (x = 0; x < n; x++) { var a = sim.xwho[x], bd = D.ageBand(C.age[a]); ef += P.ageIFR[bd]; eh += P.ageIHR[bd]; m++; }
-    card.ifr = m >= 50 ? IX.round(100 * ef / m, 2) : IX.round(100 * P.ifr, 2);
-    card.ihr = m >= 50 ? IX.round(100 * eh / m, 1) : IX.round(100 * P.ihr, 1);
+    // severity as it actually played out among the early, resolved infections (age mix, crowded wards and all),
+    // shrunk towards the expected value for that age mix when deaths are few
+    var ef = 0, eh = 0, m = 0, dd = 0, hh = 0;
+    for (x = 0; x < n && m < earlyT; x++) {
+      if (sim.xday[x] > sim.sd - 30) continue;
+      var a = sim.xwho[x], bd = D.ageBand(C.age[a]); ef += P.ageIFR[bd]; eh += P.ageIHR[bd]; m++;
+      if (sim.xdeath[x] >= 0) dd++;
+      if (sim.xhosp[x] >= 0) hh++;
+    }
+    var K0 = 150;
+    card.ifrExpected = m ? IX.round(100 * ef / m, 2) : IX.round(100 * P.ifr, 2);
+    card.ifr = m >= 50 ? IX.round(100 * (dd + K0 * ef / m) / (m + K0), 2) : IX.round(100 * P.ifr, 2);
+    card.ihr = m >= 50 ? IX.round(100 * (hh + K0 * eh / m) / (m + K0), 1) : IX.round(100 * P.ihr, 1);
     card.originCase = sim.primary;
     card.sourcePlace = sim.sourcePlace >= 0 ? C.places[sim.sourcePlace].id : null;
     card.day = S.day;

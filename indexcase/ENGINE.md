@@ -39,7 +39,7 @@ IX.GRADES                      // [{id, label, blurb}]
 | prop | meaning |
 |---|---|
 | `g.seed`, `g.attempt`, `g.grade` | seed string, generation attempt, grade id |
-| `g.day` | current day (0 = the morning of the alert). Days before 0 exist in data (onsets before the alert). |
+| `g.day` | current day index (0 = the morning of the alert). Days before 0 exist in data (onsets before the alert). **Player-facing day numbers are `g.day + 1`** (the alert morning is "Day 1"); engine text uses dates or day+1, never raw indices. All `day` fields in data are indices. |
 | `g.actNo` | 1 Detect, 2 Characterise, 3 Contain  (**`g.act(id, target, params)` is the action method**, see Actions) |
 | `g.actLabel` | `'Detect'` / `'Characterise'` / `'Contain'` |
 | `g.over`, `g.outcome` | finished? `{kind:'contained'|'vaccine'|'timeout'|'collapse', day, title, text}` |
@@ -121,7 +121,8 @@ g.person(pid) -> {
   case?: case, contactOf?: [pid], followUp?: {from, to, symptomatic?: day},
   notes: [text]
 }
-g.contacts() -> [{pid, name, of:[pid], exposure:day, setting, followUntil, status:'monitoring'|'ill'|'well'|'lost', tested?}]
+g.contacts() -> [{pid, name, of:[pid], exposure:day (last), days:{sourcePid:[day...]} (every exposure day to each source), setting, place?:ref,
+                  followUntil, status:'monitoring'|'ill'|'well'|'lost', onset?:day, tested?}]
 ```
 
 ## Surveillance data

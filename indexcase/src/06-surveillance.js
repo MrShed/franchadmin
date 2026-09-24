@@ -667,7 +667,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var S = this.S, self = this;
     return Object.keys(S.contacts).map(function (k) {
       var c = S.contacts[k], pid = +k;
-      var o = { pid: pid, name: self.name(pid), of: c.of.slice(), exposure: c.exposure, setting: c.setting, followUntil: c.followUntil, status: c.status };
+      var o = { pid: pid, name: self.name(pid), of: c.of.slice(), exposure: c.exposure, setting: c.setting, followUntil: c.followUntil, status: c.status, days: IX.clone(c.days || {}) };
       if (c.onset !== undefined) o.onset = c.onset;
       if (c.place !== undefined && c.place >= 0) o.place = self.plref(c.place);
       if (S.cases[pid]) o.tested = S.cases[pid].tests.length > 0;
@@ -1023,41 +1023,44 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var x = sim.cur[pid];
     if (x >= 0 && sim.xhosp[x] >= 0 && sim.xhosp[x] <= to) to = sim.xhosp[x];
     if (cs.outcome === 'died' && cs.died !== undefined) to = Math.min(to, this.sdOf(cs.died));
-    var found = {}, add = function (q, sd, setting, place) {
+    var found = {}, add = function (q, sd, setting, place, sds) {
       if (q === pid) return;
       var e = found[q];
-      if (!e || e.sd < sd) found[q] = { sd: sd, setting: setting, place: place === undefined ? -1 : place };
+      if (!e) e = found[q] = { sd: sd, setting: setting, place: place === undefined ? -1 : place, sds: [] };
+      if (sd > e.sd) { e.sd = sd; e.setting = setting; e.place = place === undefined ? -1 : place; }
+      (sds || [sd]).forEach(function (d) { if (e.sds.indexOf(d) < 0) e.sds.push(d); });
     };
     // household
-    for (var a = C.hStart[C.hh[pid]]; a < C.hStart[C.hh[pid] + 1]; a++) add(C.hMem[a], to, 'household', -1);
+    var allDays = []; for (var dd0 = from; dd0 <= to; dd0++) allDays.push(dd0);
+    for (var a = C.hStart[C.hh[pid]]; a < C.hStart[C.hh[pid] + 1]; a++) add(C.hMem[a], to, 'household', -1, allDays);
     // friends seen
-    this.visitsIn(pid, from, to).forEach(function (v) { if (u(K.follow, pid, 10, v.pid) < 0.9) add(v.pid, v.sds[v.sds.length - 1], 'social visit', -1); });
+    this.visitsIn(pid, from, to).forEach(function (v) { if (u(K.follow, pid, 10, v.pid) < 0.9) add(v.pid, v.sds[v.sds.length - 1], 'social visit', -1, v.sds); });
     // groups
     var unnamed = [];
     this.routineIn(pid, from, to).forEach(function (r) {
       var n = C.gStart[r.g + 1] - C.gStart[r.g], last = r.sds[r.sds.length - 1];
       var pl = r.place >= 0 ? C.places[r.place] : null;
-      var listed = r.place >= 0 && S.siteLists[r.place];
+      var listed = r.place >= 0 && S.siteLists[r.place] && ['market', 'supermarket', 'station', 'stadium', 'shop', 'hospital'].indexOf(C.places[r.place].kind) < 0 && r.set !== SET.SHOP && r.set !== SET.MARKET;
       if (r.set === SET.SCHOOL || r.set === SET.NURSERY || (n <= 16 && (r.set === SET.WORK || r.set === SET.CARE || r.set === SET.HOSP || r.set === SET.LAB || r.set === SET.ANIMAL)) || r.set === SET.EVENT && n <= 40) {
         var pFind = r.set === SET.SCHOOL || r.set === SET.NURSERY ? 0.95 : r.set === SET.EVENT ? 0.6 : 0.75;
         for (var t = C.gStart[r.g]; t < C.gStart[r.g + 1]; t++) {
           var q = C.gMem[t];
           if (u(K.follow, pid, 20 + r.g, q) >= pFind) continue;
-          var ls = -1; for (var i = r.sds.length - 1; i >= 0; i--) if (self.wasAt(q, r.g, r.sds[i], C.gMask[t])) { ls = r.sds[i]; break; }
-          if (ls >= 0) add(q, ls, IX.SET_NAMES[r.set], r.place);
+          var both = r.sds.filter(function (sd) { return self.wasAt(q, r.g, sd, C.gMask[t]); });
+          if (both.length) add(q, both[both.length - 1], IX.SET_NAMES[r.set], r.place, both);
         }
       } else if (listed) {
         // venue attendance lists from a site visit: people there on the same days
         for (var t2 = C.gStart[r.g]; t2 < C.gStart[r.g + 1]; t2++) {
-          var q2 = C.gMem[t2], ls2 = -1;
-          for (var i2 = r.sds.length - 1; i2 >= 0; i2--) if (r.sds[i2] >= listed.from && self.wasAt(q2, r.g, r.sds[i2], C.gMask[t2])) { ls2 = r.sds[i2]; break; }
-          if (ls2 >= 0 && u(K.follow, pid, 30 + r.g, q2) < 0.7) add(q2, ls2, IX.SET_NAMES[r.set], r.place);
+          var q2 = C.gMem[t2];
+          var both2 = r.sds.filter(function (sd) { return sd >= listed.from && self.wasAt(q2, r.g, sd, C.gMask[t2]); });
+          if (both2.length && u(K.follow, pid, 30 + r.g, q2) < 0.7) add(q2, both2[both2.length - 1], IX.SET_NAMES[r.set], r.place, both2);
         }
       } else if (r.set !== SET.SHOP && r.set !== SET.TRANSPORT) {
         // named companions only; the rest need an attendance list
         for (var f = C.fStart[pid]; f < C.fStart[pid + 1]; f++) {
           var fr = C.fList[f];
-          for (var t3 = C.gStart[r.g]; t3 < C.gStart[r.g + 1]; t3++) if (C.gMem[t3] === fr) { var ls3 = -1; for (var i3 = r.sds.length - 1; i3 >= 0; i3--) if (self.wasAt(fr, r.g, r.sds[i3], C.gMask[t3])) { ls3 = r.sds[i3]; break; } if (ls3 >= 0) add(fr, ls3, IX.SET_NAMES[r.set], r.place); }
+          for (var t3 = C.gStart[r.g]; t3 < C.gStart[r.g + 1]; t3++) if (C.gMem[t3] === fr) { var both3 = r.sds.filter(function (sd) { return self.wasAt(fr, r.g, sd, C.gMask[t3]); }); if (both3.length) add(fr, both3[both3.length - 1], IX.SET_NAMES[r.set], r.place, both3); }
         }
         if (pl) unnamed.push({ place: r.place, days: r.sds.map(function (sd) { return self.gd(sd); }), n: n });
       }
@@ -1070,8 +1073,10 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     list.forEach(function (q) {
       var e = found[q];
       var c = S.contacts[q];
-      if (!c) c = S.contacts[q] = { of: [], exposure: self.gd(e.sd), setting: e.setting, place: e.place, followUntil: self.gd(e.sd) + 14, status: 'monitoring' };
+      if (!c) c = S.contacts[q] = { of: [], exposure: self.gd(e.sd), setting: e.setting, place: e.place, followUntil: self.gd(e.sd) + 14, status: 'monitoring', days: {} };
       if (c.of.indexOf(pid) < 0) c.of.push(pid);
+      if (!c.days) c.days = {};
+      c.days[pid] = e.sds.sort(function (x1, x2) { return x1 - x2; }).map(function (sd) { return self.gd(sd); });
       if (self.gd(e.sd) > c.exposure) { c.exposure = self.gd(e.sd); c.followUntil = c.exposure + 14; if (c.status === 'well') c.status = 'monitoring'; }
       self.knowPerson(q);
       sim.quarUntil[q] = Math.max(sim.quarUntil[q], e.sd + 10);
@@ -1134,7 +1139,12 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       }
     });
     st.done = S.day + 1;
-    st.result = { members: st.members.length, infected: nPos, asym: nAsym, sym: nSym };
+    // serial intervals from the household's first case; co-primary cases (ill within a day of it) are excluded
+    var ons = [], sis = [];
+    [st.index].concat(st.members).forEach(function (q) { var cq = S.cases[q]; if (cq && cq.status === 'confirmed' && cq.onset !== null && !cq.asymConfirmed) ons.push(cq.onset); });
+    ons.sort(function (a, b) { return a - b; });
+    for (var oi = 1; oi < ons.length; oi++) if (ons[oi] - ons[0] >= 2) sis.push(ons[oi] - ons[0]);
+    st.result = { members: st.members.length, infected: nPos, asym: nAsym, sym: nSym, si: sis };
     this.msg('result', 'Household study: ' + this.name(st.index) + ' — ' + nPos + ' of ' + st.members.length + ' infected, ' + nAsym + ' never ill', 'Field epidemiology team', [
       { k: 'table', head: ['Member', 'Age', 'PCR d0 d7 d14', 'Antibodies d21', 'Symptoms', 'Classification'], rows: rows },
       { k: 'n', x: ['Index case: ', this.pref(st.index), '. "Never ill" means no symptoms in the diary at any point in 21 days.'] }], { day: S.day + 1 });
@@ -1183,6 +1193,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     return { ok: true, msgs: [m] };
   };
   function joinRefs(g, pids) { var out = []; pids.forEach(function (q, i) { if (i) out.push(', '); out.push(g.pref(q)); }); return out; }
+  IX.QCAT = { close: 'Close contact (<2 m, 15 min+) with someone who fell ill', near: 'Same room, within a few metres of someone who fell ill', far: 'Same room or venue, well away from anyone who fell ill', ate: 'Ate food prepared on site', nate: 'Did not eat' };
   IX.SITE_KINDS = { choir: 'choir', pub: 'pub', restaurant: 'restaurant', school: 'school', nursery: 'nursery', care_home: 'care', hospital: 'hospital', church: 'faith', mosque: 'faith', temple: 'faith', gurdwara: 'faith',
     gym: 'gym', meat_plant: 'meat', factory: 'work', office: 'work', market: 'market', farm: 'farm', hotel: 'hall', community_hall: 'hall', stadium: 'stadium', supermarket: 'shop', lab: 'lab', university: 'uni', gp: 'gp', station: 'shop' };
 
@@ -1220,27 +1231,32 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var x = self.infBy(q, key + 14);
       var infectedHere = x >= 0 && sim.xday[x] === key && sim.xplace[x] === pi;
       var on = self.illOnsetOf(q, Math.min(sdEnd + 2, key + 14));
-      var ill = on > key && on <= key + 14;
+      var ill = on > key && on <= key + 12;
       if (ill) illList.push(q);
       if (infectedHere) nIllTrue++;
       var mode = infectedHere ? sim.xmode[x] : -1;
-      // proximity to someone who was ill
-      var close = mode === 0 ? true : mode === 1 ? u(K.quest, q, pi, 1) < 0.2 : u(K.quest, q, pi, 2) < 0.3;
-      addCat(close ? 'Close contact (<2 m, 15 min+) with someone who fell ill' : 'Same room, not close to anyone ill', ill);
-      if (food) { var ate = mode === 2 ? true : u(K.quest, q, pi, 3) < 0.65; addCat(ate ? 'Ate food prepared on site' : 'Did not eat', ill); }
+      // how close were they to someone who fell ill
+      var r0 = u(K.quest, q, pi, 1);
+      var dist = mode === 0 ? 'close' : mode === 1 ? (r0 < 0.15 ? 'close' : r0 < 0.6 ? 'near' : 'far') : (r0 < 0.2 ? 'close' : r0 < 0.55 ? 'near' : 'far');
+      addCat(IX.QCAT[dist], ill);
+      if (food) { var ate = mode === 2 ? true : u(K.quest, q, pi, 3) < 0.65; addCat(ate ? IX.QCAT.ate : IX.QCAT.nate, ill); }
       if (outdoorable) { var outside = mode === 1 || mode === 0 ? u(K.quest, q, pi, 4) < 0.08 : u(K.quest, q, pi, 5) < 0.3; addCat(outside ? 'Mostly outdoors' : 'Mostly indoors', ill); }
       if (p.kind === 'choir' || p.kind === 'church' || p.kind === 'mosque') { var act = p.kind === 'choir' ? (mode >= 0 ? u(K.quest, q, pi, 6) < 0.95 : u(K.quest, q, pi, 7) < 0.85) : u(K.quest, q, pi, 8) < 0.5; addCat(p.kind === 'choir' ? (act ? 'Sang' : 'Accompanist / listener') : (act ? 'Stayed for refreshments afterwards' : 'Left straight after'), ill); }
     });
     var rows = Object.keys(cats).map(function (k) { var c = cats[k]; return [k, String(c.n), String(c.ill), c.n ? Math.round(100 * c.ill / c.n) + '%' : '–']; });
+    // the onset curve of a point-source event: days from the event to illness
+    var onsetRel = illList.map(function (q) { var on = self.illOnsetOf(q, Math.min(sdEnd + 2, key + 14)); var e = u(K.recall, q, 60, 0), err = e < 0.75 ? 0 : e < 0.88 ? -1 : 1; return on - key + err; }).filter(function (v) { return v >= 0; });
+    var hist = {}; onsetRel.forEach(function (v) { hist[v] = (hist[v] || 0) + 1; });
     var tot = resp.length, nIll = illList.length;
     // ill respondents join the line list
     illList.forEach(function (q) { if (!S.cases[q]) { var cs = self.addCase(q, 'questionnaire', S.recognized ? 'probable' : 'suspected'); cs.epiLinked = true; } });
     var lines = [
       ['Event studied: ', this.plref(pi), ' on ' + this.dateLong(this.gd(key)) + '. ' + att.length + ' people present, ' + tot + ' responded (' + Math.round(100 * tot / Math.max(1, att.length)) + '%). ' + nIll + ' reported illness starting within 14 days.'],
       { k: 'table', head: ['Exposure', 'Respondents', 'Ill', 'Attack rate'], rows: rows },
+      onsetRel.length ? { k: 'm', x: ['Illness began (days after the event): ' + Object.keys(hist).map(Number).sort(function (a, b) { return a - b; }).map(function (d2) { return '+' + d2 + ': ' + hist[d2]; }).join('  ')] } : '',
       { k: 'n', x: ['Ill respondents who were not already known have been added to the line list. Some illness will be ordinary winter bugs.'] }
     ];
-    S.quests.push({ place: pi, day: this.gd(key), resp: tot, ill: nIll, cats: cats });
+    S.quests.push({ place: pi, day: this.gd(key), resp: tot, ill: nIll, cats: cats, onsets: onsetRel });
     this.msg('result', 'Questionnaire results: ' + p.name + ' (' + nIll + ' of ' + tot + ' ill)', 'Epidemiology analysts', lines, { day: S.day + 1 });
   };
 
@@ -1427,7 +1443,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var b = D.ageBand(C.age[q]); byAge[b][0]++; if (r) byAge[b][1]++;
     }
     var ci = IX.wilson(pos, got);
-    S.seroResults.push({ day: S.day + 1, n: got, pos: pos, lo: ci[0], hi: ci[1], asked: d.asked });
+    S.seroResults.push({ day: S.day + 1, n: got, pos: pos, lo: ci[0], hi: ci[1], asked: d.asked, byAge: byAge });
     this.msg('result', 'Serosurvey: ' + (100 * pos / Math.max(1, got)).toFixed(1) + '% have antibodies', 'Field epidemiology team', [
       pos + ' of ' + got + ' residents tested positive for antibodies to ' + S.agentName + ': ' + (100 * pos / got).toFixed(1) + '% (95% CI ' + (100 * ci[0]).toFixed(1) + '–' + (100 * ci[1]).toFixed(1) + '%). Antibodies take about two weeks to appear, so this reflects infections up to mid-' + this.shortDate(this.gd(sd) - 14) + '.',
       { k: 'table', head: ['Age', 'Tested', 'Positive', '%'], rows: byAge.map(function (a, i) { return [D.AGE_BANDS[i], String(a[0]), String(a[1]), a[0] ? (100 * a[1] / a[0]).toFixed(0) + '%' : '–']; }) },

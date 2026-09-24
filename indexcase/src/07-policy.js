@@ -570,9 +570,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       case 'originCase': return +value === T.originCase ? 0 : 1;
       case 'caseDef': return 0;
       case 'incubation': return Math.min(1, Math.abs(value - t) / Math.max(1.5, 0.3 * t) / 1);
-      case 'presym': case 'asym': return Math.min(1, Math.abs(value - t) / 15);
-      case 'R': return Math.min(1, Math.abs(value - t) / Math.max(0.4, 0.3 * t));
-      case 'ifr': case 'ihr': return Math.min(1, Math.abs(Math.log(Math.max(0.01, value) / Math.max(0.01, t))) / Math.log(2));
+      case 'presym': case 'asym': return Math.min(1, Math.abs(value - t) / 20);
+      case 'R': return Math.min(1, Math.abs(value - t) / Math.max(0.5, 0.4 * t));
+      case 'ifr': case 'ihr': return Math.min(1, Math.abs(Math.log(Math.max(0.01, value) / Math.max(0.01, t))) / (2 * Math.log(2)));
     }
     return null;
   };

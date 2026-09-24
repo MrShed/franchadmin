@@ -8,11 +8,15 @@ var UIPortrait = (function () {
   var BG = [['#1f3346', '#0e1a25'], ['#2a2f45', '#12141f'], ['#23383a', '#0e1b1c'], ['#3a2d2a', '#1a1311']];
   function P(o) {
     var r = UIrand('face:' + o.pid), age = o.age === null || o.age === undefined ? 40 : o.age, f = /^f/i.test(o.sex || '') ? 1 : /^m/i.test(o.sex || '') ? 0 : (r() < .5 ? 1 : 0);
-    var sk = SKIN[Math.floor(r() * SKIN.length)], hairC = HAIR[Math.floor(r() * HAIR.length)], cl = CLOTH[Math.floor(r() * CLOTH.length)], bg = BG[Math.floor(r() * BG.length)];
+    var her = o.heritage || (typeof UIA !== 'undefined' && UIA.heritageOf ? UIA.heritageOf(o.pid) : null);
+    var SK = { light: [0, 1, 7, 1], south: [2, 3, 3, 4], dark: [4, 5, 6, 5], east: [0, 7, 1, 7] };
+    var grp = !her ? null : /british|irish|polish|romanian/.test(her) ? 'light' : /pakistani|bangladeshi|indian|sikh|southern/.test(her) ? 'south' : /caribbean|african|somali/.test(her) ? 'dark' : /chinese/.test(her) ? 'east' : null;
+    var sk = SKIN[grp ? SK[grp][Math.floor(r() * 4)] : Math.floor(r() * SKIN.length)], hairC = grp && grp !== 'light' ? HAIR[[0, 1, 8, 7][Math.floor(r() * 4)]] : HAIR[Math.floor(r() * HAIR.length)], cl = CLOTH[Math.floor(r() * CLOTH.length)], bg = BG[Math.floor(r() * BG.length)];
     if (age > 62) hairC = r() < .6 ? '#c9c5bf' : '#9b958c'; else if (age > 48 && r() < .4) hairC = '#7d7770';
     var kid = age < 13, faceW = kid ? 25 : 23 + r() * 3, faceH = kid ? 28 : 30 + r() * 3, cx = 60, cy = kid ? 60 : 56;
     var style = f ? Math.floor(r() * 5) : Math.floor(r() * 5); // hair style index
-    var covered = f && r() < .12 && !kid; // headscarf
+    var covered = f && !kid && r() < (her === 'somali' ? .8 : /pakistani|bangladeshi/.test(her || '') ? .45 : her ? .03 : .12); // headscarf
+    var turban = !f && !kid && her === 'sikh' && r() < .6;
     var bald = !f && age > 45 && r() < .35;
     var glasses = age > 40 ? r() < .45 : r() < .15, beard = !f && !kid && age > 17 && r() < .3;
     var s = '<svg viewBox="0 0 120 120" class="portrait" aria-hidden="true"><defs>' +
@@ -36,6 +40,8 @@ var UIPortrait = (function () {
     s += '<ellipse cx="' + (cx - faceW + 1) + '" cy="' + (cy + 2) + '" rx="4" ry="6" fill="' + sk[0] + '"/><ellipse cx="' + (cx + faceW - 1) + '" cy="' + (cy + 2) + '" rx="4" ry="6" fill="' + sk[1] + '"/>';
     var jaw = f ? 0.82 : 0.9;
     s += '<path d="M' + (cx - faceW) + ',' + (cy - 4) + 'Q' + (cx - faceW) + ',' + (cy - faceH) + ' ' + cx + ',' + (cy - faceH) + 'Q' + (cx + faceW) + ',' + (cy - faceH) + ' ' + (cx + faceW) + ',' + (cy - 4) + 'Q' + (cx + faceW * jaw) + ',' + (cy + faceH * .8) + ' ' + cx + ',' + (cy + faceH * .92) + 'Q' + (cx - faceW * jaw) + ',' + (cy + faceH * .8) + ' ' + (cx - faceW) + ',' + (cy - 4) + 'Z" fill="url(#pk' + o.pid + ')"/>';
+    s += '<path d="M' + (cx + faceW * .35) + ',' + (cy - faceH * .9) + 'Q' + (cx + faceW * 1.02) + ',' + (cy - 2) + ' ' + (cx + faceW * .3) + ',' + (cy + faceH * .85) + 'Q' + (cx + faceW * .8) + ',' + (cy + 4) + ' ' + (cx + faceW * .35) + ',' + (cy - faceH * .9) + 'Z" fill="#000" opacity=".08"/>';
+    s += '<ellipse cx="' + (cx - 12) + '" cy="' + (cy + 9) + '" rx="4.5" ry="2.6" fill="#e0706a" opacity=".16"/><ellipse cx="' + (cx + 12) + '" cy="' + (cy + 9) + '" rx="4.5" ry="2.6" fill="#e0706a" opacity=".12"/>';
     // age lines
     if (age > 55) s += '<path d="M' + (cx - 14) + ',' + (cy + 14) + 'q3,5 7,6M' + (cx + 14) + ',' + (cy + 14) + 'q-3,5 -7,6M' + (cx - 10) + ',' + (cy - faceH + 12) + 'h20" stroke="' + sk[1] + '" stroke-width="1.2" fill="none" opacity=".8"/>';
     // beard
@@ -51,7 +57,8 @@ var UIPortrait = (function () {
     s += '<path d="M' + (cx - mw) + ',' + (cy + 17) + 'q' + mw + ',' + (mood * 2) + ' ' + (mw * 2) + ',0" stroke="#7a3b30" stroke-width="2" fill="none" stroke-linecap="round"/>';
     if (glasses) s += '<g fill="none" stroke="#0d0d0d" stroke-width="1.6" opacity=".85"><rect x="' + (cx - ex - 6) + '" y="' + (ey - 5) + '" width="12" height="9" rx="3"/><rect x="' + (cx + ex - 6) + '" y="' + (ey - 5) + '" width="12" height="9" rx="3"/><path d="M' + (cx - ex + 6) + ',' + (ey - 1) + 'h' + (2 * ex - 12) + '"/></g>';
     // hair front
-    if (!covered && !bald) {
+    if (turban) s += '<path d="M' + (cx - faceW - 3) + ',' + (cy - 4) + 'Q' + (cx - faceW - 4) + ',' + (cy - faceH - 16) + ' ' + cx + ',' + (cy - faceH - 14) + 'Q' + (cx + faceW + 4) + ',' + (cy - faceH - 16) + ' ' + (cx + faceW + 3) + ',' + (cy - 4) + 'Q' + cx + ',' + (cy - faceH + 2) + ' ' + (cx - faceW - 3) + ',' + (cy - 4) + 'Z" fill="' + ['#1f3f7a', '#7a1f2b', '#e0a526', '#f2efe6', '#2d5b3a'][Math.floor(r() * 5)] + '"/><path d="M' + (cx - faceW) + ',' + (cy - faceH + 2) + 'Q' + cx + ',' + (cy - faceH - 8) + ' ' + (cx + faceW) + ',' + (cy - 8) + '" stroke="#000" stroke-opacity=".18" stroke-width="2" fill="none"/>';
+    else if (!covered && !bald) {
       var top = cy - faceH;
       if (f && style === 4 || (!f && style === 3)) { // curly / afro
         for (var k = 0; k < 13; k++) { var a = Math.PI + k / 12 * Math.PI; s += '<circle cx="' + (cx + Math.cos(a) * (faceW + 3)).toFixed(1) + '" cy="' + (cy - 6 + Math.sin(a) * (faceH + 2)).toFixed(1) + '" r="' + (7 + r() * 3).toFixed(1) + '" fill="' + hairC + '"/>'; }

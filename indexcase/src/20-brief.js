@@ -25,7 +25,10 @@ var UIBrief = UI.views.brief = {
     if (sub === 'est') UIEst.render(UI$('#br-body'));
     else if (sub === 'mentor') UIMentor.render(UI$('#br-body'));
     else this.renderInbox();
-    UI$('.br').classList.toggle('reading', !!UIS.brief.open && sub === 'inbox');
+    var reading = !!UIS.brief.open && sub === 'inbox', doc = UI$('#br-doc');
+    UI$('.br').classList.toggle('reading', reading);
+    if (!reading) { doc.innerHTML = ''; doc.dataset.id = ''; UI$('#br-rt').innerHTML = ''; }
+    else if (doc.dataset.id !== UIS.brief.open && !this._opening) { var m = UIA.msg(UIS.brief.open); if (m) this.fillDoc(m); }
   },
   renderInbox: function () {
     var st = UIS.brief, all = UIA.inbox().map(function (m, i) { return { m: m, i: i }; }).sort(function (a, b) { return b.m.day - a.m.day || (b.m.urgent ? 1 : 0) - (a.m.urgent ? 1 : 0) || b.i - a.i; }).map(function (x) { return x.m; }), kinds = {};
@@ -50,7 +53,17 @@ var UIBrief = UI.views.brief = {
     if (UIS.tab !== 'brief') UI.go('brief');
     if (UIS.brief.sub !== 'inbox') { UIS.brief.sub = 'inbox'; }
     UIS.brief.open = id; UIS.read[id] = 1; UIA.markRead(id);
+    this._opening = true; this.fillDoc(m); this._opening = false;
+    this.render();
+    UI.badges();
+    if (window.innerWidth < 900 && !UIhist.stack.some(function (l) { return l.name === 'reader'; })) UIhist.push('reader', function () { UIS.brief.open = null; UIBrief.render(); });
+    if (m.kind === 'mayor') UIAudio.cue('phone');
+    UI.emit('msg', m);
+    UI.save();
+  },
+  fillDoc: function (m) {
     var K = UIKINDS[m.kind] || UIKINDS.report;
+    UI$('#br-doc').dataset.id = m.id;
     UI$('#br-rt').innerHTML = '<div class="eyebrow">' + UIesc(K.l) + ' · ' + UIesc(UIA.dateShort(m.day)) + '</div><b>' + UIesc(m.title) + '</b>';
     UI$('#br-doc').innerHTML = this.doc(m) + this.choices(m);
     var self = this;
@@ -61,12 +74,6 @@ var UIBrief = UI.views.brief = {
       UIAudio.cue('ok'); UItoast('Answer given'); UI.save(); UI.refresh(); self.openMsg(m.id);
     }); });
     UI$('#br-rs').scrollTop = 0;
-    this.render();
-    UI.badges();
-    if (window.innerWidth < 900) UIhist.push('reader', function () { UIS.brief.open = null; UIBrief.render(); });
-    if (m.kind === 'mayor') UIAudio.cue('phone');
-    UI.emit('msg', m);
-    UI.save();
   },
   choices: function (m) {
     if (!m.choices || !m.choices.length) return '';
@@ -122,7 +129,7 @@ var UIEst = {
   },
   traits: function () {
     var t = UIA.estimates().traits, how = this.HOW;
-    return t.map(function (x) { var o = {}; Object.keys(x).forEach(function (k) { o[k] = x[k]; }); o.how = how[x.id] || ''; if (x.id === 'ifr' || (x.type === 'pct' && x.max && x.min > 0 && x.max / x.min > 40)) o.log = true; if (o.type === 'number' && !o.step) o.step = (o.max - o.min) > 20 ? 1 : (o.max - o.min) > 5 ? 0.5 : 0.1; if (o.type === 'pct' && !o.step) o.step = 0.01; return o; });
+    return t.map(function (x) { var o = {}; Object.keys(x).forEach(function (k) { o[k] = x[k]; }); o.how = how[x.id] || ''; if (x.id === 'ifr' || (x.type === 'pct' && x.max && x.min > 0 && x.max / x.min > 40)) { o.log = true; if (!(o.min > 0)) o.min = 0.0005; } if (o.type === 'number' && !o.step) o.step = (o.max - o.min) > 20 ? 1 : (o.max - o.min) > 5 ? 0.5 : 0.1; if (o.type === 'pct' && !o.step) o.step = 0.01; return o; });
   },
   optLabel: function (t, v) { var o = (t.options || []).filter(function (x) { return String(x.id) === String(v); })[0]; return o ? o.label : UIcap(String(v)); },
   fmt: function (t, v) {

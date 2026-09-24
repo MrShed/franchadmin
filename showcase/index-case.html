@@ -3680,7 +3680,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var S = this.S, self = this;
     return Object.keys(S.contacts).map(function (k) {
       var c = S.contacts[k], pid = +k;
-      var o = { pid: pid, name: self.name(pid), of: c.of.slice(), exposure: c.exposure, setting: c.setting, followUntil: c.followUntil, status: c.status };
+      var o = { pid: pid, name: self.name(pid), of: c.of.slice(), exposure: c.exposure, setting: c.setting, followUntil: c.followUntil, status: c.status, days: IX.clone(c.days || {}) };
       if (c.onset !== undefined) o.onset = c.onset;
       if (c.place !== undefined && c.place >= 0) o.place = self.plref(c.place);
       if (S.cases[pid]) o.tested = S.cases[pid].tests.length > 0;
@@ -4036,41 +4036,44 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var x = sim.cur[pid];
     if (x >= 0 && sim.xhosp[x] >= 0 && sim.xhosp[x] <= to) to = sim.xhosp[x];
     if (cs.outcome === 'died' && cs.died !== undefined) to = Math.min(to, this.sdOf(cs.died));
-    var found = {}, add = function (q, sd, setting, place) {
+    var found = {}, add = function (q, sd, setting, place, sds) {
       if (q === pid) return;
       var e = found[q];
-      if (!e || e.sd < sd) found[q] = { sd: sd, setting: setting, place: place === undefined ? -1 : place };
+      if (!e) e = found[q] = { sd: sd, setting: setting, place: place === undefined ? -1 : place, sds: [] };
+      if (sd > e.sd) { e.sd = sd; e.setting = setting; e.place = place === undefined ? -1 : place; }
+      (sds || [sd]).forEach(function (d) { if (e.sds.indexOf(d) < 0) e.sds.push(d); });
     };
     // household
-    for (var a = C.hStart[C.hh[pid]]; a < C.hStart[C.hh[pid] + 1]; a++) add(C.hMem[a], to, 'household', -1);
+    var allDays = []; for (var dd0 = from; dd0 <= to; dd0++) allDays.push(dd0);
+    for (var a = C.hStart[C.hh[pid]]; a < C.hStart[C.hh[pid] + 1]; a++) add(C.hMem[a], to, 'household', -1, allDays);
     // friends seen
-    this.visitsIn(pid, from, to).forEach(function (v) { if (u(K.follow, pid, 10, v.pid) < 0.9) add(v.pid, v.sds[v.sds.length - 1], 'social visit', -1); });
+    this.visitsIn(pid, from, to).forEach(function (v) { if (u(K.follow, pid, 10, v.pid) < 0.9) add(v.pid, v.sds[v.sds.length - 1], 'social visit', -1, v.sds); });
     // groups
     var unnamed = [];
     this.routineIn(pid, from, to).forEach(function (r) {
       var n = C.gStart[r.g + 1] - C.gStart[r.g], last = r.sds[r.sds.length - 1];
       var pl = r.place >= 0 ? C.places[r.place] : null;
-      var listed = r.place >= 0 && S.siteLists[r.place];
+      var listed = r.place >= 0 && S.siteLists[r.place] && ['market', 'supermarket', 'station', 'stadium', 'shop', 'hospital'].indexOf(C.places[r.place].kind) < 0 && r.set !== SET.SHOP && r.set !== SET.MARKET;
       if (r.set === SET.SCHOOL || r.set === SET.NURSERY || (n <= 16 && (r.set === SET.WORK || r.set === SET.CARE || r.set === SET.HOSP || r.set === SET.LAB || r.set === SET.ANIMAL)) || r.set === SET.EVENT && n <= 40) {
         var pFind = r.set === SET.SCHOOL || r.set === SET.NURSERY ? 0.95 : r.set === SET.EVENT ? 0.6 : 0.75;
         for (var t = C.gStart[r.g]; t < C.gStart[r.g + 1]; t++) {
           var q = C.gMem[t];
           if (u(K.follow, pid, 20 + r.g, q) >= pFind) continue;
-          var ls = -1; for (var i = r.sds.length - 1; i >= 0; i--) if (self.wasAt(q, r.g, r.sds[i], C.gMask[t])) { ls = r.sds[i]; break; }
-          if (ls >= 0) add(q, ls, IX.SET_NAMES[r.set], r.place);
+          var both = r.sds.filter(function (sd) { return self.wasAt(q, r.g, sd, C.gMask[t]); });
+          if (both.length) add(q, both[both.length - 1], IX.SET_NAMES[r.set], r.place, both);
         }
       } else if (listed) {
         // venue attendance lists from a site visit: people there on the same days
         for (var t2 = C.gStart[r.g]; t2 < C.gStart[r.g + 1]; t2++) {
-          var q2 = C.gMem[t2], ls2 = -1;
-          for (var i2 = r.sds.length - 1; i2 >= 0; i2--) if (r.sds[i2] >= listed.from && self.wasAt(q2, r.g, r.sds[i2], C.gMask[t2])) { ls2 = r.sds[i2]; break; }
-          if (ls2 >= 0 && u(K.follow, pid, 30 + r.g, q2) < 0.7) add(q2, ls2, IX.SET_NAMES[r.set], r.place);
+          var q2 = C.gMem[t2];
+          var both2 = r.sds.filter(function (sd) { return sd >= listed.from && self.wasAt(q2, r.g, sd, C.gMask[t2]); });
+          if (both2.length && u(K.follow, pid, 30 + r.g, q2) < 0.7) add(q2, both2[both2.length - 1], IX.SET_NAMES[r.set], r.place, both2);
         }
       } else if (r.set !== SET.SHOP && r.set !== SET.TRANSPORT) {
         // named companions only; the rest need an attendance list
         for (var f = C.fStart[pid]; f < C.fStart[pid + 1]; f++) {
           var fr = C.fList[f];
-          for (var t3 = C.gStart[r.g]; t3 < C.gStart[r.g + 1]; t3++) if (C.gMem[t3] === fr) { var ls3 = -1; for (var i3 = r.sds.length - 1; i3 >= 0; i3--) if (self.wasAt(fr, r.g, r.sds[i3], C.gMask[t3])) { ls3 = r.sds[i3]; break; } if (ls3 >= 0) add(fr, ls3, IX.SET_NAMES[r.set], r.place); }
+          for (var t3 = C.gStart[r.g]; t3 < C.gStart[r.g + 1]; t3++) if (C.gMem[t3] === fr) { var both3 = r.sds.filter(function (sd) { return self.wasAt(fr, r.g, sd, C.gMask[t3]); }); if (both3.length) add(fr, both3[both3.length - 1], IX.SET_NAMES[r.set], r.place, both3); }
         }
         if (pl) unnamed.push({ place: r.place, days: r.sds.map(function (sd) { return self.gd(sd); }), n: n });
       }
@@ -4083,8 +4086,10 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     list.forEach(function (q) {
       var e = found[q];
       var c = S.contacts[q];
-      if (!c) c = S.contacts[q] = { of: [], exposure: self.gd(e.sd), setting: e.setting, place: e.place, followUntil: self.gd(e.sd) + 14, status: 'monitoring' };
+      if (!c) c = S.contacts[q] = { of: [], exposure: self.gd(e.sd), setting: e.setting, place: e.place, followUntil: self.gd(e.sd) + 14, status: 'monitoring', days: {} };
       if (c.of.indexOf(pid) < 0) c.of.push(pid);
+      if (!c.days) c.days = {};
+      c.days[pid] = e.sds.sort(function (x1, x2) { return x1 - x2; }).map(function (sd) { return self.gd(sd); });
       if (self.gd(e.sd) > c.exposure) { c.exposure = self.gd(e.sd); c.followUntil = c.exposure + 14; if (c.status === 'well') c.status = 'monitoring'; }
       self.knowPerson(q);
       sim.quarUntil[q] = Math.max(sim.quarUntil[q], e.sd + 10);
@@ -4147,7 +4152,12 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       }
     });
     st.done = S.day + 1;
-    st.result = { members: st.members.length, infected: nPos, asym: nAsym, sym: nSym };
+    // serial intervals from the household's first case; co-primary cases (ill within a day of it) are excluded
+    var ons = [], sis = [];
+    [st.index].concat(st.members).forEach(function (q) { var cq = S.cases[q]; if (cq && cq.status === 'confirmed' && cq.onset !== null && !cq.asymConfirmed) ons.push(cq.onset); });
+    ons.sort(function (a, b) { return a - b; });
+    for (var oi = 1; oi < ons.length; oi++) if (ons[oi] - ons[0] >= 2) sis.push(ons[oi] - ons[0]);
+    st.result = { members: st.members.length, infected: nPos, asym: nAsym, sym: nSym, si: sis };
     this.msg('result', 'Household study: ' + this.name(st.index) + ' — ' + nPos + ' of ' + st.members.length + ' infected, ' + nAsym + ' never ill', 'Field epidemiology team', [
       { k: 'table', head: ['Member', 'Age', 'PCR d0 d7 d14', 'Antibodies d21', 'Symptoms', 'Classification'], rows: rows },
       { k: 'n', x: ['Index case: ', this.pref(st.index), '. "Never ill" means no symptoms in the diary at any point in 21 days.'] }], { day: S.day + 1 });
@@ -4196,6 +4206,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     return { ok: true, msgs: [m] };
   };
   function joinRefs(g, pids) { var out = []; pids.forEach(function (q, i) { if (i) out.push(', '); out.push(g.pref(q)); }); return out; }
+  IX.QCAT = { close: 'Close contact (<2 m, 15 min+) with someone who fell ill', near: 'Same room, within a few metres of someone who fell ill', far: 'Same room or venue, well away from anyone who fell ill', ate: 'Ate food prepared on site', nate: 'Did not eat' };
   IX.SITE_KINDS = { choir: 'choir', pub: 'pub', restaurant: 'restaurant', school: 'school', nursery: 'nursery', care_home: 'care', hospital: 'hospital', church: 'faith', mosque: 'faith', temple: 'faith', gurdwara: 'faith',
     gym: 'gym', meat_plant: 'meat', factory: 'work', office: 'work', market: 'market', farm: 'farm', hotel: 'hall', community_hall: 'hall', stadium: 'stadium', supermarket: 'shop', lab: 'lab', university: 'uni', gp: 'gp', station: 'shop' };
 
@@ -4233,27 +4244,32 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var x = self.infBy(q, key + 14);
       var infectedHere = x >= 0 && sim.xday[x] === key && sim.xplace[x] === pi;
       var on = self.illOnsetOf(q, Math.min(sdEnd + 2, key + 14));
-      var ill = on > key && on <= key + 14;
+      var ill = on > key && on <= key + 12;
       if (ill) illList.push(q);
       if (infectedHere) nIllTrue++;
       var mode = infectedHere ? sim.xmode[x] : -1;
-      // proximity to someone who was ill
-      var close = mode === 0 ? true : mode === 1 ? u(K.quest, q, pi, 1) < 0.2 : u(K.quest, q, pi, 2) < 0.3;
-      addCat(close ? 'Close contact (<2 m, 15 min+) with someone who fell ill' : 'Same room, not close to anyone ill', ill);
-      if (food) { var ate = mode === 2 ? true : u(K.quest, q, pi, 3) < 0.65; addCat(ate ? 'Ate food prepared on site' : 'Did not eat', ill); }
+      // how close were they to someone who fell ill
+      var r0 = u(K.quest, q, pi, 1);
+      var dist = mode === 0 ? 'close' : mode === 1 ? (r0 < 0.15 ? 'close' : r0 < 0.6 ? 'near' : 'far') : (r0 < 0.2 ? 'close' : r0 < 0.55 ? 'near' : 'far');
+      addCat(IX.QCAT[dist], ill);
+      if (food) { var ate = mode === 2 ? true : u(K.quest, q, pi, 3) < 0.65; addCat(ate ? IX.QCAT.ate : IX.QCAT.nate, ill); }
       if (outdoorable) { var outside = mode === 1 || mode === 0 ? u(K.quest, q, pi, 4) < 0.08 : u(K.quest, q, pi, 5) < 0.3; addCat(outside ? 'Mostly outdoors' : 'Mostly indoors', ill); }
       if (p.kind === 'choir' || p.kind === 'church' || p.kind === 'mosque') { var act = p.kind === 'choir' ? (mode >= 0 ? u(K.quest, q, pi, 6) < 0.95 : u(K.quest, q, pi, 7) < 0.85) : u(K.quest, q, pi, 8) < 0.5; addCat(p.kind === 'choir' ? (act ? 'Sang' : 'Accompanist / listener') : (act ? 'Stayed for refreshments afterwards' : 'Left straight after'), ill); }
     });
     var rows = Object.keys(cats).map(function (k) { var c = cats[k]; return [k, String(c.n), String(c.ill), c.n ? Math.round(100 * c.ill / c.n) + '%' : '–']; });
+    // the onset curve of a point-source event: days from the event to illness
+    var onsetRel = illList.map(function (q) { var on = self.illOnsetOf(q, Math.min(sdEnd + 2, key + 14)); var e = u(K.recall, q, 60, 0), err = e < 0.75 ? 0 : e < 0.88 ? -1 : 1; return on - key + err; }).filter(function (v) { return v >= 0; });
+    var hist = {}; onsetRel.forEach(function (v) { hist[v] = (hist[v] || 0) + 1; });
     var tot = resp.length, nIll = illList.length;
     // ill respondents join the line list
     illList.forEach(function (q) { if (!S.cases[q]) { var cs = self.addCase(q, 'questionnaire', S.recognized ? 'probable' : 'suspected'); cs.epiLinked = true; } });
     var lines = [
       ['Event studied: ', this.plref(pi), ' on ' + this.dateLong(this.gd(key)) + '. ' + att.length + ' people present, ' + tot + ' responded (' + Math.round(100 * tot / Math.max(1, att.length)) + '%). ' + nIll + ' reported illness starting within 14 days.'],
       { k: 'table', head: ['Exposure', 'Respondents', 'Ill', 'Attack rate'], rows: rows },
+      onsetRel.length ? { k: 'm', x: ['Illness began (days after the event): ' + Object.keys(hist).map(Number).sort(function (a, b) { return a - b; }).map(function (d2) { return '+' + d2 + ': ' + hist[d2]; }).join('  ')] } : '',
       { k: 'n', x: ['Ill respondents who were not already known have been added to the line list. Some illness will be ordinary winter bugs.'] }
     ];
-    S.quests.push({ place: pi, day: this.gd(key), resp: tot, ill: nIll, cats: cats });
+    S.quests.push({ place: pi, day: this.gd(key), resp: tot, ill: nIll, cats: cats, onsets: onsetRel });
     this.msg('result', 'Questionnaire results: ' + p.name + ' (' + nIll + ' of ' + tot + ' ill)', 'Epidemiology analysts', lines, { day: S.day + 1 });
   };
 
@@ -4440,7 +4456,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var b = D.ageBand(C.age[q]); byAge[b][0]++; if (r) byAge[b][1]++;
     }
     var ci = IX.wilson(pos, got);
-    S.seroResults.push({ day: S.day + 1, n: got, pos: pos, lo: ci[0], hi: ci[1], asked: d.asked });
+    S.seroResults.push({ day: S.day + 1, n: got, pos: pos, lo: ci[0], hi: ci[1], asked: d.asked, byAge: byAge });
     this.msg('result', 'Serosurvey: ' + (100 * pos / Math.max(1, got)).toFixed(1) + '% have antibodies', 'Field epidemiology team', [
       pos + ' of ' + got + ' residents tested positive for antibodies to ' + S.agentName + ': ' + (100 * pos / got).toFixed(1) + '% (95% CI ' + (100 * ci[0]).toFixed(1) + '–' + (100 * ci[1]).toFixed(1) + '%). Antibodies take about two weeks to appear, so this reflects infections up to mid-' + this.shortDate(this.gd(sd) - 14) + '.',
       { k: 'table', head: ['Age', 'Tested', 'Positive', '%'], rows: byAge.map(function (a, i) { return [D.AGE_BANDS[i], String(a[0]), String(a[1]), a[0] ? (100 * a[1] / a[0]).toFixed(0) + '%' : '–']; }) },
@@ -5065,9 +5081,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       case 'originCase': return +value === T.originCase ? 0 : 1;
       case 'caseDef': return 0;
       case 'incubation': return Math.min(1, Math.abs(value - t) / Math.max(1.5, 0.3 * t) / 1);
-      case 'presym': case 'asym': return Math.min(1, Math.abs(value - t) / 15);
-      case 'R': return Math.min(1, Math.abs(value - t) / Math.max(0.4, 0.3 * t));
-      case 'ifr': case 'ihr': return Math.min(1, Math.abs(Math.log(Math.max(0.01, value) / Math.max(0.01, t))) / Math.log(2));
+      case 'presym': case 'asym': return Math.min(1, Math.abs(value - t) / 20);
+      case 'R': return Math.min(1, Math.abs(value - t) / Math.max(0.5, 0.4 * t));
+      case 'ifr': case 'ihr': return Math.min(1, Math.abs(Math.log(Math.max(0.01, value) / Math.max(0.01, t))) / (2 * Math.log(2)));
     }
     return null;
   };
@@ -5594,7 +5610,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     // other unexplained admissions the hospital had already flagged
     S.preFlags.forEach(function (f) { if (!S.cases[f.pid]) self.addCase(f.pid, 'hospital', 'suspected'); });
     this.alertMessage(al, pids);
-    this.msg('system', 'Day 0: ' + this.dateLong(0), 'Incident room', [
+    this.msg('system', 'Day 1: ' + this.dateLong(0), 'Incident room', [
       'You are the Director of Public Health for ' + C.name + ' (population ' + IX.fmt(C.population) + '). This morning something landed on your desk that might be nothing.',
       { k: 'n', x: ['ACT 1 — DETECT. Is this something new? Test the patients against everything we know (the extended panel), talk to them, find out what links them. If three or more ill people test negative for everything, you can ask the lab to look for a new agent. Nobody else will.'] }]);
     S.act = 1;
@@ -5769,9 +5785,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var inc = [], asym = 0, tot = 0, pre = 0, symT = 0, off = new Int32Array(Math.max(1, n));
     for (var x = 0; x < n; x++) { if (sim.xby[x] >= 0) off[sim.xby[x]]++; }
     var early = Math.min(n, Math.max(40, Math.round(0.03 * C.N)));
+    var earlyT = Math.max(300, Math.round(0.06 * C.N));   // traits are measured on the early epidemic, as the player sees it
     var sumOff = 0, cntOff = 0;
     for (x = 0; x < n; x++) {
       if (sim.xday[x] > sim.sd - 25) continue;   // not yet complete
+      if (x >= earlyT && tot >= 300) continue;
       tot++;
       if (sim.xonset[x] < 0) asym++; else inc.push(sim.xonset[x] - sim.xday[x]);
       if (x < early) { sumOff += off[x]; cntOff++; }
@@ -5783,10 +5801,19 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     card.presym = pre + symT >= 30 ? Math.round(100 * pre / (pre + symT)) : Math.round(100 * P.presym);
     card.R = this.S.R0 || (cntOff >= 30 ? IX.round(sumOff / cntOff, 2) : P.R);
     // fatality: expected deaths at normal capacity for the people actually infected (age mix of this outbreak)
-    var ef = 0, eh = 0, m = 0;
-    for (x = 0; x < n; x++) { var a = sim.xwho[x], bd = D.ageBand(C.age[a]); ef += P.ageIFR[bd]; eh += P.ageIHR[bd]; m++; }
-    card.ifr = m >= 50 ? IX.round(100 * ef / m, 2) : IX.round(100 * P.ifr, 2);
-    card.ihr = m >= 50 ? IX.round(100 * eh / m, 1) : IX.round(100 * P.ihr, 1);
+    // severity as it actually played out among the early, resolved infections (age mix, crowded wards and all),
+    // shrunk towards the expected value for that age mix when deaths are few
+    var ef = 0, eh = 0, m = 0, dd = 0, hh = 0;
+    for (x = 0; x < n && m < earlyT; x++) {
+      if (sim.xday[x] > sim.sd - 30) continue;
+      var a = sim.xwho[x], bd = D.ageBand(C.age[a]); ef += P.ageIFR[bd]; eh += P.ageIHR[bd]; m++;
+      if (sim.xdeath[x] >= 0) dd++;
+      if (sim.xhosp[x] >= 0) hh++;
+    }
+    var K0 = 150;
+    card.ifrExpected = m ? IX.round(100 * ef / m, 2) : IX.round(100 * P.ifr, 2);
+    card.ifr = m >= 50 ? IX.round(100 * (dd + K0 * ef / m) / (m + K0), 2) : IX.round(100 * P.ifr, 2);
+    card.ihr = m >= 50 ? IX.round(100 * (hh + K0 * eh / m) / (m + K0), 1) : IX.round(100 * P.ihr, 1);
     card.originCase = sim.primary;
     card.sourcePlace = sim.sourcePlace >= 0 ? C.places[sim.sourcePlace].id : null;
     card.day = S.day;
@@ -6091,129 +6118,168 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   var SINGLE_DAY = { 'celebration': 1, 'social visit': 1, 'choir': 1, 'pub': 1, 'restaurant': 1, 'place of worship': 1, 'football ground': 1, 'gym': 1, 'funeral': 1, 'doorstep delivery': 1, 'market': 1 };
 
   // ================================================================ estimators (observable data only)
+  function erf(x) { var t = 1 / (1 + 0.3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; }
+  IX.erf = erf;
+  function robustMean(L) {
+    if (!L.length) return NaN;
+    var m = IX.median(L), keep = L.filter(function (v) { return v <= 2 * m + 2; });
+    return IX.mean(keep.length ? keep : L);
+  }
+  IX.robustMean = robustMean;
+  /** R from a growth rate r and a gamma generation interval (mean mu, sd 0.45 mu) */
+  function rFromGrowth(r, mu) { var sd = 0.45 * mu, k = mu * mu / (sd * sd), th = sd * sd / mu; return Math.pow(1 + r * th, k); }
+  IX.rFromGrowth = rFromGrowth;
+
   IX.estimate = function (g) {
-    var S = g.S, ll = g.lineList(), byPid = {};
+    var S = g.S, ll = g.lineList(), byPid = {}, C = g.C;
     ll.forEach(function (c) { byPid[c.pid] = c; });
     var cons = g.contacts();
     var E = { n: {} };
     var live = ll.filter(function (c) { return c.status === 'confirmed' || c.status === 'probable'; });
 
-    // --- incubation: ill contacts with a single-day exposure (events, visits, venues)
-    var inc = [];
-    cons.forEach(function (c) {
-      if (c.onset === undefined || !SINGLE_DAY[c.setting]) return;
-      var cs = byPid[c.pid]; if (!cs || cs.status === 'discarded') return;
-      var d = c.onset - c.exposure;
-      if (d >= 1 && d <= 21) inc.push(d);
-    });
-    // interviewed cases whose only link to a known earlier case is one event day
-    ll.forEach(function (c) {
-      if (!c.exposures || c.onset === null || c.status === 'discarded') return;
-      if ((c.illContacts || []).some(function (i) { return i.relation === 'household'; })) return;
-      var evDays = [];
-      c.exposures.forEach(function (e) { if (e.kind === 'place' && e.setting === 'celebration' && e.days.length === 1) evDays.push(e.days[0]); });
-      if (evDays.length === 1) { var d = c.onset - evDays[0]; if (d >= 1 && d <= 21) inc.push(d); }
-    });
-    E.n.incubation = inc.length;
-    if (inc.length >= 4) E.incubation = IX.round(IX.mean(inc), 1);
-
-    // --- presymptomatic transmission: when were ill contacts exposed, relative to their source's onset?
-    var pre = 0, post = 0, si = [];
+    // --- pairs from tracing with a single-day, out-of-home exposure (an event, a visit, a night out)
+    var pairs = [];
     cons.forEach(function (c) {
       if (c.onset === undefined || c.setting === 'household') return;
-      var cs = byPid[c.pid]; if (!cs || cs.status === 'discarded') return;
+      var cs = byPid[c.pid]; if (!cs || cs.status === 'discarded' || cs.status === 'suspected') return;
       c.of.forEach(function (src) {
-        var s = byPid[src]; if (!s || s.onset === null || s.status === 'discarded') return;
-        if (c.onset < s.onset) return;   // probably not infected by them
-        if (c.exposure < s.onset) pre++; else post++;
-        si.push(c.onset - s.onset);
+        var s = byPid[src]; if (!s || s.onset === null || s.status === 'discarded' || s.status === 'suspected') return;
+        var days = (c.days && c.days[src]) || [c.exposure];
+        if (days.length !== 1) return;       // only one exposure: the day is known
+        var inc = c.onset - days[0];
+        if (inc < 1 || inc > 16) return;
+        pairs.push({ day: days[0], inc: inc, si: c.onset - s.onset, pre: days[0] < s.onset });
       });
     });
-    ll.forEach(function (c) {
-      if (c.infectorGuess === undefined || c.onset === null) return;
-      var s = byPid[c.infectorGuess]; if (s && s.onset !== null && c.onset >= s.onset) si.push(c.onset - s.onset);
-    });
-    E.n.presym = pre + post;
-    if (pre + post >= 6) E.presym = Math.round(100 * pre / (pre + post));
+    // early pairs are the cleanest: later, contacts are as likely to have caught it somewhere else
+    var early0 = (S.recognizedDay || 0) + 12;
+    pairs = pairs.filter(function (p) { return p.day <= early0; });
+    // incubation: point-source events (questionnaire onset curves) and single-exposure pairs
+    var inc = [];
+    S.quests.forEach(function (q) { (q.onsets || []).forEach(function (v) { if (v >= 1 && v <= 14) inc.push(v); }); });
+    pairs.forEach(function (p) { inc.push(p.inc); });
+    E.n.incubation = inc.length;
+    if (inc.length >= 8) E.incubation = IX.round(robustMean(inc), 1);
+    // serial interval: households and early pairs
+    var si = [];
+    S.hhStudies.forEach(function (st) { if (st.result && st.result.si) st.result.si.forEach(function (v) { if (v >= -5 && v <= 21) si.push(v); }); });
+    pairs.forEach(function (p) { if (p.si >= -5 && p.si <= 21) si.push(p.si); });
     E.n.si = si.length;
-    if (si.length >= 5) E.serial = IX.round(IX.mean(si), 1);
+    if (si.length >= 6) E.serial = IX.round(IX.mean(si), 1);
+    // presymptomatic transmission: time of infection relative to the source's onset is (serial interval - incubation);
+    // its mean and spread come from the two distributions (He et al. / Ganyani et al. method)
+    var pre = 0, post = 0;
+    pairs.forEach(function (p) { if (p.si >= 0) { if (p.pre) pre++; else post++; } });
+    E.n.presym = si.length;
+    if (si.length >= 10 && inc.length >= 8) {
+      var mSi = IX.mean(si), vSi = Math.pow(IX.sd(si), 2), mIn = robustMean(inc), vIn = Math.pow(IX.sd(inc.filter(function (v) { return v <= 2 * IX.median(inc) + 2; })), 2);
+      var mt = mSi - mIn, sdt = Math.sqrt(Math.max(1, vSi - vIn));
+      var z = -mt / sdt, phi = 0.5 * (1 + erf(z / Math.SQRT2));
+      E.presymModel = Math.round(100 * phi);
+      E.presym = E.presymModel;
+      if (pre + post >= 15) E.presym = Math.round((E.presymModel + 100 * pre / (pre + post)) / 2);
+    } else if (pre + post >= 12) E.presym = Math.round(100 * pre / (pre + post));
 
-    // --- hidden (never symptomatic) infections: household studies
-    var hi = 0, ha = 0;
-    S.hhStudies.forEach(function (st) { if (st.result) { hi += st.result.infected; ha += st.result.asym; } });
+    // --- hidden infections: household studies
+    var hi = 0, ha = 0, hs = 0;
+    S.hhStudies.forEach(function (st) { if (st.result) { hi += st.result.infected; ha += st.result.asym; hs++; } });
     E.n.asym = hi;
-    if (hi >= 8) E.asym = Math.round(100 * ha / hi);
+    if (hi >= 10) E.asym = Math.round(100 * ha / hi);
 
-    // --- R: growth of admissions+cases, and the serial interval
-    var ec = g.epiCurve();
-    var n = ec.byOnset.length, lag = 7;
-    var series = [];
-    for (var i = 0; i < n; i++) series.push(ec.byOnset[i] + 0);
-    var r = growth(series, n - lag - 21, n - lag);
-    var Tg = E.serial || E.incubation || 5;
-    E.growth = r;
-    if (r !== null && live.length >= 25) E.R = IX.round(Math.max(0.5, Math.exp(r * Tg)), 2);
-    // offspring counts in fully traced chains (early, before restrictions)
-    var off = [], asymF = E.asym !== undefined ? E.asym / 100 : 0.2;
-    ll.forEach(function (c) {
-      if (!c.traced || c.onset === null) return;
-      var kids = cons.filter(function (q) { return q.of.indexOf(c.pid) >= 0 && q.onset !== undefined && q.onset >= c.onset && q.status === 'ill'; }).length;
-      if (S.day - c.onset >= 20) off.push(kids / Math.max(0.3, 1 - asymF));
-    });
-    E.n.traceR = off.length;
-    if (off.length >= 12) E.Rtrace = IX.round(IX.mean(off) * 1.25, 2);
-    if (E.R === undefined && E.Rtrace !== undefined) E.R = E.Rtrace;
+    // --- R: early growth (wastewater if we have it: it does not depend on testing), and the generation time
+    var ec = g.epiCurve(), ww = g.wastewater();
+    var mu = E.serial || E.incubation || 5;
+    var rW = wwGrowth(ww), rC = null;
+    var rd = (S.recognizedDay || 0) - ec.from;
+    rC = growth(ec.byOnset, rd - 3, Math.min(ec.byOnset.length - 7, rd + 21));
+    E.growth = rW !== null ? rW : rC;
+    E.growthFrom = rW !== null ? 'wastewater' : 'cases';
+    if (E.growth !== null && (rW !== null || live.length >= 30)) E.R = IX.round(Math.max(0.5, rFromGrowth(E.growth, mu)), 2);
 
-    // --- severity: serosurvey (infections) against deaths
-    var sero = S.seroResults.filter(function (q) { return q.pos >= 5; });
-    var deaths = 0; ec.deaths.forEach(function (d2) { deaths += d2; });
-    if (sero.length) {
-      var q = sero[sero.length - 1];
-      var infections = q.pos / q.n / 0.9 * g.C.N;
-      // deaths lag infections by ~3-4 weeks: count deaths reported up to 14 days after the survey
-      var dUpTo = 0; for (var k = 0; k < ec.deaths.length && ec.from + k <= q.day + 21; k++) dUpTo += ec.deaths[k];
-      if (infections > 0 && S.day >= q.day + 10) E.ifr = IX.round(100 * dUpTo / infections, 2);
-      var adm = 0; for (k = 0; k < ec.admissions.length && ec.from + k <= q.day + 10; k++) adm += ec.admissions[k];
-      if (infections > 0) E.ihr = IX.round(100 * adm / infections, 1);
+    // --- severity: antibodies (all infections) against deaths
+    var deathsTot = 0; ec.deaths.forEach(function (d2) { deathsTot += d2; });
+    E.deaths = deathsTot;
+    var best = null;
+    S.seroResults.forEach(function (q) { if (S.day >= q.day + 7 && q.pos >= 4 && (!best || q.pos > best.pos)) best = q; });
+    E.n.ifr = best ? best.pos : 0;
+    if (best) {
+      var prev = Math.max(0.0005, (best.pos / best.n - 0.005) / 0.895);
+      var infections = prev * C.N;
+      var dUpTo = 0, admUpTo = 0;
+      for (var k = 0; k < ec.deaths.length && ec.from + k <= best.day + 7; k++) dUpTo += ec.deaths[k];
+      for (k = 0; k < ec.admissions.length && ec.from + k <= best.day; k++) admUpTo += ec.admissions[k];
+      if (dUpTo >= 3) E.ifr = IX.round(100 * dUpTo / infections, 2);
+      E.ihr = IX.round(100 * admUpTo / infections, 1);
     }
-    E.n.ifr = sero.length;
-    E.deaths = deaths;
 
-    // --- who it hits: admissions and deaths per case, by age
-    var ba = ec.byAge, rate = [];
-    for (var b = 0; b < 7; b++) rate.push((ba.admitted[b] + 2 * ba.died[b] + 0.5) / (ba.cases[b] + 3));
-    var totAdm = ba.admitted.reduce(function (s, v) { return s + v; }, 0) + ba.died.reduce(function (s, v) { return s + v; }, 0);
-    S.reviews.forEach(function () { });
-    E.n.ageRisk = totAdm;
-    if (totAdm >= 8) {
-      var kids = (rate[0] + rate[1]) / 2, young = rate[2], mid = (rate[3] + rate[4]) / 2, old = (rate[5] + rate[6]) / 2;
-      if (old > 3 * mid && old > 3 * young) E.ageRisk = 'elderly';
-      else if (kids > 1.5 * mid && kids > young) E.ageRisk = 'children';
-      else if (young > 1.4 * mid && young > kids) E.ageRisk = 'young-adult';
-      else E.ageRisk = 'even';
-    }
+    // --- who it hits: which age shape explains admissions (and deaths) by age best
+    E.ageRisk = ageShape(g, ec, best);
+    E.n.ageRisk = ec.byAge.admitted.reduce(function (s2, v) { return s2 + v; }, 0);
 
     // --- route
     E.route = routeGuess(g, ll, E);
 
     // --- case definition from confirmed cases' symptoms
     var symN = {}, nSym = 0;
-    ll.forEach(function (c) { if (c.status === 'confirmed' && c.symptoms && c.symptoms.length) { nSym++; c.symptoms.forEach(function (s) { symN[s] = (symN[s] || 0) + 1; }); } });
-    if (nSym >= 6) E.caseDef = Object.keys(symN).filter(function (s) { return symN[s] / nSym >= 0.35; }).sort(function (a, b) { return symN[b] - symN[a]; }).slice(0, 5);
+    ll.forEach(function (c) { if (c.status === 'confirmed' && c.symptoms && c.symptoms.length) { nSym++; c.symptoms.forEach(function (sy) { symN[sy] = (symN[sy] || 0) + 1; }); } });
+    if (nSym >= 6) E.caseDef = Object.keys(symN).filter(function (sy) { return symN[sy] / nSym >= 0.35; }).sort(function (a2, b2) { return symN[b2] - symN[a2]; }).slice(0, 5);
 
     // --- source & first case: earliest known onsets, animal exposure, travel
-    var early = ll.filter(function (c) { return c.status !== 'discarded' && c.onset !== null; }).sort(function (a, b) { return a.onset - b.onset; });
+    var early = ll.filter(function (c) { return c.status !== 'discarded' && c.onset !== null; }).sort(function (a2, b2) { return a2.onset - b2.onset; });
     if (early.length) {
       var first = early[0];
       E.originCase = first.pid;
       var ex = first.exposures || [];
       if (ex.some(function (e) { return e.kind === 'travel'; })) E.source = 'traveller';
-      else if (ex.some(function (e) { return e.kind === 'animal'; })) { var pl = ex.filter(function (e) { return e.kind === 'animal'; })[0].place; E.source = pl && g.C.places[g.placeIdx(pl.id)].kind === 'market' ? 'market' : 'farm'; }
+      else if (ex.some(function (e) { return e.kind === 'animal'; })) { var pl = ex.filter(function (e) { return e.kind === 'animal'; })[0].place; E.source = pl && C.places[g.placeIdx(pl.id)].kind === 'market' ? 'market' : 'farm'; }
     }
-    if (S.animalFound !== undefined) E.source = g.C.places[S.animalFound].kind === 'market' ? 'market' : 'farm';
+    if (S.animalFound !== undefined) E.source = C.places[S.animalFound].kind === 'market' ? 'market' : 'farm';
     if (S.trial && S.trial.result) { var T = S.trial.result; E.treatment = T.hi < 1 ? (T.rr < 0.6 ? 'good' : 'partial') : 'none'; }
     return E;
   };
+
+  /** growth rate of total wastewater signal over its first three weeks of samples */
+  function wwGrowth(ww) {
+    var ids = Object.keys(ww.byDistrict); if (!ids.length) return null;
+    var n = ww.byDistrict[ids[0]].length, pts = [];
+    for (var i = 0; i < n; i++) {
+      var tot = 0, any = false;
+      ids.forEach(function (d) { var v = ww.byDistrict[d][i]; if (v !== null) { any = true; tot += v; } });
+      if (any) pts.push([i, Math.log(tot + 50)]);
+    }
+    if (pts.length < 6) return null;
+    pts = pts.slice(0, 10);
+    if (pts[pts.length - 1][0] - pts[0][0] < 10) return null;
+    var sx = 0, sy = 0, sxx = 0, sxy = 0, m = pts.length;
+    pts.forEach(function (p) { sx += p[0]; sy += p[1]; sxx += p[0] * p[0]; sxy += p[0] * p[1]; });
+    return (m * sxy - sx * sy) / (m * sxx - sx * sx);
+  }
+
+  /** age shape by Poisson likelihood: admissions (and deaths) per band against infections per band */
+  function ageShape(g, ec, sero) {
+    var ba = ec.byAge, C = g.C;
+    var adm = ba.admitted, died = ba.died, nA = 0, nD = 0, b;
+    for (b = 0; b < 7; b++) { nA += adm[b]; nD += died[b]; }
+    if (nA < 8) return undefined;
+    // exposure: infections by band from the antibody survey if we have one, else confirmed cases (which under-count children)
+    var pop = [0, 0, 0, 0, 0, 0, 0]; for (var a = 0; a < C.N; a++) pop[D.ageBand(C.age[a])]++;
+    var ex = [];
+    for (b = 0; b < 7; b++) ex.push(sero && sero.byAge ? pop[b] * (sero.byAge[b][1] + 0.5) / (sero.byAge[b][0] + 1) : ba.cases[b] + 1);
+    var bestS = null, bestL = -Infinity;
+    D.AGE_SHAPES.forEach(function (sh) {
+      var ifr = D.AGE_RISK[sh], ihr = ifr.map(function (f, i) { return f / D.FH_BASE[i]; });
+      var L = pois(adm, ex, ihr) + (nD >= 5 ? pois(died, ex, ifr) : 0);
+      if (L > bestL) { bestL = L; bestS = sh; }
+    });
+    return bestS;
+  }
+  function pois(obs, ex, rel) {
+    var so = 0, se = 0, i;
+    for (i = 0; i < obs.length; i++) { so += obs[i]; se += ex[i] * rel[i]; }
+    var k = so / se, L = 0;
+    for (i = 0; i < obs.length; i++) { var mu = Math.max(1e-9, k * ex[i] * rel[i]); L += obs[i] * Math.log(mu) - mu; }
+    return L;
+  }
 
   /** exponential growth rate by least squares on log(counts+1) over [a, b) */
   function growth(y, a, b) {
@@ -6242,21 +6308,23 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (nC >= 5 && bleed / nC > 0.2) ev.contact += 1;
     // questionnaires
     S.quests.forEach(function (q) {
-      var cats = q.cats, close = cats['Close contact (<2 m, 15 min+) with someone who fell ill'], room = cats['Same room, not close to anyone ill'];
-      var ate = cats['Ate food prepared on site'], nate = cats['Did not eat'];
-      if (ate && nate && ate.n >= 5 && nate.n >= 3) { var ra = ate.ill / ate.n, rn = (nate.ill + 0.5) / (nate.n + 1); if (ra > 2.5 * rn && ra > 0.15) ev.gut += 2; }
-      if (close && room && close.n >= 3 && room.n >= 8 && q.ill >= 3) {
-        var rc = close.ill / close.n, rr = room.ill / room.n;
-        if (rr >= 0.08 && rr > 0.25 * rc) ev.airborne += 2;
-        else if (rc > 0.2 && rr < 0.05) { ev.droplet += 1; ev.contact += 0.6; }
+      var cats = q.cats, close = cats[IX.QCAT.close], near = cats[IX.QCAT.near], far = cats[IX.QCAT.far];
+      var ate = cats[IX.QCAT.ate], nate = cats[IX.QCAT.nate];
+      if (ate && nate && ate.n >= 5 && nate.n >= 3) { var ra = ate.ill / ate.n, rn = (nate.ill + 0.5) / (nate.n + 1); if (ra > 2.5 * rn && ra > 0.15) ev.gut += 2.5; }
+      if (close && far && close.n >= 3 && far.n >= 6 && q.ill >= 3) {
+        var rc = close.ill / close.n, rf = far.ill / far.n;
+        if (rf >= 0.1 && rf > 0.3 * rc) ev.airborne += 2;
+        else if (rc >= 0.12 && rf < 0.25 * rc) { ev.droplet += 1.2; ev.contact += 0.8; }
       }
     });
     // cluster settings
     var cl = g.clusters(), venue = 0, hh = 0, care = 0;
     cl.forEach(function (c) { if (c.kind === 'household') hh++; else if (c.kind === 'care_home' || c.kind === 'hospital') care += c.size; else venue += c.size >= 3 ? 1 : 0; });
-    if (venue === 0 && hh + care >= 4 && E.presym !== undefined && E.presym < 10) ev.contact += 1.5;
-    if (E.presym !== undefined && E.presym < 8) ev.contact += 0.7;
-    if (E.presym !== undefined && E.presym > 20) { ev.airborne += 0.4; ev.droplet += 0.4; }
+    if (venue <= 1 && hh + care >= 4 && E.presym !== undefined && E.presym < 10) ev.contact += 1.5;
+    if (E.presym !== undefined && E.presym < 8) ev.contact += 1;
+    if (E.presym !== undefined && E.presym > 15) { ev.droplet += 0.8; ev.contact -= 1; }
+    if (E.serial !== undefined && E.incubation !== undefined && E.serial > E.incubation + 1.5) ev.contact += 0.6;
+    if (nC >= 5 && gutS / nC > 0.6) ev.airborne -= 1;
     // animal: positive animal samples, or early cases with animal exposure and no human source
     if (S.animalFound !== undefined) ev.animal += 3;
     var an = 0; ll.forEach(function (c) { if ((c.exposures || []).some(function (e) { return e.kind === 'animal'; }) && !(c.illContacts || []).length) an++; });
@@ -6297,6 +6365,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
         if (!S.declared && act('declare_novel')) rep.declaredDay = S.day;
         if (S.day - lastReview >= 5 && act('record_review')) lastReview = S.day;
       } else {
+        if (!g.ordersOf('wastewater').length) g.order('wastewater');
         var live = ll.filter(function (c) { return c.status === 'confirmed' || c.status === 'probable'; });
         live.sort(function (a, b) { return (b.onset === null ? -99 : b.onset) - (a.onset === null ? -99 : a.onset); });
         // household studies are the only way to count hidden cases
@@ -6545,10 +6614,10 @@ var UIA = (function () {
     if (opts.tutorial) o.tutorial = true;
     A.g = IX.newGame(String(seed), o);
     A.seed = String(seed); A.grade = grade; A.tutorial = !!opts.tutorial;
-    A.cache = {}; A.bump();
+    A.cache = {}; A._her = {}; A._names = {}; A.bump();
     return A.g;
   };
-  A.restore = function (json) { A.g = IX.load(json); A.cache = {}; A.bump(); return A.g; };
+  A.restore = function (json) { A.g = IX.load(json); A.cache = {}; A._her = {}; A._names = {}; A.bump(); return A.g; };
   A.serialize = function () { var s = A.g.save(); return typeof s === 'string' ? s : JSON.stringify(s); };
   A.readSave = function () { try { var s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } };
   A.writeSave = function (ui) {
@@ -6686,6 +6755,12 @@ var UIA = (function () {
     var p = null; try { p = call('person', String(pid)); } catch (e) { /* ignore */ }
     return (A._names[pid] = p && p.name ? p.name : String(pid));
   };
+  A.heritageOf = function (pid) {
+    if (pid === null || pid === undefined || !/^\d+$/.test(String(pid))) return null;
+    A._her = A._her || {}; if (A._her[pid] !== undefined) return A._her[pid];
+    var p = null; try { p = call('person', String(pid)); } catch (e) { /* ignore */ }
+    return (A._her[pid] = p && p.heritage ? String(p.heritage) : null);
+  };
   A.contacts = function () { return cached('contacts', function () { return arr(call('contacts')).map(function (c) { return { pid: String(c.pid), name: c.name, of: arr(c.of).map(String), exposure: num(c.exposure, null), setting: c.setting || '', followUntil: num(c.followUntil, null), status: c.status || 'monitoring', tested: c.tested }; }); }); };
   A.person = function (pid) {
     var p = call('person', String(pid)) || {};
@@ -6807,8 +6882,9 @@ var UIA = (function () {
     return cached('est', function () {
       var e = call('estimates') || {};
       var traits = arr(e.traits).map(function (t) {
-        var pct = isPct(t), ty = pct ? 'pct' : t.id === 'originCase' || t.type === 'person' ? 'person' : t.id === 'caseDef' || t.type === 'multi' ? 'multi' : t.options ? 'choice' : t.type === 'number' ? 'number' : t.type || 'number';
-        var opts = t.options ? arr(t.options).map(function (o) { return typeof o === 'object' ? { id: String(o.id), label: o.label || String(o.id) } : { id: String(o), label: String(o) }; }) : null;
+        var pct = isPct(t), ty = pct ? 'pct' : t.id === 'originCase' || t.type === 'person' ? 'person' : t.id === 'caseDef' || t.type === 'multi' || t.type === 'symptoms' ? 'multi' : t.options ? 'choice' : t.type === 'number' ? 'number' : t.type || 'number';
+        var opts = t.options ? arr(t.options).map(function (o) { return typeof o === 'object' ? { id: String(o.id), label: o.label || String(o.id) } : { id: String(o), label: String(o).replace(/-/g, ' ') }; }) : null;
+        if (ty === 'multi' && !opts && typeof IX !== 'undefined' && IX.DATA && IX.DATA.SYMPTOMS) opts = IX.DATA.SYMPTOMS.map(function (x) { return { id: String(x.id), label: x.label || String(x.id).replace(/_/g, ' ') }; });
         var o = { id: t.id, label: t.label || t.id, type: ty, options: opts, unit: t.unit || '', key: !!t.key, min: t.min, max: t.max, step: t.step };
         if (pct) { o.min = t.min !== undefined ? t.min / 100 : 0; o.max = t.max !== undefined ? t.max / 100 : 1; o.step = t.step !== undefined ? t.step / 100 : 0.01; }
         return o;
@@ -7730,11 +7806,15 @@ var UIPortrait = (function () {
   var BG = [['#1f3346', '#0e1a25'], ['#2a2f45', '#12141f'], ['#23383a', '#0e1b1c'], ['#3a2d2a', '#1a1311']];
   function P(o) {
     var r = UIrand('face:' + o.pid), age = o.age === null || o.age === undefined ? 40 : o.age, f = /^f/i.test(o.sex || '') ? 1 : /^m/i.test(o.sex || '') ? 0 : (r() < .5 ? 1 : 0);
-    var sk = SKIN[Math.floor(r() * SKIN.length)], hairC = HAIR[Math.floor(r() * HAIR.length)], cl = CLOTH[Math.floor(r() * CLOTH.length)], bg = BG[Math.floor(r() * BG.length)];
+    var her = o.heritage || (typeof UIA !== 'undefined' && UIA.heritageOf ? UIA.heritageOf(o.pid) : null);
+    var SK = { light: [0, 1, 7, 1], south: [2, 3, 3, 4], dark: [4, 5, 6, 5], east: [0, 7, 1, 7] };
+    var grp = !her ? null : /british|irish|polish|romanian/.test(her) ? 'light' : /pakistani|bangladeshi|indian|sikh|southern/.test(her) ? 'south' : /caribbean|african|somali/.test(her) ? 'dark' : /chinese/.test(her) ? 'east' : null;
+    var sk = SKIN[grp ? SK[grp][Math.floor(r() * 4)] : Math.floor(r() * SKIN.length)], hairC = grp && grp !== 'light' ? HAIR[[0, 1, 8, 7][Math.floor(r() * 4)]] : HAIR[Math.floor(r() * HAIR.length)], cl = CLOTH[Math.floor(r() * CLOTH.length)], bg = BG[Math.floor(r() * BG.length)];
     if (age > 62) hairC = r() < .6 ? '#c9c5bf' : '#9b958c'; else if (age > 48 && r() < .4) hairC = '#7d7770';
     var kid = age < 13, faceW = kid ? 25 : 23 + r() * 3, faceH = kid ? 28 : 30 + r() * 3, cx = 60, cy = kid ? 60 : 56;
     var style = f ? Math.floor(r() * 5) : Math.floor(r() * 5); // hair style index
-    var covered = f && r() < .12 && !kid; // headscarf
+    var covered = f && !kid && r() < (her === 'somali' ? .8 : /pakistani|bangladeshi/.test(her || '') ? .45 : her ? .03 : .12); // headscarf
+    var turban = !f && !kid && her === 'sikh' && r() < .6;
     var bald = !f && age > 45 && r() < .35;
     var glasses = age > 40 ? r() < .45 : r() < .15, beard = !f && !kid && age > 17 && r() < .3;
     var s = '<svg viewBox="0 0 120 120" class="portrait" aria-hidden="true"><defs>' +
@@ -7758,6 +7838,8 @@ var UIPortrait = (function () {
     s += '<ellipse cx="' + (cx - faceW + 1) + '" cy="' + (cy + 2) + '" rx="4" ry="6" fill="' + sk[0] + '"/><ellipse cx="' + (cx + faceW - 1) + '" cy="' + (cy + 2) + '" rx="4" ry="6" fill="' + sk[1] + '"/>';
     var jaw = f ? 0.82 : 0.9;
     s += '<path d="M' + (cx - faceW) + ',' + (cy - 4) + 'Q' + (cx - faceW) + ',' + (cy - faceH) + ' ' + cx + ',' + (cy - faceH) + 'Q' + (cx + faceW) + ',' + (cy - faceH) + ' ' + (cx + faceW) + ',' + (cy - 4) + 'Q' + (cx + faceW * jaw) + ',' + (cy + faceH * .8) + ' ' + cx + ',' + (cy + faceH * .92) + 'Q' + (cx - faceW * jaw) + ',' + (cy + faceH * .8) + ' ' + (cx - faceW) + ',' + (cy - 4) + 'Z" fill="url(#pk' + o.pid + ')"/>';
+    s += '<path d="M' + (cx + faceW * .35) + ',' + (cy - faceH * .9) + 'Q' + (cx + faceW * 1.02) + ',' + (cy - 2) + ' ' + (cx + faceW * .3) + ',' + (cy + faceH * .85) + 'Q' + (cx + faceW * .8) + ',' + (cy + 4) + ' ' + (cx + faceW * .35) + ',' + (cy - faceH * .9) + 'Z" fill="#000" opacity=".08"/>';
+    s += '<ellipse cx="' + (cx - 12) + '" cy="' + (cy + 9) + '" rx="4.5" ry="2.6" fill="#e0706a" opacity=".16"/><ellipse cx="' + (cx + 12) + '" cy="' + (cy + 9) + '" rx="4.5" ry="2.6" fill="#e0706a" opacity=".12"/>';
     // age lines
     if (age > 55) s += '<path d="M' + (cx - 14) + ',' + (cy + 14) + 'q3,5 7,6M' + (cx + 14) + ',' + (cy + 14) + 'q-3,5 -7,6M' + (cx - 10) + ',' + (cy - faceH + 12) + 'h20" stroke="' + sk[1] + '" stroke-width="1.2" fill="none" opacity=".8"/>';
     // beard
@@ -7773,7 +7855,8 @@ var UIPortrait = (function () {
     s += '<path d="M' + (cx - mw) + ',' + (cy + 17) + 'q' + mw + ',' + (mood * 2) + ' ' + (mw * 2) + ',0" stroke="#7a3b30" stroke-width="2" fill="none" stroke-linecap="round"/>';
     if (glasses) s += '<g fill="none" stroke="#0d0d0d" stroke-width="1.6" opacity=".85"><rect x="' + (cx - ex - 6) + '" y="' + (ey - 5) + '" width="12" height="9" rx="3"/><rect x="' + (cx + ex - 6) + '" y="' + (ey - 5) + '" width="12" height="9" rx="3"/><path d="M' + (cx - ex + 6) + ',' + (ey - 1) + 'h' + (2 * ex - 12) + '"/></g>';
     // hair front
-    if (!covered && !bald) {
+    if (turban) s += '<path d="M' + (cx - faceW - 3) + ',' + (cy - 4) + 'Q' + (cx - faceW - 4) + ',' + (cy - faceH - 16) + ' ' + cx + ',' + (cy - faceH - 14) + 'Q' + (cx + faceW + 4) + ',' + (cy - faceH - 16) + ' ' + (cx + faceW + 3) + ',' + (cy - 4) + 'Q' + cx + ',' + (cy - faceH + 2) + ' ' + (cx - faceW - 3) + ',' + (cy - 4) + 'Z" fill="' + ['#1f3f7a', '#7a1f2b', '#e0a526', '#f2efe6', '#2d5b3a'][Math.floor(r() * 5)] + '"/><path d="M' + (cx - faceW) + ',' + (cy - faceH + 2) + 'Q' + cx + ',' + (cy - faceH - 8) + ' ' + (cx + faceW) + ',' + (cy - 8) + '" stroke="#000" stroke-opacity=".18" stroke-width="2" fill="none"/>';
+    else if (!covered && !bald) {
       var top = cy - faceH;
       if (f && style === 4 || (!f && style === 3)) { // curly / afro
         for (var k = 0; k < 13; k++) { var a = Math.PI + k / 12 * Math.PI; s += '<circle cx="' + (cx + Math.cos(a) * (faceW + 3)).toFixed(1) + '" cy="' + (cy - 6 + Math.sin(a) * (faceH + 2)).toFixed(1) + '" r="' + (7 + r() * 3).toFixed(1) + '" fill="' + hairC + '"/>'; }
@@ -7947,11 +8030,22 @@ var UIMapR = (function () {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     var fs = UIclamp(T.s / 70, 8.5, 13);
     ctx.font = '600 ' + fs.toFixed(1) + 'px ' + getComputedStyle(document.body).getPropertyValue('--f-mono');
-    city.districts.forEach(function (d) {
-      var c = tx(T, d.centre), txt = d.name.toUpperCase().split('').join(' ');
+    var boxes = [], fm = getComputedStyle(document.body).getPropertyValue('--f-mono');
+    city.districts.slice().sort(function (a, b) { return (b.pop || 0) - (a.pop || 0); }).forEach(function (d) {
+      var c = tx(T, d.centre), txt = d.name.toUpperCase().split('').join('\u200A');
+      ctx.font = '600 ' + fs.toFixed(1) + 'px ' + fm;
+      var tw = ctx.measureText(txt).width;
+      if (o.w) c = [UIclamp(c[0], tw / 2 + 6, o.w - tw / 2 - 6), c[1]];
+      var bx = [c[0] - tw / 2 - 3, c[1] - fs * .7, tw + 6, fs * 1.4];
+      if (o.sel !== d.id && boxes.some(function (b) { return bx[0] < b[0] + b[2] && bx[0] + bx[2] > b[0] && bx[1] < b[1] + b[3] && bx[1] + bx[3] > b[1]; })) {
+        // crowded: try a line below, else skip
+        bx[1] += fs * 1.5; c = [c[0], c[1] + fs * 1.5];
+        if (boxes.some(function (b) { return bx[0] < b[0] + b[2] && bx[0] + bx[2] > b[0] && bx[1] < b[1] + b[3] && bx[1] + bx[3] > b[1]; })) return;
+      }
+      boxes.push(bx);
       ctx.fillStyle = 'rgba(3,6,10,.7)'; ctx.fillText(txt, c[0] + 1, c[1] + 1);
       ctx.fillStyle = o.sel === d.id ? 'rgba(220,238,255,.95)' : 'rgba(164,190,214,.55)'; ctx.fillText(txt, c[0], c[1]);
-      if (o.counts && o.counts[d.id] && T.s > 500) { ctx.font = '600 ' + (fs * .9).toFixed(1) + 'px ' + getComputedStyle(document.body).getPropertyValue('--f-mono'); ctx.fillStyle = 'rgba(255,164,119,.8)'; ctx.fillText(o.counts[d.id] + ' cases', c[0], c[1] + fs * 1.3); ctx.font = '600 ' + fs.toFixed(1) + 'px ' + getComputedStyle(document.body).getPropertyValue('--f-mono'); }
+      if (o.counts && o.counts[d.id] && T.s > 500) { ctx.font = '600 ' + (fs * .9).toFixed(1) + 'px ' + fm; ctx.fillStyle = 'rgba(255,164,119,.8)'; ctx.fillText(o.counts[d.id] + (o.counts[d.id] === 1 ? ' case' : ' cases'), c[0], c[1] + fs * 1.3); }
     });
   };
   /** glowing dots: pts [{p:[x,y], b: bucket, big}] */
@@ -8008,6 +8102,7 @@ var UIMap = UI.views.map = {
   show: function () { this.data(); this.chrome(); this.cv.resize(); this.cv.frame(); },
   refresh: function () { this.data(); this.chrome(); this.cv.frame(); },
   data: function () {
+    this.dataV = (this.dataV || 0) + 1;
     var city = UIA.city(), day = UIA.day(), cases = UIA.cases();
     var counts = {};
     this.pts = cases.filter(function (c) { return c.status !== 'negative' && c.status !== 'contact'; }).map(function (c) {
@@ -8038,13 +8133,25 @@ var UIMap = UI.views.map = {
     var st = UIS.map; if (!st.layers.cases || !this.pts) return [];
     return this.pts.filter(function (q) { return !st.recency || q.age < st.recency; });
   },
+  /* the static layers render into a cached canvas; animation frames only add the pulses */
   draw: function (ctx, w, h) {
-    var st = UIS.map, city = UIA.city();
-    var T = UIMapR.base(ctx, w, h, { city: city, view: st.view, sel: this.sel, ww: st.layers.ww ? this.wv : null });
-    this.T = T;
+    var st = UIS.map, dpr = this.cv.dpr;
+    var key = [w, h, dpr, st.view.x.toFixed(1), st.view.y.toFixed(1), st.view.k.toFixed(4), JSON.stringify(st.layers), st.recency, this.sel, UIA.v, this.dataV].join('|');
+    if (key !== this.ckey) {
+      var c = this.cache || (this.cache = document.createElement('canvas'));
+      c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+      var x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.layers(x, w, h, false); this.ckey = key;
+    }
+    ctx.drawImage(this.cache, 0, 0, w, h);
+    this.layers(ctx, w, h, true);
+  },
+  layers: function (ctx, w, h, anim) {
+    var st = UIS.map, city = UIA.city(), T;
+    if (!anim) { T = UIMapR.base(ctx, w, h, { city: city, view: st.view, sel: this.sel, ww: st.layers.ww ? this.wv : null }); this.T = T; } else T = this.T;
     var t = (performance.now() / 1000);
     // venues: pinpoints at city scale, labelled diamonds when zoomed in; cluster venues always stand out
-    if (st.layers.venues) {
+    if (st.layers.venues && !anim) {
       ctx.save();
       var near = T.s > 900, vs = UIclamp(T.s / 85, 6, 12), hot = {};
       (this.clusters || []).forEach(function (c) { if (c.place) hot[c.place] = 1; });
@@ -8060,7 +8167,7 @@ var UIMap = UI.views.map = {
       });
       ctx.restore();
     }
-    UIMapR.labels(ctx, T, city, { sel: this.sel, counts: this.counts });
+    if (!anim) UIMapR.labels(ctx, T, city, { sel: this.sel, counts: this.counts, w: w });
     // clusters: pulsing rings, labels kept on screen and apart
     if (st.layers.clusters && this.clusters) {
       var boxes = [], day = UIA.day(), maxLbl = Math.round(UIclamp(w * h / 60000, 4, 14) * Math.min(3, Math.sqrt(st.view.k)));
@@ -8068,9 +8175,9 @@ var UIMap = UI.views.map = {
       cls.forEach(function (c, i) {
         var stale = c.lastOnset !== null && day - c.lastOnset >= 21;
         if (!c.pos) return; var q = UIMapR.toScreen(T, c.pos), rad = UIclamp(T.s / 60, 10, 30) * (0.8 + Math.sqrt(c.size) * .25), ph = (t * .6 + i * .37) % 1;
+        if (anim) { if (!stale) { ctx.strokeStyle = 'rgba(255,224,194,' + (0.5 * (1 - ph)).toFixed(3) + ')'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(q[0], q[1], rad * (1 + ph * .7), 0, Math.PI * 2); ctx.stroke(); } return; }
         ctx.save();
         if (stale) ctx.globalAlpha = 0.4;
-        if (!stale) { ctx.strokeStyle = 'rgba(255,224,194,' + (0.5 * (1 - ph)).toFixed(3) + ')'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(q[0], q[1], rad * (1 + ph * .7), 0, Math.PI * 2); ctx.stroke(); }
         ctx.setLineDash([4, 3]); ctx.strokeStyle = 'rgba(255,224,194,.85)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q[0], q[1], rad, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
         if (i >= maxLbl || stale) { ctx.fillStyle = 'rgba(20,12,8,.9)'; ctx.beginPath(); ctx.arc(q[0] + rad * .7, q[1] - rad * .7, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#ffe0c2'; ctx.font = '700 9.5px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(c.size), q[0] + rad * .7, q[1] - rad * .7 + .5); ctx.restore(); return; }
         var lbl = (c.name.length > 26 ? c.name.slice(0, 25) + '…' : c.name) + ' · ' + c.size; ctx.font = '600 11px system-ui,sans-serif'; var tw = ctx.measureText(lbl).width, bw = tw + 14, bh = 19;
@@ -8086,14 +8193,14 @@ var UIMap = UI.views.map = {
     }
     // cases
     var vp = this.visiblePts();
-    UIMapR.dots(ctx, T, vp);
+    if (!anim) UIMapR.dots(ctx, T, vp);
     ctx.save();
     vp.forEach(function (q) {
       var c = UIMapR.toScreen(T, q.p);
-      if (q.died) { ctx.strokeStyle = 'rgba(217,211,199,.75)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(c[0], c[1], UIclamp(T.s / 120, 3, 7) + 2, 0, Math.PI * 2); ctx.stroke(); }
-      if (q.big) { var ph = (t * .8 + (UIh(q.c.pid) % 100) / 100) % 1; ctx.strokeStyle = 'rgba(255,200,160,' + (0.6 * (1 - ph)).toFixed(3) + ')'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(c[0], c[1], 4 + ph * 16, 0, Math.PI * 2); ctx.stroke(); }
+      if (q.died && !anim) { ctx.strokeStyle = 'rgba(217,211,199,.75)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(c[0], c[1], UIclamp(T.s / 120, 3, 7) + 2, 0, Math.PI * 2); ctx.stroke(); }
+      if (q.big && anim) { var ph = (t * .8 + (UIh(q.c.pid) % 100) / 100) % 1; ctx.strokeStyle = 'rgba(255,200,160,' + (0.6 * (1 - ph)).toFixed(3) + ')'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(c[0], c[1], 4 + ph * 16, 0, Math.PI * 2); ctx.stroke(); }
     });
-    if (this.hl) { var hp = UIMapR.toScreen(T, this.hl); ctx.strokeStyle = '#c5e4ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hp[0], hp[1], 12, 0, Math.PI * 2); ctx.stroke(); }
+    if (this.hl && anim) { var hp = UIMapR.toScreen(T, this.hl); ctx.strokeStyle = '#c5e4ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hp[0], hp[1], 12, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
   },
   anim: function () {
@@ -8867,7 +8974,7 @@ var UIEst = {
   },
   traits: function () {
     var t = UIA.estimates().traits, how = this.HOW;
-    return t.map(function (x) { var o = {}; Object.keys(x).forEach(function (k) { o[k] = x[k]; }); o.how = how[x.id] || ''; if (x.id === 'ifr' || (x.type === 'pct' && x.max && x.min > 0 && x.max / x.min > 40)) o.log = true; if (o.type === 'number' && !o.step) o.step = (o.max - o.min) > 20 ? 1 : (o.max - o.min) > 5 ? 0.5 : 0.1; if (o.type === 'pct' && !o.step) o.step = 0.01; return o; });
+    return t.map(function (x) { var o = {}; Object.keys(x).forEach(function (k) { o[k] = x[k]; }); o.how = how[x.id] || ''; if (x.id === 'ifr' || (x.type === 'pct' && x.max && x.min > 0 && x.max / x.min > 40)) { o.log = true; if (!(o.min > 0)) o.min = 0.0005; } if (o.type === 'number' && !o.step) o.step = (o.max - o.min) > 20 ? 1 : (o.max - o.min) > 5 ? 0.5 : 0.1; if (o.type === 'pct' && !o.step) o.step = 0.01; return o; });
   },
   optLabel: function (t, v) { var o = (t.options || []).filter(function (x) { return String(x.id) === String(v); })[0]; return o ? o.label : UIcap(String(v)); },
   fmt: function (t, v) {
