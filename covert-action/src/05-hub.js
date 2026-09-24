@@ -266,13 +266,16 @@ function pauseScene(back) {
 
 // ---------- CIA BUILDING ----------
 function ciaArrive() {
+  game.ciaFloor = 0;
   if (game.ciaVisited[game.city]) return ciaFloors();
   game.ciaVisited[game.city] = true;
   return pageScene(t => { rect(0, 0, W, H, P.K); ciaLobbyArt(170, 0, 150, 200, t); rect(170, 0, 150, 11, P.G1); ['L', '1', '2', '3'].forEach((c, i) => text(c, 186 + i * 36, 2, i === 0 ? P.YE : P.GR)); para('You arrive at the CIA building and check with your contact.', 15, 20, 140, P.W, 8); statusBox(174); }, () => go(ciaFloors()));
 }
+// the lift: doors shut, the indicator steps floor by floor, ding, doors open
+function ride(floor, next) { const from = game.ciaFloor || 0; game.ciaFloor = floor; go(liftScene(from, floor, next)); }
 function ciaFloors() {
   return menuScene({
-    menu: Menu([{ label: '1. Data Section', go: () => go(dataSection(() => go(ciaFloors()))) }, { label: '2. Intelligence Section', go: () => go(intelSection(() => go(ciaFloors()))) }, { label: '3. Crypto Branch', go: () => go(cryptoBranch(() => go(ciaFloors()))) }, { label: 'Leave building', go: () => go(cityScene()) }], 27, 30, 146),
+    menu: Menu([{ label: '1. Data Section', go: () => ride(1, () => go(dataSection(() => go(ciaFloors())))) }, { label: '2. Intelligence Section', go: () => ride(2, () => go(intelSection(() => go(ciaFloors())))) }, { label: '3. Crypto Branch', go: () => ride(3, () => go(cryptoBranch(() => go(ciaFloors())))) }, { label: 'Leave building', go: () => ride(0, () => go(cityScene())) }], 27, 30, 146),
     back: () => go(cityScene()),
     draw() { rect(0, 0, W, H, P.K); text('You are in the CIA building.', 21, 14, P.W); text('Which floor ?', 21, 22, P.W); this.menu.draw(); statusBox(174); },
   });
