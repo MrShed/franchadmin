@@ -307,6 +307,13 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       E.ihr = IX.round(100 * admUpTo / infections, 1);
     }
 
+    // high death rates show up early in cohorts where everyone infected is known (household and timing studies)
+    if (E.ifr === undefined) {
+      var coh = {}, cohDead = 0, cohN = 0;
+      S.hhStudies.forEach(function (st) { if (!st.result || S.day - st.done < 21) return; st.members.forEach(function (q) { var cq = byPid[q]; if (cq && cq.status === 'confirmed' && !coh[q]) { coh[q] = 1; cohN++; if (cq.outcome === 'died') cohDead++; } }); });
+      E.n.ifrCohort = cohN;
+      if (cohDead >= 3 && cohN >= 30) E.ifr = IX.round(100 * cohDead / cohN, 2);
+    }
     // --- who it hits: which age shape explains admissions (and deaths) by age best
     E.ageRisk = ageShape(g, ec, best);
     E.n.ageRisk = ec.byAge.admitted.reduce(function (s2, v) { return s2 + v; }, 0);
@@ -392,6 +399,14 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     return (m * sxy - sx * sy) / den;
   }
   IX.growthRate = growth;
+  /** recent growth rate from wastewater (does not saturate when testing does), else from cases */
+  IX.recentGrowth = function (g, days) {
+    days = days || 14;
+    var ww = g.wastewater(), ids = Object.keys(ww.byDistrict), n = ids.length ? ww.byDistrict[ids[0]].length : 0, pts = [];
+    for (var i = Math.max(0, n - days); i < n; i++) { var tot = 0, any = false; ids.forEach(function (d) { var v = ww.byDistrict[d][i]; if (v !== null) { any = true; tot += v; } }); if (any) pts.push([i, Math.log(tot + 50)]); }
+    if (pts.length >= 4) { var sx = 0, sy = 0, sxx = 0, sxy = 0, m = pts.length; pts.forEach(function (p) { sx += p[0]; sy += p[1]; sxx += p[0] * p[0]; sxy += p[0] * p[1]; }); return (m * sxy - sx * sy) / (m * sxx - sx * sx); }
+    var ec = g.epiCurve(); return growth(ec.byReport, ec.byReport.length - days, ec.byReport.length);
+  };
 
   function routeGuess(g, ll, E) {
     var S = g.S;
@@ -403,7 +418,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (nC >= 5 && gutS / nC > 0.6) ev.gut += 2;
     if (nC >= 5 && bleed / nC > 0.2) ev.contact += 1;
     // questionnaires
-    var pc = { n: 0, ill: 0 }, pf = { n: 0, ill: 0 }, foodQ = 0;
+    var pc = { n: 0, ill: 0 }, pf = { n: 0, ill: 0 }, pn = { n: 0, ill: 0 }, foodQ = 0;
     S.quests.forEach(function (q) {
       var cats = q.cats, close = cats[IX.QCAT.close], far = cats[IX.QCAT.far];
       var ate = cats[IX.QCAT.ate], nate = cats[IX.QCAT.nate];
@@ -411,13 +426,20 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (q.ill < 3 || !close || !far || (!q.event && ['choir', 'pub', 'restaurant', 'church', 'mosque', 'temple', 'gurdwara'].indexOf(q.kind) < 0)) return;
       if (q.day > (S.recognizedDay || 0) + 12) return;   // later, everyone is catching it everywhere: attack rates stop meaning much
       pc.n += close.n; pc.ill += close.ill; pf.n += far.n; pf.ill += far.ill;
+      var near = cats[IX.QCAT.near]; if (near) { pn.n += near.n; pn.ill += near.ill; }
     });
-    E.qPool = { close: pc.n ? IX.round(pc.ill / pc.n, 3) : null, far: pf.n ? IX.round(pf.ill / pf.n, 3) : null, nc: pc.n, nf: pf.n, food: foodQ };
+    E.qPool = { close: pc.n ? IX.round(pc.ill / pc.n, 3) : null, near: pn.n ? IX.round(pn.ill / pn.n, 3) : null, far: pf.n ? IX.round(pf.ill / pf.n, 3) : null, nc: pc.n, nn: pn.n, nf: pf.n, food: foodQ };
     if (pc.n >= 6 && pf.n >= 12 && pc.ill >= 2) {
-      var rc = pc.ill / pc.n, rf = pf.ill / pf.n, ratio = rf / Math.max(0.001, rc);
-      if (ratio >= 0.5 && rc >= 0.08) ev.airborne += 2.2;
-      else if (ratio <= 0.42) { ev.droplet += 1.4; ev.contact += 0.8; }
+      var rc = pc.ill / pc.n, rf = pf.ill / pf.n, rn = pn.n ? pn.ill / pn.n : rf;
+      var ratio = ((rn + rf) / 2) / Math.max(0.001, rc);
+      if ((ratio >= 0.55 && rc >= 0.06) || rf >= 0.12) ev.airborne += 2.2;
+      else if (ratio <= 0.45 && rc >= 0.06) { ev.droplet += 1.4; ev.contact += 0.8; }
     }
+    // health and care workers catching it far more than anyone else: nursing the sick spreads it (body fluids)
+    var hcw = 0, occN = 0;
+    ll.forEach(function (c) { if (c.status !== 'confirmed') return; var kp = S.people[c.pid]; if (!kp || !kp.known.occupation) return; occN++; if (/nurse|doctor|care worker|porter/.test(kp.known.occupation)) hcw++; });
+    E.hcwShare = occN ? IX.round(hcw / occN, 2) : null;
+    if (occN >= 15 && hcw / occN > 0.18) ev.contact += 1.2;
     // explosive single-day clusters in shared air (choirs, pubs, gyms, services, parties) are the airborne signature
     var big = 0;
     g.clusters().forEach(function (k) { if (k.place && ['choir', 'pub', 'gym', 'church', 'mosque', 'temple', 'gurdwara', 'hotel', 'community_hall', 'restaurant'].indexOf(k.kind) >= 0 && k.size >= 6 && k.lastOnset !== null && k.lastOnset - k.firstOnset <= 7) big++; });
@@ -513,7 +535,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   };
 
   // ================================================================ acceptance
-  IX.ACCEPT = { detectBy: { probationer: 10, consultant: 10, director: 12 }, charSlack: 21, needTraits: 5, minGhostDeaths: 6, minGhostHosp: 20, minPeakDay: 14, maxAlertInf: 0.06, maxAlertInfBy: { probationer: 0.03, consultant: 0.05, director: 0.07 } };
+  IX.ACCEPT = { detectBy: { probationer: 10, consultant: 10, director: 12 }, charSlack: 21, needTraits: 5, minGhostDeaths: 6, minGhostHosp: 20, minPeakDay: 14, maxAlertInf: 0.06, maxAlertInfBy: { probationer: 0.02, consultant: 0.04, director: 0.07 } };
   var SINGLE_SET = {}; [SET.EVENT, SET.VISIT, SET.PUB, SET.RESTAURANT, SET.CHOIR, SET.FAITH, SET.STADIUM, SET.GYM, SET.MARKET, SET.DOORSTEP, SET.FUNERAL].forEach(function (s) { SINGLE_SET[s] = 1; });
 
   /** Fast acceptance (used by IX.newGame): the alert, the ghost city, and truth-side proxies for
@@ -588,15 +610,19 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (!v.ghost) return v;
     var copy = IX.load(g.save());
     copy._ghost = g._ghost;
-    var rep = IX.solve(copy, { until: opts.until || 75 });
+    var rep = IX.solve(copy, { until: opts.until || 90 });
     v.solver = rep;
     var dBy = A.detectBy[g.grade] || 10;
     if (rep.confirmed === null || rep.confirmed > dBy + 2) v.fails.push('not detected by day ' + dBy + ' (confirmed ' + rep.confirmed + ')');
     var ref = rep.community !== null ? rep.community : 40;
-    var inTime = IX.KEY_TRAITS.filter(function (k) { return rep.traitDay[k] !== undefined && rep.traitDay[k] <= ref + A.charSlack; });
-    v.charTraits = inTime;
+    // the core traits must be readable in time to act on; severity and silent spread may take longer
+    var CORE = ['route', 'incubation', 'asym', 'R', 'ageRisk'];
+    var inTime = CORE.filter(function (k) { return rep.traitDay[k] !== undefined && rep.traitDay[k] <= ref + A.charSlack; });
+    var ever = IX.KEY_TRAITS.filter(function (k) { return rep.traitDay[k] !== undefined; });
+    v.charTraits = inTime; v.everTraits = ever;
     v.charRef = ref;
-    if (inTime.length < A.needTraits) v.fails.push('characterised ' + inTime.length + '/' + IX.KEY_TRAITS.length + ' by day ' + (ref + A.charSlack) + ' (missing ' + IX.KEY_TRAITS.filter(function (k) { return inTime.indexOf(k) < 0; }).join(',') + ')');
+    if (inTime.length < 4) v.fails.push('core traits ' + inTime.length + '/5 by day ' + (ref + A.charSlack) + ' (missing ' + CORE.filter(function (k) { return inTime.indexOf(k) < 0; }).join(',') + ')');
+    if (ever.length < 6) v.fails.push('characterised ' + ever.length + '/7 by day ' + rep.day + ' (missing ' + IX.KEY_TRAITS.filter(function (k) { return ever.indexOf(k) < 0; }).join(',') + ')');
     v.solverOk = !v.fails.length;
     v.ok = v.solverOk;
     return v;
@@ -776,7 +802,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           var beds = g.sim.hospNow, cap = g.bedCap();
           if (beds > 0.6 * cap) ord('surge');
           var wk = g.weekStats();
-          var rising = wk.cases > 1.1 * wk.casesPrev && wk.cases >= 6;
+          var rg = IX.recentGrowth(g, 14);
+          var rising = (rg !== null && rg !== undefined ? rg > 0.02 : wk.cases > 1.1 * wk.casesPrev) && wk.cases >= 6;
           peakWk = Math.max(peakWk, wk.cases);
           var Rest = E.R || (S.published.R && S.published.R.value) || 2;
           var fast = (E.growth !== undefined && E.growth !== null && E.growth > 0.09) || Rest >= 2.2;
@@ -791,7 +818,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           }
           if (beds > 1.05 * cap && rising) ord('lockdown');
           // stand down in steps once it has clearly turned
-          var falling = wk.cases < 0.75 * wk.casesPrev && wk.cases < 0.5 * peakWk;
+          var falling = (rg !== null && rg !== undefined ? rg < -0.03 : wk.cases < 0.75 * wk.casesPrev) && wk.cases < 0.5 * peakWk;
           if (falling && beds < 0.6 * cap) {
             var age = function (id) { var o = g.ordersOf(id)[0]; return o ? S.day - o.since : -1; };
             if (age('lockdown') >= 14) lift('lockdown');

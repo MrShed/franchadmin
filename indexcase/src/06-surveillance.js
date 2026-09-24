@@ -497,7 +497,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (a >= 60 && hsz === 1 && o !== OCC.CARE_RES) bits.push('Lived alone.');
     else if (a >= 70) bits.push(['Grandparent of ' + (2 + k % 7) + '.', 'Married for ' + (30 + k % 30) + ' years.', ''][(k >> 12) % 3]);
     else if (a >= 25 && a < 60 && hsz >= 3) bits.push('Leaves a partner and ' + (hsz - 2 > 1 ? (hsz - 2) + ' children' : 'a child') + '.');
-    return bits.filter(Boolean).join(' ');
+    var out = bits.filter(Boolean).join(' ');
+    if (!out) out = ['Lived on ' + C.hAddr[h].replace(/^\d+ /, '') + '.', 'A familiar face in ' + C.districts[C.dist[pid]].name + '.', 'Known to the neighbours for ' + (a > 50 ? 'decades' : 'years') + '.'][k % 3];
+    return out;
   };
   GP.reportDeaths = function (list) {
     var S = this.S, self = this, sim = this.sim, C = this.C;
@@ -1080,7 +1082,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var n = C.gStart[r.g + 1] - C.gStart[r.g], last = r.sds[r.sds.length - 1];
       var pl = r.place >= 0 ? C.places[r.place] : null;
       var listed = r.place >= 0 && S.siteLists[r.place] && ['market', 'supermarket', 'station', 'stadium', 'shop', 'hospital'].indexOf(C.places[r.place].kind) < 0 && r.set !== SET.SHOP && r.set !== SET.MARKET;
-      if (r.set === SET.SCHOOL || r.set === SET.NURSERY || (n <= 16 && (r.set === SET.WORK || r.set === SET.CARE || r.set === SET.HOSP || r.set === SET.LAB || r.set === SET.ANIMAL)) || r.set === SET.EVENT && n <= 40) {
+      // schools, nurseries, wards and care homes keep registers and rotas; small teams know each other
+      if (r.set === SET.SCHOOL || r.set === SET.NURSERY || r.set === SET.HOSP || r.set === SET.CARE || (n <= 16 && (r.set === SET.WORK || r.set === SET.LAB || r.set === SET.ANIMAL)) || r.set === SET.EVENT && n <= 40) {
         var pFind = r.set === SET.SCHOOL || r.set === SET.NURSERY ? 0.95 : r.set === SET.EVENT ? 0.6 : 0.75;
         for (var t = C.gStart[r.g]; t < C.gStart[r.g + 1]; t++) {
           var q = C.gMem[t];
@@ -1171,7 +1174,14 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (!fromA) {
         // sequencing tells a different source apart, unless the virus barely mutates
         if (!slow || u(K.seq, q, a, 5) < 0.5) { elsewhere++; verdict = 'caught it elsewhere (genome does not match)'; }
-        else { var guess = u(K.seq, q, a, 6) < 0.5; if (guess) before++; else after++; verdict = guess ? 'before (link not confirmable)' : 'after (link not confirmable)'; }
+        else {
+          // the genome cannot rule the link out: the diaries decide, when they can
+          var dd = ((c.days && c.days[a]) || []).map(function (d0) { return self.sdOf(d0); });
+          var allB = dd.length && dd.every(function (d0) { return d0 < onA; }), allA = dd.length && dd.every(function (d0) { return d0 >= onA; });
+          if (allB) { before++; verdict = 'before (only met before; link not confirmable)'; }
+          else if (allA) { after++; verdict = 'after (only met after; link not confirmable)'; }
+          else { unclear++; verdict = 'cannot tell'; }
+        }
       } else {
         var days = (c.days && c.days[a]) || [];
         var infDay = sim.xday[xq];
@@ -1406,7 +1416,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var lines = [];
     lines.push(['Records of ' + nAdm + ' admission' + (nAdm === 1 ? '' : 's') + ' compatible with the illness were reviewed at ', this.plref(C.hospital), '.' + (found.length ? ' ' + (found.length + fp) + ' patients not previously reported have been added to the line list' + (fp ? ' (some will turn out to be something else)' : '') + '.' : '')]);
     rows = D.AGE_BANDS.map(function (bd, i) { return [bd, String(byAge[i]), String(icu[i]), String(died[i])]; });
-    lines.push({ k: 'table', head: ['Age', 'Admitted', 'Intensive care', 'Died'], rows: rows });
+    if (nAdm) lines.push({ k: 'table', head: ['Age', 'Admitted', 'Intensive care', 'Died'], rows: rows });
+    else lines.push('Nothing in the notes yet that looks like this illness. That is either good news or a sign it is too early to tell.');
     var symRows = Object.keys(symCount).sort(function (a, b) { return symCount[b] - symCount[a]; }).map(function (s) { return [D.SYM[s].label, Math.round(100 * symCount[s] / nAdm) + '%']; });
     if (symRows.length) lines.push({ k: 'table', head: ['Symptom on admission', 'Share'], rows: symRows });
     if (earliest) lines.push(['The earliest compatible admission was ', this.pref(earliest.pid), ' on ' + this.dateLong(this.gd(earliest.h)) + '.']);

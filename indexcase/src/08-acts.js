@@ -417,6 +417,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     card.ifr = m >= 50 ? IX.round(100 * (dd + K0 * ef / m) / (m + K0), 2) : IX.round(100 * P.ifr, 2);
     card.ihr = m >= 50 ? IX.round(100 * (hh + K0 * eh / m) / (m + K0), 1) : IX.round(100 * P.ihr, 1);
     card.originCase = sim.primary;
+    card.caseDef = P.symptoms.filter(function (sy) { return sy.p >= 0.35; }).map(function (sy) { return sy.id; });
     card.sourcePlace = sim.sourcePlace >= 0 ? C.places[sim.sourcePlace].id : null;
     card.day = S.day;
     this._truth = card;
@@ -488,7 +489,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var sdEnd = sim.sd;
     var gh = this.ghost(Math.max(sdEnd, this.sdOf(DAY_LIMIT))).sim;
     var dA = 0, dG = 0, dGnow = 0;
-    for (var x = 0; x < sim.n; x++) if (sim.xdeath[x] >= 0) dA++;
+    for (var x = 0; x < sim.n; x++) if (sim.xdeath[x] >= 0 && sim.xdeath[x] < sdEnd) dA++;
     for (x = 0; x < gh.n; x++) if (gh.xdeath[x] >= 0) { dG++; if (gh.xdeath[x] < sdEnd + 30) dGnow++; }
     var iA = sim.n, iG = gh.n;
     var lives = dG >= 5 ? IX.clamp((dG - dA) / dG, 0, 1) : IX.clamp((iG - iA) / Math.max(1, iG), 0, 1);
@@ -554,7 +555,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var tree = [];
     for (x = 0; x < sim.n; x++) tree.push({ pid: sim.xwho[x], infector: sim.xby[x] >= 0 ? sim.xwho[sim.xby[x]] : null, day: this.gd(sim.xday[x]), setting: IX.SET_NAMES[sim.xset[x]], place: sim.xplace[x] >= 0 ? C.places[sim.xplace[x]].id : null, variant: !!sim.xvr[x], known: !!S.cases[sim.xwho[x]] });
     var prim = sim.primary;
-    var origin = { primary: prim, primaryName: this.name(prim), source: P.source, place: sim.sourcePlace >= 0 ? this.plref(sim.sourcePlace) : null, day: this.gd(0 + 0) - S.sd0 + 0,
+    var origin = { primary: prim, primaryName: this.name(prim), source: P.source, place: sim.sourcePlace >= 0 ? this.plref(sim.sourcePlace) : null,
       infectedDay: this.gd(sim.xday[0]), indexCase: S.alert ? S.alert.pids[0] : null, found: !!(S.published.originCase && +S.published.originCase.value === prim),
       sourceFound: !!(S.published.source && S.published.source.value === P.source), spillovers: sim.spills, knownToYou: !!S.cases[prim] };
     return {

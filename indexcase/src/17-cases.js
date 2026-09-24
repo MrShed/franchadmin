@@ -130,11 +130,22 @@ var UICases = UI.views.cases = {
     [['ill', 'Fell ill'], ['monitoring', 'Monitoring'], ['well', 'Stayed well'], ['lost', 'Lost to follow-up']].forEach(function (g) {
       var L = by[g[0]] || []; if (!L.length) return;
       html += '<div class="eyebrow" style="margin:18px 2px 8px">' + g[1] + ' · ' + L.length + '</div><div class="list">' + L.slice(0, 200).map(function (c) {
-        var of = c.of.map(function (x) { var k = UIA.caseOf(x); return k ? k.name : x; }).join(', ');
-        return UIli({ attrs: 'data-pid="' + UIesc(c.pid) + '"', ic: '<span class="mini-face">' + UIPortrait.svg({ pid: c.pid }) + '</span>', icStyle: 'background:none;padding:0;overflow:hidden', label: UIesc(c.name), small: 'Contact of ' + UIesc(of) + (c.setting ? ' · ' + UIesc(UIplaceKind(c.setting)[0].toLowerCase()) : '') + (c.followUntil !== null && c.status === 'monitoring' ? ' · ' + Math.max(0, c.followUntil - day) + 'd left' : '') });
+        var of = c.of.map(function (x) { var k = UIA.caseOf(x); return k ? k.name : x; }).join(', '), nd = 0; Object.keys(c.days || {}).forEach(function (k) { nd += c.days[k].length; });
+        return UIli({ attrs: 'data-pid="' + UIesc(c.pid) + '"', ic: '<span class="mini-face">' + UIPortrait.svg({ pid: c.pid }) + '</span>', icStyle: 'background:none;padding:0;overflow:hidden', label: UIesc(c.name), small: 'Contact of ' + UIesc(of) + (c.setting ? ' · ' + UIesc(UIplaceKind(c.setting)[0].toLowerCase()) : '') + (nd > 1 ? ' · exposed on ' + nd + ' days' : '') + (c.followUntil !== null && c.status === 'monitoring' ? ' · ' + Math.max(0, c.followUntil - day) + 'd left' : '') });
       }).join('') + '</div>';
     });
     UI$('#cs-body').innerHTML = html;
+  },
+
+  /** every day a contact was exposed to each source case, as a strip of ticks over the fortnight */
+  exposureDays: function (fl, pref) {
+    var day = UIA.day(), srcs = Object.keys(fl.days).filter(function (k) { return fl.days[k].length; }); if (!srcs.length) return '';
+    var d0 = Math.min.apply(null, srcs.map(function (k) { return fl.days[k][0]; })), d1 = Math.max(day, d0 + 13);
+    return '<div class="xd"><div class="eyebrow">Exposure days · ' + UIesc(UIA.dateShort(d0)) + ' – ' + UIesc(UIA.dateShort(d1)) + '</div>' + srcs.map(function (k) {
+      var set = {}; fl.days[k].forEach(function (d) { set[d] = 1; });
+      var ticks = ''; for (var d = d0; d <= d1; d++) ticks += '<i class="' + (set[d] ? 'on' : '') + (d === day ? ' now' : '') + '" title="' + UIesc(UIA.dateShort(d)) + '"></i>';
+      return '<div class="xd-r"><span class="xd-n">' + pref(k) + '</span><span class="xd-t">' + ticks + '</span><b>' + fl.days[k].length + 'd</b></div>';
+    }).join('') + '</div>';
   },
 
   // ------------------------------------------------------------ person sheet
@@ -150,6 +161,7 @@ var UICases = UI.views.cases = {
       (c && c.via ? '<div class="ps-via">' + UIesc(this.VIA[c.via] || UIcap(c.via)) + (c.reported !== null ? ' · ' + UIesc(UIA.dateShort(c.reported)) : '') + '</div>' : '') + '</div></div>';
     html += this.timeline(p, c, day);
     if (died) html += '<div class="ps-died">' + UIesc(p.name) + ' died' + (c && c.died !== null ? ' on ' + UIesc(UIA.dateLong(c.died)) : '') + '. ' + (p.age !== null && p.age !== undefined ? UIesc(p.age) + ' years old.' : '') + '</div>';
+    if (p.follow && p.follow.days && Object.keys(p.follow.days).length) html += this.exposureDays(p.follow, pref);
     if (p.follow) html += '<div class="ps-follow">' + UIICON.people + '<span>Contact of ' + p.follow.of.map(pref).join(', ') + ' · ' + UIesc(p.follow.setting || '') + (p.follow.exposure !== null ? ', exposed ' + UIesc(UIA.dateShort(p.follow.exposure)) : '') + '. <b>' + UIesc(UIcap(p.follow.status)) + '</b>' + (p.follow.followUntil !== null ? ' · followed until ' + UIesc(UIA.dateShort(p.follow.followUntil)) : '') + '</span></div>';
     // what we know
     var know = '';

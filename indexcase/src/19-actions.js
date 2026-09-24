@@ -133,7 +133,7 @@ var UIActions = UI.views.actions = {
     if (!acts.length) return '';
     return '<div class="eyebrow sh-sec">' + UIesc(title || 'Actions here') + '</div><div class="list">' + acts.map(function (a) {
       var why = a.available ? UIA.canAct(a.id, target) : a.why; if (why) a = Object.assign({}, a, { available: false, why: why });
-      var ic = /interview/.test(a.id) ? UIICON.mic : /trace|house/.test(a.id) ? UIICON.people : /seq/.test(a.id) ? UIICON.dna : /test/.test(a.id) ? UIICON.test : /visit|site/.test(a.id) ? UIICON.pin : /question/.test(a.id) ? UIICON.report : /close|shut/.test(a.id) ? UIICON.shield : UIICON.spark;
+      var ic = /timing/.test(a.id) ? UIICON.clock : /interview/.test(a.id) ? UIICON.mic : /trace|house/.test(a.id) ? UIICON.people : /seq/.test(a.id) ? UIICON.dna : /test/.test(a.id) ? UIICON.test : /visit|site/.test(a.id) ? UIICON.pin : /question/.test(a.id) ? UIICON.report : /close|shut/.test(a.id) ? UIICON.shield : UIICON.spark;
       return UIli({ attrs: 'data-ta="' + UIesc(a.id) + '"', ic: ic, label: UIesc(a.label), small: a.available ? UIesc(a.desc || '') : '<span style="color:var(--amber)">' + UIesc(a.why) + '</span>', right: UIcosts(a), dis: !a.available });
     }).join('') + '</div>';
   },

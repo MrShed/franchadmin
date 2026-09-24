@@ -14,11 +14,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   // ---------------------------------------------------------------- grades
   IX.GRADES = [
     { id: 'probationer', label: 'Probationer', blurb: 'Respiratory viruses only, a bigger team, quicker lab results and a patient council.',
-      staff: { tracers: 5, field: 3, analysts: 2 }, trust: 6, comply: 1.06, beds: 1.15, fund: 1.2, panel: 16, pcrStart: 40, pcrGrow: 3, pcrMax: 160, seq: 4, funding: 450, vaccineBase: 50, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
+      staff: { tracers: 6, field: 3, analysts: 3 }, trust: 10, comply: 1.15, beds: 1.35, fund: 1.3, panel: 16, pcrStart: 45, pcrGrow: 4, pcrMax: 180, seq: 4, funding: 500, vaccineBase: 40, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
     { id: 'consultant', label: 'Consultant', blurb: 'The full range of diseases, a small team and a lab that is doing its best.',
-      staff: { tracers: 4, field: 2, analysts: 2 }, trust: 0, comply: 1, beds: 1, fund: 1, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 60, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
+      staff: { tracers: 4, field: 2, analysts: 2 }, trust: 2, comply: 1.05, beds: 1.1, fund: 1, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 55, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
     { id: 'director', label: 'Director', blurb: 'Wider and nastier diseases, noisier data, slower results and a council that wants the city open.',
-      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -8, comply: 0.9, beds: 0.85, fund: 0.7, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 75, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
+      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -6, comply: 0.95, beds: 0.9, fund: 0.75, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 70, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
   ];
   IX.gradeOf = function (id) { return IX.GRADES.filter(function (g) { return g.id === id; })[0] || IX.GRADES[1]; };
   GP.grades = function () { return IX.gradeOf(this.grade); };
@@ -144,7 +144,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (c.money && S.funding < c.money) return 'Not enough money in the budget.';
     // availability by stage
     if (id === 'declare_novel') { if (S.recognized) return 'The agent has been identified: ' + S.agentName + '.'; if (S.declared) return 'The lab is working on it.'; }
-    if ((id === 'sequence' || id === 'serosurvey' || id === 'trial' || id === 'publish_sequence') && !S.recognized) return 'Only once the lab has identified the agent.';
+    if ((id === 'sequence' || id === 'serosurvey' || id === 'trial' || id === 'publish_sequence' || id === 'timing_study') && !S.recognized) return 'Only once the lab has identified the agent.';
     if (id === 'counter_rumour' && !S.rumours.some(function (r) { return r.reported; })) return 'No rumours reported yet.';
     if (id === 'publish_sequence' && S.seqPublished !== undefined) return 'Already published.';
     if (catalogue) return null;
@@ -259,8 +259,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (this.C.places[pi].kind === 'hospital') return 'You cannot close the hospital.';
       if (this.S.orders.some(function (o) { return o.until === undefined && o.type === type && o.target === pi; })) return 'Already closed.';
     } else if (this.ordersOf(type).length && type !== 'gatherings' && type !== 'shielding' && type !== 'vaccinate') return 'Already in force.';
-    if (S.funding < O.cost * 3) return 'Not enough money to fund it.';
-    return null;
+    return null;   // orders can always be issued; overspending is a matter for the council
   };
   GP.order = function (type, params) {
     var S = this.S;
@@ -572,7 +571,10 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       case 'source': return value === t ? 0 : 1;
       case 'treatment': return value === t ? 0 : (Math.abs(D.TREATMENTS.indexOf(value) - D.TREATMENTS.indexOf(t)) === 1 ? 0.5 : 1);
       case 'originCase': return +value === T.originCase ? 0 : 1;
-      case 'caseDef': return 0;
+      case 'caseDef':
+        var A = value || [], B = T.caseDef || [], inter = A.filter(function (x) { return B.indexOf(x) >= 0; }).length;
+        var uni = A.length + B.length - inter;
+        return uni ? IX.round(1 - inter / uni, 2) : 0;
       case 'incubation': return Math.min(1, Math.abs(value - t) / Math.max(2, 0.5 * t));
       case 'presym': return Math.min(1, Math.abs(value - t) / 40);
       case 'asym': return Math.min(1, Math.abs(value - t) / 30);

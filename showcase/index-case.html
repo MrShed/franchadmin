@@ -178,12 +178,13 @@ svg{display:block}
 #scrim{position:fixed;inset:0;background:rgba(2,4,7,.62);z-index:50;opacity:0;transition:opacity .22s;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 #scrim.on{opacity:1}
 #sheet{position:fixed;left:0;right:0;bottom:0;z-index:51;max-height:calc(92vh - var(--safe-t));max-height:calc(92dvh - var(--safe-t));display:flex;flex-direction:column;
-  background:linear-gradient(180deg,#16212c,#0e161e 140px);border-top:1px solid var(--line3);border-radius:22px 22px 0 0;
-  box-shadow:0 -24px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);transform:translateY(105%);transition:transform .3s var(--ease);padding-bottom:var(--safe-b)}
+  background:radial-gradient(120% 160px at 50% 0,rgba(143,203,255,.07),transparent 70%),linear-gradient(180deg,#141f2a,#0c141b 160px);border-top:1px solid rgba(160,210,255,.2);border-radius:26px 26px 0 0;
+  box-shadow:0 -30px 70px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);transform:translateY(105%);transition:transform .46s cubic-bezier(.22,1.12,.36,1);padding-bottom:var(--safe-b)}
 #sheet.on{transform:none}
+#sheet:not(.on){transition:transform .3s var(--ease)}
 #sheet.drag{transition:none}
 .sh-grip{flex:none;height:22px;display:grid;place-items:center;touch-action:none;cursor:grab}
-.sh-grip::before{content:"";width:42px;height:5px;border-radius:3px;background:#3a4b5b}
+.sh-grip::before{content:"";width:40px;height:4px;border-radius:2px;background:rgba(160,190,215,.35)}
 .sh-head{padding:0 16px 10px;flex:none;display:flex;align-items:flex-start;gap:12px;touch-action:none}
 .sh-head .t{flex:1;min-width:0}
 .sh-head h3{margin:2px 0 0;font:400 32px/1 var(--f-disp);letter-spacing:-.015em;}
@@ -335,7 +336,7 @@ svg{display:block}
   .pop{top:calc(66px + var(--safe-t))}
   .t-wrap{padding:40px 64px;justify-content:center}
   .t-brand{flex:0 0 auto;min-height:0;padding:10px 0 26px}
-  .t-title{font-size:clamp(100px,19vh,190px)}
+  .t-title{font-size:clamp(96px,16vh,170px)}
   .t-panel,.t-dek{max-width:520px}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
@@ -463,7 +464,16 @@ i.su{background:rgba(217,211,199,.14);border:1px solid rgba(233,226,212,.7)}
 .ps-meta{font-size:14px;color:var(--ink2);line-height:1.4}
 .ps-via{margin-top:6px;font:11px var(--f-mono);color:var(--ink3);letter-spacing:.04em}
 .ps-died{margin:14px 0 0;padding:12px 14px;border-radius:12px;border:1px solid rgba(217,211,199,.2);background:rgba(217,211,199,.05);color:var(--bone);font:15px/1.5 var(--f-serif)}
-.ps-follow{margin-top:12px;display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:rgba(143,203,255,.06);border:1px solid rgba(143,203,255,.15);font-size:13.5px;color:var(--ink2)}
+.ps-follow{margin-top:12px;display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:14px;background:rgba(143,203,255,.06);border:1px solid rgba(143,203,255,.14);font-size:13.5px;color:var(--ink2)}
+.xd{margin-top:14px;padding:12px 13px;border-radius:14px;background:rgba(2,6,10,.35);border:1px solid rgba(143,203,255,.08)}
+.xd .eyebrow{display:block;margin-bottom:9px}
+.xd-r{display:grid;grid-template-columns:minmax(0,7.5em) 1fr auto;gap:10px;align-items:center;min-height:26px;font-size:13px}
+.xd-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xd-t{display:flex;gap:2px}
+.xd-t i{flex:1;height:12px;border-radius:2px;background:rgba(255,255,255,.05)}
+.xd-t i.on{background:linear-gradient(180deg,#ffb088,#e2521e);box-shadow:0 0 8px rgba(255,110,60,.45)}
+.xd-t i.now{outline:1px solid rgba(255,224,194,.6);outline-offset:1px}
+.xd-r b{font:600 11px var(--f-mono);color:var(--ink3)}
 .ps-follow svg{width:18px;height:18px;flex:none;stroke:var(--ice);fill:none;stroke-width:1.7;margin-top:1px}
 .ps-kv{margin:4px 0 8px}
 .kn{margin:12px 0}
@@ -618,8 +628,8 @@ blockquote cite .lnk{font-style:normal}
 .d-press{background:#ebe5d8;color:#1e1b16;padding:18px 18px 22px;border-radius:4px;box-shadow:0 20px 50px rgba(0,0,0,.6);transform:rotate(-.4deg);background-image:linear-gradient(180deg,rgba(255,255,255,.4),rgba(0,0,0,.03))}
 .d-press .pr-mast{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px double #1e1b16;padding-bottom:6px;margin-bottom:10px;font:700 17px var(--f-serif);letter-spacing:.02em}
 .d-press .pr-mast em{font:italic 12px var(--f-serif)}
-.d-press h1{font:800 34px/1 var(--f-serif);font-stretch:normal;text-transform:none;letter-spacing:-.01em;color:#111;margin:4px 0 12px}
-.d-press p{color:#2a261f;font:15px/1.55 var(--f-serif)}
+.d-press h1{font:400 44px/.95 var(--f-serif);font-stretch:normal;text-transform:none;letter-spacing:-.02em;color:#111;margin:6px 0 14px}
+.d-press p{color:#2a261f;font:17px/1.45 var(--f-serif)}
 .d-press .pr-body{columns:2 150px;column-gap:18px}
 .d-press h5{color:#9a3413}
 .d-press .lnk{color:#1c3d78;border-bottom-color:rgba(28,61,120,.4)}
@@ -735,6 +745,13 @@ blockquote cite .lnk{font-style:normal}
 /* ---------- debrief ---------- */
 #debrief{overflow-y:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(90% 40% at 50% 0,rgba(255,122,69,.12),transparent 70%),#04070a}
 .db-bg{display:none}
+.db{position:relative}
+.db-glow{position:absolute;left:0;right:0;top:0;height:640px;pointer-events:none;background:radial-gradient(90% 60% at 50% 0,var(--oc,rgba(255,122,69,.16)),transparent 70%)}
+.oc-contained{--oc:rgba(63,208,170,.2)} .oc-vaccine{--oc:rgba(143,203,255,.22)} .oc-collapse{--oc:rgba(255,70,60,.24)} .oc-timeout{--oc:rgba(242,182,64,.14)} .oc-resigned{--oc:rgba(160,175,190,.12)}
+.oc-burnout{--oc:rgba(150,120,100,.2)}
+.oc-burnout .db-glow{background:radial-gradient(90% 60% at 50% 0,rgba(150,120,100,.2),transparent 70%),radial-gradient(2px 2px at 20% 30%,rgba(255,150,90,.7),transparent),radial-gradient(1.5px 1.5px at 70% 18%,rgba(255,150,90,.6),transparent),radial-gradient(2px 2px at 84% 42%,rgba(255,120,70,.5),transparent),radial-gradient(1.5px 1.5px at 38% 12%,rgba(255,170,110,.55),transparent),radial-gradient(1px 1px at 58% 36%,rgba(255,150,90,.6),transparent)}
+.oc-burnout .db-hero h1{background:linear-gradient(180deg,#e9e2da 20%,#8d7f74);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 40px rgba(255,120,60,.18))}
+.db-in{position:relative}
 .db-in{max-width:760px;margin:0 auto;padding:calc(40px + var(--safe-t)) calc(18px + var(--safe-r)) calc(40px + var(--safe-b)) calc(18px + var(--safe-l))}
 .db-hero h1{font:400 clamp(66px,20vw,132px)/.88 var(--f-disp);letter-spacing:-.035em;margin:14px 0 18px;background:linear-gradient(180deg,#fff 30%,#c9b9ae);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 40px rgba(255,122,69,.2));padding-bottom:.04em}
 .db-hero>p{font-size:17px;color:var(--ink2);margin:0 0 20px;max-width:32em}
@@ -4251,7 +4268,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var n = C.gStart[r.g + 1] - C.gStart[r.g], last = r.sds[r.sds.length - 1];
       var pl = r.place >= 0 ? C.places[r.place] : null;
       var listed = r.place >= 0 && S.siteLists[r.place] && ['market', 'supermarket', 'station', 'stadium', 'shop', 'hospital'].indexOf(C.places[r.place].kind) < 0 && r.set !== SET.SHOP && r.set !== SET.MARKET;
-      if (r.set === SET.SCHOOL || r.set === SET.NURSERY || (n <= 16 && (r.set === SET.WORK || r.set === SET.CARE || r.set === SET.HOSP || r.set === SET.LAB || r.set === SET.ANIMAL)) || r.set === SET.EVENT && n <= 40) {
+      // schools, nurseries, wards and care homes keep registers and rotas; small teams know each other
+      if (r.set === SET.SCHOOL || r.set === SET.NURSERY || r.set === SET.HOSP || r.set === SET.CARE || (n <= 16 && (r.set === SET.WORK || r.set === SET.LAB || r.set === SET.ANIMAL)) || r.set === SET.EVENT && n <= 40) {
         var pFind = r.set === SET.SCHOOL || r.set === SET.NURSERY ? 0.95 : r.set === SET.EVENT ? 0.6 : 0.75;
         for (var t = C.gStart[r.g]; t < C.gStart[r.g + 1]; t++) {
           var q = C.gMem[t];
@@ -4342,7 +4360,14 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (!fromA) {
         // sequencing tells a different source apart, unless the virus barely mutates
         if (!slow || u(K.seq, q, a, 5) < 0.5) { elsewhere++; verdict = 'caught it elsewhere (genome does not match)'; }
-        else { var guess = u(K.seq, q, a, 6) < 0.5; if (guess) before++; else after++; verdict = guess ? 'before (link not confirmable)' : 'after (link not confirmable)'; }
+        else {
+          // the genome cannot rule the link out: the diaries decide, when they can
+          var dd = ((c.days && c.days[a]) || []).map(function (d0) { return self.sdOf(d0); });
+          var allB = dd.length && dd.every(function (d0) { return d0 < onA; }), allA = dd.length && dd.every(function (d0) { return d0 >= onA; });
+          if (allB) { before++; verdict = 'before (only met before; link not confirmable)'; }
+          else if (allA) { after++; verdict = 'after (only met after; link not confirmable)'; }
+          else { unclear++; verdict = 'cannot tell'; }
+        }
       } else {
         var days = (c.days && c.days[a]) || [];
         var infDay = sim.xday[xq];
@@ -4577,7 +4602,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var lines = [];
     lines.push(['Records of ' + nAdm + ' admission' + (nAdm === 1 ? '' : 's') + ' compatible with the illness were reviewed at ', this.plref(C.hospital), '.' + (found.length ? ' ' + (found.length + fp) + ' patients not previously reported have been added to the line list' + (fp ? ' (some will turn out to be something else)' : '') + '.' : '')]);
     rows = D.AGE_BANDS.map(function (bd, i) { return [bd, String(byAge[i]), String(icu[i]), String(died[i])]; });
-    lines.push({ k: 'table', head: ['Age', 'Admitted', 'Intensive care', 'Died'], rows: rows });
+    if (nAdm) lines.push({ k: 'table', head: ['Age', 'Admitted', 'Intensive care', 'Died'], rows: rows });
+    else lines.push('Nothing in the notes yet that looks like this illness. That is either good news or a sign it is too early to tell.');
     var symRows = Object.keys(symCount).sort(function (a, b) { return symCount[b] - symCount[a]; }).map(function (s) { return [D.SYM[s].label, Math.round(100 * symCount[s] / nAdm) + '%']; });
     if (symRows.length) lines.push({ k: 'table', head: ['Symptom on admission', 'Share'], rows: symRows });
     if (earliest) lines.push(['The earliest compatible admission was ', this.pref(earliest.pid), ' on ' + this.dateLong(this.gd(earliest.h)) + '.']);
@@ -4802,11 +4828,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   // ---------------------------------------------------------------- grades
   IX.GRADES = [
     { id: 'probationer', label: 'Probationer', blurb: 'Respiratory viruses only, a bigger team, quicker lab results and a patient council.',
-      staff: { tracers: 5, field: 3, analysts: 2 }, trust: 6, comply: 1.06, beds: 1.15, fund: 1.2, panel: 16, pcrStart: 40, pcrGrow: 3, pcrMax: 160, seq: 4, funding: 450, vaccineBase: 50, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
+      staff: { tracers: 6, field: 3, analysts: 3 }, trust: 10, comply: 1.15, beds: 1.35, fund: 1.3, panel: 16, pcrStart: 45, pcrGrow: 4, pcrMax: 180, seq: 4, funding: 500, vaccineBase: 40, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
     { id: 'consultant', label: 'Consultant', blurb: 'The full range of diseases, a small team and a lab that is doing its best.',
-      staff: { tracers: 4, field: 2, analysts: 2 }, trust: 0, comply: 1, beds: 1, fund: 1, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 60, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
+      staff: { tracers: 4, field: 2, analysts: 2 }, trust: 2, comply: 1.05, beds: 1.1, fund: 1, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 55, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
     { id: 'director', label: 'Director', blurb: 'Wider and nastier diseases, noisier data, slower results and a council that wants the city open.',
-      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -8, comply: 0.9, beds: 0.85, fund: 0.7, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 75, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
+      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -6, comply: 0.95, beds: 0.9, fund: 0.75, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 70, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
   ];
   IX.gradeOf = function (id) { return IX.GRADES.filter(function (g) { return g.id === id; })[0] || IX.GRADES[1]; };
   GP.grades = function () { return IX.gradeOf(this.grade); };
@@ -4932,7 +4958,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (c.money && S.funding < c.money) return 'Not enough money in the budget.';
     // availability by stage
     if (id === 'declare_novel') { if (S.recognized) return 'The agent has been identified: ' + S.agentName + '.'; if (S.declared) return 'The lab is working on it.'; }
-    if ((id === 'sequence' || id === 'serosurvey' || id === 'trial' || id === 'publish_sequence') && !S.recognized) return 'Only once the lab has identified the agent.';
+    if ((id === 'sequence' || id === 'serosurvey' || id === 'trial' || id === 'publish_sequence' || id === 'timing_study') && !S.recognized) return 'Only once the lab has identified the agent.';
     if (id === 'counter_rumour' && !S.rumours.some(function (r) { return r.reported; })) return 'No rumours reported yet.';
     if (id === 'publish_sequence' && S.seqPublished !== undefined) return 'Already published.';
     if (catalogue) return null;
@@ -5047,8 +5073,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (this.C.places[pi].kind === 'hospital') return 'You cannot close the hospital.';
       if (this.S.orders.some(function (o) { return o.until === undefined && o.type === type && o.target === pi; })) return 'Already closed.';
     } else if (this.ordersOf(type).length && type !== 'gatherings' && type !== 'shielding' && type !== 'vaccinate') return 'Already in force.';
-    if (S.funding < O.cost * 3) return 'Not enough money to fund it.';
-    return null;
+    return null;   // orders can always be issued; overspending is a matter for the council
   };
   GP.order = function (type, params) {
     var S = this.S;
@@ -6771,6 +6796,13 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       E.ihr = IX.round(100 * admUpTo / infections, 1);
     }
 
+    // high death rates show up early in cohorts where everyone infected is known (household and timing studies)
+    if (E.ifr === undefined) {
+      var coh = {}, cohDead = 0, cohN = 0;
+      S.hhStudies.forEach(function (st) { if (!st.result || S.day - st.done < 21) return; st.members.forEach(function (q) { var cq = byPid[q]; if (cq && cq.status === 'confirmed' && !coh[q]) { coh[q] = 1; cohN++; if (cq.outcome === 'died') cohDead++; } }); });
+      E.n.ifrCohort = cohN;
+      if (cohDead >= 3 && cohN >= 30) E.ifr = IX.round(100 * cohDead / cohN, 2);
+    }
     // --- who it hits: which age shape explains admissions (and deaths) by age best
     E.ageRisk = ageShape(g, ec, best);
     E.n.ageRisk = ec.byAge.admitted.reduce(function (s2, v) { return s2 + v; }, 0);
@@ -6856,6 +6888,14 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     return (m * sxy - sx * sy) / den;
   }
   IX.growthRate = growth;
+  /** recent growth rate from wastewater (does not saturate when testing does), else from cases */
+  IX.recentGrowth = function (g, days) {
+    days = days || 14;
+    var ww = g.wastewater(), ids = Object.keys(ww.byDistrict), n = ids.length ? ww.byDistrict[ids[0]].length : 0, pts = [];
+    for (var i = Math.max(0, n - days); i < n; i++) { var tot = 0, any = false; ids.forEach(function (d) { var v = ww.byDistrict[d][i]; if (v !== null) { any = true; tot += v; } }); if (any) pts.push([i, Math.log(tot + 50)]); }
+    if (pts.length >= 4) { var sx = 0, sy = 0, sxx = 0, sxy = 0, m = pts.length; pts.forEach(function (p) { sx += p[0]; sy += p[1]; sxx += p[0] * p[0]; sxy += p[0] * p[1]; }); return (m * sxy - sx * sy) / (m * sxx - sx * sx); }
+    var ec = g.epiCurve(); return growth(ec.byReport, ec.byReport.length - days, ec.byReport.length);
+  };
 
   function routeGuess(g, ll, E) {
     var S = g.S;
@@ -6867,7 +6907,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (nC >= 5 && gutS / nC > 0.6) ev.gut += 2;
     if (nC >= 5 && bleed / nC > 0.2) ev.contact += 1;
     // questionnaires
-    var pc = { n: 0, ill: 0 }, pf = { n: 0, ill: 0 }, foodQ = 0;
+    var pc = { n: 0, ill: 0 }, pf = { n: 0, ill: 0 }, pn = { n: 0, ill: 0 }, foodQ = 0;
     S.quests.forEach(function (q) {
       var cats = q.cats, close = cats[IX.QCAT.close], far = cats[IX.QCAT.far];
       var ate = cats[IX.QCAT.ate], nate = cats[IX.QCAT.nate];
@@ -6875,13 +6915,20 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (q.ill < 3 || !close || !far || (!q.event && ['choir', 'pub', 'restaurant', 'church', 'mosque', 'temple', 'gurdwara'].indexOf(q.kind) < 0)) return;
       if (q.day > (S.recognizedDay || 0) + 12) return;   // later, everyone is catching it everywhere: attack rates stop meaning much
       pc.n += close.n; pc.ill += close.ill; pf.n += far.n; pf.ill += far.ill;
+      var near = cats[IX.QCAT.near]; if (near) { pn.n += near.n; pn.ill += near.ill; }
     });
-    E.qPool = { close: pc.n ? IX.round(pc.ill / pc.n, 3) : null, far: pf.n ? IX.round(pf.ill / pf.n, 3) : null, nc: pc.n, nf: pf.n, food: foodQ };
+    E.qPool = { close: pc.n ? IX.round(pc.ill / pc.n, 3) : null, near: pn.n ? IX.round(pn.ill / pn.n, 3) : null, far: pf.n ? IX.round(pf.ill / pf.n, 3) : null, nc: pc.n, nn: pn.n, nf: pf.n, food: foodQ };
     if (pc.n >= 6 && pf.n >= 12 && pc.ill >= 2) {
-      var rc = pc.ill / pc.n, rf = pf.ill / pf.n, ratio = rf / Math.max(0.001, rc);
-      if (ratio >= 0.5 && rc >= 0.08) ev.airborne += 2.2;
-      else if (ratio <= 0.42) { ev.droplet += 1.4; ev.contact += 0.8; }
+      var rc = pc.ill / pc.n, rf = pf.ill / pf.n, rn = pn.n ? pn.ill / pn.n : rf;
+      var ratio = ((rn + rf) / 2) / Math.max(0.001, rc);
+      if ((ratio >= 0.55 && rc >= 0.06) || rf >= 0.12) ev.airborne += 2.2;
+      else if (ratio <= 0.45 && rc >= 0.06) { ev.droplet += 1.4; ev.contact += 0.8; }
     }
+    // health and care workers catching it far more than anyone else: nursing the sick spreads it (body fluids)
+    var hcw = 0, occN = 0;
+    ll.forEach(function (c) { if (c.status !== 'confirmed') return; var kp = S.people[c.pid]; if (!kp || !kp.known.occupation) return; occN++; if (/nurse|doctor|care worker|porter/.test(kp.known.occupation)) hcw++; });
+    E.hcwShare = occN ? IX.round(hcw / occN, 2) : null;
+    if (occN >= 15 && hcw / occN > 0.18) ev.contact += 1.2;
     // explosive single-day clusters in shared air (choirs, pubs, gyms, services, parties) are the airborne signature
     var big = 0;
     g.clusters().forEach(function (k) { if (k.place && ['choir', 'pub', 'gym', 'church', 'mosque', 'temple', 'gurdwara', 'hotel', 'community_hall', 'restaurant'].indexOf(k.kind) >= 0 && k.size >= 6 && k.lastOnset !== null && k.lastOnset - k.firstOnset <= 7) big++; });
@@ -6977,7 +7024,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   };
 
   // ================================================================ acceptance
-  IX.ACCEPT = { detectBy: { probationer: 10, consultant: 10, director: 12 }, charSlack: 21, needTraits: 5, minGhostDeaths: 6, minGhostHosp: 20, minPeakDay: 14, maxAlertInf: 0.06, maxAlertInfBy: { probationer: 0.03, consultant: 0.05, director: 0.07 } };
+  IX.ACCEPT = { detectBy: { probationer: 10, consultant: 10, director: 12 }, charSlack: 21, needTraits: 5, minGhostDeaths: 6, minGhostHosp: 20, minPeakDay: 14, maxAlertInf: 0.06, maxAlertInfBy: { probationer: 0.02, consultant: 0.04, director: 0.07 } };
   var SINGLE_SET = {}; [SET.EVENT, SET.VISIT, SET.PUB, SET.RESTAURANT, SET.CHOIR, SET.FAITH, SET.STADIUM, SET.GYM, SET.MARKET, SET.DOORSTEP, SET.FUNERAL].forEach(function (s) { SINGLE_SET[s] = 1; });
 
   /** Fast acceptance (used by IX.newGame): the alert, the ghost city, and truth-side proxies for
@@ -7052,15 +7099,19 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (!v.ghost) return v;
     var copy = IX.load(g.save());
     copy._ghost = g._ghost;
-    var rep = IX.solve(copy, { until: opts.until || 75 });
+    var rep = IX.solve(copy, { until: opts.until || 90 });
     v.solver = rep;
     var dBy = A.detectBy[g.grade] || 10;
     if (rep.confirmed === null || rep.confirmed > dBy + 2) v.fails.push('not detected by day ' + dBy + ' (confirmed ' + rep.confirmed + ')');
     var ref = rep.community !== null ? rep.community : 40;
-    var inTime = IX.KEY_TRAITS.filter(function (k) { return rep.traitDay[k] !== undefined && rep.traitDay[k] <= ref + A.charSlack; });
-    v.charTraits = inTime;
+    // the core traits must be readable in time to act on; severity and silent spread may take longer
+    var CORE = ['route', 'incubation', 'asym', 'R', 'ageRisk'];
+    var inTime = CORE.filter(function (k) { return rep.traitDay[k] !== undefined && rep.traitDay[k] <= ref + A.charSlack; });
+    var ever = IX.KEY_TRAITS.filter(function (k) { return rep.traitDay[k] !== undefined; });
+    v.charTraits = inTime; v.everTraits = ever;
     v.charRef = ref;
-    if (inTime.length < A.needTraits) v.fails.push('characterised ' + inTime.length + '/' + IX.KEY_TRAITS.length + ' by day ' + (ref + A.charSlack) + ' (missing ' + IX.KEY_TRAITS.filter(function (k) { return inTime.indexOf(k) < 0; }).join(',') + ')');
+    if (inTime.length < 4) v.fails.push('core traits ' + inTime.length + '/5 by day ' + (ref + A.charSlack) + ' (missing ' + CORE.filter(function (k) { return inTime.indexOf(k) < 0; }).join(',') + ')');
+    if (ever.length < 6) v.fails.push('characterised ' + ever.length + '/7 by day ' + rep.day + ' (missing ' + IX.KEY_TRAITS.filter(function (k) { return ever.indexOf(k) < 0; }).join(',') + ')');
     v.solverOk = !v.fails.length;
     v.ok = v.solverOk;
     return v;
@@ -7240,7 +7291,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           var beds = g.sim.hospNow, cap = g.bedCap();
           if (beds > 0.6 * cap) ord('surge');
           var wk = g.weekStats();
-          var rising = wk.cases > 1.1 * wk.casesPrev && wk.cases >= 6;
+          var rg = IX.recentGrowth(g, 14);
+          var rising = (rg !== null && rg !== undefined ? rg > 0.02 : wk.cases > 1.1 * wk.casesPrev) && wk.cases >= 6;
           peakWk = Math.max(peakWk, wk.cases);
           var Rest = E.R || (S.published.R && S.published.R.value) || 2;
           var fast = (E.growth !== undefined && E.growth !== null && E.growth > 0.09) || Rest >= 2.2;
@@ -7255,7 +7307,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           }
           if (beds > 1.05 * cap && rising) ord('lockdown');
           // stand down in steps once it has clearly turned
-          var falling = wk.cases < 0.75 * wk.casesPrev && wk.cases < 0.5 * peakWk;
+          var falling = (rg !== null && rg !== undefined ? rg < -0.03 : wk.cases < 0.75 * wk.casesPrev) && wk.cases < 0.5 * peakWk;
           if (falling && beds < 0.6 * cap) {
             var age = function (id) { var o = g.ordersOf(id)[0]; return o ? S.day - o.since : -1; };
             if (age('lockdown') >= 14) lift('lockdown');
@@ -7352,7 +7404,7 @@ var UIA = (function () {
   A.over = function () { return !!A.g.over; };
   A.outcome = function () { var o = A.g.outcome; if (!o) return null; return typeof o === 'string' ? { kind: o } : o; };
   A.agentName = function () { return A.g.agentName || null; };
-  A.dateLabel = function (d) { try { var s = A.g.dateLabel(d); if (s) return String(s); } catch (e) { /* ignore */ } return 'Day ' + d; };
+  A.dateLabel = function (d) { try { var s = A.g.dateLabel(d); if (s) return String(s); } catch (e) { /* ignore */ } return 'Day ' + (d + 1); };
   A.dateLong = function (d) { try { if (A.g.dateLong) return String(A.g.dateLong(d)); } catch (e) { /* ignore */ } return A.dateLabel(d); };
   A.dateShort = function (d) { var s = A.dateLabel(d).split(' '); return s.length >= 3 ? s[1] + ' ' + s[2] : s.join(' '); };
 
@@ -7468,7 +7520,8 @@ var UIA = (function () {
     var p = null; try { p = call('person', String(pid)); } catch (e) { /* ignore */ }
     return (A._her[pid] = p && p.heritage ? String(p.heritage) : null);
   };
-  A.contacts = function () { return cached('contacts', function () { return arr(call('contacts')).map(function (c) { return { pid: String(c.pid), name: c.name, of: arr(c.of).map(String), exposure: num(c.exposure, null), setting: c.setting || '', followUntil: num(c.followUntil, null), status: c.status || 'monitoring', tested: c.tested }; }); }); };
+  A.contacts = function () { return cached('contacts', function () { return arr(call('contacts')).map(function (c) { var days = {}; Object.keys(c.days || {}).forEach(function (k) { days[String(k)] = arr(c.days[k]).map(function (d) { return num(d, null); }).filter(function (d) { return d !== null; }).sort(function (a, b) { return a - b; }); });
+        return { pid: String(c.pid), name: c.name, of: arr(c.of).map(String), exposure: num(c.exposure, null), days: days, setting: c.setting || '', followUntil: num(c.followUntil, null), status: c.status || 'monitoring', tested: c.tested }; }); }); };
   A.person = function (pid) {
     var p = call('person', String(pid)) || {};
     var c = A.caseOf(pid), k = p.known || {};
@@ -7547,7 +7600,6 @@ var UIA = (function () {
       if (a && a.order && typeof g.order === 'function') { var p = {}; Object.keys(params || {}).forEach(function (k) { p[k] = params[k]; }); if (target !== undefined && target !== null) p.target = target; r = g.order(id, p); }
       else if (typeof g.act === 'function') r = g.act(id, target === undefined ? null : target, params || {});
       else if (typeof g.doAct === 'function') r = g.doAct(id, target === undefined ? null : target, params || {});
-      else if (typeof g.canAct === 'function' && typeof g.costOf === 'function' && g.S) r = shimAct(g, id, target, params || {});
       else r = { ok: false, err: 'The engine has no action entry point' };
     } catch (e) { r = { ok: false, err: e.message }; if (typeof console !== 'undefined') console.error(e); }
     A.bump();
@@ -7555,27 +7607,6 @@ var UIA = (function () {
     var msgs = arr(r.msgs);
     return { ok: r.ok !== false && !r.err, err: r.err || r.error || '', msgs: msgs.map(function (m) { return typeof m === 'string' ? m : m.title || m.text || ''; }), msgIds: msgs.filter(function (m) { return m && m.id !== undefined; }).map(function (m) { return String(m.id); }), raw: r };
   };
-  /* TEMPORARY: the engine's act() method is shadowed by the act-number getter
-   * (08-acts defines g.act after 07 defines GP.act). This mirrors 07's GP.act
-   * until the engine renames one of them; remove when g.act is callable again. */
-  function shimAct(g, id, target, params) {
-    var why = g.canAct(id, target, params);
-    if (why) return { ok: false, msgs: [], err: why };
-    var cat = A.action(id), T = cat ? cat.target : 'none', S = g.S;
-    var fn = g['inv_' + id] || g['do_' + id];
-    if (!fn) return { ok: false, msgs: [], err: 'Unknown action' };
-    g._fresh = [];
-    var tg = T === 'place' ? g.placeIdx(target) : (target === null || target === undefined ? null : +target);
-    var r = fn.call(g, T === 'none' ? params : tg, params);
-    if (!r || !r.ok) { g._fresh = null; return { ok: false, msgs: [], err: (r && r.err) || 'Could not do that.' }; }
-    var c = g.costOf(id, tg, params);
-    for (var k in (c.hours || {})) S.used[k] += c.hours[k];
-    if (c.seq) S.seqUsed += c.seq;
-    if (c.money) g.spend(c.money);
-    S.log.push([S.day, id, tg, params]);
-    var msgs = g._fresh; g._fresh = null;
-    return { ok: true, msgs: msgs };
-  }
   A.orders = function () {
     return cached('orders', function () {
       return arr(call('orders')).map(function (o) { return { id: String(o.id), type: o.type || o.action, label: o.label || o.type, target: refId(o.target), params: o.params || {}, since: num(o.since, 0), lag: num(o.lag, 0), effectFrom: num(o.effectFrom, num(o.since, 0) + num(o.lag, 0)), compliance: num(o.compliance, null), costPerDay: num(o.costPerDay, 0) * 1000, economyPerDay: num(o.economyPerDay, 0) * 1e6 }; });
@@ -7691,7 +7722,8 @@ var UIA = (function () {
     };
   };
   A.trials = function () { return []; };
-  A.standDown = function () { var g = A.g; if (typeof g.resign === 'function') g.resign(); else { var tgt = g.S && Object.getOwnPropertyDescriptor(Object.getPrototypeOf(g), 'over') ? g.S : g; tgt.over = true; if (!tgt.outcome) tgt.outcome = { kind: 'resigned', day: A.day(), title: 'Stood down', text: 'You stepped away before the end. Here is what happened.' }; } A.bump(); };
+  /** stand down: the engine ends the game (outcome 'resigned'); the debrief still works */
+  A.standDown = function () { var r = null; try { r = A.g.resign(); } catch (e) { if (typeof console !== 'undefined') console.error(e); } A.bump(); return r || { ok: false }; };
   return A;
 })();
 /* INDEX CASE UI — 11-util.js: DOM helpers, formatting, icons, prefs. */
@@ -9517,11 +9549,22 @@ var UICases = UI.views.cases = {
     [['ill', 'Fell ill'], ['monitoring', 'Monitoring'], ['well', 'Stayed well'], ['lost', 'Lost to follow-up']].forEach(function (g) {
       var L = by[g[0]] || []; if (!L.length) return;
       html += '<div class="eyebrow" style="margin:18px 2px 8px">' + g[1] + ' · ' + L.length + '</div><div class="list">' + L.slice(0, 200).map(function (c) {
-        var of = c.of.map(function (x) { var k = UIA.caseOf(x); return k ? k.name : x; }).join(', ');
-        return UIli({ attrs: 'data-pid="' + UIesc(c.pid) + '"', ic: '<span class="mini-face">' + UIPortrait.svg({ pid: c.pid }) + '</span>', icStyle: 'background:none;padding:0;overflow:hidden', label: UIesc(c.name), small: 'Contact of ' + UIesc(of) + (c.setting ? ' · ' + UIesc(UIplaceKind(c.setting)[0].toLowerCase()) : '') + (c.followUntil !== null && c.status === 'monitoring' ? ' · ' + Math.max(0, c.followUntil - day) + 'd left' : '') });
+        var of = c.of.map(function (x) { var k = UIA.caseOf(x); return k ? k.name : x; }).join(', '), nd = 0; Object.keys(c.days || {}).forEach(function (k) { nd += c.days[k].length; });
+        return UIli({ attrs: 'data-pid="' + UIesc(c.pid) + '"', ic: '<span class="mini-face">' + UIPortrait.svg({ pid: c.pid }) + '</span>', icStyle: 'background:none;padding:0;overflow:hidden', label: UIesc(c.name), small: 'Contact of ' + UIesc(of) + (c.setting ? ' · ' + UIesc(UIplaceKind(c.setting)[0].toLowerCase()) : '') + (nd > 1 ? ' · exposed on ' + nd + ' days' : '') + (c.followUntil !== null && c.status === 'monitoring' ? ' · ' + Math.max(0, c.followUntil - day) + 'd left' : '') });
       }).join('') + '</div>';
     });
     UI$('#cs-body').innerHTML = html;
+  },
+
+  /** every day a contact was exposed to each source case, as a strip of ticks over the fortnight */
+  exposureDays: function (fl, pref) {
+    var day = UIA.day(), srcs = Object.keys(fl.days).filter(function (k) { return fl.days[k].length; }); if (!srcs.length) return '';
+    var d0 = Math.min.apply(null, srcs.map(function (k) { return fl.days[k][0]; })), d1 = Math.max(day, d0 + 13);
+    return '<div class="xd"><div class="eyebrow">Exposure days · ' + UIesc(UIA.dateShort(d0)) + ' – ' + UIesc(UIA.dateShort(d1)) + '</div>' + srcs.map(function (k) {
+      var set = {}; fl.days[k].forEach(function (d) { set[d] = 1; });
+      var ticks = ''; for (var d = d0; d <= d1; d++) ticks += '<i class="' + (set[d] ? 'on' : '') + (d === day ? ' now' : '') + '" title="' + UIesc(UIA.dateShort(d)) + '"></i>';
+      return '<div class="xd-r"><span class="xd-n">' + pref(k) + '</span><span class="xd-t">' + ticks + '</span><b>' + fl.days[k].length + 'd</b></div>';
+    }).join('') + '</div>';
   },
 
   // ------------------------------------------------------------ person sheet
@@ -9537,6 +9580,7 @@ var UICases = UI.views.cases = {
       (c && c.via ? '<div class="ps-via">' + UIesc(this.VIA[c.via] || UIcap(c.via)) + (c.reported !== null ? ' · ' + UIesc(UIA.dateShort(c.reported)) : '') + '</div>' : '') + '</div></div>';
     html += this.timeline(p, c, day);
     if (died) html += '<div class="ps-died">' + UIesc(p.name) + ' died' + (c && c.died !== null ? ' on ' + UIesc(UIA.dateLong(c.died)) : '') + '. ' + (p.age !== null && p.age !== undefined ? UIesc(p.age) + ' years old.' : '') + '</div>';
+    if (p.follow && p.follow.days && Object.keys(p.follow.days).length) html += this.exposureDays(p.follow, pref);
     if (p.follow) html += '<div class="ps-follow">' + UIICON.people + '<span>Contact of ' + p.follow.of.map(pref).join(', ') + ' · ' + UIesc(p.follow.setting || '') + (p.follow.exposure !== null ? ', exposed ' + UIesc(UIA.dateShort(p.follow.exposure)) : '') + '. <b>' + UIesc(UIcap(p.follow.status)) + '</b>' + (p.follow.followUntil !== null ? ' · followed until ' + UIesc(UIA.dateShort(p.follow.followUntil)) : '') + '</span></div>';
     // what we know
     var know = '';
@@ -9976,7 +10020,7 @@ var UIActions = UI.views.actions = {
     if (!acts.length) return '';
     return '<div class="eyebrow sh-sec">' + UIesc(title || 'Actions here') + '</div><div class="list">' + acts.map(function (a) {
       var why = a.available ? UIA.canAct(a.id, target) : a.why; if (why) a = Object.assign({}, a, { available: false, why: why });
-      var ic = /interview/.test(a.id) ? UIICON.mic : /trace|house/.test(a.id) ? UIICON.people : /seq/.test(a.id) ? UIICON.dna : /test/.test(a.id) ? UIICON.test : /visit|site/.test(a.id) ? UIICON.pin : /question/.test(a.id) ? UIICON.report : /close|shut/.test(a.id) ? UIICON.shield : UIICON.spark;
+      var ic = /timing/.test(a.id) ? UIICON.clock : /interview/.test(a.id) ? UIICON.mic : /trace|house/.test(a.id) ? UIICON.people : /seq/.test(a.id) ? UIICON.dna : /test/.test(a.id) ? UIICON.test : /visit|site/.test(a.id) ? UIICON.pin : /question/.test(a.id) ? UIICON.report : /close|shut/.test(a.id) ? UIICON.shield : UIICON.spark;
       return UIli({ attrs: 'data-ta="' + UIesc(a.id) + '"', ic: ic, label: UIesc(a.label), small: a.available ? UIesc(a.desc || '') : '<span style="color:var(--amber)">' + UIesc(a.why) + '</span>', right: UIcosts(a), dis: !a.available });
     }).join('') + '</div>';
   },
@@ -10372,11 +10416,11 @@ var UIDebrief = {
     var root = UI$('#debrief'), D = UIA.debriefN();
     UI$('#game').hidden = true; UI$('#title').hidden = true; root.hidden = false;
     var city = UIA.city(), day = UIA.day();
-    var OUT = { contained: ['Contained', 'The chains of transmission broke. The city never knew how close it came.'], vaccine: ['The vaccine arrived', 'You held on until the city could be protected.'], timeout: ['Six months on', 'The outbreak outlasted the emergency. Here is what it cost.'], collapse: ['Overwhelmed', 'The hospital could not hold. What follows is what happened.'], resigned: ['Stood down', 'You stepped away before the end. Here is what happened.'] };
+    var OUT = { contained: ['Contained', 'The chains of transmission broke. The city never knew how close it came.'], vaccine: ['The vaccine arrived', 'You held on until the city could be protected.'], timeout: ['Six months on', 'The outbreak outlasted the emergency. Here is what it cost.'], collapse: ['Overwhelmed', 'The hospital could not hold. What follows is what happened.'], resigned: ['Stood down', 'You stepped away before the end. Here is what happened.'], burnout: ['It burned itself out', 'It stopped only when there was almost no one left to infect. Most of the city caught it.'] };
     var oc = D.outcome || { kind: 'resigned' }, o = OUT[oc.kind] || [UIcap(oc.kind || 'The end'), ''];
     if (oc.title) o = [oc.title, oc.text || o[1]];
     var sc = Math.round(D.scale || 1);
-    var html = '<div class="db"><canvas class="db-bg" id="db-bg"></canvas><div class="db-in">' +
+    var html = '<div class="db oc-' + UIesc(oc.kind || 'resigned') + '"><div class="db-glow"></div><canvas class="db-bg" id="db-bg"></canvas><div class="db-in">' +
       '<header class="db-hero"><div class="eyebrow em">' + UIesc(city.name) + ' · ' + (day + 1) + ' days · ' + UIesc((UIA.grades().filter(function (g) { return g.id === UIA.grade; })[0] || { label: '' }).label) + '</div><h1>' + UIesc(o[0]) + '</h1><p>' + UIesc(o[1]) + '</p>' +
       '<div class="db-big"><div><b style="color:var(--bone)">' + UIfmt.n(D.totals.deaths) + '</b><span>died</span></div><div><b style="color:var(--ghost)">' + UIfmt.n(D.totals.ghostDeaths) + '</b><span>would have died in the ghost city</span></div><div><b style="color:var(--ember)">' + UIfmt.n(D.totals.infections) + '</b><span>infected · ≈' + UIfmt.n(D.totals.infections * sc) + ' city-wide</span></div>' + (D.score && (D.score.total !== null || D.score.grade) ? (function () { var gr = D.score.grade && String(D.score.grade).length <= 3 ? D.score.grade : null; return '<div><b>' + UIesc(gr || UIfmt.n(D.score.total)) + '</b><span>' + (gr && D.score.total !== null ? UIfmt.n(D.score.total) + ' points' : 'points') + '</span></div>'; })() : '') + '</div>' +
       (D.totals.ghostDeaths > D.totals.deaths ? '<p class="db-saved">' + UIfmt.n(D.totals.ghostDeaths - D.totals.deaths) + ' fewer deaths than if nobody had acted.</p>' : '') +

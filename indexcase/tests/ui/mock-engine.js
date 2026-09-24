@@ -259,6 +259,7 @@ var IX = typeof IX !== 'undefined' ? IX : {};
     this.startDay();
     return { day: this.day, newMsgs: this.msgs.slice(before), events: events, over: this.over, outcome: this.outcome };
   };
+  G.resign = function () { if (!this.over) { this.over = true; this.outcome = { kind: 'resigned', day: this.day, title: 'Stood down', text: 'You stepped away before the end.' }; } return { ok: true, msgs: [], outcome: this.outcome }; };
   G.advance = function (n) { var all = [], ev = []; for (var i = 0; i < n; i++) { var r = this.endDay(); all = all.concat(r.newMsgs); ev = ev.concat(r.events); if (r.over || r.events.length) break; } return { day: this.day, newMsgs: all, events: ev, over: this.over, outcome: this.outcome }; };
   G.mentorStatus = function () { var d = this.day; return { nudge: { ok: this.mUsed.nudge !== d, why: this.mUsed.nudge === d ? 'Once a day' : '' }, pointer: { ok: this.left.analysts >= 3, why: this.left.analysts >= 3 ? '' : 'Needs 3 analyst hours' }, answer: { ok: true }, used: {} }; };
   G.mentor = function (tier) {

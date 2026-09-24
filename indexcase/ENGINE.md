@@ -207,7 +207,9 @@ One-off action ids:
 | `request_funding` | none (params) | a request to the next council meeting (money, staff) |
 | `hire` | none (params kind, n) | recruit staff from the budget (arrive after 3 days) |
 
-Orders (`order: true`) are issued with `g.order(id, params)` (or `g.act(id, target, params)`):
+Orders (`order: true`) are issued with `g.order(id, params)` (or `g.act(id, target, params)`). They are never
+blocked by money: running costs come out of the budget each day, and overspending is a matter for the council
+(credibility). The economy cost is tallied separately in £m.
 
 | id | target | effect (applies from lag, scaled by compliance) |
 |---|---|---|
