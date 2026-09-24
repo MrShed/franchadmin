@@ -249,6 +249,7 @@ var UIA = (function () {
       if (a && a.order && typeof g.order === 'function') { var p = {}; Object.keys(params || {}).forEach(function (k) { p[k] = params[k]; }); if (target !== undefined && target !== null) p.target = target; r = g.order(id, p); }
       else if (typeof g.act === 'function') r = g.act(id, target === undefined ? null : target, params || {});
       else if (typeof g.doAct === 'function') r = g.doAct(id, target === undefined ? null : target, params || {});
+      else if (typeof g.canAct === 'function' && typeof g.costOf === 'function' && g.S) r = shimAct(g, id, target, params || {});
       else r = { ok: false, err: 'The engine has no action entry point' };
     } catch (e) { r = { ok: false, err: e.message }; if (typeof console !== 'undefined') console.error(e); }
     A.bump();
@@ -256,6 +257,27 @@ var UIA = (function () {
     var msgs = arr(r.msgs);
     return { ok: r.ok !== false && !r.err, err: r.err || r.error || '', msgs: msgs.map(function (m) { return typeof m === 'string' ? m : m.title || m.text || ''; }), msgIds: msgs.filter(function (m) { return m && m.id !== undefined; }).map(function (m) { return String(m.id); }), raw: r };
   };
+  /* TEMPORARY: the engine's act() method is shadowed by the act-number getter
+   * (08-acts defines g.act after 07 defines GP.act). This mirrors 07's GP.act
+   * until the engine renames one of them; remove when g.act is callable again. */
+  function shimAct(g, id, target, params) {
+    var why = g.canAct(id, target, params);
+    if (why) return { ok: false, msgs: [], err: why };
+    var cat = A.action(id), T = cat ? cat.target : 'none', S = g.S;
+    var fn = g['inv_' + id] || g['do_' + id];
+    if (!fn) return { ok: false, msgs: [], err: 'Unknown action' };
+    g._fresh = [];
+    var tg = T === 'place' ? g.placeIdx(target) : (target === null || target === undefined ? null : +target);
+    var r = fn.call(g, T === 'none' ? params : tg, params);
+    if (!r || !r.ok) { g._fresh = null; return { ok: false, msgs: [], err: (r && r.err) || 'Could not do that.' }; }
+    var c = g.costOf(id, tg, params);
+    for (var k in (c.hours || {})) S.used[k] += c.hours[k];
+    if (c.seq) S.seqUsed += c.seq;
+    if (c.money) g.spend(c.money);
+    S.log.push([S.day, id, tg, params]);
+    var msgs = g._fresh; g._fresh = null;
+    return { ok: true, msgs: msgs };
+  }
   A.orders = function () {
     return cached('orders', function () {
       return arr(call('orders')).map(function (o) { return { id: String(o.id), type: o.type || o.action, label: o.label || o.type, target: refId(o.target), params: o.params || {}, since: num(o.since, 0), lag: num(o.lag, 0), effectFrom: num(o.effectFrom, num(o.since, 0) + num(o.lag, 0)), compliance: num(o.compliance, null), costPerDay: num(o.costPerDay, 0) * 1000, economyPerDay: num(o.economyPerDay, 0) * 1e6 }; });
