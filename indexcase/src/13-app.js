@@ -294,8 +294,9 @@ UI.confirmEndDay = function () {
   UI.emit('endpop');
   pop.addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
-    pop.remove(); UI.emit('endpopclose');
+    pop.remove();
     if (b.dataset.x === 'yes') UI.endDay();
+    UI.emit('endpopclose');
   });
   setTimeout(function () {
     document.addEventListener('pointerdown', function off(e) { if (!pop.contains(e.target) && !e.target.closest('#tb-end') && !e.target.closest('#coach')) { pop.remove(); UI.emit('endpopclose'); } document.removeEventListener('pointerdown', off, true); }, true);
