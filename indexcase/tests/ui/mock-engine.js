@@ -58,7 +58,7 @@ var IX = (function () {
     }
     this.people = people;
     this.truth = { route: 'airborne', incubation: 5.2, presym: 0.32, asym: 0.28, R: 2.6, ifr: 0.014, ageRisk: 'elderly', symptoms: [['fever', .82], ['dry cough', .71], ['loss of taste', .44], ['fatigue', .6], ['headache', .35]], tell: 'loss of taste', source: 'market', treatment: 'partial', mutation: 0.7 };
-    this.day = 0; this.act = 1; this.over = false; this.outcome = null;
+    this.day = 0; this.stage = 1; this.over = false; this.outcome = null;
     this.inf = {}; this.events = []; this.msgs = []; this.known = {}; this.tests = []; this.seqs = []; this.nodes = []; this._ord = []; this.pub = {}; this.pubHist = []; this.nextId = 1;
     this.res = { staffHours: { tracers: 24, field: 12, analysts: 8 }, testsLeft: 30, seqLeft: 4, funding: 250000, beds: 180, icu: 16, trust: { overall: 0.66, byDistrict: {} } };
     districts.forEach(function (d) { this.res.trust.byDistrict[d.id] = 0.5 + r() * .35; }, this);
@@ -205,7 +205,7 @@ var IX = (function () {
       if (c[3].hours) Object.keys(c[3].hours).forEach(function (k) { if (self.left[k] < c[3].hours[k]) { ok = false; why = 'Not enough ' + k + ' hours today'; } });
       if (c[3].tests && self.tLeft < c[3].tests) { ok = false; why = 'No tests left today'; }
       if (c[3].seq && self.sLeft < c[3].seq) { ok = false; why = 'Sequencer full today'; }
-      if (c[0] === 'declare' && self.act > 1) { ok = false; why = 'Already confirmed'; }
+      if (c[0] === 'declare' && self.stage > 1) { ok = false; why = 'Already confirmed'; }
       return { id: c[0], label: c[1], area: c[2], costs: c[3], target: c[4], desc: c[5], lag: c[6], kind: c[2] === 'contain' || c[2] === 'protect' ? 'order' : 'action', available: ok, why: why, effect: c[2] === 'contain' ? 'Cuts transmission in affected settings' : '' };
     });
   };
@@ -255,7 +255,7 @@ var IX = (function () {
     this.log.push(['publish', v]);
     var self = this; Object.keys(v).forEach(function (k) { self.pub[k] = { value: v[k], day: self.day }; self.pubHist.push({ trait: k, value: v[k], day: self.day }); });
     var m = this.msg('press', 'Health chief: "' + Object.keys(v).length + ' things we now know"', [{ k: 'p', x: ['The Wexmoor Courier reports the public health team\'s first published estimates. Reaction on social media is mixed.'] }], 'Wexmoor Courier');
-    if (Object.keys(this.pub).length >= 6 && this.act === 2) this.act = 3;
+    if (Object.keys(this.pub).length >= 6 && this.stage === 2) this.stage = 3;
     return { msgs: [m] };
   };
   G.endDay = function () {
@@ -266,18 +266,18 @@ var IX = (function () {
     // reporting
     this.events.forEach(function (e) {
       if (self.known[e.pid]) return;
-      if (e.onset !== null && self.day - e.onset === 3 && R(hs(e.pid))() < (self.act > 1 ? .7 : .35)) self.know(e.pid, self.day, 'GP');
+      if (e.onset !== null && self.day - e.onset === 3 && R(hs(e.pid))() < (self.stage > 1 ? .7 : .35)) self.know(e.pid, self.day, 'GP');
       if (e.hosp === self.day) self.know(e.pid, self.day, 'hospital');
     });
     this.tests.forEach(function (t) {
       if (t.due !== self.day) return;
       var e = self.inf[t.pid], pos = e && self.day - e.day >= 1 && self.day - e.day < 14;
       var rec = self.known[t.pid].tests.filter(function (x) { return x.result === 'pending'; })[0];
-      if (rec) { rec.result = pos ? (self.act > 1 ? 'pos' : 'neg-known') : 'neg'; rec.resultDay = self.day; }
-      self.msg('lab', 'Result: ' + self.P(t.pid).name + ' — ' + (pos ? (self.act > 1 ? 'POSITIVE' : 'negative for known pathogens') : 'negative'), [{ k: 'p', x: ['Sample from ', self.ref(t.pid), ' taken ' + self.dateLabel(t.day) + '.'] }], 'Public Health Lab');
+      if (rec) { rec.result = pos ? (self.stage > 1 ? 'pos' : 'neg-known') : 'neg'; rec.resultDay = self.day; }
+      self.msg('lab', 'Result: ' + self.P(t.pid).name + ' — ' + (pos ? (self.stage > 1 ? 'POSITIVE' : 'negative for known pathogens') : 'negative'), [{ k: 'p', x: ['Sample from ', self.ref(t.pid), ' taken ' + self.dateLabel(t.day) + '.'] }], 'Public Health Lab');
     });
     this.seqs.forEach(function (s) { if (s.due === self.day) { if (self.known[s.pid]) self.known[s.pid].seq = 's' + s.pid; self.msg('lab', 'Genome ready: ' + self.P(s.pid).name, [{ k: 'p', x: ['Sequence for ', self.ref(s.pid), ' added to the tree.'] }], 'Sequencing unit'); } });
-    if (this.pendingDeclare === this.day && this.act === 1) { this.act = 2; events.push({ kind: 'act', act: 2 }); this.msg('lab', 'Novel agent confirmed: Agent WX-1', [{ k: 'p', x: ['The reference laboratory confirms a previously undescribed virus in samples from Wexmoor. It will be referred to as Agent WX-1.'] }], 'Reference Laboratory'); }
+    if (this.pendingDeclare === this.day && this.stage === 1) { this.stage = 2; events.push({ kind: 'act', act: 2 }); this.msg('lab', 'Novel agent confirmed: Agent WX-1', [{ k: 'p', x: ['The reference laboratory confirms a previously undescribed virus in samples from Wexmoor. It will be referred to as Agent WX-1.'] }], 'Reference Laboratory'); }
     if (this.day % 7 === 3) this.msg('council', 'Council emergency committee — minutes', [{ k: 'p', x: ['Cllr Pauline Grey (Leader) asked whether the market could stay open for the Easter trade. The committee requests a recommendation by Friday.'] }, { k: 'q', x: ['"We cannot shut the city on the strength of four pneumonias."'] }], 'Wexmoor City Council');
     if (this.day === 2) this.msg('mayor', 'The Mayor is on the line', [{ k: 'q', x: ['"I have the Courier asking me about a mystery bug at St Anne\'s. What do I tell them? And please — not the word plague."'] }], 'Mayor Colin Hart');
     if (this.day === 4) this.msg('rumour', 'Rumour: "it\'s in the water"', [{ k: 'p', x: ['A post claiming the reservoir is contaminated has been shared 2,300 times in ', { ref: 'district', id: 'd3', text: this.city.districts[3].name }, '. Bottled water is selling out.'] }], 'Social listening');
