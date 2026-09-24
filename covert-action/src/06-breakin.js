@@ -131,12 +131,727 @@ function furnish(B, opts) {
   return { F, occ };
 }
 
+// ===================================================================
+// BREAK-IN ART (biX_): hand-built EGA sprites for rooms, furniture,
+// people, the Max portrait, the kit and the armory. Everything static is
+// rendered once into cached canvases (sprite()) and blitted per frame.
+// ===================================================================
+// colour ramps: [shadow, base, light] for every EGA colour
+const biX_RAMP = {
+  [EGA.black]: [P.K, P.K, P.G1], [EGA.blue]: [P.K, P.BL, P.BL2], [EGA.green]: [P.K, P.GR, P.GR2], [EGA.cyan]: [P.K, P.TL, P.CY],
+  [EGA.red]: [P.K, P.RD, P.RD2], [EGA.magenta]: [P.K, P.MG, P.PK], [EGA.brown]: [P.K, P.BR, P.YE], [EGA.lgray]: [P.G1, P.G3, P.W],
+  [EGA.dgray]: [P.K, P.G1, P.G3], [EGA.lblue]: [P.BL, P.BL2, P.CY], [EGA.lgreen]: [P.GR, P.GR2, P.W], [EGA.lcyan]: [P.TL, P.CY, P.W],
+  [EGA.lred]: [P.RD, P.RD2, P.W], [EGA.lmagenta]: [P.MG, P.PK, P.W], [EGA.yellow]: [P.BR, P.YE, P.W], [EGA.white]: [P.G3, P.W, P.W],
+};
+const biX_ramp = c => biX_RAMP[c] || [P.K, c, P.W];
+const biX_hash = (i, j, s = 0) => { let n = Math.imul(i + 7919 * s, 374761393) + Math.imul(j, 668265263); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+const biX_bay = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
+// filled ellipse inscribed in a pixel box
+function biX_ell(x, y, w, h, c) {
+  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h); if (w <= 0 || h <= 0) return; g.fillStyle = c;
+  for (let j = 0; j < h; j++) { const yy = (j + 0.5) / h * 2 - 1, hw = w / 2 * Math.sqrt(Math.max(0, 1 - yy * yy)); const a = Math.round(w / 2 - hw), b = Math.round(w / 2 + hw); if (b > a) g.fillRect(x + a, y + j, b - a, 1); }
+}
+// outlined, lit-from-top-left ellipse and box
+function biX_ball(x, y, w, h, base, lt, dk, ol = P.K) {
+  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h); if (w < 3 || h < 3) { biX_ell(x, y, w, h, ol || base); return; }
+  if (ol) biX_ell(x, y, w, h, ol); biX_ell(x + 1, y + 1, w - 2, h - 2, dk); biX_ell(x + 1, y + 1, w - 3, h - 3, lt); if (w > 4 && h > 4) biX_ell(x + 2, y + 2, w - 4, h - 4, base);
+}
+function biX_box(x, y, w, h, base, lt, dk, ol = P.K) {
+  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h); if (w <= 0 || h <= 0) return;
+  if (w < 3 || h < 3) { rect(x, y, w, h, ol || base); return; }
+  if (ol) rect(x, y, w, h, ol); rect(x + 1, y + 1, w - 2, h - 2, dk); rect(x + 1, y + 1, w - 3, h - 3, lt); if (w > 3 && h > 3) rect(x + 2, y + 2, w - 4, h - 4, base);
+}
+// per-pixel painter: fn(i, j) -> colour | null, optional 1-px outline around the shape
+function biX_raster(x, y, w, h, fn, ol) {
+  const G = new Array(w * h);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) G[j * w + i] = fn(i, j) || null;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const c = G[j * w + i]; if (c) { g.fillStyle = c; g.fillRect(x + i, y + j, 1, 1); } }
+  if (ol) { g.fillStyle = ol; for (let j = -1; j <= h; j++) for (let i = -1; i <= w; i++) { const at = (a, b) => a >= 0 && b >= 0 && a < w && b < h && G[b * w + a]; if (at(i, j)) continue; if (at(i - 1, j) || at(i + 1, j) || at(i, j - 1) || at(i, j + 1)) g.fillRect(x + i, y + j, 1, 1); } }
+}
+// string-row sprites: rows of characters mapped through a colour map ('.' or missing = clear)
+function biX_rows(rows, x, y, map) { for (let j = 0; j < rows.length; j++) { const r = rows[j]; for (let i = 0; i < r.length; i++) { const c = map[r[i]]; if (c) { g.fillStyle = c; g.fillRect(x + i, y + j, 1, 1); } } } }
+function biX_spr(key, rows, map) { return sprite('biX_r_' + key, Math.max(...rows.map(r => r.length)), rows.length, () => biX_rows(rows, 0, 0, map)); }
+function biX_put(key, rows, map, x, y, flip) {
+  const c = biX_spr(key, rows, map);
+  if (!flip) { g.drawImage(c, x | 0, y | 0); return; }
+  g.save(); g.translate((x | 0) + c.width, y | 0); g.scale(-1, 1); g.drawImage(c, 0, 0); g.restore();
+}
+
+// ---------- top-down people: one shape function, rendered at 16 headings ----------
+// o: pose stand|crouch|out, dirI 0..15, step -1..1, k scale, uni colour, head cap|hood|hair, hair colour,
+//    arms gun|side|up, gun pistol|uzi, mask, stripes, strap
+// ---------- people: hand-drawn 3/4-view sprites, layered (legs, torso, arms, head) ----------
+// letters: k outline, C/c cap light/base, v visor, H/h hair light/base, s skin, z skin shade, e eye,
+// U/u/d uniform light/base/dark, b belt, Y buckle, P/p/q trousers light/base/dark, F/f shoes, g/G gun, m/M gas mask
+const biX_PL = { // large: 15 x 17 canvas, feet on row 16
+  head: {
+    D: {
+      cap: ['.....kkkkk.....', '....kCCccck....', '....kCcccck....', '...kvvvvvvvk...', '....ksesesk....', '....kzssszk....', '.....kzszk.....'],
+      hood: ['.....kkkkk.....', '....kHhhhhk....', '....kHhhhhk....', '....khhhhhk....', '....ksesesk....', '....khzzzhk....', '.....khhhk.....'],
+      hair: ['.....kkkkk.....', '....kHHhhhk....', '....kHhhhhk....', '....khssshk....', '....ksesesk....', '....kzssszk....', '.....kzszk.....'],
+      mask: ['...............', '...............', '...............', '...............', '....kMmmMmk....', '....kmmmmmk....', '.....kmgmk.....'],
+    },
+    U: {
+      cap: ['.....kkkkk.....', '....kCCccck....', '....kCcccck....', '....kcccccc....', '....khhhhhk....', '....zkhhhkz....', '.....kzzzk.....'],
+      hood: ['.....kkkkk.....', '....kHhhhhk....', '....kHhhhhk....', '....khhhhhk....', '....khhhhhk....', '....khhhhhk....', '.....khhhk.....'],
+      hair: ['.....kkkkk.....', '....kHHhhhk....', '....kHhhhhk....', '....khhhhhk....', '....khhhhhk....', '....zkhhhkz....', '.....kzzzk.....'],
+      mask: ['...............', '...............', '...............', '...............', '...............', '....mk...km....', '...............'],
+    },
+    R: {
+      cap: ['....kkkkk......', '...kCCccck.....', '...kCcccck.....', '...kcccvvvvk...', '...khssssek....', '...khzssssk....', '....kzzsk......'],
+      hood: ['....kkkkk......', '...kHhhhhk.....', '...kHhhhhhk....', '...khhhhhhk....', '...khhsssek....', '...khhhhhhk....', '....khhhk......'],
+      hair: ['....kkkkk......', '...kHHhhhk.....', '...kHhhhhhk....', '...khhhsssk....', '...khhssesk....', '...khzsssssk...', '....kzzssk.....'],
+      mask: ['...............', '...............', '...............', '...............', '.......mmMk....', '.......mmmmk...', '.......kgk.....'],
+    },
+  },
+  torso: {
+    D: ['..kUUuuuuuudk..', '..kUuuuuuuudk..', '..kUuuuuuuudk..', '..kUuuuuuuudk..', '..kbbbbYbbbbk..'],
+    U: ['..kUUuuuuuudk..', '..kUuuuuuuudk..', '..kUuuuuuuudk..', '..kUuuuuuuudk..', '..kbbbbbbbbbk..'],
+    R: ['...kUUuuudk....', '...kUuuuudk....', '...kUuuuudk....', '...kUuuuudk....', '...kbbbbbbk....'],
+  },
+  arms: {
+    D: {
+      side: ['..kUk.....kdk..', '.kUuk.....kudk.', '.kUuk.....kudk.', '.kUdk.....kudk.', '.kssk.....kssk.', '..kk.......kk..'],
+      up: ['.kk.........kk.', 'kssk.......kssk', 'kUdk.......kUdk', 'kUdk.......kUdk', '.kUk.......kdk.', '..kUk.....kdk..'],
+      gun: ['..kUk.....kdk..', '.kUuUk...kudk..', '.kUuuUksskudk..', '..kkkkssskkk...', '......kgGk.....', '......kggk.....'],
+      gunDR: ['..kUk.....kdk..', '..kUuk....kudk.', '..kUuuk...kuukk', '...kkUuuuussGGk', '......kkkkkzggk', '............kk.'],
+    },
+    U: {
+      side: ['..kUk.....kdk..', '.kUuk.....kudk.', '.kUuk.....kudk.', '.kUdk.....kudk.', '.kssk.....kssk.', '..kk.......kk..'],
+      up: ['.kk.........kk.', 'kssk.......kssk', 'kUdk.......kUdk', 'kUdk.......kUdk', '.kUk.......kdk.', '..kUk.....kdk..'],
+      gun: ['.kUUk.....kddk.', '.kUuk.....kudk.', '..kUk.....kdk..', '...kk.....kk...', '...............', '...............'],
+      gunUR: ['..kUk....kkdk..', '.kUuk...kssdk..', '.kUuk..kGgkk...', '..kk..kGgk.....', '......kgk......', '...............'],
+    },
+    R: {
+      side: ['....kUk........', '....kUuk.......', '....kUuk.......', '....kUdk.......', '....kssk.......', '.....kk........'],
+      up: ['...kssk........', '...kUuk........', '...kUuk........', '....kUk........', '...............', '...............'],
+      gun: ['....kUk........', '....kUuk..kkkk.', '....kUuuusGGGGk', '.....kkkkszgkk.', '..........kgk..', '...........k...'],
+      gunDR: ['....kUk........', '....kUuk.......', '....kUuuk......', '.....kUuusk....', '......kkkszGk..', '.........kkGgk.', '...........kgk.', '............k..'],
+      gunUR: ['....kUk....kk..', '....kUuk..kGgk.', '....kUuuskGgk..', '.....kUuszkk...', '......kkkk.....', '...............'],
+    },
+  },
+  legs: {
+    D: [['...kPppkPppk...', '...kPppkPppk...', '...kPpqkPpqk...', '...kFffkFffk...', '...kkkkkkkkk...'],
+      ['...kPppkPppk...', '...kPppkPppk...', '...kPpqkkkkk...', '...kFffkFffk...', '...kkkkkkkkk...'],
+      ['...kPppkPppk...', '...kPppkPppk...', '...kkkkkPpqk...', '...kFffkFffk...', '...kkkkkkkkk...']],
+    R: [['...kPppqk......', '...kPppqk......', '...kPpqk.......', '...kFfffk......', '...kkkkkk......'],
+      ['..kPpqkPpk.....', '.kPpqk.kPpk....', '.kPqk...kPpk...', 'kFffk...kFffk..', 'kkkk.....kkkk..'],
+      ['...kPpPpk......', '...kPpkPpk.....', '..kPqk.kPpk....', '..kFfk.kFffk...', '..kkk...kkkk...']],
+  },
+  crouch: { D: ['...kPppppppk...', '..kFfkkkkkFfk..'], R: ['...kPpppppk....', '...kFfkkkFfk...'] },
+  y: { head: 0, torso: 7, arms: 7, legs: 12 }, w: 15, h: 17,
+};
+const biX_PS = { // small: 11 x 13 canvas
+  head: {
+    D: {
+      cap: ['...kkkkk...', '..kCcccck..', '..kvvvvvk..', '...kesek...', '....kzk....'],
+      hood: ['...kkkkk...', '..kHhhhhk..', '..khsesk...', '..khhhhhk..', '....khk....'],
+      hair: ['...kkkkk...', '..kHhhhhk..', '..khsssk...', '...kesek...', '....kzk....'],
+      mask: ['...........', '...........', '...........', '...kMmMk...', '....kgk....'],
+    },
+    U: {
+      cap: ['...kkkkk...', '..kCcccck..', '..kcccccc..', '...khhhk...', '....kzk....'],
+      hood: ['...kkkkk...', '..kHhhhhk..', '..khhhhhk..', '...khhhk...', '....khk....'],
+      hair: ['...kkkkk...', '..kHhhhhk..', '..khhhhhk..', '...khhhk...', '....kzk....'],
+      mask: ['...........', '...........', '...........', '...........', '...........'],
+    },
+    R: {
+      cap: ['...kkkk....', '..kCccck...', '..kccvvvk..', '..khsesk...', '...kzzk....'],
+      hood: ['...kkkk....', '..kHhhhk...', '..khhhhk...', '..khhsek...', '...khhk....'],
+      hair: ['...kkkk....', '..kHhhhk...', '..khhssk...', '..khssek...', '...kzzsk...'],
+      mask: ['...........', '...........', '...........', '.....mMk...', '.....kgk...'],
+    },
+  },
+  torso: {
+    D: ['..kUuuudk..', '..kUuuudk..', '..kbbYbbk..'],
+    U: ['..kUuuudk..', '..kUuuudk..', '..kbbbbbk..'],
+    R: ['...kUudk...', '...kUudk...', '...kbbbk...'],
+  },
+  arms: {
+    D: {
+      side: ['.kUk...kdk.', '.kUk...kdk.', '.ksk...ksk.', '..k.....k..'],
+      up: ['ksk.....ksk', 'kUk.....kdk', '.kUk...kdk.', '...........'],
+      gun: ['.kUk...kdk.', '..kUksskd..', '...kkgGk...', '....kgk....'],
+      gunDR: ['.kUk...kdk.', '..kUkkkudk.', '...kkUussGk', '......kkzgk'],
+    },
+    U: {
+      side: ['.kUk...kdk.', '.kUk...kdk.', '.ksk...ksk.', '..k.....k..'],
+      up: ['ksk.....ksk', 'kUk.....kdk', '.kUk...kdk.', '...........'],
+      gun: ['.kUk...kdk.', '.kUk...kdk.', '..k.....k..', '...........'],
+      gunUR: ['.kUk..kskk.', '.kUk.kGgk..', '..k.kgk....', '...........'],
+    },
+    R: {
+      side: ['...kUk.....', '...kUk.....', '...ksk.....', '....k......'],
+      up: ['..ksk......', '..kUk......', '...kUk.....', '...........'],
+      gun: ['...kUk..kk.', '...kUuusGGk', '....kkkzgk.', '........k..'],
+      gunDR: ['...kUk.....', '...kUuk....', '....kUusk..', '.....kkzGk.', '.......kgk.', '........k..'],
+      gunUR: ['...kUk..kk.', '...kUk.kGk.', '....kUusk..', '.....kkk...'],
+    },
+  },
+  legs: {
+    D: [['...kPkPk...', '...kpkpk...', '...kFkFk...', '...kkkkk...'],
+      ['...kPkPk...', '...kpkkk...', '...kFkFk...', '...kkkkk...'],
+      ['...kPkPk...', '...kkkpk...', '...kFkFk...', '...kkkkk...']],
+    R: [['...kPpk....', '...kPpk....', '...kFfk....', '...kkkk....'],
+      ['..kPkPk....', '.kPk.kPk...', '.kFk..kFk..', '.kk....kk..'],
+      ['...kPPk....', '..kPkPk....', '..kFkkFk...', '..kk..kk...']],
+  },
+  crouch: { D: ['..kPpppPk..', '..kFkkkFk..'], R: ['..kPppppk..', '..kFkkkFk..'] },
+  y: { head: 0, torso: 5, arms: 5, legs: 8 }, w: 11, h: 12,
+};
+// knocked-out: lying on the floor, head to the right
+const biX_OUT_L = [
+  '..........kk.......',
+  '.........kssk......',
+  '..........kUuk.kkk.',
+  '.kk.kkkkkkkUuukkssk',
+  'kFfkPpppkUuuuukzsek',
+  'kFfkPpppbUuuuukhsHk',
+  'kFfkPpppkUuuuukkhhk',
+  '.kk.kqqqkkddddk.kk.',
+  '.....kkk.kssk......',
+  '..........kk.......',
+];
+const biX_OUT_S = [
+  '......kk.....',
+  '.kk.kkkUk.kk.',
+  'kFkPpkUuukssk',
+  'kFkPpbUuukhHk',
+  '.kkqqkddkkkk.',
+  '......ksk....',
+  '.......k.....',
+];
+const biX_HAIR = { [EGA.black]: [P.K, P.G1], [EGA.brown]: [P.BR, P.BR], [EGA.yellow]: [P.YE, P.W], [EGA.lgray]: [P.G3, P.W], [EGA.dgray]: [P.G1, P.G3] };
+function biX_pmap(o) {
+  const u = o.uni === P.W ? [P.G3, P.W, P.W] : biX_ramp(o.uni), max_ = o.uni === P.K;
+  const hr = biX_HAIR[o.hair] || [o.hair || P.BR, o.hair || P.BR], cap = max_ ? [P.K, P.K, P.G1] : u, dark = o.skin === EGA.brown;
+  const pants = o.pants ? biX_ramp(o.pants) : max_ ? [P.K, P.K, P.G1] : [u[0] === P.K ? P.K : u[0], u[0] === P.K ? u[1] : u[0], u[1]];
+  return {
+    k: P.K, C: cap[2], c: cap[1], v: P.K, H: max_ ? P.G1 : hr[1], h: max_ ? P.K : hr[0], s: dark ? P.BR : P.SK, z: dark ? P.RD : P.BR, e: P.K,
+    U: max_ ? P.G1 : u[2], u: u[1], d: max_ ? P.K : u[0] === P.K ? u[1] : u[0], b: max_ ? P.G1 : P.K, Y: max_ ? P.G1 : P.YE,
+    P: pants[2], p: pants[1], q: pants[0], F: P.G1, f: P.K, g: P.K, G: P.G1, m: P.G3, M: P.CY,
+  };
+}
+// o: { big, face 0..7 (0 = right, clockwise), frame 0..2, uni, head, hair, arms, mask, stripes, pants }
+function biX_person(o) {
+  const T = o.big ? biX_PL : biX_PS, f = o.face, flip = f > 2 && f < 6 ? 1 : 0;
+  const fx = flip ? (12 - f) % 8 : f; // left-facing frames are mirrored right-facing ones
+  const body = { 0: 'R', 1: 'R', 2: 'D', 6: 'U', 7: 'R' }[fx] || 'R';
+  let arms = o.arms;
+  if (arms === 'gun') arms = fx === 1 ? 'gunDR' : fx === 7 ? 'gunUR' : 'gun';
+  if (body === 'D' && arms === 'gunUR') arms = 'gun';
+  const key = 'biX_p_' + [o.big ? 1 : 0, body, flip, arms, o.frame, o.uni, o.head, o.hair, o.mask ? 1 : 0, o.stripes ? 1 : 0, o.pants || '', o.crouch ? 1 : 0, o.skin || ''].join('_');
+  return sprite(key, T.w, T.h, () => {
+    const map = biX_pmap(o);
+    const lay = (rows, y0) => { for (let j = 0; j < rows.length; j++) { const r = rows[j]; for (let i = 0; i < r.length; i++) { let ch = r[i]; if (ch === '.') continue; if (o.stripes && 'Uud'.includes(ch) && (y0 + j) % 2) ch = 'G'; const c = map[ch]; if (c) px(flip ? T.w - 1 - i : i, y0 + j, c); } } };
+    const lb = body === 'R' ? 'R' : 'D', off = o.crouch ? (o.big ? 3 : 2) : 0;
+    if (o.crouch) lay(T.crouch[lb], T.h - 2); else lay(T.legs[lb][o.frame || 0], T.y.legs);
+    lay(T.torso[body], T.y.torso + off);
+    const A = T.arms[body][arms] || T.arms[body].side;
+    const armsBehind = body === 'U';
+    if (!armsBehind) lay(T.head[body][o.head] || T.head[body].hair, T.y.head + off);
+    lay(A, T.y.arms + off);
+    if (armsBehind) lay(T.head[body][o.head] || T.head[body].hair, T.y.head + off);
+    if (o.mask) lay(T.head[body].mask, T.y.head + off);
+  });
+}
+function biX_body(o) {
+  const rows = o.big ? biX_OUT_L : biX_OUT_S, w = rows[0].length, flip = o.flip ? 1 : 0;
+  return sprite('biX_out_' + [o.big ? 1 : 0, flip, o.uni, o.head, o.hair, o.stripes ? 1 : 0, o.skin || ''].join('_'), w, rows.length, () => {
+    const m = biX_pmap(o); if (o.head !== 'cap') { m.C = m.H; m.c = m.h; }
+    for (let j = 0; j < rows.length; j++) for (let i = 0; i < w; i++) { let ch = rows[j][i]; if (ch === '.') continue; if (o.stripes && 'Uud'.includes(ch) && i % 2) ch = 'G'; if (m[ch]) px(flip ? w - 1 - i : i, j, m[ch]); }
+  });
+}
+
+// ---------- furniture, drawn in a canonical orientation (its back to the north wall) ----------
+function biX_furn(type, S, st) {
+  const f = FURN[type], w = f.w * S, h = f.h * S;
+  return sprite('biX_f_' + type + '_' + S + '_' + st, w, h, () => biX_furnDraw(type, w, h, S, st));
+}
+function biX_furnDraw(type, w, h, S, st) {
+  const q = S / 8, R = Math.round, opened = st.indexOf('o') >= 0;
+  const wood = (x, y, ww, hh) => {
+    x = R(x); y = R(y); ww = R(ww); hh = R(hh); rect(x, y, ww, hh, P.K); rect(x + 1, y + 1, ww - 2, hh - 2, P.BR);
+    for (let yy = y + 2; yy < y + hh - 2; yy++) for (let xx = x + 2; xx < x + ww - 2; xx++) if (biX_hash(xx >> 2, yy, 3) < 0.12 && (xx + yy) % 3) px(xx, yy, P.RD);
+    for (let xx = x + 1; xx < x + ww - 1; xx++) if (xx % 2 === 0) px(xx, y + 1, P.YE); rect(x + 1, y + hh - 2, ww - 2, 1, P.RD); rect(x + ww - 2, y + 1, 1, hh - 2, P.RD);
+  };
+  const rbox = (x, y, ww, hh, c) => { x = R(x); y = R(y); ww = R(ww); hh = R(hh); biX_raster(x, y, ww, hh, (i, j) => { const e = Math.min(i, ww - 1 - i) + Math.min(j, hh - 1 - j); if ((i === 0 || i === ww - 1) && (j === 0 || j === hh - 1)) return null; if (i === 0 || j === 0) return c[2]; if (i === ww - 1 || j === hh - 1) return c[0]; return c[1]; }, P.K); };
+  switch (type) {
+    case 'desk': {
+      const top = R(q);
+      wood(0, top, w, h - top - 1);
+      const iy = top + 2, ih = h - top - 5;
+      // green leather blotter with a sheet of paper on it
+      const bx = R(w * 0.3), bw = R(w * 0.34), by = iy + R(ih * 0.12), bh = Math.max(2, R(ih * 0.76));
+      rect(bx, by, bw, bh, P.GR); rect(bx, by, bw, 1, P.GR2); rect(bx, by + bh - 1, bw, 1, P.K);
+      const px0 = bx + R(bw * 0.2), pw = Math.max(2, R(bw * 0.45)); rect(px0, by, pw, Math.max(2, bh - 1), P.W); if (S >= 10) for (let yy = by + 1; yy < by + bh - 2; yy += 2) rect(px0 + 1, yy, Math.max(1, pw - 2 - (yy % 3)), 1, P.G3);
+      if (S >= 10) { px(px0 + pw + 1, by + 1, P.K); px(px0 + pw + 2, by + 2, P.K); px(px0 + pw + 3, by + 3, P.YE); } // a pen
+      // banker's lamp: green shade, brass stem
+      const lx = w - R(w * 0.24), lw = Math.max(3, R(5 * q)), lh = Math.max(3, R(3 * q)); biX_ball(lx, iy - 1, lw, lh, P.GR, P.GR2, P.K); if (S >= 10) { px(lx + (lw >> 1), iy - 1 + lh, P.YE); px(lx + (lw >> 1) - 1, iy + lh, P.YE); px(lx + (lw >> 1) + 1, iy + lh, P.BR); }
+      // telephone
+      if (S >= 9) { const tx = R(w * 0.07) + 1, tw = Math.max(3, R(3 * q)); rect(tx, iy + 1, tw, 2, P.K); px(tx + 1, iy + 1, P.G1); rect(tx - 1, iy, tw + 2, 1, P.K); px(tx - 1, iy, P.G1); }
+      if (opened) { const dx = R(w * 0.38), dw = R(w * 0.28), dh = Math.max(3, R(4 * q)), dy = h - dh; rect(dx, dy, dw, dh, P.K); rect(dx + 1, dy, dw - 2, dh - 1, P.RD); rect(dx + 2, dy, dw - 4, dh - 2, P.W); for (let xx = dx + 2; xx < dx + dw - 2; xx += 2) px(xx, dy + 1, P.G3); }
+      else { const hy = h - 3; rect(R(w * 0.5) - 1, hy, 3, 1, P.YE); }
+      break;
+    }
+    case 'chair': {
+      // an office chair from above: castor star, padded seat, armrests, a curved backrest to the south
+      const exec = st.indexOf('x') >= 0, c = exec ? [P.K, P.G1, P.G3] : [P.BL, P.BL2, P.CY], bk = exec ? [P.K, P.K, P.G1] : [P.K, P.BL, P.BL2];
+      const m = Math.max(1, R(S * 0.2)), sw = S - 2 * m, sy = Math.max(1, R(S * 0.1)), sh = Math.max(3, R(S * 0.55)), by = sy + sh - 1, bh = Math.max(2, S - by - 1);
+      if (S >= 9) { const cx = R(S / 2); rect(cx, 0, 1, sy + 1, P.K); rect(0, R(S * 0.45), m + 1, 1, P.K); rect(S - m - 1, R(S * 0.45), m + 1, 1, P.K); px(cx, 0, P.G1); px(0, R(S * 0.45), P.G1); px(S - 1, R(S * 0.45), P.G1); }
+      rbox(m, sy, sw, sh, c);
+      if (S >= 10) { rect(m + 2, sy + 2, sw - 4, 1, c[2]); rect(R(S / 2), sy + 2, 1, sh - 4, c[0]); }
+      if (S >= 9) { rect(m - 1, sy + 1, 2, sh - 2, P.K); rect(S - m - 1, sy + 1, 2, sh - 2, P.K); px(m - 1, sy + 1, P.G1); px(S - m, sy + 1, P.G1); }
+      rbox(m - 1, by, sw + 2, bh, bk);
+      break;
+    }
+    case 'file': {
+      biX_box(R(q * 0.5), 0, S - R(q), S - 1, P.G3, P.W, P.G1);
+      const fy = S - Math.max(3, R(3 * q)) - 1; rect(R(q * 0.5) + 1, fy, S - R(q) - 2, 1, P.G1);
+      if (opened) { rect(R(q * 0.5) + 2, 2, S - R(q) - 4, fy - 3, P.K); for (let x = R(q * 0.5) + 2, n = 0; x < S - R(q * 0.5) - 2; x += 2, n++) rect(x, 2 + (n % 2), 1, Math.max(1, fy - 4), [P.YE, P.W, P.CY, P.W][n % 4]); }
+      else { px(R(S / 2) - 1, fy + 2, P.TL); px(R(S / 2), fy + 2, P.CY); if (S >= 10) { rect(R(q * 0.5) + 2, R(S * 0.35), S - R(q) - 4, 1, P.G1); px(R(S / 2), R(S * 0.35) + 2, P.TL); } }
+      break;
+    }
+    case 'wallsafe': {
+      const sh = Math.max(4, R(S * 0.72)), x0 = R(q), sw = S - 2 * R(q);
+      biX_box(x0, 0, sw, sh, P.G1, P.G3, P.K);
+      if (opened) {
+        rect(x0 + 2, 1, sw - 4, sh - 3, P.K); rect(x0 + 2, R(sh / 2), sw - 4, 1, P.G1); if (sw > 6) { rect(x0 + 3, R(sh / 2) - 2, 3, 2, P.GR); px(x0 + 3, R(sh / 2) - 2, P.GR2); }
+        rect(x0 + sw - 2, sh - 1, 3, Math.max(3, R(S * 0.28)), P.K); rect(x0 + sw - 1, sh - 1, 1, Math.max(2, R(S * 0.28) - 1), P.G3);   // the door, swung open
+      } else { const cx = R(S / 2) - 1, cy = R(sh / 2) - 1; if (S >= 9) { biX_ball(cx - 1, cy - 1, 4, 4, P.G3, P.W, P.G1); px(cx + 1, cy - 1, P.RD2); } else px(cx, cy, P.W); px(S - R(q) - 3, cy + 1, P.YE); px(S - R(q) - 3, cy + 2, P.YE); }
+      break;
+    }
+    case 'floorsafe': {
+      biX_box(1, 1, S - 2, S - 2, P.G1, P.G3, P.K);
+      if (opened) { rect(3, 3, S - 6, S - 6, P.K); rect(3, 3, S - 6, 1, P.G1); rect(S - 2, 2, 1, S - 4, P.W); }
+      else {
+        for (const [x, y] of [[2, 2], [S - 4, 2], [2, S - 4], [S - 4, S - 4]]) px(x + 0.5, y + 0.5, P.G3);
+        const c = R(S / 2) - 1; if (S >= 9) { biX_ball(c - 1, c - 1, 4, 4, P.YE, P.W, P.BR); px(c + 1, c - 1, P.K); } else { px(c, c, P.YE); }
+        if (S >= 11) { rect(3, R(S * 0.72), S - 6, 1, P.K); }
+      }
+      break;
+    }
+    case 'plant': {
+      const cx = S / 2, cy = S / 2, rr = S * 0.5, nL = S >= 11 ? 9 : 7;
+      biX_raster(0, 0, S, S, (i, j) => {
+        const dx = i + 0.5 - cx, dy = j + 0.5 - cy, d = Math.hypot(dx, dy);
+        if (d < S * 0.2) return d < S * 0.12 ? P.K : (dx + dy < 0 ? P.RD2 : P.BR);
+        let a = Math.atan2(dy, dx) / (Math.PI * 2) * nL + 0.25; const fr = a - Math.floor(a), lob = Math.abs(fr - 0.5) * 2;
+        const len = rr * (0.78 + 0.22 * biX_hash(Math.floor(a) & 15, 5));
+        if (d < len * (1 - lob * lob * 0.9) && d < rr - 0.2) return fr < 0.42 ? P.GR2 : (d > len * 0.75 ? P.GR : P.GR);
+        return null;
+      }, P.K);
+      break;
+    }
+    case 'typewriter': {
+      wood(0, R(q), S, S - R(q) - 1);
+      const bx = R(S * 0.14), bw = S - 2 * bx, by = R(S * 0.3), bh = Math.max(3, R(S * 0.52));
+      rect(R(S * 0.3), 0, S - 2 * R(S * 0.3), by + 1, P.W); if (S >= 10) rect(R(S * 0.3) + 1, 1, S - 2 * R(S * 0.3) - 2, 1, P.G3);
+      biX_box(bx, by, bw, bh, P.G1, P.G3, P.K); rect(bx, by, bw, 1, P.K); rect(bx + 1, by + 1, bw - 2, 1, P.G3);
+      for (let r = 0; r < (S >= 10 ? 2 : 1); r++) for (let x = bx + 2 + r; x < bx + bw - 2; x += 2) px(x, by + 3 + r * 2, P.W);
+      break;
+    }
+    case 'couch': {
+      const lth = st.indexOf('x') >= 0, c = lth ? [P.K, P.BR, P.YE] : [P.RD, P.RD2, P.PK], back = Math.max(2, R(S * 0.34)), arm = Math.max(2, R(S * 0.22));
+      const d = lth ? [P.K, P.RD, P.BR] : [P.K, P.RD, P.RD2];
+      rbox(0, 0, w, h - 1, d);                                   // frame and backrest
+      rbox(0, back - 1, arm + 1, h - back, d); rbox(w - arm - 1, back - 1, arm + 1, h - back, d); // arms
+      const cw = (w - 2 * arm - 2) / 2;
+      for (let n = 0; n < 2; n++) { const x0 = R(arm + 1 + n * cw), x1 = R(arm + 1 + (n + 1) * cw); rbox(x0, back, x1 - x0, h - back - 1, lth ? [P.RD, P.BR, P.YE] : c); if (S >= 10) { px(R((x0 + x1) / 2), R(back + (h - back) / 2), lth ? P.RD : P.RD); } }
+      if (S >= 10) for (let x = arm + 3; x < w - arm - 3; x += 3) px(x, R(back / 2), d[0]);
+      break;
+    }
+    case 'picture': {
+      const x0 = R(S * 0.12), fw = S - 2 * x0, fh = Math.max(3, R(S * 0.28));
+      rect(x0, 0, fw, fh, P.K); rect(x0 + 1, 0, fw - 2, fh - 1, P.YE); rect(x0 + 1, fh - 2, fw - 2, 1, P.BR);
+      if (fh >= 4) { rect(x0 + 2, 0, fw - 4, fh - 3, P.BL2); for (let x = x0 + 2; x < x0 + fw - 2; x++) if ((x * 7) % 5 < 2) px(x, fh - 4, P.GR); }
+      break;
+    }
+    case 'computer': {
+      biX_box(0, 0, w, h - 1, P.G3, P.W, P.G1);
+      rect(1, h - Math.max(3, R(3 * q)) - 1, w - 2, 1, P.G1);
+      const L = biX_mfLayout(w, h);
+      for (const r of L.reels) { biX_ball(r.x - r.r, r.y - r.r, r.r * 2 + 1, r.r * 2 + 1, P.K, P.G1, P.K, P.G1); px(r.x, r.y, P.G3); }
+      rect(L.px, L.py, L.pw, L.ph, P.K);
+      if (S >= 10) { rect(w - 4, 2, 2, 1, P.RD); for (let x = 2; x < w - 2; x += 3) px(x, h - 3, P.G1); }
+      break;
+    }
+    case 'terminal': {
+      wood(0, R(q), S, S - R(q) - 1);
+      const cx = R(S * 0.14), cw = S - 2 * cx, ch = Math.max(4, R(S * 0.56));
+      biX_box(cx, 0, cw, ch, P.G3, P.W, P.G1); rect(cx + 2, 2, cw - 4, ch - 4, P.K); rect(cx + 2, 2, cw - 4, ch - 4, P.GR);
+      rect(cx + 2, 2, cw - 4, ch - 4, P.K); for (let y = 3; y < ch - 3; y += 2) rect(cx + 3, y, Math.max(1, R((cw - 6) * (0.4 + 0.5 * biX_hash(y, S)))), 1, P.GR);
+      const ky = ch + 1; if (ky + 2 < S) { rect(cx, ky, cw, Math.max(2, R(S * 0.2)), P.K); rect(cx + 1, ky, cw - 2, Math.max(1, R(S * 0.2) - 1), P.G3); for (let x = cx + 2; x < cx + cw - 2; x += 2) px(x, ky + 1, P.W); }
+      break;
+    }
+    case 'table': {
+      const tw = [P.RD, P.BR, P.YE];
+      biX_ball(1, 1, w - 2, h - 2, P.BR, P.BR, P.RD); biX_ell(3, 3, w - 7, h - 7, P.BR);
+      for (let a = 0; a < 40; a++) { const an = a / 40 * Math.PI * 2; if (Math.cos(an) + Math.sin(an) < -0.7) px(R(w / 2 + Math.cos(an) * (w / 2 - 3)), R(h / 2 + Math.sin(an) * (h / 2 - 3)), a % 2 ? P.YE : P.BR); }
+      for (let j = 4; j < h - 4; j += 3) for (let i = 4; i < w - 4; i++) if (biX_hash(i >> 2, j, 17) < 0.1 && Math.hypot(i - w / 2, j - h / 2) < w / 2 - 4) px(i, j, P.RD);
+      // magazines, an ashtray, coffee cups
+      const mx = R(w * 0.24), my = R(h * 0.34), mw = Math.max(3, R(5 * q)), mh = Math.max(3, R(6 * q));
+      rect(mx + 1, my + 1, mw, mh, P.K); rect(mx, my, mw, mh, P.W); rect(mx, my, mw, Math.max(1, R(2 * q)), P.RD2); if (S >= 10) { rect(mx + 1, my + R(3 * q), mw - 2, 1, P.G3); rect(mx + 1, my + R(4 * q), mw - 3, 1, P.G3); }
+      const ax = R(w * 0.58), ay = R(h * 0.52), aw = Math.max(3, R(4 * q)); biX_ball(ax, ay, aw, aw, P.G3, P.W, P.G1); px(ax + (aw >> 1), ay + (aw >> 1), P.K); if (S >= 10) px(ax + aw, ay + 1, P.W);
+      const cxp = R(w * 0.62), cyp = R(h * 0.26); biX_ball(cxp, cyp, Math.max(3, R(3 * q)), Math.max(3, R(3 * q)), P.W, P.W, P.G3); px(cxp + 1, cyp + 1, P.BR);
+      break;
+    }
+    case 'toilet': {
+      const tx = R(S * 0.18); biX_box(tx, 0, S - 2 * tx, Math.max(3, R(S * 0.32)), P.W, P.W, P.G3);
+      if (S >= 10) px(R(S / 2), 1, P.G3);
+      const bx = R(S * 0.22), by = R(S * 0.26); biX_ball(bx, by, S - 2 * bx, S - by - 1, P.W, P.W, P.G3);
+      biX_ell(bx + 2, by + 2, S - 2 * bx - 4, S - by - 5, P.TL); if (S >= 9) biX_ell(bx + 3, by + 3, S - 2 * bx - 6, S - by - 7, P.CY);
+      break;
+    }
+    case 'sink': {
+      const bx = R(S * 0.1); biX_ball(bx, R(S * 0.08), S - 2 * bx, R(S * 0.75), P.W, P.W, P.G3);
+      biX_ell(bx + 2, R(S * 0.08) + 2, S - 2 * bx - 4, R(S * 0.75) - 4, P.G3); biX_ell(bx + 2, R(S * 0.08) + 3, S - 2 * bx - 4, R(S * 0.75) - 5, P.CY);
+      px(R(S / 2), R(S * 0.45), P.K); rect(R(S / 2) - 1, 0, 3, Math.max(2, R(S * 0.2)), P.G1); px(R(S / 2), 0, P.W);
+      break;
+    }
+    case 'evidence': {
+      if (st.indexOf('c') < 0) break;
+      biX_box(1, 1, S - 2, S - 2, P.BR, P.YE, P.RD);
+      for (let y = 1 + Math.max(2, R(S / 3)); y < S - 2; y += Math.max(2, R(S / 3))) rect(2, y, S - 4, 1, P.RD);
+      rect(2, 2, 1, S - 4, P.YE); line(2, 2, S - 3, S - 3, P.RD); if (S >= 10) { px(R(S / 2) - 1, R(S / 2) + 2, P.K); px(R(S / 2), R(S / 2) + 2, P.K); }
+      break;
+    }
+    case 'car': {
+      const c = biX_ramp(st.split('_')[1] || P.RD), glass = c[1] === P.BL || c[1] === P.BL2 ? [P.K, P.TL] : [P.BL, P.CY];
+      const map = { k: P.K, t: P.K, T: P.G1, B: c[2], b: c[1], d: c[0] === P.K ? c[1] : c[0], g: glass[0], G: glass[1], w: P.G3, y: P.YE, r: P.RD2 };
+      biX_rows(biX_CAR, R((w - 18) / 2), R((h - 12) / 2), map);
+      break;
+    }
+    case 'bin': {
+      biX_ball(R(S * 0.12), R(S * 0.12), S - 2 * R(S * 0.12), S - 2 * R(S * 0.12), P.G3, P.W, P.G1);
+      biX_ell(R(S * 0.3), R(S * 0.3), S - 2 * R(S * 0.3), S - 2 * R(S * 0.3), P.G1); px(R(S / 2), R(S / 2), P.G3);
+      break;
+    }
+    case 'lamp': {
+      const cx = R(S / 2);
+      biX_ball(cx - 2, R(S * 0.15), 4, 4, P.G1, P.G3, P.K);          // the post, from above
+      rect(cx - 1, R(S * 0.15) + 3, 2, Math.max(1, R(S * 0.3)), P.K);  // arm out over the road
+      biX_ball(cx - 2, S - 5, 5, 4, P.YE, P.W, P.BR);                 // lamp head
+      break;
+    }
+  }
+}
+// where the mainframe's tape reels and lamp panel sit (shared by the static sprite and the animation)
+function biX_mfLayout(w, h) {
+  const r = Math.max(2, Math.round(h * 0.26)), y = Math.round(h * 0.42);
+  return { reels: [{ x: Math.round(w * 0.2), y, r }, { x: Math.round(w * 0.2) + r * 2 + 2, y, r }], px: Math.round(w * 0.2) + r * 3 + 4, py: 2, pw: Math.max(3, w - (Math.round(w * 0.2) + r * 3 + 4) - 3), ph: Math.max(3, Math.round(h * 0.55)) };
+}
+
+// ---------- floors per room kind (drawn once into the room layer) ----------
+function biX_floor(kind, X, Y, w, h, S) {
+  const pat = {
+    hall: (i, j) => { const t = (Math.floor(i / S) + Math.floor(j / S)) & 1; return t ? (biX_bay(i, j) < 5 ? P.G1 : P.G3) : (biX_hash(i, j, 1) < 0.04 ? P.W : P.G3); },
+    office: (i, j) => {
+      const ph = Math.max(3, Math.round(S / 2)), r = Math.floor(j / ph), pl = S * 2, off = (r % 3) * Math.round(S * 0.66), n = Math.floor((i + off) / pl);
+      if (j % ph === ph - 1) return P.RD; if ((i + off) % pl === 0) return biX_bay(i, j) < 8 ? P.K : P.RD;
+      const tone = biX_hash(n, r, 2), jj = j % ph;
+      if (jj === 0 && tone > 0.5 && biX_hash(i >> 1, r, 4) < 0.5) return P.RD;           // grain streaks
+      if (tone < 0.3 && jj === ph - 2 && biX_hash(i >> 2, r, 5) < 0.6) return P.RD;
+      return biX_hash(i, j, 6) < 0.025 ? P.RD : P.BR;
+    },
+    exec: (i, j) => {
+      const b = Math.max(2, Math.round(S * 0.5)), e = Math.min(i, j, w - 1 - i, h - 1 - j);
+      if (e === b) return P.YE; if (e === b + 1) return P.BR; if (e === b - 1) return P.K;
+      if (e > b + 1) { const u = (i - b) % 6, v = (j - b) % 6; if ((Math.abs(u - 3) + Math.abs(v - 3)) === 2 && S >= 9) return P.MG; }
+      return biX_bay(i, j) < 1 ? P.K : P.RD;
+    },
+    file: (i, j) => { const fi = i % S, fj = j % S; if (fi === 0 || fj === 0) return P.G1; if (fi === 1 || fj === 1) return P.W; const hsh = biX_hash(i, j, 5); return hsh < 0.03 ? P.G1 : P.G3; },
+    computer: (i, j) => { const fi = i % S, fj = j % S; if (fi === 0 || fj === 0) return P.W; if (fi === S - 1 || fj === S - 1) return P.G1; if (S >= 10 && fi % 3 === 1 && fj % 3 === 1 && fi > 1 && fj > 1 && fi < S - 2 && fj < S - 2) return P.G1; return P.G3; },
+    cipher: (i, j) => biX_bay(i, j) < 2 ? P.BL2 : P.BL,
+    lounge: (i, j) => biX_hash(i, j, 7) < 0.03 ? P.GR2 : biX_bay(i, j) < 2 ? P.K : P.GR,
+    bath: (i, j) => { const ts = Math.max(3, Math.floor(S / 2)); const a = i % ts === 0, b = j % ts === 0; if (a && b) return P.TL; if (a || b) return P.G3; return P.W; },
+  }[kind] || ((i, j) => P.G3);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(X + i, Y + j, pat(i, j));
+  // shadow cast by the north and west walls
+  const sh = S >= 10 ? 2 : 1;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const e = Math.min(i, j); if (e < sh && biX_bay(X + i, Y + j) < (e === 0 ? 10 : 5)) px(X + i, Y + j, P.K); }
+}
+// walls: 4px bevelled band with a cyan outline and mitred corners (after the original)
+function biX_walls(X0, Y0, w, h) {
+  rect(X0 - 4, Y0 - 4, w + 8, h + 8, P.CY); rect(X0 - 3, Y0 - 3, w + 6, h + 6, P.G3);
+  rect(X0 - 3, Y0 - 3, w + 6, 1, P.W); rect(X0 - 3, Y0 - 3, 1, h + 6, P.W); rect(X0 - 3, Y0 + h + 2, w + 6, 1, P.G1); rect(X0 + w + 2, Y0 - 3, 1, h + 6, P.G1);
+  rect(X0 - 1, Y0 - 1, w + 2, 1, P.G1); rect(X0 - 1, Y0 - 1, 1, h + 2, P.G1); rect(X0 - 1, Y0 + h, w + 2, 1, P.W); rect(X0 + w, Y0 - 1, 1, h + 2, P.W);
+  for (const [cx, cy, dx, dy] of [[X0 - 3, Y0 - 3, 1, 1], [X0 + w + 2, Y0 - 3, -1, 1], [X0 - 3, Y0 + h + 2, 1, -1], [X0 + w + 2, Y0 + h + 2, -1, -1]]) for (let k = 0; k < 3; k++) px(cx + dx * k, cy + dy * k, P.G1);
+}
+// a door in canonical frame: opening along +x (width dw), wall depth 0..3 along +y, room beyond y=4
+function biX_door(dw, open, outside, S) {
+  rect(0, 0, 1, 4, P.K); rect(dw - 1, 0, 1, 4, P.K); rect(1, 0, 1, 4, P.G1); rect(dw - 2, 0, 1, 4, P.W);
+  if (open) {
+    if (outside) { for (let y = 0; y < 4; y++) for (let x = 2; x < dw - 2; x++) px(x, y, biX_bay(x, y) < 6 ? P.BL : P.K); }
+    else { rect(2, 0, dw - 4, 4, P.G1); for (let x = 2; x < dw - 2; x++) if (x & 1) px(x, 1, P.G3); }
+    // both leaves swung into the room, with their swing arcs dotted on the floor
+    const L = Math.max(3, (dw >> 1) - 2), lc = outside ? P.GR2 : P.YE, lb = outside ? P.GR : P.BR;
+    for (let a = 1; a < 10; a += 2) { const an = a / 10 * Math.PI / 2, xx = Math.round(Math.cos(an) * L), yy = Math.round(4 + Math.sin(an) * L); px(2 + xx, yy, P.G1); px(dw - 3 - xx, yy, P.G1); }
+    for (const x0 of [2, dw - 5]) { rect(x0, 4, 3, L, P.K); rect(x0 + 1, 4, 1, L - 1, lb); px(x0 + 1, 4, lc); px(x0 + 1, 4 + L - 2, P.YE); }
+  } else if (outside) { // steel street door: green panels, push bar, centre seam
+    rect(2, 0, dw - 4, 4, P.GR); rect(2, 0, dw - 4, 1, P.K); rect(2, 1, dw - 4, 1, P.GR2); rect(2, 3, dw - 4, 1, P.K);
+    const m = dw >> 1; rect(m, 0, 1, 4, P.K); rect(4, 2, m - 6, 1, P.G3); rect(m + 2, 2, dw - m - 6, 1, P.G3); px(m - 2, 2, P.W); px(m + 2, 2, P.W);
+  } else { // wooden double door: panels, centre seam, brass handles
+    rect(2, 0, dw - 4, 4, P.BR); rect(2, 0, dw - 4, 1, P.RD); rect(2, 3, dw - 4, 1, P.K);
+    const m = dw >> 1; rect(m, 0, 1, 4, P.K);
+    for (let x = 3; x < dw - 3; x++) if (x !== m && x !== m - 1 && x !== m + 1 && (x - 3) % 4 === 1) px(x, 1, P.YE);
+    px(m - 2, 2, P.YE); px(m + 2, 2, P.YE); px(m - 2, 1, P.W); px(m + 2, 1, P.W);
+  }
+}
+
+// ---------- the city street for ambushes ----------
+function biX_street(X0, Y0, w, h, S, oy, MH, night) {
+  // building fronts in the margin: brick with doorways and lit windows
+  for (let j = -4; j < h + 4; j++) for (let i = -4; i < w + 4; i++) {
+    if (j >= 0 && j < h && i >= 0 && i < w) continue;
+    const bi = i + 64, bj = j + 64; let c = (bj % 3 === 0 || (bi + (Math.floor(bj / 3) % 2) * 3) % 6 === 0) ? P.K : (biX_hash(bi >> 1, bj, 9) < 0.2 ? P.BR : P.RD);
+    px(X0 + i, Y0 + j, c);
+  }
+  for (const yy of [Y0 - 4, Y0 + h]) for (let x = X0 + 6; x < X0 + w - 8; x += 26) { rect(x, yy, 8, 4, P.K); rect(x + 1, yy === Y0 - 4 ? yy : yy + 1, 6, 3, P.BR); rect(x + 14, yy + 1, 6, 2, night ? P.YE : P.TL); }
+  // sidewalks: paving slabs, curb, gutter
+  const sw = 2 * S;
+  for (const sy of [Y0, Y0 + h - sw]) { for (let j = 0; j < sw; j++) for (let i = 0; i < w; i++) { const hs = biX_hash(i, j + sy, 11); px(X0 + i, sy + j, (i % S === 0 || j % S === 0) ? P.G1 : hs < 0.05 ? P.W : hs > 0.95 ? P.G1 : P.G3); } }
+  rect(X0, Y0 + sw - 1, w, 1, P.W); rect(X0, Y0 + sw, w, 1, P.K); rect(X0, Y0 + h - sw, w, 1, P.W); rect(X0, Y0 + h - sw - 1, w, 1, P.K);
+  // asphalt
+  const ry = Y0 + sw + 1, rh = h - 2 * sw - 2;
+  for (let j = 0; j < rh; j++) for (let i = 0; i < w; i++) { const hs = biX_hash(i, j, 12), patch = vnoise(i / 9, j / 7) > 0.68; px(X0 + i, ry + j, night ? (hs < 0.04 ? P.G3 : biX_bay(i, j) < 8 ? P.K : P.G1) : (hs < 0.05 ? P.K : hs > 0.985 ? P.G3 : patch && biX_bay(i, j) < 5 ? P.K : P.G1)); }
+  // lane markings, a manhole, an oil stain
+  const cy = oy + Math.floor(MH / 2) * S; for (let x = X0 + 2; x < X0 + w; x += 10) rect(x, cy, 5, 1, P.YE);
+  for (let x = X0 + 2; x < X0 + w; x += 3 * S) { rect(x, ry + 2 * S - 1, 1, 2, P.W); rect(x, ry + rh - 2 * S - 1, 1, 2, P.W); }
+  biX_ball(X0 + Math.round(w * 0.62), cy + 4, 7, 5, P.G1, P.G3, P.K); rect(X0 + Math.round(w * 0.62) + 2, cy + 6, 3, 1, P.K);
+  for (let k = 0; k < 14; k++) { const a = biX_hash(k, 3, 13) * 6.28, d = biX_hash(k, 4, 13) * 5; px(X0 + Math.round(w * 0.3 + Math.cos(a) * d * 1.4), cy - 8 + Math.round(Math.sin(a) * d), P.K); }
+  // the road runs off both ends
+  for (const ex of [X0 - 4, X0 + w]) { const y0 = oy + 5 * S, hh = (MH - 10) * S; for (let j = 0; j < hh; j++) for (let i = 0; i < 4; i++) px(ex + i, y0 + j, biX_bay(ex + i, y0 + j) < 6 ? P.K : P.G1); }
+}
+
+// ---------- explosions and gas (cached frames) ----------
+function biX_boom(type, fi, rad) {
+  return sprite('biX_boom_' + type + fi + '_' + rad, rad * 2 + 1, rad * 2 + 1, () => {
+    const p = fi / 7, fr = rad * (0.35 + 0.65 * Math.sqrt(p));
+    for (let j = 0; j <= rad * 2; j++) for (let i = 0; i <= rad * 2; i++) {
+      const dx = i - rad, dy = j - rad, d = Math.hypot(dx, dy) / fr; if (d > 1.15 || Math.hypot(dx, dy) > rad) continue;
+      const n = vnoise(i * 0.3 + fi * 3.1, j * 0.3) - 0.5, b = biX_bay(i, j) / 16;
+      if (type === 'frag') {
+        const z = d + n * 0.5 + p * 0.75;
+        if (d + n * 0.4 > 1 + (b - 0.5) * 0.2) continue;
+        if (p > 0.55 && z > 1.2 && b < (p - 0.5) * 1.6) continue; // the smoke thins out
+        px(i, j, z < 0.3 ? P.W : z < 0.55 ? P.YE : z < 0.8 ? P.RD2 : z < 1.0 ? P.RD : z < 1.3 || b < 0.5 ? P.G1 : P.K);
+      } else {
+        const ring = Math.abs(d - 0.9 - n * 0.2);
+        if (ring < 0.12) px(i, j, p < 0.5 ? P.W : P.CY);
+        else if (d < 0.8 && b < (1 - p) * 0.9 - d * 0.4) px(i, j, d < 0.4 ? P.W : P.YE);
+      }
+    }
+  });
+}
+function biX_gas(rad, ph) {
+  return sprite('biX_gas_' + rad + '_' + ph, rad * 2 + 1, rad * 2 + 1, () => {
+    for (let j = 0; j <= rad * 2; j++) for (let i = 0; i <= rad * 2; i++) {
+      const d = Math.hypot(i - rad, j - rad) / rad; if (d > 1) continue;
+      const n = vnoise(i * 0.16 + ph * 1.3, j * 0.16 - ph * 0.7), dens = (1 - d) * 1.5 + (n - 0.5) * 1.1, b = biX_bay(i, j);
+      if (b < dens * 7) px(i, j, b < dens * 2.2 ? P.GR : P.GR2);
+    }
+  });
+}
+
+// ---------- Max, side view, for the portrait box ----------
+const biX_MAX_TOP = [
+  '......kkkkk..........',
+  '.....kbbdDdk.........',
+  '....kbbbbbddk........',
+  '....kbdbbbbbk........',
+  '....kkkkkkkkkk.......',
+  '....kbbhsskkk........',
+  '....kbhsssewk........',
+  '....kbhsssssk........',
+  '....kbhssssssk.......',
+  '.....khsshsk.........',
+  '......kbbhhbk........',
+  '....kkbbdbbbbkk......',
+  '...kbbbddbbbbbbkkkkkk',
+  '...kbbddbbbbddssmmnnn',
+  '...kbddbbbbbbkhhgkkkk',
+  '...kbdbbbbbbbk..gg...',
+  '...kbdbbbbbbk........',
+  '...kbdbbbbbbk........',
+  '...kGGGGGGGGk........',
+];
+const biX_MAX_LEGS = [[
+  '...kbbbbbbbbk........',
+  '...kbbdbkbbbk........',
+  '...kbbdbkbbdk........',
+  '...kbbdbkbbdk........',
+  '...kbdbk.kbdk........',
+  '...kbdbk.kbdk........',
+  '...kbdbk.kbdk........',
+  '...klllk.klllk.......',
+  '...kllllkkLlllk......',
+], [
+  '...kbbbbbbbbk........',
+  '..kbbdbbbbbbbk.......',
+  '..kbdbk.kbbdbk.......',
+  '.kbdbk...kbbdbk......',
+  '.kbdbk....kbdbk......',
+  'kbdbk......kbdbk.....',
+  'kbdk........kbdbk....',
+  'kllk........klllk....',
+  'kLllk.......kLlllk...',
+], [
+  '...kbbbbbbbbk........',
+  '...kbdbbbbbbk........',
+  '...kbdbkkbdbk........',
+  '...kbdbkkbdk.........',
+  '....kbdbkbdk.........',
+  '....kbdbkbdk.........',
+  '....kbdkkbdk.........',
+  '....klllklllk........',
+  '....kLlllkLlllk......',
+]];
+const biX_MAX_CROUCH = [
+  '...kbbbbbbbbbbbbk....',
+  '...kbdbbbbbbbbdbbk...',
+  '...kbdbkkkkkkkbdbk...',
+  '..kbdbk......kbdk....',
+  '.kLlllk.....kLllk....',
+];
+function biX_maxMap(disg, uni) {
+  const r = disg ? biX_ramp(uni) : [P.K, P.K, P.G1];
+  return { k: P.K, b: r[1], d: disg ? r[2] : P.G1, D: disg ? P.W : P.G3, s: P.SK, h: P.BR, e: P.K, w: P.W, l: P.K, L: P.G1, G: disg ? P.K : P.G1, g: P.K, m: P.G1, n: P.G3 };
+}
+
+// ---------- equipment display pieces ----------
+function biX_gunSide(uzi) {
+  return sprite('biX_gun_' + (uzi ? 'uzi' : 'pistol'), 60, 20, () => {
+    if (!uzi) {
+      biX_box(0, 3, 19, 5, P.G1, P.G3, P.K); for (let x = 3; x < 17; x += 3) px(x, 6, P.K); rect(0, 4, 1, 3, P.K); px(1, 5, P.K);
+      rect(18, 1, 26, 6, P.K); rect(19, 2, 24, 4, P.G1); rect(19, 2, 24, 1, P.G3); rect(24, 3, 6, 1, P.K); for (let x = 36; x < 42; x += 2) rect(x, 3, 1, 2, P.K);
+      px(20, 0, P.K); rect(41, 0, 2, 1, P.K);
+      rect(18, 7, 24, 2, P.K); rect(19, 7, 22, 1, P.G1);
+      frame(23, 8, 8, 5, P.K); px(27, 9, P.G3); px(27, 10, P.G1);
+      for (let r = 0; r < 9; r++) { const x0 = 31 + Math.round(r * 0.6); rect(x0, 8 + r, 10, 1, P.K); if (r < 8) { rect(x0 + 1, 8 + r, 8, 1, P.BR); if (r % 2) px(x0 + 3, 8 + r, P.RD); px(x0 + 1, 8 + r, P.YE); } }
+    } else {
+      rect(0, 5, 8, 3, P.K); rect(1, 5, 6, 1, P.G1); rect(6, 3, 3, 7, P.K); px(7, 4, P.G3);
+      biX_box(8, 2, 32, 9, P.G1, P.G3, P.K); for (let x = 12; x < 22; x += 2) rect(x, 4, 1, 4, P.K); rect(23, 3, 10, 1, P.W); rect(28, 2, 3, 1, P.K);
+      rect(9, 0, 2, 2, P.K); rect(35, 0, 3, 2, P.K);
+      frame(16, 10, 9, 5, P.K); px(20, 11, P.G3);
+      rect(25, 11, 8, 9, P.K); rect(26, 11, 6, 8, P.G1); rect(26, 11, 1, 8, P.G3); for (let y = 13; y < 19; y += 2) rect(27, y, 4, 1, P.K);
+      rect(40, 4, 18, 1, P.K); rect(40, 8, 18, 1, P.K); rect(40, 5, 17, 1, P.G1); rect(56, 3, 3, 7, P.K); rect(57, 4, 1, 5, P.G1);
+    }
+  });
+}
+const biX_CAR = [
+  '...tTt......tTt...', '.kkkkkkkkkkkkkkkk.', 'krBBBBBBBBBBBBBByk', 'kwbbkgGBBBgGkbbbwk', 'kwbbkgbbbbggkbbbwk', 'kwbbkgbbbbggkBBBwk',
+  'kwbbkgbbbbggkbbbwk', 'kwbbkGbbbbgGkbbbwk', 'kwbbkgddddggkbbbwk', 'krddddddddddddddyk', '.kkkkkkkkkkkkkkkk.', '...tTt......tTt...',
+];
+const biX_GREN = ['.kgk.', 'kcwck', 'kcccd', '.kdk.'];
+function biX_grenMap(col) { const r = biX_ramp(col); return { k: P.K, g: P.G3, c: r[1], w: r[2], d: r[0] === P.K ? P.G1 : r[0] }; }
+const biX_BUG = ['...k...', '.kkRkk.', 'kRRWRRk', 'kRRRRRk', '.kkkkk.', '.k...k.'];
+const biX_BUGMAP = { k: P.K, R: P.RD, W: P.RD2 };
+const biX_ROUND = ['.Y.', 'YYW', 'YYB', 'BBB', 'BBB', 'BBB', 'KKK'];
+const biX_ROUNDMAP = { Y: P.BR, W: P.YE, B: P.YE, K: P.BR };
+const biX_CLIP = ['kkkkkkk', 'kYYWYYk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kkkkkkk'];
+const biX_CLIPMAP = { k: P.K, Y: P.BR, W: P.YE, G: P.G3, g: P.G1 };
+function biX_camera() {
+  return sprite('biX_cam', 22, 14, () => {
+    rect(4, 0, 6, 2, P.K); rect(5, 1, 4, 1, P.G3); rect(14, 1, 4, 2, P.K); px(15, 1, P.RD2);
+    biX_box(0, 2, 22, 11, P.K, P.K, P.K); rect(1, 3, 20, 2, P.G3); rect(1, 3, 20, 1, P.W); rect(1, 5, 20, 7, P.K); for (let x = 2; x < 20; x += 2) for (let y = 6; y < 12; y += 2) px(x + (y & 2 ? 1 : 0), y, P.G1);
+    biX_ball(6, 4, 10, 10, P.G1, P.G3, P.K); biX_ell(8, 6, 6, 6, P.BL); biX_ell(9, 7, 4, 4, P.TL); px(9, 7, P.W); px(10, 7, P.CY);
+    rect(17, 6, 3, 2, P.TL); px(17, 6, P.CY);
+  });
+}
+function biX_safekit() {
+  return sprite('biX_safekit', 46, 25, () => {
+    // an open leather tool roll: stethoscope, hand drill, lock picks
+    rect(0, 3, 46, 22, P.K); rect(1, 4, 44, 20, P.BR); rect(2, 5, 42, 18, P.K); for (let x = 2; x < 44; x += 2) { px(x, 4, P.YE); px(x + 1, 23, P.RD); }
+    for (const x of [16, 31]) rect(x, 6, 1, 16, P.RD);
+    rect(17, 0, 12, 4, P.K); rect(18, 1, 10, 2, P.BR); px(18, 1, P.YE);
+    // stethoscope: ear tubes, a loop of tubing, the chest piece
+    for (let a = 0; a < 30; a++) { const an = a / 30 * Math.PI * 1.75 + 0.3; px(9 + Math.round(Math.cos(an) * 5), 12 + Math.round(Math.sin(an) * 5), a % 5 ? P.G3 : P.W); }
+    rect(4, 6, 1, 4, P.G3); rect(12, 6, 1, 4, P.G3); px(4, 6, P.W); px(12, 6, P.W);
+    biX_ball(9, 15, 6, 6, P.G3, P.W, P.G1); px(11, 17, P.K);
+    // drill
+    biX_box(19, 8, 10, 6, P.YE, P.W, P.BR); rect(24, 14, 4, 7, P.K); rect(25, 14, 2, 6, P.RD); px(25, 15, P.RD2); rect(18, 10, 1, 2, P.K); rect(17, 10, 1, 2, P.G3); rect(18, 10, 1, 1, P.W);
+    // picks and tension wrenches
+    for (let n = 0; n < 5; n++) { rect(33 + n * 2, 7, 1, 14, P.G3); px(33 + n * 2, 7, P.W); rect(33 + n * 2, 17, 1, 4, P.BR); if (n % 2) px(34 + n * 2, 8, P.G3); }
+  });
+}
+function biX_silhouette() {
+  return sprite('biX_sil', 145, 99, () => {
+    rect(0, 0, 145, 99, P.BL);
+    const cx = 276 - 173;
+    const inside = (x, y) => {
+      if (((x - cx) / 11) ** 2 + ((y - 17) / 14) ** 2 < 1) return true;
+      if (Math.abs(x - cx) < 7 && y >= 28 && y < 40) return true;
+      if (y >= 34) { const s = Math.min(1, (y - 33) / 12), hw = 7 + 24 * Math.sqrt(s) + Math.max(0, (y - 46) * 0.06); if (Math.abs(x - cx) < hw) return true; }
+      if (y >= 42 && y < 54 && x > 232 - 173 && x < cx) return y - 42 > (cx - x) * 0.05 - 1;
+      return false;
+    };
+    for (let y = 0; y < 99; y++) for (let x = 0; x < 145; x++) {
+      if (!inside(x, y)) continue;
+      if (!inside(x - 1, y)) { px(x, y, P.BR); continue; }
+      if (!inside(x + 1, y)) { px(x, y, P.K); continue; }
+      if (y % 2 === 0) px(x, y, (x - cx) > 12 && biX_bay(x, y) < 10 ? P.K : P.G1);
+    }
+  });
+}
+function biX_mask(x, y) { // gas mask on the silhouette's face
+  biX_ball(x, y, 22, 17, P.G1, P.G3, P.K); biX_ball(x + 3, y + 3, 7, 6, P.TL, P.CY, P.BL); biX_ball(x + 12, y + 3, 7, 6, P.TL, P.CY, P.BL); px(x + 5, y + 4, P.W); px(x + 14, y + 4, P.W);
+  biX_ball(x + 7, y + 10, 8, 8, P.G3, P.W, P.G1); for (let i = 0; i < 3; i++) px(x + 9 + i * 2, y + 13, P.K); rect(x, y + 6, 2, 3, P.K); rect(x + 20, y + 6, 2, 3, P.K);
+}
+
+// ---------- the Equipment Display: kit on Max's silhouette (also used by the armory) ----------
+function biX_vestPx(i, j) { // design space 50 x 65
+  const c = 24.5, dx = Math.abs(i - c);
+  if (j < 14) { if (dx > 8 && dx < 17) return (dx < 10 ? P.G3 : dx > 15 ? P.K : (j % 3 ? P.G1 : P.K)); return null; }   // shoulder straps
+  if (j < 22 && dx < 8 + (j - 14) * 0.2 && j < 14 + (8 - dx) * 0.9) return null;                                       // neck scoop
+  const half = j < 22 ? 17 + (j - 14) * 0.9 : 24; if (dx > half) return null;
+  if (j > 60 && dx > 24 - (64 - j)) return null;
+  if (dx < 1) return j % 3 === 0 ? P.G3 : P.K;                                                                      // velcro seam
+  const pouch = j >= 30 && j < 43 && (dx > 3 && dx < 11 || dx > 12 && dx < 20);
+  if (pouch) { if (j < 33) return j === 30 ? P.G3 : P.G1; if ((dx < 5 || (dx > 9.5 && dx < 13.5) || dx > 18.5) || j === 42) return P.K; return biX_bay(i, j) < 3 ? P.G3 : P.G1; }
+  if (j === 29 || j === 48) return P.K; if (j === 49) return P.G3;
+  if (j >= 52 && j < 56 && dx > 14) return j === 52 ? P.G3 : P.K;                                                  // side straps
+  if (dx > half - 1.5) return i < c ? P.G3 : P.K;
+  return biX_bay(i, j) < 2 ? P.K : P.G1;
+}
+function biX_vest(w, h) { return sprite('biX_vest' + w + 'x' + h, w + 2, h + 1, () => biX_raster(1, 0, w, h, (i, j) => biX_vestPx(Math.floor((i + 0.5) * 50 / w), Math.floor((j + 0.5) * 65 / h)), P.K)); }
+// kit: the chosen equipment; m: { gun, hits, gren, gtype, bugs, clip, clips, film }; drawn for a panel whose left edge is x=173
+function biX_equip(kit, m, t) {
+  g.drawImage(biX_silhouette(), 173, 0);
+  if (kit.kevlar) { g.drawImage(biX_vest(50, 65), 250, 31); for (let i = 0; i < m.hits; i++) { const hx = 262 + (i * 17) % 30, hy = 50 + (i * 11) % 30; biX_ball(hx - 2, hy - 2, 5, 5, P.G1, P.W, P.K, P.G3); px(hx, hy, P.K); } }
+  else for (let i = 0; i < m.hits; i++) { const hx = 266 + i * 8, hy = 56; biX_ell(hx - 1, hy, 6, 5, P.RD); px(hx, hy + 1, P.RD2); px(hx + 1, hy + 5, P.RD); px(hx + 2, hy + 6, P.RD); }
+  if (kit.gasmask) biX_mask(265, 12);
+  if (kit.detector) {
+    for (let a = 0; a <= 24; a++) { const an = Math.PI + a / 24 * Math.PI, xx = 276 + Math.round(Math.cos(an) * 13), yy = 17 + Math.round(Math.sin(an) * 15); px(xx, yy, P.G3); px(xx, yy - 1, P.W); px(xx, yy + 1, P.K); }
+    for (const ex of [260, 288]) { biX_box(ex, 11, 5, 10, P.G1, P.G3, P.K); rect(ex + 2, 0, 1, 11, P.G3); px(ex + 2, 0, (t * 3 | 0) % 2 ? P.RD2 : P.YE); }
+  }
+  const uzi = m.gun === 'uzi'; g.drawImage(biX_gunSide(uzi), uzi ? 188 : 183, uzi ? 37 : 38);
+  biX_ball(214, 43, 10, 9, P.G1, P.G3, P.K); rect(216, 51, 5, 2, P.K);
+  // grenade bandolier
+  rect(177, 1, 58, 17, P.K);
+  ['frag', 'stun', 'gas'].forEach((k2, row) => {
+    const y = 3 + row * 5, on = m.gtype === k2; rect(178, y - 1, 56, 5, on ? P.TL : P.G1); rect(178, y - 1, 56, 1, on ? P.CY : P.G3);
+    for (let n = 0; n < 8; n++) px(184 + n * 7, y + 1, P.K);
+    for (let n = 0; n < Math.min(8, m.gren[k2]); n++) biX_put('gr_' + k2, biX_GREN, biX_grenMap(GREN[k2].col), 179 + n * 7, y);
+  });
+  for (let n = 0; n < m.bugs; n++) biX_put('bug', biX_BUG, biX_BUGMAP, 236 + (n % 2) * 9, 8 + Math.floor(n / 2) * 8);
+  for (let n = 0; n < m.clip; n++) biX_put('round', biX_ROUND, biX_ROUNDMAP, 178 + n * 5, 70);
+  for (let n = 0; n < Math.min(4, m.clips); n++) biX_put('clip', biX_CLIP, biX_CLIPMAP, 178 + n * 10, 80);
+  if (kit.camera) {
+    g.drawImage(biX_camera(), 224, 71);
+    rect(223, 86, 15, 9, P.K); frame(223, 86, 15, 9, P.G1); text(String(m.film).padStart(2, '0'), 225, 87, P.GR2);
+    rect(239, 86, 7, 8, P.K); rect(240, 87, 5, 6, P.YE); rect(240, 89, 5, 2, P.K); px(242, 86, P.G3);
+  }
+  if (kit.safekit) g.drawImage(biX_safekit(), 248, 73);
+}
+
 // ------------------------------------------------------------------
 function breakinScene(opts, done) {
   const level = opts.level || 0, occupant = opts.occupant || null, org = opts.org || ORGS[0];
   const mode = opts.mode || 'breakin'; // 'defend' = guard a jailed suspect, 'street' = ambush gunfight
   const kit = opts.kit || { uzi: false, camera: true, bugs: 0, gasmask: false, detector: false, kevlar: false, safekit: false, frag: 0, stun: 4, gas: 0 };
   const sk = skillLevel('combat');
+  const uniC = org.uni || P.YE; // guards wear the organization's colours
   // persistent layout: the same seed builds the same building
   const saved = seed; if (opts.building && opts.building.seed) seed = opts.building.seed;
   const B = mode === 'street' ? genStreet() : genBuilding(level); const { F, occ } = mode === 'street' ? furnishStreet(B) : furnish(B, { occupant, level });
@@ -172,7 +887,7 @@ function breakinScene(opts, done) {
   function spot(room) { for (let i = 0; i < 80; i++) { const x = ri(room.x, room.x + room.w - 1), y = ri(room.y, room.y + room.h - 1); if (B.T[y][x] === T_FLOOR && occ[y][x] < 0 && !people.some(p => Math.abs(p.x - x * TS - 4) < 8 && Math.abs(p.y - y * TS - 4) < 8)) return [x * TS + 4, y * TS + 4]; } return [room.x * TS + 4, room.y * TS + 4]; }
 
   // ---------- people ----------
-  function addGuard(room, st = 'patrol') { const [x, y] = spot(room); const g2 = { kind: 'guard', x, y, dir: rnd() * 7, walk: 0, state: st, out: false, stun: 0, cool: 1 + rnd(), home: room.id, path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.15 * level, gren: rnd() < 0.3 ? 1 : 0, col: P.YE }; people.push(g2); return g2; }
+  function addGuard(room, st = 'patrol') { const [x, y] = spot(room); const g2 = { kind: 'guard', x, y, dir: rnd() * 7, walk: 0, state: st, out: false, stun: 0, cool: 1 + rnd(), home: room.id, path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.15 * level, gren: rnd() < 0.3 ? 1 : 0, col: uniC }; people.push(g2); return g2; }
   const important = B.rooms.filter(r => ['file', 'computer', 'cipher', 'exec'].includes(r.kind));
   const nGuards = mode !== 'breakin' ? 0 : Math.min(12, 3 + level * 2 + (opts.alert || 0) * 2 + Math.floor(B.rooms.length / 6));
   for (let i = 0; i < nGuards; i++) addGuard(rnd() < 0.5 && important.length ? pick(important) : pick(B.rooms), rnd() < 0.7 ? 'patrol' : 'idle');
@@ -188,7 +903,7 @@ function breakinScene(opts, done) {
     let x, y;
     if (mode === 'defend') { const d = pick(B.outer); d.open = true; x = (d.x + (d.side === 'W' ? 1 : d.side === 'E' ? -1 : 0)) * TS + 4; y = (d.y + (d.side === 'N' ? 1 : d.side === 'S' ? -1 : 0)) * TS + 4; }
     else { x = (rnd() < 0.5 ? 1 : B.MW - 2) * TS + 4; y = ri(5, B.MH - 7) * TS + 4; }
-    people.push({ kind: 'guard', raider: true, x, y, dir: Math.atan2(max.y - y, max.x - x), walk: 0, state: mode === 'defend' ? 'raid' : 'hunt', out: false, stun: 0, cool: 1.2 + rnd(), home: Math.max(0, roomOf(x, y)), path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.2 * level, gren: rnd() < 0.3 ? 1 : 0, col: P.RD2 });
+    people.push({ kind: 'guard', raider: true, x, y, dir: Math.atan2(max.y - y, max.x - x), walk: 0, state: mode === 'defend' ? 'raid' : 'hunt', out: false, stun: 0, cool: 1.2 + rnd(), home: Math.max(0, roomOf(x, y)), path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.2 * level, gren: rnd() < 0.3 ? 1 : 0, col: uniC });
     raidLeft--; sfx.tone(300, 0.15, 'square', 0.04, -100);
   }
   if (mode === 'defend') {
@@ -222,7 +937,7 @@ function breakinScene(opts, done) {
   function fire() {
     if (max.cool > 0 || max.stun > 0 || max.busy) return;
     if (max.clip <= 0) { if (max.clips > 0) { max.clips--; max.clip = 6; max.cool = 0.8; say('Reloading.'); sfx.tick(); } else { say('Out of ammunition.'); sfx.deny(); max.cool = 0.4; } return; }
-    max.clip--; max.cool = max.gun === 'uzi' ? 0.25 : 0.55;
+    max.clip--; max.cool = max.gun === 'uzi' ? 0.25 : 0.55; max.fl = t;
     const n = max.gun === 'uzi' ? 3 : 1; for (let i = 0; i < n; i++) { const a = max.dir + (rnd() - 0.5) * (0.18 - sk * 0.03) + (i - 1) * 0.04; bullets.push({ x: max.x, y: max.y, vx: Math.cos(a) * 240, vy: Math.sin(a) * 240, mine: true, life: 0.7 }); }
     sfx.tone(180, 0.05, 'square', 0.04, -80); noise(max.x, max.y, 40);
     if (max.disguised) { max.disguised = false; say('Your disguise is blown.'); }
@@ -377,7 +1092,7 @@ function breakinScene(opts, done) {
         if (sees) {
           p.dir = Math.atan2(max.y - p.y, max.x - p.x); p.cool -= dt;
           if (dist(p.x, p.y, max.x, max.y) > 36) { moveEnt(p, Math.cos(p.dir) * sp, Math.sin(p.dir) * sp, dt); p.walk += dt; }
-          if (p.cool <= 0) { p.cool = 1.4 - level * 0.15 + rnd() * 0.8; if (p.gren && rnd() < 0.2 && dist(p.x, p.y, max.x, max.y) > 30) { p.gren--; grenades.push({ x: p.x, y: p.y, sx: p.x, sy: p.y, tx: max.x, ty: max.y, t: 0, z: 0, type: 'stun' }); } else { const a = p.dir + (rnd() - 0.5) * (0.3 - level * 0.04 + (max.crouch ? 0.15 : 0)); bullets.push({ x: p.x, y: p.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, mine: false, life: 0.8 }); sfx.tone(160, 0.05, 'square', 0.04, -60); } }
+          if (p.cool <= 0) { p.cool = 1.4 - level * 0.15 + rnd() * 0.8; if (p.gren && rnd() < 0.2 && dist(p.x, p.y, max.x, max.y) > 30) { p.gren--; grenades.push({ x: p.x, y: p.y, sx: p.x, sy: p.y, tx: max.x, ty: max.y, t: 0, z: 0, type: 'stun' }); } else { const a = p.dir + (rnd() - 0.5) * (0.3 - level * 0.04 + (max.crouch ? 0.15 : 0)); bullets.push({ x: p.x, y: p.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, mine: false, life: 0.8 }); p.fl = t; sfx.tone(160, 0.05, 'square', 0.04, -60); } }
         } else if (p.last) { if (walkTo(p.last[0], p.last[1], sp)) { p.state = resume(); p.target = [max.x, max.y]; } }
         break;
     }
@@ -442,69 +1157,95 @@ function breakinScene(opts, done) {
     const w = r.w * S, h = r.h * S; const ox = Math.floor((VX0 + VX1) / 2 - w / 2) - r.x * S, oy = Math.floor((VY0 + VY1) / 2 - h / 2) - r.y * S;
     return { r, S, ox, oy, sx: wx => ox + wx / TS * S, sy: wy => oy + wy / TS * S };
   }
+  const night = isNight();
+  const roomF = B.rooms.map(r => F.filter(f => f.room === r.id));
+  const layers = new Map();
+  // the static part of a room (floor, walls, doors, furniture) is painted once per room, scale and state
   function drawRoom(v) {
-    const { r, S, ox, oy } = v; const X0 = ox + r.x * S, Y0 = oy + r.y * S, w = r.w * S, h = r.h * S;
-    if (r.kind === 'street') { drawStreet(v, X0, Y0, w, h); return; }
-    // light cyan outline, 3-px light gray wall with mitred dark corners
-    rect(X0 - 4, Y0 - 4, w + 8, h + 8, P.CY); rect(X0 - 3, Y0 - 3, w + 6, h + 6, P.G3);
-    for (const [cx, cy, dx, dy] of [[X0 - 3, Y0 - 3, 1, 1], [X0 + w + 2, Y0 - 3, -1, 1], [X0 - 3, Y0 + h + 2, 1, -1], [X0 + w + 2, Y0 + h + 2, -1, -1]]) for (let k = 0; k < 3; k++) px(cx + dx * k, cy + dy * k, P.G1);
-    // checkerboard floor
-    for (let yy = 0; yy < h; yy++) { g.fillStyle = P.G1; g.fillRect(X0, Y0 + yy, w, 1); g.fillStyle = P.BL2; for (let xx = (yy & 1); xx < w; xx += 2) g.fillRect(X0 + xx, Y0 + yy, 1, 1); }
-    for (const d of r.doors) {
-      const horizWall = d.o === 'h'; let dx, dy, dw, dh;
-      if (horizWall) { dx = ox + d.x * S - S / 2; dw = S * 2; dy = d.y < r.y ? Y0 - 3 : Y0 + h; dh = 3; } else { dy = oy + d.y * S - S / 2; dh = S * 2; dx = d.x < r.x ? X0 - 3 : X0 + w; dw = 3; }
-      rect(dx, dy - (horizWall ? 1 : 0), dw, dh + (horizWall ? 2 : 0), d.open ? P.BL : d.outside ? P.GR2 : P.G1);
-      if (d.open) dither(dx, dy, dw, dh, P.BL, P.BL2, 8); else px(dx + dw / 2, dy + dh / 2, P.W);
+    const { r, S, ox, oy } = v, X0 = ox + r.x * S, Y0 = oy + r.y * S, w = r.w * S, h = r.h * S;
+    const key = r.id + '|' + S + '|' + r.doors.map(d => d.open ? 1 : 0).join('') + '|' + roomF[r.id].map(furnState).join(',');
+    let c = layers.get(key);
+    if (!c) {
+      if (layers.size > 40) layers.clear();
+      c = document.createElement('canvas'); c.width = w + 8; c.height = h + 8;
+      drawTo(c.getContext('2d'), () => {
+        g.translate(4 - X0, 4 - Y0);
+        if (r.kind === 'street') {
+          biX_street(X0, Y0, w, h, S, oy, B.MH, night);
+          if (night) for (const f of roomF[r.id]) if (f.type === 'lamp') { const cx = ox + f.x * S + S / 2, cy = oy + f.y * S + S / 2, R = S * 2.6; for (let yy = -R; yy <= R; yy++) for (let xx = -R; xx <= R; xx++) { const d = Math.hypot(xx, yy) / R; const X = Math.round(cx + xx), Y = Math.round(cy + yy); if (d < 1 && X >= X0 && X < X0 + w && Y >= Y0 && Y < Y0 + h && biX_bay(X, Y) < (1 - d) * 7) px(X, Y, P.YE); } }
+        } else { biX_walls(X0, Y0, w, h); biX_floor(r.kind, X0, Y0, w, h, S); for (const d of r.doors) drawDoor(d, v, X0, Y0, w, h); }
+        for (const f of roomF[r.id]) drawFurn(f, v);
+      });
+      layers.set(key, c);
     }
+    g.drawImage(c, X0 - 4, Y0 - 4);
   }
-  function drawStreet(v, X0, Y0, w, h) {
-    const S = v.S; rect(X0 - 4, Y0 - 4, w + 8, h + 8, P.BR); for (let x = X0 - 4; x < X0 + w + 4; x += 6) { rect(x, Y0 - 4, 1, 3, P.RD); rect(x + 3, Y0 + h + 1, 1, 3, P.RD); }
-    for (let x = X0 + 8; x < X0 + w - 8; x += 28) { rect(x, Y0 - 4, 7, 4, P.K); rect(x + 12, Y0 + h, 7, 4, P.K); }
-    rect(X0, Y0, w, h, P.G3); for (let i = 0, q = 7; i < 140; i++) { q = (q * 1103515245 + 12345) & 0x7fffffff; px(X0 + q % w, Y0 + (q >> 8) % h, i % 4 ? P.G1 : P.W); }
-    rect(X0, Y0, w, 2 * S, P.BR); rect(X0, Y0 + h - 2 * S, w, 2 * S, P.BR); for (let x = X0; x < X0 + w; x += S * 2) { rect(x, Y0, 1, 2 * S, P.RD); rect(x, Y0 + h - 2 * S, 1, 2 * S, P.RD); }
-    rect(X0, Y0 + 2 * S, w, 1, P.K); rect(X0, Y0 + h - 2 * S - 1, w, 1, P.K);
-    const cy = v.oy + (B.MH / 2) * S; for (let x = X0 + 2; x < X0 + w; x += 8) rect(x, cy, 4, 1, P.YE);
-    for (const ex of [X0 - 4, X0 + w]) rect(ex, v.oy + 5 * S, 4, (B.MH - 10) * S, P.G3);
+  function drawDoor(d, v, X0, Y0, w, h) {
+    const S = v.S, dw = 2 * S, half = Math.floor(S / 2); g.save();
+    if (d.o === 'h') { const dx = v.ox + d.x * S - half; if (d.y < v.r.y) g.translate(dx, Y0 - 4); else { g.translate(dx + dw, Y0 + h + 4); g.rotate(Math.PI); } }
+    else { const dy = v.oy + d.y * S - half; if (d.x < v.r.x) { g.translate(X0 - 4, dy + dw); g.rotate(-Math.PI / 2); } else { g.translate(X0 + w + 4, dy); g.rotate(Math.PI / 2); } }
+    biX_door(dw, d.open, d.outside, S); g.restore();
   }
-  function drawFurn(f, v) {
-    const S = v.S, X = v.ox + f.x * S, Y = v.oy + f.y * S, w = f.w * S, h = f.h * S, q = Math.max(1, S / 8);
-    const box = (x, y, ww, hh, c) => { rect(x, y, ww, hh, P.K); rect(x + 1, y + 1, ww - 2, hh - 2, c); rect(x + 1, y + 1, ww - 2, 1, P.W); };
-    switch (f.type) {
-      case 'desk': box(X, Y + 1, w, h - 2, P.BR); rect(X + 3 * q, Y + 3 * q, 5 * q, 3 * q, f.opened ? P.W : P.G3); rect(X + w - 6 * q, Y + 2 * q, 2 * q, 2 * q, P.RD2); rect(X + w / 2, Y + 3 * q, 3 * q, 2 * q, P.W); break;
-      case 'chair': box(X + 1, Y + 1, w - 2, h - 2, P.BL2); rect(X + 2, Y + h - 3, w - 4, 1, P.BL); break;
-      case 'file': box(X, Y, w, h, P.G3); rect(X + w / 2 - 1, Y + h / 2 - 1, 2, 1, P.TL); if (f.opened) rect(X + 2, Y + h - 3, w - 4, 2, P.W); break;
-      case 'wallsafe': box(X + 1, Y + 1, w - 2, h - 2, f.opened ? P.K : P.G1); px(X + w / 2, Y + h / 2, P.W); break;
-      case 'floorsafe': rect(X + 1, Y + 1, w - 2, h - 2, f.opened ? P.RD : P.RD2); line(X + 3, Y + 3, X + w - 4, Y + h - 4, P.YE); line(X + w - 4, Y + 3, X + 3, Y + h - 4, P.YE); break;
-      case 'plant': { const cx = X + w / 2, cy = Y + h / 2; for (let k = 0; k < 8; k++) { const a = k * 0.8; line(cx, cy, cx + Math.cos(a) * w / 2, cy + Math.sin(a) * h / 2, k % 2 ? P.GR : P.GR2); } px(cx - 2, cy - 1, P.W); px(cx + 2, cy + 2, P.BL2); break; }
-      case 'typewriter': box(X + 1, Y + 1, w - 2, h - 2, P.K); rect(X + 2, Y + 2, w - 4, 2, P.W); rect(X + 3, Y + h / 2, w - 6, 1, P.CY); break;
-      case 'couch': box(X, Y + 1, w, h - 2, P.RD); rect(X + 2, Y + 3, w - 4, h - 6, P.RD2); break;
-      case 'picture': rect(X + 1, Y, w - 2, 3, P.BR); rect(X + 2, Y, w - 4, 2, P.BL2); break;
-      case 'computer': box(X, Y, w, h, P.W); rect(X + 1, Y + h / 2, w - 2, 2, P.TL); for (let i = 0; i < 4; i++) px(X + 3 + i * 3, Y + 3, ((t * 4 | 0) + i) % 2 ? P.RD2 : P.K); break;
-      case 'terminal': box(X + 1, Y + 1, w - 2, h - 2, P.G3); rect(X + 3, Y + 3, w - 6, h - 7, P.TL); rect(X + 3, Y + h - 3, w - 6, 1, P.W); break;
-      case 'table': { rect(X + 2, Y + 1, w - 4, h - 2, P.BR); rect(X + 1, Y + 2, w - 2, h - 4, P.BR); rect(X + w / 2 - 2, Y + h / 2 - 1, 4, 3, P.YE); break; }
-      case 'toilet': box(X + 2, Y + 1, w - 4, h - 2, P.W); break;
-      case 'sink': box(X + 1, Y + 1, w - 2, h - 3, P.W); rect(X + w / 2 - 1, Y + 3, 2, 2, P.CY); break;
-      case 'car': { const vert = false; rect(X, Y + 1, w, h - 2, P.K); rect(X + 1, Y + 2, w - 2, h - 4, f.col); rect(X + w * 0.3, Y + 3, w * 0.4, h - 6, P.TL); rect(X + w * 0.3 + 1, Y + 3, 2, h - 6, P.CY); for (const wx of [X + 2, X + w - 5]) { rect(wx, Y, 3, 2, P.K); rect(wx, Y + h - 2, 3, 2, P.K); } rect(X + w - 2, Y + 3, 1, 2, P.YE); rect(X + 1, Y + 3, 1, 2, P.RD2); break; }
-      case 'bin': disc(X + w / 2, Y + h / 2, Math.max(2, w / 2 - 1), P.K); disc(X + w / 2, Y + h / 2, Math.max(1, w / 2 - 2), P.G3); px(X + w / 2, Y + h / 2, P.G1); break;
-      case 'lamp': disc(X + w / 2, Y + h / 2, 2, P.K); px(X + w / 2, Y + h / 2, P.YE); break;
-      case 'evidence': if (f.content) { box(X + 1, Y + 1, w - 2, h - 2, P.BR); line(X + 2, Y + 2, X + w - 3, Y + h - 3, P.K); } break;
-    }
+  function furnState(f) {
+    let s = f.opened ? 'o' : ''; if (f.type === 'evidence' && f.content) s += 'c';
+    if ((f.type === 'chair' || f.type === 'couch') && B.rooms[f.room] && B.rooms[f.room].kind === 'exec') s += 'x';
+    if (f.type === 'car') s += '_' + f.col; return s;
   }
-  function drawGuy(p, X, Y) {
-    const x = Math.round(X), y = Math.round(Y);
-    if (p.out) { if (p.hidden) return; const c = p.col || P.YE; line(x - 5, y - 4, x + 5, y + 4, c); line(x - 5, y + 4, x + 5, y - 4, c); line(x - 4, y - 4, x + 4, y + 4, P.BR); rect(x - 1, y - 1, 3, 3, P.K); return; }
-    const ph = (p.walk * 8 | 0) % 2, dx = Math.round(Math.cos(p.dir) * 5), dy = Math.round(Math.sin(p.dir) * 5);
-    if (p.kind === 'max') {
-      const c = max.disguised ? P.YE : P.K; rect(x - 3, y - 4, 7, 9, c); rect(x - 2, y - 3, 5, 7, max.crouch ? P.K : P.G1); rect(x - 1, y - 2, 3, 3, P.BR);
-      if (!max.crouch) { line(x, y, x + dx, y + dy, P.K); px(x + dx, y + dy, max.cool > (max.gun === 'uzi' ? 0.15 : 0.4) ? P.W : P.G3); }
-    } else {
-      const c = p.col || P.YE, shade = p.kind === 'guard' ? P.GR : P.G1;
-      rect(x - 4, y - 4, 9, 9, c); rect(x + 2, y - 3, 2, 7, shade); rect(x - 2, y - 2, 5, 5, P.K); px(x, y - 1, p.kind === 'guard' ? P.G1 : P.BR);
-      if (p.kind === 'guard') { px(x + Math.round(dx * 0.8), y + Math.round(dy * 0.8), P.PK); line(x + Math.round(dx * 0.8), y + Math.round(dy * 0.8), x + dx + Math.sign(dx), y + dy + Math.sign(dy), P.K); if (p.state === 'attack' && p.cool > 1) { px(x + dx * 2, y + dy * 2, P.YE); px(x + dx * 2 + 1, y + dy * 2, P.W); } }
-      px(ph ? x - 4 : x + 4, y + 4, c);
-      if (p.stun > 0) px(x, y - 7, (t * 6 | 0) % 2 ? P.YE : P.W);
-      if (p === target && p.state === 'seated') rect(x - 1, y - 8, 3, 1, P.YE);
-    }
+  function wallSide(f) { const r = B.rooms[f.room]; if (!r || r.kind === 'street') return 'N'; if (f.y === r.y) return 'N'; if (f.y + f.h === r.y + r.h) return 'S'; if (f.x === r.x) return 'W'; if (f.x + f.w === r.x + r.w) return 'E'; return 'N'; }
+  const WALLED = { file: 1, wallsafe: 1, picture: 1, typewriter: 1, terminal: 1, toilet: 1, sink: 1, computer: 1, couch: 1 };
+  // run fn in the furniture's own frame: canonical sprite coordinates, turned to face away from its wall
+  function inFurnFrame(f, v, fn) {
+    const S = v.S, X = v.ox + f.x * S, Y = v.oy + f.y * S, w = f.w * S, h = f.h * S;
+    let side = WALLED[f.type] ? wallSide(f) : f.type === 'lamp' && f.y > B.MH / 2 ? 'S' : 'N'; if (w !== h && (side === 'E' || side === 'W')) side = 'N';
+    g.save();
+    if (f.type === 'car' && f.x % 2) { g.translate(X + w, Y); g.scale(-1, 1); }
+    else if (side === 'N') g.translate(X, Y);
+    else { g.translate(X + w / 2, Y + h / 2); g.rotate({ E: Math.PI / 2, S: Math.PI, W: -Math.PI / 2 }[side]); g.translate(-w / 2, -h / 2); }
+    fn(w, h); g.restore();
+  }
+  function drawFurn(f, v) { const spr = biX_furn(f.type, v.S, furnState(f)); inFurnFrame(f, v, () => g.drawImage(spr, 0, 0)); }
+  // the moving parts: tape reels, lamp panels, terminal cursors
+  function animFurn(f, v) {
+    const S = v.S;
+    if (f.type === 'computer') inFurnFrame(f, v, (w, h) => {
+      const L = biX_mfLayout(w, h);
+      L.reels.forEach((r, i) => { const a = t * (i ? 4.2 : -3.4); for (const s of [0, 2.1, 4.2]) px(r.x + Math.round(Math.cos(a + s) * (r.r - 1)), r.y + Math.round(Math.sin(a + s) * (r.r - 1)), P.G3); });
+      const ph = t * 4 | 0;
+      for (let yy = L.py + 1; yy < L.py + L.ph - 1; yy += 2) for (let xx = L.px + 1; xx < L.px + L.pw - 1; xx += 2) if (biX_hash(xx * 7 + yy, ph + ((xx * 3 + yy) >> 2), 8) < 0.45) px(xx, yy, [P.RD2, P.GR2, P.YE, P.W][(xx + yy * 3) % 4]);
+    });
+    if (f.type === 'terminal') inFurnFrame(f, v, () => {
+      const cx = Math.round(S * 0.14), cw = S - 2 * cx, ch = Math.max(4, Math.round(S * 0.56));
+      const lines = Math.max(1, Math.floor((ch - 6) / 2) + 1), ln = (t * 1.5 | 0) % lines, y = 3 + ln * 2;
+      if (y < ch - 2) { const n = Math.max(1, cw - 6); rect(cx + 3, y, Math.min(n, 1 + ((t * 8 | 0) % n)), 1, P.GR2); if ((t * 3 | 0) % 2) px(cx + 3 + Math.min(n - 1, (t * 8 | 0) % n), y, P.W); }
+    });
+  }
+  // ---------- people ----------
+  const bigOf = S => S >= 10;
+  const faceOf = a => ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
+  function look(p) {
+    if (p === max) { const d = max.disguised; return { uni: d ? uniC : P.K, head: d ? 'cap' : 'hood', hair: P.K, arms: 'gun', gun: max.gun, mask: kit.gasmask && clouds.length > 0, strap: !d }; }
+    if (p.kind === 'guard') return { uni: p.col || uniC, head: 'cap', hair: P.K, arms: 'gun', gun: 'pistol', mask: !!p.gasmask && clouds.length > 0 };
+    if (p.kind === 'ward') return { uni: P.W, head: 'hair', hair: P.G1, arms: 'side', stripes: true };
+    const fc = p === target && occupant && occupant.face || {};
+    return { uni: p.col || P.W, head: 'hair', hair: fc.hair || P.BR, skin: fc.skin, pants: P.K, arms: (p.state === 'cower' || p.state === 'captive') ? 'up' : 'side' };
+  }
+  function muzzle(x, y) { const f = (t * 30 | 0) % 2; px(x, y, P.W); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) px(x + dx, y + dy, P.YE); if (f) for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) px(x + dx, y + dy, P.RD2); else for (const [dx, dy] of [[1, 1], [-1, -1], [1, -1], [-1, 1]]) px(x + dx, y + dy, P.RD2); }
+  function stars(x, y) { for (let i = 0; i < 3; i++) { const a = t * 5 + i * 2.1, sx = x + Math.round(Math.cos(a) * 5), sy = y + Math.round(Math.sin(a) * 2); px(sx, sy, P.W); if (((t * 8) | 0) % 2 === i % 2) { px(sx - 1, sy, P.YE); px(sx + 1, sy, P.YE); px(sx, sy - 1, P.YE); px(sx, sy + 1, P.YE); } } }
+  const MARK = ['kkkkkkk', 'kYYYYYk', '.kYYYk.', '..kYk..', '...k...'];
+  function drawGuy(p, X, Y, S) {
+    const x = Math.round(X), y = Math.round(Y), big = bigOf(S), L = look(p);
+    if (p.out) { if (p.hidden) return; const spr = biX_body(Object.assign({ big, flip: Math.cos(p.dir) < 0 }, L)); g.drawImage(spr, x - (spr.width >> 1), y - (spr.height >> 1)); return; }
+    if (p._lw !== p.walk) { p._lw = p.walk; p._mt = t; }
+    const moving = t - (p._mt === undefined ? -9 : p._mt) < 0.12, frame = moving ? 1 + ((p.walk * 6 | 0) % 2) : 0;
+    const crouch = (p === max && max.crouch) || (p.state === 'seated' && (p === target || p === ward)), face = faceOf(p.dir);
+    const spr = biX_person(Object.assign({ big, face, frame, crouch }, L)), top = y - (big ? 11 : 8);
+    // a soft shadow on the floor under the feet
+    const sw = big ? 9 : 7, fy = top + spr.height - 1; for (let i = 0; i < sw; i++) if ((i + fy) & 1) px(x - (sw >> 1) + i, fy, P.K);
+    g.drawImage(spr, x - (spr.width >> 1), top);
+    const fl = p === max ? max.fl : p.fl;
+    if (L.arms === 'gun' && fl !== undefined && t - fl < 0.07) { const c = Math.cos(p.dir), s = Math.sin(p.dir), r = big ? 8 : 6; muzzle(x + Math.round(c * r), y + Math.round(s * r) - (big ? 2 : 1) + (crouch ? 2 : 0)); }
+    if (p.stun > 0 || (p === max && max.stun > 0)) stars(x, top - 1);
+    if (p === target && p.state === 'seated') biX_put('mark', MARK, { k: P.K, Y: P.YE }, x - 3, top - 6 - ((t * 3 | 0) % 2));
   }
   scene.draw = function () {
     // left: black/blue scan-lines; right: blue panel; white divider
@@ -513,30 +1254,62 @@ function breakinScene(opts, done) {
     drawEquip();
     drawBuildingWindow(179, 99, 122, 98);
     if (!entryDoor) { drawDoorMenu(); postFlash(); return; }
-    const v = roomView(), r = v.r;
+    const v = roomView(), r = v.r, S = v.S, X0 = v.ox + r.x * S, Y0 = v.oy + r.y * S;
     drawRoom(v);
-    for (const f of F) if (f.room === r.id) drawFurn(f, v);
-    for (const tr of traps) if (roomOf(tr.x, tr.y) === r.id) { const X = v.sx(tr.x), Y = v.sy(tr.y); rect(X - 1, Y - 1, 3, 3, P.K); px(X, Y, GREN[tr.type].col); if ((t * 3 | 0) % 2) px(X, Y - 2, tr.kind === 'booby' ? P.RD2 : P.CY); }
-    for (const c of clouds) if (c.room === r.id) { const cr = c.r / TS * v.S; dither(v.sx(c.x) - cr, v.sy(c.y) - cr, cr * 2, cr * 2, 'rgba(0,0,0,0)', P.GR2, 6); }
-    const here = people.filter(p => roomOf(p.x, p.y) === r.id || p === max.prisoner).concat([max]).sort((a, b) => a.y - b.y);
-    for (const p of here) drawGuy(p, v.sx(p.x), v.sy(p.y));
-    for (const b of bullets) if (roomOf(b.x, b.y) === r.id) rect(v.sx(b.x), v.sy(b.y), 1, 1, b.mine ? P.W : P.YE);
-    for (const gr of grenades) if (roomOf(gr.x, gr.y) === r.id) rect(v.sx(gr.x) - 1, v.sy(gr.y) - gr.z - 1, 3, 3, GREN[gr.type].col);
-    for (const e of fx) { const X = v.sx(e.x), Y = v.sy(e.y); if (e.k === 'boom') { disc(X, Y, 6 + (0.5 - e.t) * 40, e.type === 'frag' ? P.RD2 : P.W); disc(X, Y, 5, P.YE); } else px(X, Y, e.k === 'hit' ? P.RD2 : P.YE); }
-    if (max.busy) { const X = v.sx(max.x), Y = v.sy(max.y); rect(X - 8, Y - 10, 16, 2, P.K); rect(X - 8, Y - 10, 16 * max.busy.t / max.busy.need, 2, P.GR2); }
+    for (const f of roomF[r.id]) if (f.type === 'computer' || f.type === 'terminal') animFurn(f, v);
+    for (const tr of traps) if (roomOf(tr.x, tr.y) === r.id) {
+      const X = Math.round(v.sx(tr.x)), Y = Math.round(v.sy(tr.y));
+      if (tr.kind === 'booby') for (let i = 3; i < 8; i += 2) px(X + i, Y + 1, P.G3);
+      biX_put('gr_' + tr.type, biX_GREN, biX_grenMap(GREN[tr.type].col), X - 2, Y - 2);
+      if ((t * 3 | 0) % 2) { px(X, Y - 3, tr.kind === 'booby' ? P.RD2 : P.CY); px(X + 1, Y - 3, P.K); }
+    }
+    if (clouds.some(c => c.room === r.id)) {
+      g.save(); g.beginPath(); g.rect(X0, Y0, r.w * S, r.h * S); g.clip();
+      for (const c of clouds) if (c.room === r.id) { const rad = Math.max(3, Math.round(c.r / TS * S / 3) * 3), spr = biX_gas(rad, (t * 2.5 | 0) % 6); g.drawImage(spr, Math.round(v.sx(c.x)) - rad, Math.round(v.sy(c.y)) - rad); }
+      g.restore();
+    }
+    const here = people.filter(p => roomOf(p.x, p.y) === r.id || p === max.prisoner).concat([max]);
+    for (const p of here) if (p.out) drawGuy(p, v.sx(p.x), v.sy(p.y), S);
+    const tall = roomF[r.id].filter(f => !FURN[f.type].flat && f.type !== 'chair');
+    for (const p of here.filter(p => !p.out).sort((a, b) => a.y - b.y)) {
+      const X = v.sx(p.x), Y = v.sy(p.y); drawGuy(p, X, Y, S);
+      // whoever stands just north of a desk or cabinet disappears behind it
+      const hw = bigOf(S) ? 8 : 6;
+      for (const f of tall) { const fx0 = v.ox + f.x * S, fy0 = v.oy + f.y * S; if (fy0 > Y && fy0 < Y + 9 && fx0 < X + hw && fx0 + f.w * S > X - hw) { drawFurn(f, v); animFurn(f, v); } }
+    }
+    for (const b of bullets) if (roomOf(b.x, b.y) === r.id) { const X = Math.round(v.sx(b.x)), Y = Math.round(v.sy(b.y)), l = Math.hypot(b.vx, b.vy) || 1, tl = Math.max(2, S * 0.3); line(X - b.vx / l * tl, Y - b.vy / l * tl, X, Y, b.mine ? P.YE : P.RD2); px(X, Y, P.W); }
+    for (const gr of grenades) if (roomOf(gr.x, gr.y) === r.id) {
+      const X = Math.round(v.sx(gr.x)), Y = Math.round(v.sy(gr.y)), z = Math.round(gr.z);
+      rect(X - 1, Y + 1, 3, 1, P.K);
+      if (gr.t < 1) for (const dk of [0.1, 0.2, 0.3]) { const kk = gr.t - dk; if (kk <= 0) continue; px(Math.round(v.sx(gr.sx + (gr.tx - gr.sx) * kk)), Math.round(v.sy(gr.sy + (gr.ty - gr.sy) * kk) - Math.sin(kk * Math.PI) * 10), dk < 0.15 ? P.G3 : P.G1); }
+      biX_put('gr_' + gr.type, biX_GREN, biX_grenMap(GREN[gr.type].col), X - 2, Y - z - 2);
+      if (gr.t >= 1 && (t * 12 | 0) % 2) px(X, Y - z - 3, P.YE);
+    }
+    g.save(); g.beginPath(); g.rect(X0 - 4, Y0 - 4, r.w * S + 8, r.h * S + 8); g.clip();
+    for (const e of fx) {
+      const X = Math.round(v.sx(e.x)), Y = Math.round(v.sy(e.y));
+      if (e.k === 'boom') {
+        const age = 0.5 - e.t, fi = Math.max(0, Math.min(7, Math.floor(age / 0.5 * 8))), rad = Math.max(8, Math.round(26 / TS * S * 0.8));
+        const spr = biX_boom(e.type === 'frag' ? 'frag' : 'stun', fi, rad); g.drawImage(spr, X - rad, Y - rad);
+        if (e.type === 'frag') for (let i = 0; i < 14; i++) { const a = i * 2.4 + biX_hash(i, X, 15) * 0.8, sp = (0.5 + biX_hash(i, Y, 14) * 0.9) * rad * 1.5, d = sp * Math.min(1, age * 3.2), lift = Math.sin(Math.min(1, age * 2.4) * Math.PI) * 4; px(X + Math.cos(a) * d, Y + Math.sin(a) * d - lift, [P.G3, P.BR, P.K, P.YE, P.W][i % 5]); if (i % 3 === 0) px(X + Math.cos(a) * d + 1, Y + Math.sin(a) * d - lift, P.K); }
+      } else if (e.k === 'hit') { px(X, Y, P.RD2); px(X + 1, Y - 1, P.RD); px(X - 1, Y + 1, P.RD); px(X + 1, Y + 1, P.RD2); px(X - 1, Y - 1, P.RD); }
+      else { px(X, Y, P.W); if (e.t > 0.05) { px(X - 1, Y - 1, P.YE); px(X + 1, Y - 1, P.YE); px(X, Y - 2, P.YE); } }
+    }
+    g.restore();
+    if (max.busy) { const X = Math.round(v.sx(max.x)), Y = Math.round(v.sy(max.y)); rect(X - 9, Y - 13, 18, 4, P.K); rect(X - 8, Y - 12, 16, 2, P.G1); const n = Math.round(16 * Math.min(1, max.busy.t / max.busy.need)); rect(X - 8, Y - 12, n, 2, P.GR); rect(X - 8, Y - 12, n, 1, P.GR2); }
     const tgt = people.find(p => p.kind === 'guard' && !p.out && roomOf(p.x, p.y) === r.id && Math.abs(Math.atan2(Math.sin(Math.atan2(p.y - max.y, p.x - max.x) - max.dir), Math.cos(Math.atan2(p.y - max.y, p.x - max.x) - max.dir))) < 0.3 && los(max.x, max.y, p.x, p.y));
     // Max portrait, x0..24 y0..39
-    rect(0, 0, 25, 40, P.G3); rect(1, 1, 23, 38, P.BL2); drawMaxSide(3, 10, tgt);
-    if (max.stun > 0 || max.gassed > 0.4) { const k = Math.min(1, Math.max(max.stun / 6, max.gassed / 2.5)); rect(1, 1 + 38 * (1 - k), 23, 38 * k, max.gassed > 0.4 ? P.BR : P.G1); }
+    rect(0, 0, 25, 40, P.G3); g.drawImage(sideBackdrop(), 1, 1); drawMaxSide(3, 10, tgt);
+    if (max.stun > 0 || max.gassed > 0.4) { const k = Math.min(1, Math.max(max.stun / 6, max.gassed / 2.5)), y0 = 1 + Math.round(38 * (1 - k)), c = max.gassed > 0.4 ? P.GR : P.G1; for (let y = y0; y < 39; y++) for (let x = 1; x < 24; x++) if (biX_bay(x, y) < 9) px(x, y, c); }
     // information bar, x26..170 y0..18
-    rect(26, 0, 145, 19, P.G3); rect(27, 1, 142, 17, P.BL); rect(169, 1, 1, 17, P.K);
+    rect(26, 0, 145, 19, P.G3); rect(26, 0, 145, 1, P.W); rect(26, 0, 1, 19, P.W); rect(27, 1, 142, 17, P.BL); rect(169, 1, 1, 17, P.K); rect(27, 18, 143, 1, P.G1);
     text(fitText(ROOM_NAMES[r.kind], 78), 30, 2, P.W);
     const hh = Math.floor(clock / 3600) % 24, mm = Math.floor(clock / 60) % 60, ss = Math.floor(clock) % 60;
     if (max.disguised || max.gassed > 0.4) text(max.gassed > 0.4 ? 'GAS' : 'Disguise', 102, 2, P.RD2);
     textR([hh, mm, ss].map(v2 => String(v2).padStart(2, '0')).join(':'), 167, 2, P.W);
     textC(fitText(msg, 138), 98, 10, P.W);
     if (msgLong()) { const ls = wrap(msg, 146); msgBox(12, 20, 150, ls.length * 8 + 6); ls.forEach((l, i) => text(l, 16, 23 + i * 8, P.W)); }
-    if (alarm && mode === 'breakin' && (t * 4 | 0) % 2) { frame(v.ox + r.x * v.S - 5, v.oy + r.y * v.S - 5, r.w * v.S + 10, r.h * v.S + 10, P.RD2); }
+    if (alarm && mode === 'breakin' && (t * 4 | 0) % 2) { frame(X0 - 5, Y0 - 5, r.w * S + 10, r.h * S + 10, P.RD2); frame(X0 - 6, Y0 - 6, r.w * S + 12, r.h * S + 12, P.RD); }
     if (comp) drawComputer();
     if (over) drawOver();
     if (pauseMenu) { msgBox(30, 40, 136, 18 + pauseMenu.items.length * 8); text(pauseTitle, 36, 43, P.W); pauseMenu.draw(); }
@@ -548,35 +1321,30 @@ function breakinScene(opts, done) {
     if (hitFlash <= 0) return; hitFlash--;
     const d = g.getImageData(0, 0, W, H), a = d.data; for (let i = 0; i < a.length; i += 4) if (a[i] === 0xAA && a[i + 1] === 0xAA && a[i + 2] === 0xAA) { a[i] = 0xFF; a[i + 1] = 0x55; a[i + 2] = 0x55; } g.putImageData(d, 0, 0);
   }
+  // ---------- Max, side view (top-left box) ----------
+  const sideBackdrop = () => sprite('biX_sidebg', 23, 38, () => {
+    for (let y = 0; y < 31; y++) for (let x = 0; x < 23; x++) px(x, y, biX_bay(x, y) < y / 2 ? P.BL : P.BL2);
+    rect(0, 31, 23, 1, P.W); rect(0, 32, 23, 1, P.G3);
+    for (let y = 33; y < 38; y++) for (let x = 0; x < 23; x++) px(x, y, (x + y * 2) % 7 === 0 ? P.G1 : biX_bay(x, y) < 4 ? P.G1 : P.G3);
+  });
   function drawMaxSide(x, y, tgt) {
-    const mv = input.axis(); const walk = (mv.x || mv.y) ? (t * 6 | 0) % 2 : 0; const top = max.crouch ? 8 : 0;
-    rect(x + 7, y + top, 5, 5, P.RD2); rect(x + 7, y + top, 5, 2, P.BR); rect(x + 11, y + 2 + top, 1, 2, P.RD);
-    rect(x + 5, y + 5 + top, 9, 11 - top / 2, max.disguised ? P.YE : P.K); rect(x + 6, y + 6 + top, 2, 8, P.G1); rect(x + 13, y + 7 + top, 5, 2, P.K); rect(x + 17, y + 6 + top, 3, 2, P.G3);
-    if (!max.crouch) { rect(x + 6, y + 16, 3, 10 - walk, P.K); rect(x + 10, y + 16, 3, 9 + walk, P.K); } else rect(x + 5, y + 18, 11, 6, P.K);
-    if (tgt) { const q = Math.min(1, (0.3 + sk * 0.2) * (max.gun === 'uzi' ? 1.4 : 1)); const col = q > 0.8 ? P.W : q > 0.5 ? P.G3 : q > 0.3 ? P.G1 : P.K; frame(x + 5, y + 2, 9, 9, col); px(x + 9, y + 6, col); }
+    const mv = input.axis(); const moving = (mv.x || mv.y) && !max.busy && max.stun <= 0 && !comp; const fr = moving ? 1 + ((t * 6 | 0) % 2) : 0;
+    const map = biX_maxMap(max.disguised, uniC), key = max.disguised ? 'd' + uniC : 'n';
+    const top = max.crouch ? 5 : 0;
+    biX_put('mxT' + key, biX_MAX_TOP, map, x, y + top);
+    if (max.crouch) biX_put('mxC' + key, biX_MAX_CROUCH, map, x, y + top + 19);
+    else biX_put('mxL' + fr + key, biX_MAX_LEGS[fr], map, x, y + 19);
+    if (max.gun === 'uzi') { rect(x + 16, y + top + 15, 2, 3, P.K); px(x + 16, y + top + 15, P.G1); rect(x + 12, y + top + 11, 3, 1, P.K); }
+    if (max.fl !== undefined && t - max.fl < 0.07) { px(x + 21, y + top + 13, P.W); px(x + 22, y + top + 13, P.YE); px(x + 21, y + top + 12, P.YE); px(x + 21, y + top + 14, P.YE); }
+    if (kit.gasmask && clouds.length) { rect(x + 9, y + top + 6, 5, 3, P.G3); px(x + 11, y + top + 6, P.CY); rect(x + 10, y + top + 9, 3, 2, P.G1); }
+    if (tgt) {
+      const q = Math.min(1, (0.3 + sk * 0.2) * (max.gun === 'uzi' ? 1.4 : 1)); const col = q > 0.8 ? P.W : q > 0.5 ? P.G3 : q > 0.3 ? P.G1 : P.K;
+      const cx = 19, cy = 5; for (const [dx, dy] of [[-3, -1], [-3, 0], [-3, 1], [3, -1], [3, 0], [3, 1], [-1, -3], [0, -3], [1, -3], [-1, 3], [0, 3], [1, 3]]) px(cx + dx, cy + dy, col);
+      px(cx, cy, (t * 4 | 0) % 2 ? P.RD2 : col); px(cx - 2, cy - 2, col); px(cx + 2, cy - 2, col); px(cx - 2, cy + 2, col); px(cx + 2, cy + 2, col);
+    }
   }
-  function drawEquip() {
-    // Max's silhouette: dark gray / blue stripes, brown lit edge
-    const sil = (y) => { if (y < 26) return [262, 286]; if (y < 34) return [266, 282]; return [248 - Math.min(6, (y - 34) / 8), 310]; };
-    for (let y = 0; y < H; y++) { const [a, b] = sil(y); rect(a, y, b - a, 1, y % 2 ? P.G1 : P.BL); px(a, y, P.BR); }
-    rect(240, 36, 12, 8, P.G1);
-    if (kit.kevlar) { rect(252, 30, 48, 66, P.G3); dither(252, 30, 48, 66, P.G3, P.G1, 5); rect(266, 30, 20, 10, P.BL); for (let i = 0; i < max.hits; i++) { const hx = 262 + (i * 17) % 30, hy = 50 + (i * 11) % 30; px(hx, hy, P.K); px(hx - 1, hy - 1, P.G1); px(hx + 1, hy + 1, P.G1); px(hx + 1, hy - 1, P.K); } }
-    else for (let i = 0; i < max.hits; i++) rect(266 + i * 8, 56, 4, 4, P.RD2);
-    if (kit.gasmask) { rect(266, 12, 20, 10, P.G3); disc(276, 17, 3, P.BR); disc(276, 17, 1, P.YE); }
-    if (kit.detector) { rect(262, 6, 2, 12, P.YE); rect(288, 6, 2, 12, P.YE); rect(263, 3, 26, 2, P.YE); }
-    // the gun, held at shoulder height
-    if (max.gun === 'uzi') { rect(178, 44, 54, 7, P.K); rect(184, 45, 44, 2, P.G1); rect(200, 51, 6, 8, P.K); rect(214, 51, 5, 10, P.G1); } else { rect(186, 44, 40, 6, P.K); rect(190, 45, 32, 2, P.G1); rect(206, 50, 6, 8, P.K); }
-    px(max.gun === 'uzi' ? 178 : 186, 46, P.G3); rect(226, 44, 18, 4, P.G1);
-    // grenade rack
-    rect(177, 2, 57, 15, P.BL2); ['frag', 'stun', 'gas'].forEach((k2, row) => { const y = 3 + row * 5; if (max.gtype === k2) rect(177, y - 1, 57, 5, P.CY); for (let n = 0; n < Math.min(8, max.gren[k2]); n++) { rect(179 + n * 7, y, 5, 4, P.K); rect(180 + n * 7, y, 3, 3, GREN[k2].col); } });
-    // bugs
-    for (let n = 0; n < max.bugs; n++) { const bx = 236 + (n % 2) * 9, by = 8 + Math.floor(n / 2) * 8; rect(bx, by, 7, 5, P.RD); rect(bx + 1, by + 1, 5, 3, P.RD2); }
-    // bullets and magazines
-    for (let n = 0; n < max.clip; n++) { rect(178 + n * 5, 71, 3, 6, P.W); rect(178 + n * 5, 75, 3, 2, P.G1); }
-    for (let n = 0; n < Math.min(4, max.clips); n++) { rect(178 + n * 10, 80, 7, 14, P.G3); for (let k2 = 0; k2 < 7; k2++) rect(178 + n * 10, 81 + k2 * 2, 7, 1, P.G1); }
-    if (kit.camera) { rect(226, 73, 19, 11, P.W); rect(227, 74, 17, 2, P.G3); disc(235, 79, 3, P.TL); rect(223, 86, 14, 8, P.K); text(String(max.film).padStart(2, '0'), 224, 86, P.GR2); rect(238, 86, 6, 6, P.BL2); }
-    if (kit.safekit) { rect(248, 73, 45, 24, P.K); frame(248, 73, 45, 24, P.G3); textC('SAFE', 270, 74, P.G1); textC('CRACKING', 270, 81, P.G1); textC('KIT', 270, 88, P.G1); }
-  }
+  // ---------- Equipment Display: the kit on Max's silhouette ----------
+  const drawEquip = () => biX_equip(kit, max, t);
   function drawBuildingWindow(x, y, w, h) {
     frame(x, y, w, h, P.G3); rect(x + 1, y + 1, w - 2, h - 2, P.K);
     const sc = Math.min((w - 6) / B.bw, (h - 6) / B.bh), ox = x + 3 - B.bx * sc + ((w - 6) - B.bw * sc) / 2, oy = y + 3 - B.by * sc;
@@ -589,13 +1357,22 @@ function breakinScene(opts, done) {
   const doorMenu = B.outer.length && Menu(B.outer.map((d, i) => ({ label: 'Door #' + (i + 1), go: () => enterAt(d) })), 46, 70, 80);
   function drawDoorMenu() { msgBox(28, 58, 110, 16 + B.outer.length * 8); text('Which door?', 34, 61, P.W); doorMenu.draw(); const sc = Math.min(116 / B.bw, 92 / B.bh), ox = 182 - B.bx * sc + (116 - B.bw * sc) / 2, oy = 102 - B.by * sc; B.outer.forEach((d, i) => text(String(i + 1), ox + d.x * sc - 2, oy + d.y * sc - 4, P.YE, P.K)); }
   function drawComputer() {
-    rect(VX0, VY0 - 20, VX1 - VX0, VY1 - VY0 + 26, P.K); frame(VX0, VY0 - 20, VX1 - VX0, VY1 - VY0 + 26, P.CY);
+    const x0 = VX0, y0 = VY0 - 20, w = VX1 - VX0, h = VY1 - VY0 + 26;
+    rect(x0, y0, w, h, P.K); frame(x0, y0, w, h, P.G3); frame(x0 + 1, y0 + 1, w - 2, h - 2, P.G1); rect(x0 + 1, y0 + 1, w - 2, 1, P.W);
+    px(x0 + 3, y0 + 3, P.G1); px(x0 + 4, y0 + 3, P.G1); px(x0 + 3, y0 + 4, P.G1);
     let y = VY0 - 16; for (const l of comp.lines) { y = para(l, VX0 + 4, y, VX1 - VX0 - 8, P.GR2, 8) + 1; if (y > VY0 + 70) break; }
     const prompt = comp.stage === 'pw' ? 'PASSWORD: ' : 'SEARCH: ';
     if (comp.stage !== 'result') text(prompt + comp.input + ((t * 3 | 0) % 2 ? '_' : ''), VX0 + 4, VY0 + 76, P.YE);
     else text(comp.last ? 'Enter: log off' : 'Type again, or Esc: log off', VX0 + 4, VY0 + 76, P.G3);
+    if ((t * 2 | 0) % 2) px(x0 + w - 6, y0 + h - 5, P.GR2); rect(x0 + w - 12, y0 + h - 5, 4, 1, P.G1);
+    // the keyboard
+    rect(8, 145, 157, 40, P.K); rect(9, 146, 155, 38, P.G1); rect(9, 146, 155, 1, P.G3);
     const K = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (let i = 0; i < 29; i++) { const x = 10 + (i % 13) * 12, yy = 148 + Math.floor(i / 13) * 12; rect(x, yy, 11, 11, i < 26 ? P.GR : P.G1); textC(i < 26 ? K[i] : ['_', '<', 'OK'][i - 26], x + 5, yy + 2, i < 26 ? P.K : P.W); }
+    for (let i = 0; i < 29; i++) {
+      const x = 10 + (i % 13) * 12, yy = 148 + Math.floor(i / 13) * 12, sp = i >= 26, ok = i === 28, kw = ok ? 34 : 10;
+      rect(x, yy, kw + 1, 11, P.K); bevel(x, yy, kw, 10, ok ? P.GR : sp ? P.G1 : P.G3, ok ? P.GR2 : sp ? P.G3 : P.W, ok ? P.K : sp ? P.K : P.G1);
+      textC(i < 26 ? K[i] : ['_', '<', 'ENTER'][i - 26], x + (kw >> 1), yy + 2, sp && !ok ? P.W : P.K);
+    }
   }
   function drawOver() {
     const k = over.kind; const lines = [{ escaped: mode === 'street' ? 'You sprint off down the street and lose them.' : 'You quickly slip out of the building.', captured: 'You slump to the ground, overcome by your wounds.', abort: mode === 'breakin' ? 'You abandon the mission.' : 'You run for it.', held: 'The last raider goes down. The prisoner stays behind bars.', freed: 'The raiders reach the cell and spirit the prisoner away.', won: 'The hit squad is down. The street goes quiet.' }[k]];
@@ -666,40 +1443,71 @@ function armoryScene(start) {
     onKey(k) { if (k === 'up') nav(0, -1); else if (k === 'down') nav(0, 1); else if (k === 'left') nav(-1, 0); else if (k === 'right') nav(1, 0); else if (k === 'select' || k === 'fire') toggle(); else if (k === 'menu' || k === 'alt2') go_(); },
     onTap(x, y) { const i = slots.findIndex(s => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h + 12); if (i >= 0) { sel = i; toggle(); return; } if (y > 178 && x > 240) go_(); },
     draw() {
-      rect(0, 0, W, H, P.K); rect(0, 0, 160, 172, P.BL2); rect(74, 0, 2, 172, P.K); rect(158, 0, 2, 172, P.K);
+      const t = this.t;
+      g.drawImage(biX_armoryBg(slots), 0, 0);
       slots.forEach((s, i) => {
-        const on = i === sel, y0 = s.y + 8; rect(s.x, y0, s.w, s.h, on ? P.CY : P.BL); if (on) dither(s.x, y0, s.w, s.h, P.CY, P.W, 3);
-        rect(s.x, y0 + s.h, s.w, 3, P.BR); rect(s.x, y0 + s.h + 3, s.w, 1, P.K);
-        if (s.label) textC(s.label, s.x + s.w / 2, s.y, P.W);
-        if (s.k === 'detector') { rect(s.x, s.y + 8, s.w, 9, P.BL2); textC('DETECTOR', s.x + s.w / 2, s.y + 8, P.W); }
+        const on = i === sel, y0 = s.y + 8;
+        if (on) { for (let y = y0 + 1; y < y0 + s.h; y++) for (let x = s.x + 1; x < s.x + s.w - 1; x++) if (biX_bay(x, y) < 3) px(x, y, P.BL2); }
         if (!taken[s.k]) armoryItem(s.k, s.x + s.w / 2, y0 + s.h);
+        else { const cx = Math.round(s.x + s.w / 2), cy = Math.round(y0 + s.h / 2) - 3; const tw = textW('TAKEN') + 6; rect(cx - (tw >> 1), cy, tw, 10, P.K); frame(cx - (tw >> 1), cy, tw, 10, P.G1); textC('TAKEN', cx, cy + 1, P.G3); }
+        if (on) { const c = (t * 4 | 0) % 2 ? P.YE : P.W; frame(s.x - 1, y0 - 1, s.w + 2, s.h + 2, c); frame(s.x, y0, s.w, s.h, P.K); }
+        const lc = on ? P.YE : P.W, lx = s.x + s.w / 2;
+        if (s.k === 'gasmask') { textC('GAS', lx, 4, lc, P.K); textC('MASK', lx, 12, lc, P.K); }
+        else if (s.label) textC(s.k === 'safekit' ? 'SAFECRACKING' : s.label, lx, s.y, lc, P.K);
+        if (s.k === 'detector') textC('SENSOR', lx, s.y + 8, lc, P.K);
       });
-      const cx = 238;
-      for (let yy = 0; yy < 162; yy += 2) { const w = yy < 26 ? 16 : yy < 34 ? 10 : Math.min(58, 36 + (yy - 34) / 2); rect(cx - w / 2, 6 + yy, w, 1, P.BL); }
-      rect(cx - 70, 44, 50, 3, P.BL); rect(cx - 96, 40, 30, 5, P.G3); rect(cx - 88, 45, 5, 8, P.G3); if (taken.uzi) { rect(cx - 104, 38, 44, 6, P.G1); rect(cx - 84, 44, 5, 12, P.G1); }
-      for (let n = 0; n < 6; n++) rect(cx - 90 + n * 5, 70, 3, 8, P.YE); for (let n = 0; n < 3; n++) rect(cx - 90 + n * 10, 82, 7, 12, P.G3);
-      if (taken.kevlar) { rect(cx - 20, 48, 42, 50, P.G1); for (let i = 0; i < 6; i++) rect(cx - 16, 52 + i * 8, 34, 1, P.G3); }
-      if (taken.gasmask) { rect(cx - 9, 14, 18, 10, P.G3); disc(cx, 22, 3, P.K); }
-      if (taken.detector) { rect(cx - 13, 8, 3, 14, P.YE); rect(cx + 11, 8, 3, 14, P.YE); rect(cx - 12, 4, 25, 2, P.YE); }
-      if (taken.camera) { rect(cx + 24, 60, 14, 9, P.G3); disc(cx + 31, 64, 3, P.K); }
-      if (taken.safekit) { rect(cx - 20, 110, 40, 18, P.G1); frame(cx - 20, 110, 40, 18, P.G3); text('KIT', cx - 7, 115, P.W); }
-      ['frag', 'stun', 'gas'].forEach((k, r) => { if (taken[k]) for (let n = 0; n < 4; n++) disc(cx - 104 + n * 7, 104 + r * 8, 2, GREN[k].col); });
-      if (taken.bugs) for (let n = 0; n < 4; n++) disc(cx + 30 + n * 6, 130, 2, P.RD);
+      // right: Max's silhouette carrying what has been picked so far
+      const k = kit(), m = { gun: taken.uzi ? 'uzi' : 'pistol', hits: 0, gren: { frag: k.frag, stun: k.stun, gas: k.gas }, gtype: k.stun ? 'stun' : k.gas ? 'gas' : k.frag ? 'frag' : 'stun', bugs: k.bugs, clip: 6, clips: 3, film: 36 };
+      rect(160, 0, 160, 172, P.BL);
+      g.save(); g.translate(-9, 40); biX_equip(k, m, t); g.restore();
+      rect(162, 2, 156, 34, P.K); frame(162, 2, 156, 34, P.G1); rect(163, 3, 154, 1, P.G3);
+      textC('EQUIPMENT ROOM', 240, 7, P.YE, P.K); textC('Choose up to five items', 240, 17, P.G3); textC('for the break-in.', 240, 25, P.G3);
+      for (let n = 0; n < 5; n++) { const x = 170 + n * 9, on = n < used(); rect(x, 158, 7, 7, P.K); rect(x + 1, 159, 5, 5, on ? P.YE : P.G1); if (on) px(x + 1, 159, P.W); }
+      text(used() + ' of 5', 218, 158, P.W);
+      rect(0, 172, W, 28, P.K); rect(0, 172, W, 1, P.G1);
       text('Items taken: ' + used() + ' of 5.  The silenced pistol is free.', 4, 176, P.W);
       text('Enter takes or returns.  Esc when ready.', 4, 187, P.G3);
-      bevel(250, 182, 64, 14, P.BL, P.BL2, P.K); textC('Go in', 282, 185, P.YE);
+      bevel(250, 182, 64, 14, P.BL, P.BL2, P.K); frame(249, 181, 66, 16, P.K); textC('Go in', 282, 185, P.YE);
     },
   };
 }
+// the equipment room: pegboard wall, felt-lined cubbies, steel shelves and uprights
+function biX_armoryBg(slots) {
+  return sprite('biX_armory', 320, 172, () => {
+    for (let y = 0; y < 172; y++) for (let x = 0; x < 160; x++) px(x, y, (x % 4 === 2 && y % 4 === 2) ? P.K : biX_bay(x, y) < (y > 120 ? 4 : 2) ? P.RD : P.BR);
+    for (const s of slots) {
+      const y0 = s.y + 8;
+      rect(s.x, y0, s.w, s.h, P.BL); for (let y = y0; y < y0 + s.h; y++) for (let x = s.x; x < s.x + s.w; x++) if (biX_bay(x, y) < 2) px(x, y, P.K);
+      rect(s.x, y0, s.w, 1, P.K); rect(s.x, y0, 1, s.h, P.K); rect(s.x + 1, y0 + 1, s.w - 1, 1, P.NV); rect(s.x + s.w - 1, y0, 1, s.h, P.BL2);
+      // steel shelf and its shadow on the pegboard
+      rect(s.x - 1, y0 + s.h, s.w + 2, 3, P.G3); rect(s.x - 1, y0 + s.h, s.w + 2, 1, P.W); rect(s.x - 1, y0 + s.h + 2, s.w + 2, 1, P.G1); rect(s.x - 1, y0 + s.h + 3, s.w + 2, 1, P.K);
+      for (let x = s.x; x < s.x + s.w; x++) if (x % 2) px(x, y0 + s.h + 4, P.K);
+      for (const bx of [s.x + 3, s.x + s.w - 5]) { rect(bx, y0 + s.h + 3, 2, 3, P.G1); px(bx, y0 + s.h + 3, P.G3); }
+    }
+    for (const ux of [74, 158]) { rect(ux, 0, 3, 172, P.G3); rect(ux, 0, 1, 172, P.W); rect(ux + 2, 0, 1, 172, P.G1); for (let y = 3; y < 172; y += 6) px(ux + 1, y, P.K); }
+    rect(0, 0, 1, 172, P.K);
+  });
+}
+const biX_BIGGREN = {
+  frag: ['..kkk..', '.kGGGk.', '..kGkWk', '.kwcck.', 'kwcdcdk', 'kcdcdck', 'kdcdcdk', 'kcdcddk', '.kdddk.', '..kkk..'],
+  stun: ['..kkk..', '.kGGGk.', '..kGkWk', '.kkkkk.', '.kwcck.', '.kwcdk.', '.kyyyk.', '.kwcdk.', '.kccdk.', '.kkkkk.'],
+  gas: ['..kkk..', '.kGGGk.', '.kkGkk.', 'kwwccdk', 'kwcccdk', 'kkkkkkk', 'kwcccdk', 'kwcccdk', 'kcccddk', '.kkkkk.'],
+};
 function armoryItem(k, cx, base) {
+  cx = Math.round(cx); base = Math.round(base);
   switch (k) {
-    case 'uzi': rect(cx - 16, base - 14, 32, 6, P.G1); rect(cx - 4, base - 8, 5, 8, P.G1); rect(cx + 8, base - 10, 3, 6, P.G1); break;
-    case 'camera': rect(cx - 7, base - 9, 14, 9, P.G1); disc(cx, base - 5, 3, P.K); rect(cx + 3, base - 11, 3, 2, P.G3); break;
-    case 'bugs': for (let n = 0; n < 6; n++) { disc(cx - 25 + n * 10, base - 4, 3, P.RD); px(cx - 25 + n * 10, base - 5, P.W); } break;
-    case 'frag': case 'stun': case 'gas': for (let n = 0; n < 7; n++) { disc(cx - 28 + n * 9, base - 5, 3, GREN[k].col); rect(cx - 29 + n * 9, base - 10, 2, 2, P.G3); } break;
-    case 'gasmask': disc(cx, base - 14, 10, P.G3); disc(cx - 4, base - 16, 3, P.CY); disc(cx + 4, base - 16, 3, P.CY); disc(cx, base - 7, 4, P.K); break;
-    case 'detector': rect(cx - 10, base - 22, 3, 14, P.K); rect(cx + 7, base - 22, 3, 14, P.K); rect(cx - 9, base - 25, 19, 3, P.K); rect(cx - 12, base - 10, 7, 8, P.RD); rect(cx + 5, base - 10, 7, 8, P.RD); break;
-    case 'kevlar': rect(cx - 20, base - 50, 40, 48, P.G1); rect(cx - 8, base - 50, 16, 10, P.BL); for (let i = 0; i < 5; i++) rect(cx - 17, base - 38 + i * 8, 34, 1, P.G3); break;
-    case 'safekit': rect(cx - 34, base - 12, 68, 12, P.G3); rect(cx - 30, base - 28, 18, 16, P.G1); for (let i = 0; i < 3; i++) rect(cx - 26 + i * 5, base - 26, 2, 12, [P.RD, P.GR2, P.YE][i]); rect(cx - 6, base - 28, 34, 16, P.K); for (let i = 0; i < 12; i++) px(cx - 2 + (i % 6) * 5, base - 24 + Math.floor(i / 6) * 5, i % 3 ? P.RD2 : P.GR2); break;
+    case 'uzi': g.drawImage(biX_gunSide(true), cx - 30, base - 21); for (const hx of [cx - 14, cx + 12]) { rect(hx, base - 26, 1, 4, P.G3); px(hx, base - 26, P.W); } break;
+    case 'camera': g.drawImage(biX_camera(), cx - 13, base - 14); for (let a = 0; a <= 12; a++) { const an = Math.PI + a / 12 * Math.PI; px(cx - 2 + Math.round(Math.cos(an) * 12), base - 12 + Math.round(Math.sin(an) * 5), P.K); } rect(cx + 13, base - 8, 7, 8, P.K); rect(cx + 14, base - 7, 5, 7, P.YE); rect(cx + 14, base - 5, 5, 2, P.K); px(cx + 16, base - 8, P.G3); break;
+    case 'bugs': for (let n = 0; n < 6; n++) { const bx = cx - 30 + n * 10; biX_put('bug', biX_BUG, biX_BUGMAP, bx, base - 6); px(bx + 3, base - 8, P.G3); px(bx + 3, base - 9, n % 2 ? P.RD2 : P.G3); } break;
+    case 'frag': case 'stun': case 'gas': { const r = biX_ramp(GREN[k].col); for (let n = 0; n < 7; n++) biX_put('bg_' + k, biX_BIGGREN[k], { k: P.K, G: P.G3, W: P.W, w: r[2], c: r[1], d: r[0] === P.K ? P.G1 : r[0], y: P.YE }, cx - 31 + n * 9, base - 10); break; }
+    case 'gasmask': for (const sx of [-1, 1]) { line(cx + sx * 10, base - 12, cx + sx * 6, base - 24, P.K); line(cx + sx * 11, base - 12, cx + sx * 7, base - 24, P.G1); } biX_mask(cx - 11, base - 19); rect(cx - 2, base - 2, 5, 2, P.G1); break;
+    case 'detector': {
+      for (let a = 0; a <= 20; a++) { const an = Math.PI + a / 20 * Math.PI, xx = cx + Math.round(Math.cos(an) * 10), yy = base - 10 + Math.round(Math.sin(an) * 9); px(xx, yy, P.G3); px(xx, yy - 1, P.W); px(xx, yy + 1, P.K); }
+      for (const ex of [cx - 13, cx + 9]) { biX_box(ex, base - 12, 5, 10, P.G1, P.G3, P.K); rect(ex + 2, base - 24, 1, 12, P.G3); px(ex + 2, base - 25, P.YE); px(ex + 2, base - 24, P.RD2); }
+      biX_box(cx - 5, base - 9, 11, 9, P.G1, P.G3, P.K); rect(cx - 3, base - 7, 7, 3, P.GR); px(cx - 2, base - 6, P.GR2); px(cx + 1, base - 5, P.GR2); px(cx + 3, base - 3, P.RD2);
+      break;
+    }
+    case 'kevlar': g.drawImage(biX_vest(40, 50), cx - 21, base - 51); rect(cx - 1, base - 55, 2, 5, P.G3); px(cx - 1, base - 55, P.W); rect(cx - 9, base - 52, 18, 1, P.G3); break;
+    case 'safekit': biX_box(cx - 24, base - 35, 48, 11, P.G1, P.G3, P.K); rect(cx - 21, base - 32, 42, 6, P.K); rect(cx - 21, base - 32, 42, 1, P.RD); px(cx - 20, base - 27, P.G3); px(cx + 19, base - 27, P.G3); g.drawImage(biX_safekit(), cx - 23, base - 25); break;
   }
 }
