@@ -141,153 +141,15 @@ const isNight = () => { const h = hourOf(game.t || 0); return h < 6 || h >= 19; 
 function sidewalk(x, y, w, h) { rect(x, y, w, h, P.G1); dither(x, y, w, h, P.G1, P.G3, 6); }
 
 // ---------- the Chief ----------
-function chiefArt(t) {
-  rect(0, 0, W, H, P.K);
-  for (let x = 0; x < W; x += 5) { rect(x, 0, 3, 120, P.TL); rect(x + 3, 0, 1, 120, P.CY); rect(x + 4, 0, 1, 120, P.K); }
-  rect(92, 0, 136, 100, P.CY); dither(92, 0, 136, 56, P.CY, P.W, 3);
-  for (const [cx, cy] of [[118, 14], [168, 30], [205, 10]]) { dither(cx - 16, cy - 5, 32, 10, 'rgba(0,0,0,0)', P.W, 9); }
-  frame(92, 0, 136, 100, P.G3);
-  rect(44, 6, 2, 118, P.YE); g.fillStyle = P.RD; g.beginPath(); g.moveTo(46, 10); g.lineTo(80, 14); g.lineTo(74, 90); g.lineTo(46, 96); g.fill(); dither(46, 10, 34, 86, 'rgba(0,0,0,0)', P.RD2, 3); for (let y = 12; y < 94; y += 3) px(46 + (y > 50 ? 26 : 32), y, P.YE);
-  rect(276, 6, 2, 118, P.YE); g.fillStyle = P.BL; g.beginPath(); g.moveTo(276, 10); g.lineTo(244, 16); g.lineTo(250, 92); g.lineTo(276, 98); g.fill(); for (const [sx, sy] of [[258, 34], [266, 50], [256, 64], [264, 24], [268, 76]]) { px(sx, sy, P.YE); px(sx - 1, sy, P.YE); px(sx + 1, sy, P.YE); px(sx, sy - 1, P.YE); px(sx, sy + 1, P.YE); }
-  rect(118, 40, 84, 70, P.K); rect(122, 36, 76, 8, P.G1);
-  rect(108, 74, 104, 40, P.G1); dither(108, 74, 104, 40, P.G1, P.G3, 3);
-  rect(148, 74, 24, 36, P.W); rect(157, 76, 6, 30, P.RD); rect(155, 74, 10, 3, P.RD);
-  rect(146, 62, 28, 14, P.SK); disc(160, 52, 15, P.SK); dither(146, 38, 28, 12, 'rgba(0,0,0,0)', P.RD, 4); rect(145, 48, 3, 10, P.G3); rect(172, 48, 3, 10, P.G3);
-  rect(151, 52, 6, 2, P.K); rect(163, 52, 6, 2, P.K); rect(152, 53, 3, 1, P.W); rect(164, 53, 3, 1, P.W); rect(159, 55, 2, 6, P.RD); rect(154, 65, 12, 1, P.RD);
-  rect(0, 106, W, 41, P.BR); for (let y = 108; y < 146; y += 4) line(0, y, W, y + 3, P.RD); dither(0, 106, W, 41, 'rgba(0,0,0,0)', P.K, 2); rect(0, 106, W, 2, P.YE);
-  rect(126, 104, 68, 10, P.G3); for (let i = 0; i < 13; i++) rect(128 + i * 5, 106, 3, 2, P.W); rect(126, 99, 14, 8, P.SK); rect(180, 99, 14, 8, P.SK);
-  rect(28, 112, 30, 24, P.K); frame(28, 112, 30, 24, P.W); rect(33, 116, 20, 16, P.G1); line(30, 134, 22, 142, P.K);
-  rect(236, 110, 46, 4, P.W); rect(238, 114, 44, 3, P.G3); line(212, 110, 222, 92, P.YE); rect(208, 110, 10, 3, P.K);
-  rect(241, 130, 61, 12, P.YE); rect(241, 130, 61, 1, P.W); rect(241, 141, 61, 1, P.G1); rect(301, 130, 1, 12, P.G1);
-  disc(250, 136, 4, P.G1); disc(250, 136, 3, P.TL); px(249, 135, P.W); text('CHIEF', 268, 133, P.G1); text('CHIEF', 267, 132, P.K);
-  rect(0, 147, W, 53, P.K); rect(0, 147, W, 1, P.W); rect(0, 199, W, 1, P.W); rect(0, 147, 1, 53, P.W); rect(319, 147, 1, 53, P.W);
-}
 
 // ---------- title / character art ----------
-function drawMaxFigure(cx, base, sex, lit) {
-  const c = lit ? P.K : P.G1, sk = lit ? P.W : P.G3;
-  if (sex === 'm') {
-    disc(cx, base - 164, 7, c); rect(cx - 4, base - 160, 8, 8, sk); rect(cx - 5, base - 170, 10, 4, c);
-    g.fillStyle = c; g.beginPath(); g.moveTo(cx - 14, base - 150); g.lineTo(cx + 14, base - 150); g.lineTo(cx + 12, base - 80); g.lineTo(cx - 12, base - 80); g.fill();
-    rect(cx - 3, base - 150, 6, 20, sk); rect(cx - 1, base - 148, 2, 16, c);
-    rect(cx - 12, base - 80, 10, 80, c); rect(cx + 2, base - 80, 10, 80, c); rect(cx - 19, base - 146, 6, 50, c); rect(cx + 13, base - 146, 6, 46, c); rect(cx + 13, base - 100, 6, 5, sk);
-  } else {
-    disc(cx, base - 166, 7, c); rect(cx - 8, base - 166, 16, 22, c); rect(cx - 3, base - 164, 6, 8, sk);
-    g.fillStyle = c; g.beginPath(); g.moveTo(cx - 10, base - 148); g.lineTo(cx + 10, base - 148); g.lineTo(cx + 8, base - 110); g.lineTo(cx + 14, base - 20); g.lineTo(cx - 14, base - 20); g.lineTo(cx - 8, base - 110); g.fill();
-    for (let i = 0; i < 40; i++) px(cx - 8 + (i * 7) % 16, base - 140 + (i * 13) % 110, lit ? P.G3 : P.G1);
-    rect(cx - 6, base - 20, 3, 20, sk); rect(cx + 3, base - 20, 3, 20, sk); rect(cx - 16, base - 144, 5, 44, sk); rect(cx + 11, base - 144, 5, 44, sk);
-  }
-}
-function trainingArt(i, x, y, w, h, t) {
-  g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
-  const cx = x + w / 2;
-  if (i === 0) { rect(x, y, w, h, P.RD); rect(cx - 16, y + 6, 32, h - 6, P.K); dither(cx - 16, y + 6, 32, h - 6, P.K, P.RD, 2); disc(cx, y + 22, 7, P.K); rect(cx - 5, y + 18, 10, 4, P.BR); rect(cx - 3, y + 22, 6, 5, P.SK); rect(cx - 10, y + 30, 20, 44, P.K); rect(cx - 10, y + 74, 8, 50, P.K); rect(cx + 2, y + 74, 8, 50, P.K); rect(cx + 10, y + 34, 20, 4, P.K); rect(cx + 26, y + 31, 7, 4, P.G3); rect(cx - 14, y + 34, 5, 26, P.K); px(cx + 33, y + 31, P.W); }
-  else if (i === 1) { rect(x, y, w, h, P.K); rect(x, y, w, 60, P.BL); dither(x, y + 40, w, 20, P.BL, P.K, 8); for (let k = 0; k < 14; k++) px(x + (k * 37) % w, y + (k * 23) % 40, P.W); disc(x + 14, y + 14, 3, P.YE); for (let k = 0; k < 44; k += 2) { px(x + 4 + k, y + 120 - k, P.MG); px(x + 12 + k, y + 124 - k, P.PK); } g.save(); g.translate(cx + 6, y + 80); g.rotate(-0.6); rect(-22, -6, 44, 12, P.RD2); rect(-14, -10, 22, 5, P.RD); rect(-8, -9, 10, 3, P.CY); rect(-22, 4, 9, 4, P.K); rect(12, 4, 9, 4, P.K); rect(20, -4, 3, 3, P.YE); g.restore(); for (let k = 0; k < 6; k++) line(cx + 20, y + 94, cx + 34 + k * 3, y + 116, P.YE); }
-  else if (i === 2) { rect(x, y, w, h, P.G1); dither(x, y, w, 70, P.G1, P.G3, 4); rect(x + 44, y + 6, 22, 26, P.W); frame(x + 44, y + 6, 22, 26, P.K); for (let k = 0; k < 5; k++) rect(x + 47, y + 10 + k * 4, 16, 1, P.G1); disc(cx - 4, y + 40, 9, P.SK); rect(cx - 14, y + 30, 20, 8, P.K); dither(cx - 14, y + 28, 22, 14, 'rgba(0,0,0,0)', P.W, 4); rect(cx - 16, y + 50, 26, 40, P.W); rect(cx + 6, y + 64, 16, 5, P.W); rect(x, y + 88, w, h - 88, P.K); rect(x + 4, y + 88, w - 8, 5, P.G3); rect(cx + 10, y + 70, 6, 18, P.G3); rect(cx + 6, y + 66, 14, 5, P.K); }
-  else { rect(x, y, w, h, P.K); for (let k = 0; k < 7; k++) { rect(x + w - 22, y + 6 + k * 16, 20, 12, P.G1); rect(x + w - 20, y + 8 + k * 16, 16, 2, P.G3); } rect(x + 2, y + 20, 44, 70, P.BL); dither(x + 2, y + 20, 44, 70, P.BL, P.K, 6); dither(x + 2, y + 30, 40, 40, 'rgba(0,0,0,0)', P.BL2, 3); line(x + 20, y + 40, x + w - 20, y + 30, P.RD2); line(x + 24, y + 50, x + w - 22, y + 44, P.RD2); line(x + 18, y + 60, x + w - 22, y + 60, P.W); }
-  g.restore();
-}
 
 // ---------- the small framed city picture on the city menu ----------
-function cityPic(x, y, w, h, c) {
-  const night = isNight(); sky(x, y, w, h, night);
-  const base = y + h - 8, cx = x + w / 2, stone = night ? P.G3 : P.W;
-  rect(x, base, w, 8, P.G1); dither(x, base, w, 8, P.G1, P.G3, 4);
-  const trees = () => { for (const tx of [x + 12, x + w - 14]) { disc(tx, base - 12, 9, P.GR); dither(tx - 9, base - 21, 18, 18, 'rgba(0,0,0,0)', P.GR2, 3); rect(tx - 1, base - 4, 2, 4, P.BR); } };
-  switch (c.id) {
-    case 'WAS': trees(); rect(cx - 40, base - 12, 80, 12, stone); for (let i = -38; i < 38; i += 4) rect(cx + i, base - 11, 2, 10, P.G3); rect(cx - 16, base - 20, 32, 8, stone); disc(cx, base - 22, 10, stone); rect(cx - 10, base - 22, 20, 2, P.G3); rect(cx - 1, base - 36, 2, 5, stone); break;
-    case 'ROM': rect(cx - 36, base - 26, 72, 26, P.TN); for (let r = 0; r < 3; r++) for (let i = -34; i < 34; i += 6) rect(cx + i, base - 22 + r * 8, 3, 5, P.BR); break;
-    case 'PAR': for (let yy = 0; yy < 38; yy++) { const hw = yy > 26 ? 4 + (yy - 26) * 1.3 : 1 + yy * 0.12; rect(cx - hw, base - 38 + yy, hw * 2, 1, P.G1); } break;
-    case 'LON': rect(cx - 4, base - 36, 8, 36, P.TN); disc(cx, base - 26, 3, P.W); rect(cx + 6, base - 14, 44, 14, P.TN); for (let i = 0; i < 40; i += 6) rect(cx + 8 + i, base - 18, 2, 4, P.TN); break;
-    case 'CAI': for (const [o, s] of [[-24, 26], [10, 20], [36, 12]]) for (let yy = 0; yy < s; yy++) rect(cx + o - yy, base - s + yy, yy * 2, 1, yy % 3 ? P.YE : P.BR); break;
-    case 'IST': case 'DAM': case 'BGW': case 'AMM': case 'BEY': case 'TRP': case 'THR': disc(cx, base - 14, 14, stone); rect(cx - 16, base - 14, 32, 14, stone); for (const o of [-24, 24]) { rect(cx + o - 1, base - 34, 3, 34, stone); rect(cx + o - 1, base - 37, 3, 3, P.TL); } break;
-    default: { let s = c.id.charCodeAt(0) * 7; for (let bx = x + 4; bx < x + w - 8;) { s = (s * 16807) % 2147483647; const bw = 10 + s % 12, bh = 12 + (s >> 4) % 26; rect(bx, base - bh, bw, bh, [P.G3, P.W, P.TN, P.CY][s % 4]); for (let wy = base - bh + 3; wy < base - 3; wy += 4) for (let wx = bx + 2; wx < bx + bw - 2; wx += 3) px(wx, wy, night ? P.YE : P.BL); bx += bw + 2; } if (c.region === 'americas') trees(); }
-  }
-}
 
 // ---------- CIA floors ----------
-function ciaLobbyArt(x, y, w, h, t) {
-  rect(x, y, w, h, P.G3); dither(x, y, w, h, P.G3, P.W, 3); rect(x, y + 150, w, 50, P.BR); dither(x, y + 150, w, 50, P.BR, P.K, 4);
-  rect(x + 16, y + 30, 36, 50, P.BL); frame(x + 16, y + 30, 36, 50, P.K); rect(x + 96, y + 30, 36, 50, P.BL); frame(x + 96, y + 30, 36, 50, P.K);
-  disc(x + w / 2, y + 60, 18, P.BL); disc(x + w / 2, y + 60, 15, P.W); textC('CIA', x + w / 2, y + 57, P.BL);
-  // contact in a trenchcoat
-  const cx = x + 90; disc(cx, y + 104, 7, P.SK); rect(cx - 7, y + 98, 14, 4, P.BR); rect(cx - 12, y + 112, 24, 70, P.G3); dither(cx - 12, y + 112, 24, 70, P.G3, P.G1, 3); rect(cx - 2, y + 112, 4, 30, P.K);
-}
-function dataRoomArt(x, y, w, h, t) {
-  rect(x, y, w, h, P.K); rect(x + 4, y + 16, w - 8, 80, P.BL); for (let i = 0; i < 3; i++) { rect(x + 10 + i * 46, y + 18, 30, 8, P.YE); text(['D.C.', 'LONDON', 'TOKYO'][i], x + 12 + i * 46, y + 18, P.K); }
-  for (const pl of LAND.slice(0, 8)) { g.fillStyle = P.TL; g.beginPath(); pl.forEach(([lo, la], k) => { const px_ = x + 8 + (lo + 170) / 360 * (w - 16), py = y + 30 + (78 - la) / 140 * 60; k ? g.lineTo(px_, py) : g.moveTo(px_, py); }); g.fill(); }
-  rect(x, y + 120, w, 80, P.G1); rect(x + 10, y + 128, 60, 20, P.G3); disc(x + 60, y + 120, 10, P.SK); rect(x + 44, y + 130, 34, 50, P.W); rect(x + 64, y + 116, 6, 10, P.K);
-  disc(x + 120, y + 70, 7, P.BR); rect(x + 112, y + 78, 18, 50, P.GR2); dither(x + 112, y + 110, 18, 40, P.GR2, P.YE, 5); rect(x + 120, y + 86, 16, 12, P.W);
-}
-function intelArt(x, y, w, h, t) {
-  rect(x, y, w, h, P.G1); dither(x, y, w, h, P.G1, P.K, 5); g.fillStyle = P.TL; g.beginPath(); g.ellipse(x + w / 2, y + 60, 44, 16, 0, 0, 7); g.fill(); rect(x + w / 2 - 44, y + 60, 88, 70, P.TL); g.fillStyle = P.CY; g.beginPath(); g.ellipse(x + w / 2, y + 60, 44, 16, 0, 0, 7); g.fill();
-  for (let i = 0; i < 8; i++) rect(x + w / 2 - 40 + i * 11, y + 80, 6, 40, P.BL); for (let i = 0; i < 10; i++) px(x + w / 2 - 36 + i * 8, y + 72, (t * 5 + i | 0) % 2 ? P.RD2 : P.GR2);
-  person(x + 20, y + 190, P.W, P.BL, P.SK, P.BR, 44); person(x + 132, y + 190, P.W, P.G1, P.SK, P.K, 44);
-}
-function cryptoLabArt(x, y, w, h, t) {
-  rect(x, y, w, h, P.BL); rect(x, y + 110, w, 90, P.G1); rect(x + 6, y + 110, w - 12, 6, P.W);
-  rect(x + 20, y + 30, 40, 30, P.W); frame(x + 20, y + 30, 40, 30, P.K); for (let i = 0; i < 5; i++) rect(x + 24, y + 34 + i * 5, 30, 1, P.G1);
-  disc(x + 96, y + 60, 12, P.SK); dither(x + 82, y + 44, 28, 16, 'rgba(0,0,0,0)', P.W, 6); rect(x + 80, y + 72, 32, 40, P.W); rect(x + 110, y + 84, 16, 6, P.W); rect(x + 116, y + 86, 8, 22, P.G3); rect(x + 112, y + 80, 16, 6, P.K);
-}
-function hotelLobbyArt(t) {
-  rect(0, 0, W, H, P.K);
-  for (let x = 0; x < W; x += 60) { rect(x + 20, 20, 10, 150, P.K); rect(x + 21, 20, 2, 150, P.YE); }
-  rect(0, 0, W, 16, P.G1); for (let i = 0; i < 12; i++) disc(160 + Math.cos(i / 12 * 6.28) * 30, 10 + Math.sin(i / 12 * 6.28) * 6, 1, P.YE);
-  // red stairs and the herringbone carpet
-  for (let i = 0; i < 10; i++) rect(150 - i * 6, 90 + i * 4, 40 + i * 12, 4, i % 2 ? P.RD : P.RD2);
-  for (let y = 130; y < H; y += 2) { const hw = (y - 130) * 1.1 + 30; for (let x = 160 - hw; x < 160 + hw; x += 4) { px(x + (y % 4), y, P.RD); px(x + 2 - (y % 4) / 2, y, P.BL); } }
-  rect(230, 110, 60, 30, P.BR); rect(230, 110, 60, 3, P.YE); person(260, 110, P.W, P.K, P.SK, P.K, 22);
-  for (const [px_, py] of [[20, 180], [300, 176], [280, 60]]) { disc(px_, py - 14, 12, P.GR); dither(px_ - 12, py - 26, 24, 24, 'rgba(0,0,0,0)', P.GR2, 4); rect(px_ - 4, py - 4, 8, 6, P.BR); }
-  person(190, 160, P.W, P.BL, P.SK, P.BR, 26); person(175, 150, P.RD2, P.K, P.SK, P.K, 22); person(212, 172, P.BL2, P.K, P.SK, P.YE, 28);
-}
-function interrogationArt(x, y, w, h, p) {
-  rect(x, y, w, h, P.K); vgrad(x, y, w, 120, [P.K, P.G1]); disc(x + w / 2, y + 12, 3, P.YE); line(x + w / 2, y, x + w / 2, y + 9, P.G3);
-  rect(x + 20, y + 110, w - 40, 6, P.BR); rect(x + w / 2 - 30, y + 42, 60, 72, P.W); frame(x + w / 2 - 30, y + 42, 60, 72, P.G3); drawFace(p.face, x + w / 2 - 26, y + 46, 52, 64);
-}
-function captureArt(x, y, w, h) {
-  rect(x, y, w, h, P.GR); dither(x, y, w, h, P.GR, P.BL, 6); frame(x, y, w, h, P.W);
-  rect(x + 10, y + 30, w - 20, 140, P.RD); dither(x + 10, y + 30, w - 20, 140, P.RD, P.RD2, 5); rect(x + 10, y + 26, w - 20, 8, P.YE);
-  rect(x + w / 2 - 22, y + 60, 44, 40, P.G3); disc(x + w / 2, y + 80, 14, P.G1); disc(x + w / 2, y + 80, 9, P.K); rect(x + w / 2 - 16, y + 100, 32, 50, P.G1); rect(x + w / 2 - 20, y + 140, 40, 30, P.K);
-}
 
 // ---------- buildings: townhouse (hideout), glass office, tower (active cel), stucco safehouse (agent) ----------
-function buildingArt(x, y, w, h, b) {
-  rect(x, y, w, h, P.K); const base = y + h - 22;
-  const type = b.agency ? (b.type || 'office') : b.type || 'hideout';
-  if (type === 'hideout') {
-    g.fillStyle = P.G1; g.beginPath(); g.moveTo(x + 22, base - 118); g.lineTo(x + w - 22, base - 118); g.lineTo(x + w - 14, base - 104); g.lineTo(x + 14, base - 104); g.fill(); dither(x + 14, base - 118, w - 28, 14, 'rgba(0,0,0,0)', P.W, 3);
-    rect(x + 28, base - 132, 12, 18, P.BR); dither(x + 28, base - 132, 12, 18, P.BR, P.G1, 6);
-    brick(x + 16, base - 104, w - 32, 104, P.BR, P.G3);
-    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { const wx = x + 26 + c * ((w - 62) / 3), wy = base - 96 + r * 28; rect(wx - 2, wy - 2, 18, 22, P.BR); rect(wx, wy, 14, 18, (r * 4 + c + b.address.length) % 7 === 0 ? P.YE : P.G1); rect(wx, wy + 8, 14, 1, P.BR); rect(wx + 6, wy, 1, 18, P.BR); for (let k = 1; k < 8; k += 2) rect(wx + 1, wy + k, 5, 1, P.K); if ((r * 4 + c + b.address.length) % 7 === 0) person(wx + 10, wy + 18, b.org ? b.org.uni : P.RD, P.K, P.SK, P.K, 12); }
-    rect(x + w / 2 - 18, base - 30, 36, 30, P.K); frame(x + w / 2 - 18, base - 30, 36, 30, P.BR); rect(x + w / 2 - 1, base - 30, 2, 30, P.BR); rect(x + w / 2 - 22, base - 34, 44, 4, P.RD);
-    for (let i = 0; i < 44; i += 3) rect(x + w / 2 - 22 + i, base - 10, 1, 10, P.K); rect(x + w / 2 - 22, base - 10, 44, 1, P.K);
-  } else if (type === 'office') {
-    rect(x + 20, base - 130, w - 40, 130, P.TL); for (let yy = base - 126; yy < base - 20; yy += 10) for (let xx = x + 24; xx < x + w - 24; xx += 12) { rect(xx, yy, 10, 8, (xx + yy) % 3 ? P.CY : P.W); dither(xx, yy, 10, 8, 'rgba(0,0,0,0)', P.BL2, 3); }
-    rect(x + w / 2 - 16, base - 20, 32, 20, P.K); rect(x + 14, base - 22, w - 28, 2, P.G3); if (b.agency) { rect(x + w / 2 - 26, base - 32, 52, 9, P.K); textC(b.agency, x + w / 2, base - 31, P.YE); }
-  } else if (type === 'active cel') {
-    rect(x + 40, base - 150, w - 80, 150, P.W); for (let yy = base - 144; yy < base - 16; yy += 9) { for (let xx = x + 46; xx < x + w - 46; xx += 9) rect(xx, yy, 6, 6, P.BL); rect(x + 40, yy + 7, w - 80, 1, P.G3); }
-    for (const px_ of [x + 30, x + w - 38]) { rect(px_, base - 10, 10, 10, P.G3); disc(px_ + 5, base - 12, 6, P.GR); }
-    rect(x + w / 2 - 12, base - 18, 24, 18, P.K);
-  } else {
-    rect(x + 16, base - 90, w - 32, 90, P.TN); dither(x + 16, base - 90, w - 32, 90, P.TN, P.W, 5); rect(x + 12, base - 96, w - 24, 6, P.RD);
-    for (let c = 0; c < 4; c++) { const ax = x + 26 + c * ((w - 60) / 3); rect(ax, base - 70, 18, 40, P.K); disc(ax + 9, base - 70, 9, P.K); rect(ax, base - 70, 18, 1, P.TN); }
-    rect(x + w / 2 - 12, base - 26, 24, 26, P.BR); disc(x + w / 2, base - 26, 12, P.BR);
-  }
-  sidewalk(x, base, w, 22);
-  const nG = 1 + (b.alert || 0) + (b.suspect !== null && b.suspect !== undefined ? 1 : 0);
-  for (let i = 0; i < Math.min(6, nG + 1); i++) person(x + 12 + i * 28, base + 18, i % 2 ? (b.org ? b.org.uni : P.G1) : [P.W, P.BL2, P.RD, P.GR][i % 4], P.K, i % 3 ? P.SK : P.BR, P.K, 16);
-}
 // watching through binoculars
-function binocularArt(x, y, w, h, b, face) {
-  rect(x, y, w, h, P.K);
-  const cx = x + w / 2, cy = y + h / 2 - 10, r = Math.min(w, h) / 2 - 6;
-  g.save(); g.beginPath(); g.arc(cx, cy, r, 0, 7); g.clip();
-  rect(cx - r, cy - r, r * 2, r * 2, P.BL); dither(cx - r, cy - r, r * 2, r * 2, P.BL, P.K, 6); rect(cx - 6, cy - r, 12, r * 2, P.G3); rect(cx - r, cy - 4, r * 2, 8, P.G3);
-  if (face) { drawFace(face, cx - 26, cy - 20, 52, 64); dither(cx - 30, cy + 34, 60, 16, 'rgba(0,0,0,0)', P.GR, 4); }
-  g.restore();
-  for (let k = 0; k < 8; k++) { g.strokeStyle = P.K; g.lineWidth = 1; g.beginPath(); g.arc(cx, cy, r - k, 0, 7); g.stroke(); }
-  dither(cx - r - 4, cy - r - 4, r * 2 + 8, r * 2 + 8, 'rgba(0,0,0,0)', P.K, 1);
-}
 
 // ---------- regional travel maps: dark gray land, embossed yellow coasts, dithered sea ----------
 const regionMapCache = {};
@@ -316,9 +178,3 @@ function drawRegionMap(region, x, y, w, h, here, dests, selCity, flying, t) {
 }
 
 // ---------- vacation snapshots ----------
-function rewardArt(i, x, y, w, h, t) {
-  if (i === 0) { rect(x, y, w, h, P.PK); dither(x, y, w, 120, P.PK, P.W, 4); rect(x, y + 140, w, 60, P.G3); for (let k = 0; k < 5; k++) { const mx = x + 14 + k * 62; rect(mx, y + 80, 52, 64, P.W); frame(mx, y + 80, 52, 64, P.G1); disc(mx + 26, y + 116, 16, P.G1); disc(mx + 26, y + 116, 12, (k + (t * 4 | 0)) % 2 ? P.BL2 : P.CY); rect(mx + 4, y + 84, 44, 6, P.G3); } person(x + 80, y + 180, P.GR, P.BL, P.SK, P.BR, 60); person(x + 230, y + 180, P.MG, P.K, P.SK, P.YE, 56); rect(x + 238, y + 150, 26, 14, P.TN); textC('WASH-O-RAMA', x + w / 2, y + 20, P.RD); }
-  else if (i === 1) { rect(x, y, w, h, P.CY); rect(x, y + 120, w, 80, P.BR); rect(x + 50, y + 104, 220, 20, P.BR); rect(x + 50, y + 104, 220, 3, P.YE); for (let k = 0; k < 8; k++) rect(x + 70 + k * 12, y + 96 - k * 2, 40, 5, P.W); disc(x + 260, y + 40, 16, P.W); line(x + 260, y + 40, x + 260, y + 30, P.K); line(x + 260, y + 40, x + 268, y + 40, P.K); person(x + 160, y + 104, P.W, P.G1, P.SK, P.BR, 50); }
-  else if (i === 2) { vgrad(x, y, w, 90, [P.BL2, P.CY]); rect(x, y + 90, w, 36, P.BL); for (let k = 0; k < w; k += 10) rect(x + k + ((t * 10 | 0) % 10), y + 98, 5, 1, P.W); rect(x, y + 126, w, 74, P.YE); dither(x, y + 126, w, 74, P.YE, P.BR, 2); disc(x + 270, y + 30, 14, P.YE); line(x + 200, y + 180, x + 212, y + 96, P.W); for (let k = 0; k < 9; k++) line(x + 212, y + 96, x + 176 + k * 9, y + 114, k % 2 ? P.RD2 : P.W); rect(x + 150, y + 160, 40, 10, P.RD2); person(x + 120, y + 180, P.RD2, P.SK, P.SK, P.BR, 40); }
-  else { rect(x, y, w, h, P.K); for (let k = 0; k < w; k += 12) { const on = ((k / 12 + (t * 6 | 0)) % 3) === 0; rect(x + k, y + 4, 8, 3, on ? P.YE : P.RD); } g.fillStyle = P.GR; g.beginPath(); g.ellipse(x + w / 2, y + 130, 130, 40, 0, 0, 7); g.fill(); disc(x + w / 2, y + 130, 24, P.BR); for (let k = 0; k < 18; k++) { const a = k / 18 * Math.PI * 2 + t; px(x + w / 2 + Math.cos(a) * 19, y + 130 + Math.sin(a) * 12, k % 2 ? P.RD : P.K); } for (let k = 0; k < 6; k++) rect(x + 50 + k * 44, y + 150, 10, 4, [P.RD2, P.BL2, P.W, P.YE, P.GR2, P.PK][k]); person(x + 40, y + 120, P.RD2, P.RD2, P.SK, P.YE, 70); person(x + 280, y + 120, P.K, P.K, P.SK, P.K, 70); textC('MONTE CARLO', x + w / 2, y + 20, P.YE); }
-}
