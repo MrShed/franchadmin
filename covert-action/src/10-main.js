@@ -112,11 +112,20 @@ function startBreakin(b) {
 }
 function masterPlan() {
   const cr = game.crime; cr.people.forEach(p => { p.exists = true; learn(p, 'face'); });
-  return { label: 'Master plan: ' + cr.object, draw() { cr.people.forEach((p, i) => { const x = 14 + (i % 5) * 60, y = 26 + Math.floor(i / 5) * 78; drawFace(p.face, x, y, 40, 50); text(fitText(p.role, 56), x, y + 52, P.W); if (p.status === 'arrested') text('ARRESTED', x, y + 61, P.RD2); }); } };
+  const pos = i => [14 + (i % 5) * 60, 26 + Math.floor(i / 5) * 78];
+  return { label: 'Master plan: ' + cr.object, draw() {
+    // red string between everyone who meets or messages
+    cr.steps.forEach(s => { if (s.to === undefined) return; const [ax, ay] = pos(s.from), [bx, by] = pos(s.to); line(ax + 20, ay + 20, bx + 20, by + 20, P.RD2); line(ax + 21, ay + 20, bx + 21, by + 20, P.RD2); });
+    cr.people.forEach((p, i) => { const [x, y] = pos(i); rect(x, y, 44, 54, P.G1); rect(x - 2, y - 2, 44, 54, P.W); frame(x - 2, y - 2, 44, 54, P.G3); drawFace(p.face, x, y, 40, 50); rect(x - 2, y + 52, 44, 9, P.W); text(fitText(p.role, 56), x, y + 52, P.K); disc(x + 20, y - 2, 2, P.RD); px(x + 19, y - 3, P.W); px(x + 21, y, P.K); });
+    cr.people.forEach((p, i) => { if (p.status !== 'arrested') return; const [x, y] = pos(i); uiX_stamp('ARRESTED', x + 20 - uiX_stampW('ARRESTED') / 2, y + 30, P.RD, true); });
+  } };
 }
 function personnelFile(org) {
   const ps = game.crime.people.filter(p => p.org === org); ps.forEach(p => learn(p, 'name'));
-  return { label: 'Personnel file: ' + org.name, draw() { ps.forEach((p, i) => { text(p.name, 20, 30 + i * 10, P.W); text(cityById(p.city).name, 180, 30 + i * 10, P.CY); }); } };
+  return { label: 'Personnel file: ' + org.name, draw() {
+    text('NAME', 20, 19, P.G1); text('LOCATION', 180, 19, P.G1); rect(16, 27, 290, 1, P.K);
+    ps.forEach((p, i) => { const y = 30 + i * 10; text(p.name, 20, y, P.K); g.fillStyle = P.G3; for (let x = 24 + textW(p.name); x < 176; x += 3) g.fillRect(x, y + 6, 1, 1); text(cityById(p.city).name, 180, y, P.BL); });
+  } };
 }
 
 // ---------- CRYPTO ----------
@@ -130,25 +139,30 @@ function startCrypto(m) {
     const R = (k, v) => [k, v];
     const rows = [R('Message Source', who(from)), R("Source's Organization", from.org.name), R('Evidence Against Source', from.role), R('Message Recipient', who(to)), R("Recipient's Organization", to.org.name), R('Location of Recipient', cityById(to.city).name), R('Evidence Against Recipient', to.role)];
     go(pageScene(() => {
-      folder(P.G3, 'Message Decode'); text('Msg# ' + m.id, 14, 20, P.G1);
-      rows.forEach(([k, v], i) => { text(k, 14, 30 + i * 10, P.K); text(fitText(v, 150), 150, 30 + i * 10, k.startsWith('Evidence') ? P.RD : P.BL); });
-      text('Paraphrased Decoded Message:', 14, 108, P.K); para(m.text.split('. ').slice(1).join('. ').toLowerCase().replace(/(^|\. )([a-z])/g, (a, b, c) => b + c.toUpperCase()), 14, 118, W - 28, P.G1, 8);
+      folder(P.G3, 'Message Decode', true, 'DECODED'); text('Msg# ' + m.id, 14, 20, P.G1);
+      rows.forEach(([k, v], i) => { const y = 30 + i * 10; text(k, 14, y, P.K); g.fillStyle = P.G3; for (let x = 17 + textW(k); x < 155; x += 2) g.fillRect(x, y + 6, 1, 1); text(fitText(v, 146), 158, y, k.startsWith('Evidence') ? P.RD : P.BL); });
+      const plain = m.text.split('. ').slice(1).join('. ').toLowerCase().replace(/(^|\. )([a-z])/g, (a, b, c) => b + c.toUpperCase()), nl = wrap(plain, W - 28).length;
+      const ch = Math.min(176, 118 + nl * 8 + 4) - 104; rect(12, 106, 300, ch, P.G1); rect(10, 104, 300, ch, P.W); frame(10, 104, 300, ch, P.G3); rect(11, 117, 298, 1, P.RD2);
+      g.fillStyle = P.CY; for (let y = 125; y < 104 + ch - 1; y += 8) for (let x = 12; x < 308; x += 2) g.fillRect(x, y, 1, 1);
+      text('Paraphrased Decoded Message:', 14, 108, P.K); para(plain, 14, 118, W - 28, P.BL, 8);
     }, () => go(cryptoBranch(() => go(ciaFloors())))));
   }));
 }
 
 // ---------- shared ----------
-function afterMission(minutes, next) { if (practiceMode) { practiceMode = false; go(optionsScene()); return; } advance(minutes); if (!checkCaseEnd()) next(); }
+function afterMission(minutes, next) { if (practiceMode) { practiceMode = false; go(practiceScene()); return; } advance(minutes); if (!checkCaseEnd()) next(); }
 function report(title, lines, next) {
-  return pageScene(() => {
-    rect(0, 0, W, H, P.K); text(title, 15, 12, P.YE);
+  return pageScene(t => {
+    rect(0, 0, W, H, P.K); g.drawImage(uiX_reportBg(), 0, 0);
+    const on = (t * 3 | 0) % 2; uiX_lamp(296, 13, on, P.RD2); uiX_lamp(302, 13, !on, P.GR2);
+    text(title, 15, 12, P.YE, P.K);
     let y = 24; for (const l of lines) { y = para(l, 15, y, 290, P.W, 8) + 4; if (y > 160) break; }
     statusBox(174);
   }, next);
 }
 function capturedScene(out) {
   const held = game.crime.people.filter(p => p.status === 'arrested' && p.role !== 'Mastermind');
-  const escape = () => go(pageScene(() => { rect(0, 0, W, H, P.K); rect(225, 0, 95, 200, P.RD); dither(225, 0, 95, 200, P.RD, P.K, 4); rect(240, 70, 60, 20, P.G3); disc(250, 80, 10, P.G3); disc(290, 80, 10, P.G3); disc(250, 80, 6, P.RD); disc(290, 80, 6, P.RD); rect(230, 110, 90, 40, P.K); para('After hours of effort, you manage to work your hands free of the cuffs. You slip out past a sleeping guard and make your way back to the CIA office.', 15, 20, 200, P.W, 8); statusBox(174); }, () => go(report('Break-in', out.length ? out : ['You lost everything you were carrying.'], () => go(cityScene())))));
+  const escape = () => go(pageScene(t => { rect(0, 0, W, H, P.K); uiX_escapeArt(225, 0, 95, 200, t); para('After hours of effort, you manage to work your hands free of the cuffs. You slip out past a sleeping guard and make your way back to the CIA office.', 15, 20, 200, P.W, 8); statusBox(174); }, () => go(report('Break-in', out.length ? out : ['You lost everything you were carrying.'], () => go(cityScene())))));
   return menuScene({
     menu: Menu([{ label: 'No thanks, Squinty.', go: () => { advance(18 * 60); escape(); } }, { label: 'Agree to exchange.', go: () => {
       if (held.length) { const p = pick(held); p.status = 'free'; p.jailCity = null; go(report('Exchange', ['You are traded for ' + p.name + ', who walks free and rejoins the plot.'], () => go(ciaFloors()))); return; }
@@ -181,7 +195,7 @@ function prisonBreakScene() {
   return menuScene({
     menu: Menu([{ label: far ? 'Fly to ' + city.name + ' and defend' : 'Rush to the jail', go: defend }, { label: 'Leave it to the police', go: police }], 23, 120, 200),
     draw() {
-      rect(0, 0, W, H, P.K); captureArt(225, 0, 95, 200); rect(0, 0, 222, 12, P.RD); textC('URGENT', 111, 2, P.W);
+      rect(0, 0, W, H, P.K); captureArt(225, 0, 95, 200); uiX_urgent(0, 0, 222, 12, this.t); textC('URGENT', 111, 2, P.W, P.K);
       para('Our people in ' + city.name + ' report that the ' + p.org.name + ' are planning to break ' + p.name + ' (' + p.role + ') out of jail. The attack could come at any moment.', 15, 22, 200, P.W, 8);
       para('Defend the cell yourself: nobody may reach the prisoner. You will have a pistol, a few grenades and a motion detector.', 15, 70, 200, P.G3, 8);
       this.menu.draw(); statusBox(174);
@@ -222,7 +236,7 @@ function practice(kind, diff) {
   practiceMode = true; game.diff = diff;
   if (!game.agent) game.agent = newAgent('m', 'Trainee');
   Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [] }); game.startDate = new Date(1990, 5, 1, 8, 0, 0); newCrime();
-  const back = () => { practiceMode = false; go(optionsScene()); };
+  const back = () => { practiceMode = false; go(practiceScene()); };
   const cr = game.crime, p = cr.people[1], b = game.buildings[p.building];
   if (kind === 'breakin') go(armoryScene(kit => go(breakinScene(Object.assign({ level: diff, occupant: p, building: b, org: b.org, alert: 0 }, kit), back))));
   const bare = { uzi: false, camera: false, bugs: 0, gasmask: false, detector: kind === 'defend', kevlar: false, safekit: false, frag: kind === 'defend' ? 2 : 1, stun: kind === 'defend' ? 3 : 1, gas: 0 };
@@ -237,3 +251,53 @@ function practice(kind, diff) {
 fit();
 go(titleScene());
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frameLoop); });
+
+// ---------- UI art for the pages above (uiX_) ----------
+// the field-report telex: a framed black sheet, blue title band and a strip of punched tape
+function uiX_reportBg() {
+  return sprite('uiX_report', W, 174, () => {
+    rect(0, 0, W, 174, P.K);
+    frame(3, 3, 314, 168, P.G1); frame(5, 5, 310, 164, P.BL); rect(5, 5, 310, 1, P.BL2);
+    rect(6, 8, 308, 14, P.BL); rect(6, 8, 308, 1, P.BL2); rect(6, 21, 308, 1, P.K); uiX_speck(6, 9, 308, 12, P.K, 3);
+    rect(150, 10, 136, 10, P.YE); rect(150, 10, 136, 1, P.W); rect(150, 19, 136, 1, P.BR);
+    for (let x = 152; x < 284; x += 3) { px(x, 14, P.BR); for (const [yy, s] of [[11, 1], [12, 2], [16, 3], [17, 4]]) if (uiX_hash(x, yy, 21 + s) < 0.45) px(x, yy, P.K); }
+    for (const [x, y] of [[3, 3], [316, 3], [3, 170], [316, 170]]) px(x, y, P.G3);
+  });
+}
+// a hazard-striped banner with rotating beacons at each end
+function uiX_urgent(x, y, w, h, t) {
+  rect(x, y, w, h, P.RD); rect(x, y, w, 1, P.RD2); rect(x, y + h - 1, w, 1, P.K);
+  const off = (t * 12 | 0) % 8;
+  for (const [sx, sw] of [[x + 2, 60], [x + w - 62, 60]]) { g.save(); g.beginPath(); g.rect(sx, y + 2, sw, h - 4); g.clip(); rect(sx, y + 2, sw, h - 4, P.K); for (let k = -h; k < sw + h; k += 8) for (let j = 0; j < h - 4; j++) rect(sx + k + j + off, y + 2 + j, 4, 1, P.YE); g.restore(); }
+  const on = (t * 4 | 0) % 2;
+  for (const bx of [x + 66, x + w - 71]) { rect(bx, y + 2, 5, 8, P.K); rect(bx + 1, y + 3, 3, 6, on ? P.RD2 : P.RD); if (on) px(bx + 1, y + 3, P.W); }
+}
+// the cell after escape: dripping stone, a barred window's light, and the cuffs you slipped
+function uiX_escapeArt(x, y, w, h, t) {
+  g.drawImage(sprite('uiX_escape' + w + 'x' + h, w, h, () => {
+    rect(0, 0, w, h, P.K);
+    // stone blocks, moonlit in a shaft under the window
+    for (let yy = 0; yy < 150; yy++) for (let xx = 0; xx < w; xx++) {
+      const r = yy / 9 | 0, bx = (xx + (r % 2) * 8) % 16, by = yy % 9, b = BAYER[(yy & 3) * 4 + (xx & 3)];
+      const lit = yy > 52 && xx > 24 + (yy - 53) * 0.25 && xx < 70 + (yy - 53) * 0.6, far = Math.abs(xx - 47) / 47 + (yy > 100 ? (yy - 100) / 80 : 0);
+      let c;
+      if (by === 8 || bx === 15) c = P.K;
+      else if (by === 0) c = lit ? P.W : b < 8 ? P.G3 : P.G1;
+      else if (lit) c = b < 10 - (uiX_hash((xx + (r % 2) * 8) >> 4, r, 5) * 4 | 0) ? P.G3 : P.G1;
+      else c = b < 3 + far * 8 + (uiX_hash((xx + (r % 2) * 8) >> 4, r, 5) * 4 | 0) ? P.K : P.G1;
+      px(xx, yy, c);
+    }
+    // moonlight through the bars
+    rect(22, 18, 50, 34, P.K); rect(24, 20, 46, 30, P.BL); uiX_speck(24, 20, 46, 30, P.K, 5); disc(56, 30, 5, P.W); disc(58, 28, 5, P.BL); px(34, 26, P.W); px(44, 40, P.W);
+    for (let i = 0; i < 5; i++) { rect(27 + i * 10, 18, 3, 34, P.G1); rect(27 + i * 10, 18, 1, 34, P.G3); }
+    rect(22, 52, 50, 2, P.G3); rect(22, 53, 50, 1, P.G1);
+    // floor
+    rect(0, 150, w, 50, P.G1); uiX_speck(0, 150, w, 50, P.K, 8); rect(0, 150, w, 1, P.G3); for (let yy = 151; yy < 200; yy++) uiX_speck(46 + (yy - 150) * 0.2 | 0, yy, 40 + (yy - 150) * 0.4 | 0, 1, P.G3, 3);
+    // the open handcuffs on the floor
+    const ring = (cx, cy, gap) => { for (let yy = -9; yy <= 9; yy++) for (let xx = -9; xx <= 9; xx++) { const d = Math.hypot(xx, yy), a = Math.atan2(yy, xx); if (d < 5.5 || d > 8.6) continue; if (gap && a > -0.9 && a < 0.1) continue; const l = -(xx + yy) / d; px(cx + xx, cy + yy, l > 0.5 ? P.W : l > -0.3 ? P.G3 : P.G1); } };
+    ring(24, 168, false); ring(66, 172, true); rect(18, 158, 12, 4, P.G3); rect(18, 158, 12, 1, P.W); px(23, 159, P.K); rect(60, 162, 12, 4, P.G3); rect(60, 162, 12, 1, P.W); px(65, 163, P.K);
+    for (let i = 0; i < 4; i++) { const cx = 34 + i * 6, cy = 168 + i; frame(cx, cy - 1, 5, 3, i % 2 ? P.G3 : P.W); }
+  }), x, y);
+  // a drip from the ceiling
+  const k = (t * 1.5) % 1, dy = y + 4 + k * k * 140; if (dy < y + 148) rect(x + 80, dy, 1, 2, P.CY); else rect(x + 78, y + 149, 5, 1, P.CY);
+}

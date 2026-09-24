@@ -108,30 +108,91 @@ function sidewalk(x, y, w, h) { rect(x, y, w, h, P.G1); dither(x, y, w, h, P.G1,
 // ---------- buildings: townhouse (hideout), glass office, tower (active cel), stucco safehouse (agent) ----------
 // watching through binoculars
 
-// ---------- regional travel maps: dark gray land, embossed yellow coasts, dithered sea ----------
+// ---------- regional travel maps: embossed gray relief, yellow-lit coasts, shelf-shaded dithered sea ----------
 const regionMapCache = {};
 const TRAVEL_VIEW = { europe: { lon: [-26, 46], lat: [30, 70] }, mideast: { lon: [-4, 62], lat: [12, 46] }, americas: { lon: [-122, -32], lat: [-40, 44] } };
 function travelProj(region, x, y, w, h) { const V = TRAVEL_VIEW[region]; return (lon, lat) => [x + (lon - V.lon[0]) / (V.lon[1] - V.lon[0]) * w, y + (V.lat[1] - lat) / (V.lat[1] - V.lat[0]) * h]; }
+// paint LAND through any projection into the current context (0,0,w,h)
+function uiX_mapRender(w, h, proj, mini) {
+  const m = document.createElement('canvas'); m.width = w; m.height = h; const mc = m.getContext('2d'); mc.fillStyle = '#fff';
+  const path = poly => { mc.beginPath(); poly.forEach(([lo, la], i) => { const [a, b] = proj(lo, la); i ? mc.lineTo(a, b) : mc.moveTo(a, b); }); mc.closePath(); mc.fill(); };
+  LAND.forEach(path); mc.fillStyle = '#000'; WATER.forEach(path);
+  const d = mc.getImageData(0, 0, w, h).data;
+  const L = new Uint8Array(w * h); for (let i = 0; i < w * h; i++) L[i] = d[i * 4] > 127 ? 1 : 0;
+  const land = (xx, yy) => L[clamp(yy, 0, h - 1) * w + clamp(xx, 0, w - 1)];
+  // chamfer distance from the coast, on the sea side
+  const D = new Float32Array(w * h).fill(99); for (let i = 0; i < w * h; i++) if (L[i]) D[i] = 0;
+  for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) { const i = yy * w + xx; if (xx) D[i] = Math.min(D[i], D[i - 1] + 1); if (yy) D[i] = Math.min(D[i], D[i - w] + 1); if (xx && yy) D[i] = Math.min(D[i], D[i - w - 1] + 1.4); if (yy && xx < w - 1) D[i] = Math.min(D[i], D[i - w + 1] + 1.4); }
+  for (let yy = h - 1; yy >= 0; yy--) for (let xx = w - 1; xx >= 0; xx--) { const i = yy * w + xx; if (xx < w - 1) D[i] = Math.min(D[i], D[i + 1] + 1); if (yy < h - 1) D[i] = Math.min(D[i], D[i + w] + 1); if (xx < w - 1 && yy < h - 1) D[i] = Math.min(D[i], D[i + w + 1] + 1.4); if (yy < h - 1 && xx) D[i] = Math.min(D[i], D[i + w - 1] + 1.4); }
+  const sc = mini ? 14 : 22, hN = (xx, yy) => vnoise(xx / sc, yy / sc) * 0.75 + vnoise(xx / (sc / 3), yy / (sc / 3)) * 0.25;
+  for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
+    const b = BAYER[(yy & 3) * 4 + (xx & 3)], i = yy * w + xx;
+    if (L[i]) {
+      const lit = !land(xx - 1, yy) || !land(xx, yy - 1), shade = !land(xx + 1, yy) || !land(xx, yy + 1);
+      let c;
+      if (lit) c = P.YE; else if (shade) c = P.K;
+      else if (!land(xx - 2, yy) || !land(xx, yy - 2) || !land(xx - 1, yy - 1)) c = b < 8 ? P.BR : P.G1;
+      else {
+        const e = hN(xx - 2, yy - 2) - hN(xx + 2, yy + 2), ht = hN(xx, yy);
+        c = e > 0.07 ? (b < 2 ? P.G3 : P.G1) : e < -0.07 ? (b < 2 ? P.K : P.G1) : P.G1;
+      }
+      px(xx, yy, c);
+    } else {
+      const dd = D[i]; let c = P.BL;
+      if (land(xx - 1, yy - 1) && dd < 1.5) c = P.K; // the land's drop shadow on the water
+      else if (dd < 1.5) c = P.BL2;
+      else if (dd < 3.5) c = b < 7 ? P.BL2 : P.BL;
+      else if (dd < 6) c = b < 2 ? P.BL2 : P.BL;
+      else if (dd > 12 && b < 1) c = P.K;
+      if (c === P.BL && yy % 6 === 3 && (xx + ((yy / 6) | 0) * 7) % 16 < 3 && dd > 4) c = P.BL2;
+      if (c === P.BL && yy % 6 === 2 && (xx + ((yy / 6) | 0) * 7) % 16 === 3 && dd > 4) c = P.BL2;
+      px(xx, yy, c);
+    }
+  }
+  // map symbols: little lit-and-shaded peaks where the relief is highest
+  const inland = (xx, yy, r) => { for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (!land(xx + i, yy + j)) return false; return true; };
+  for (let yy = 4; yy < h - 3; yy += mini ? 6 : 7) for (let xx = 4 + ((yy / 7 | 0) % 2) * 4; xx < w - 4; xx += mini ? 7 : 8) {
+    const jx = xx + (uiX_hash(xx, yy, 31) * 3 | 0), jy = yy + (uiX_hash(xx, yy, 32) * 3 | 0);
+    if (hN(jx, jy) < 0.62 || !inland(jx, jy, 3)) continue;
+    px(jx, jy - 2, P.W); px(jx - 1, jy - 1, P.G3); px(jx, jy - 1, P.G3); px(jx + 1, jy - 1, P.K); px(jx - 2, jy, P.G3); px(jx - 1, jy, P.G3); px(jx + 1, jy, P.K); px(jx + 2, jy, P.K); px(jx, jy, P.K);
+  }
+}
+// top-down jet, nose up; rotated copies for the other headings
+const uiX_JET = ['.....W.....', '....WlW....', '....WCW....', '....WWW....', '...lWWWl...', '.lWWWWWWWl.', 'WWWWWWWWWWW', 'l...WWW...l', '....WWW....', '...lWlWl...', '..WWl.lWW..'];
+function uiX_rot(rows) { const n = rows.length; return rows[0].split('').map((_, c) => rows.map((r, j) => rows[n - 1 - j][c]).join('')); }
+function uiX_jet(dir) { let r = uiX_JET; for (let i = 0; i < dir; i++) r = uiX_rot(r); return r; }
 function drawRegionMap(region, x, y, w, h, here, dests, selCity, flying, t) {
+  const V = TRAVEL_VIEW[region]; t = t || 0;
   const proj = travelProj(region, x, y, w, h); const key = region + w + 'x' + h;
   let c = regionMapCache[key];
-  if (!c) {
-    const V = TRAVEL_VIEW[region];
-    c = document.createElement('canvas'); c.width = w; c.height = h; const m = document.createElement('canvas'); m.width = w; m.height = h; const mc = m.getContext('2d'); mc.fillStyle = '#fff';
-    const path = poly => { mc.beginPath(); poly.forEach(([lo, la], i) => { const px_ = (lo - V.lon[0]) / (V.lon[1] - V.lon[0]) * w, py = (V.lat[1] - la) / (V.lat[1] - V.lat[0]) * h; i ? mc.lineTo(px_, py) : mc.moveTo(px_, py); }); mc.closePath(); mc.fill(); };
-    LAND.forEach(path); mc.fillStyle = '#000'; WATER.forEach(path);
-    const d = mc.getImageData(0, 0, w, h).data; const land = (xx, yy) => xx >= 0 && yy >= 0 && xx < w && yy < h && d[(yy * w + xx) * 4] > 127;
-    let s = 7;
-    drawTo(c.getContext('2d'), () => { for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) { if (land(xx, yy)) { const lit = !land(xx - 1, yy) || !land(xx, yy - 1), shade = !land(xx + 1, yy) || !land(xx, yy + 1); px(xx, yy, lit ? P.YE : shade ? P.K : P.G1); } else { s = (s * 1103515245 + 12345) & 0x7fffffff; const r = (s >> 16) % 5; px(xx, yy, r < 2 ? P.BL : r < 4 ? P.BL2 : P.K); } } });
-    regionMapCache[key] = c;
-  }
+  if (!c) c = regionMapCache[key] = sprite('uiX_region' + key, w, h, () => uiX_mapRender(w, h, (lo, la) => [(lo - V.lon[0]) / (V.lon[1] - V.lon[0]) * w, (V.lat[1] - la) / (V.lat[1] - V.lat[0]) * h]));
   g.drawImage(c, x, y);
+  const blink = (t * 4 | 0) % 2, pos = ct => ct.hq ? [x + 3, y + h / 2] : proj(ct.lon, ct.lat);
+  const label = (s, cx, cy, col) => { const tw = textW(s); let lx = cx + 5; if (lx + tw > x + w - 2) lx = cx - 5 - tw; rect(lx - 1, cy - 4, tw + 3, 10, P.K); text(s, lx, cy - 3, col); };
+  // Washington sits off the left edge: an arrow and a tag
+  const hqShown = here.hq || (dests.some(d => d.hq) && selCity && selCity.hq);
   for (const ct of [here, ...dests]) {
-    if (ct.hq) continue; const [cx, cy] = proj(ct.lon, ct.lat); const sel = selCity === ct;
-    rect(cx, cy, 2, 2, P.CY); if (sel || ct === here) text(ct.name, cx + 4, cy - 3, sel ? P.CY : P.W, P.K);
+    if (ct.hq) continue; const [cx, cy] = proj(ct.lon, ct.lat), sel = selCity === ct, me = ct === here;
+    if (sel) { const r = 3 + ((t * 6) | 0) % 3; frame(cx - r, cy - r, r * 2 + 1, r * 2 + 1, blink ? P.CY : P.W); }
+    rect(cx - 1, cy - 1, 3, 3, P.K); px(cx, cy, me ? P.YE : sel ? P.CY : P.W);
+    if (me) { rect(cx - 2, cy, 1, 1, P.YE); rect(cx + 2, cy, 1, 1, P.YE); rect(cx, cy - 2, 1, 1, P.YE); rect(cx, cy + 2, 1, 1, P.YE); }
   }
-  if (here.hq || (dests.some(d => d.hq) && selCity && selCity.hq)) { rect(x + 1, y + h / 2, 3, 2, P.CY); text('Washington', x + 5, y + h / 2 - 3, selCity && selCity.hq ? P.CY : P.W); }
-  if (flying) { const a = here.hq ? [x + 2, y + h / 2] : proj(here.lon, here.lat), b = flying.to.hq ? [x + 2, y + h / 2] : proj(flying.to.lon, flying.to.lat); const k = flying.t; const px_ = a[0] + (b[0] - a[0]) * k, py = a[1] + (b[1] - a[1]) * k; for (let i = 0; i < 24 * k; i += 2) px(a[0] + (b[0] - a[0]) * i / 24, a[1] + (b[1] - a[1]) * i / 24, P.W); rect(px_ - 3, py, 7, 1, P.W); rect(px_, py - 2, 1, 5, P.W); rect(px_ - 2, py + 2, 5, 1, P.W); }
+  if (hqShown) { const cy = y + h / 2 | 0; g.drawImage(uiX_spr('hqarrow', ['..W', '.WW', 'WWW', '.WW', '..W']), x + 1, cy - 2); }
+  for (const ct of [here, ...dests]) { if (ct.hq) continue; const [cx, cy] = proj(ct.lon, ct.lat); if (selCity === ct || ct === here) label(ct.name, cx, cy, selCity === ct ? P.CY : P.YE); }
+  if (hqShown) label('Washington', x + 1, y + h / 2 | 0, selCity && selCity.hq ? P.CY : here.hq ? P.YE : P.W);
+  if (flying) {
+    const a = pos(here), b = pos(flying.to), k = Math.min(1, flying.t), len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const cxp = (a[0] + b[0]) / 2, cyp = (a[1] + b[1]) / 2 - len * 0.28;
+    const at = u => [(1 - u) * (1 - u) * a[0] + 2 * u * (1 - u) * cxp + u * u * b[0], (1 - u) * (1 - u) * a[1] + 2 * u * (1 - u) * cyp + u * u * b[1]];
+    const n = Math.max(8, len / 2 | 0);
+    for (let i = 0; i <= n; i++) { const u = i / n, [qx, qy] = at(u); if (u <= k) { if (i % 2 === 0) px(qx, qy, P.W); } else if (i % 3 === 0) px(qx, qy, P.G3); }
+    const [jx, jy] = at(k), [nx, ny] = at(Math.min(1, k + 0.02)), [ox, oy] = at(Math.max(0, k - 0.02)), dx = nx - ox, dy = ny - oy;
+    const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0);
+    const alt = Math.sin(k * Math.PI) * 5 + 1;
+    g.drawImage(uiX_spr('jetS' + dir, uiX_jet(dir), P.K), jx - 5 + alt, jy - 5 + alt);
+    g.drawImage(uiX_spr('jet' + dir, uiX_jet(dir)), jx - 5, jy - 5);
+    if (blink) px(jx + (dir === 1 ? -5 : dir === 3 ? 5 : 0), jy + (dir === 0 ? 5 : dir === 2 ? -5 : 0), P.RD2);
+  }
 }
 
 // ---------- vacation snapshots ----------
