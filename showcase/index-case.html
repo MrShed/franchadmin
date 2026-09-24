@@ -563,6 +563,7 @@ article blockquote cite{display:block;font:600 10.5px var(--f-mono);font-style:n
 .d-press h1{font:800 34px/1 var(--f-serif);font-stretch:normal;text-transform:none;letter-spacing:-.01em;color:#111;margin:4px 0 12px}
 .d-press p{color:#2a261f;font:15px/1.55 var(--f-serif)}
 .d-press .pr-body{columns:2 150px;column-gap:18px}
+.d-press h5{color:#9a3413}
 .d-press .lnk{color:#1c3d78;border-bottom-color:rgba(28,61,120,.4)}
 .d-press blockquote{background:none;border-left-color:#1e1b16;color:#1e1b16}
 .d-call .cl-card{display:flex;gap:14px;align-items:center;padding:14px;border-radius:16px;background:radial-gradient(120% 100% at 0 0,rgba(255,122,69,.18),transparent 60%),rgba(18,28,37,.9);border:1px solid rgba(255,122,69,.3);margin-bottom:14px}
@@ -6951,12 +6952,12 @@ var UIA = (function () {
     });
     function fmtT(t, v) {
       if (v === undefined || v === null) return '—';
-      if (t.type === 'person') { var c = A.caseOf(v); return c ? c.name : String(v); }
+      if (t.type === 'person') return A.nameOf(v);
       if (Array.isArray(v)) return v.map(function (x) { var o = (t.options || []).filter(function (y) { return y.id === String(x); })[0]; return o ? o.label : x; }).join(', ');
       if (t.type === 'pct') return UIfmt.pct(v, v < 0.01 ? 2 : v < 0.1 ? 1 : 0);
       if (t.type === 'number' || typeof v === 'number') return (+v).toFixed(Math.abs(v) < 10 && v % 1 ? 1 : 0) + (t.unit ? ' ' + t.unit : '');
       var op = (t.options || []).filter(function (y) { return y.id === String(v); })[0];
-      return op ? op.label : UIcap(String(v));
+      return UIcap(op ? op.label : String(v).replace(/-/g, ' '));
     }
     var cv = D.curves || {}, act = cv.actual || {}, gh = cv.ghost || {};
     var dth = D.deaths || {}, costs = D.costs || {};
@@ -8096,7 +8097,7 @@ var UIMap = UI.views.map = {
       self.g.zoomAt(cv.w / 2, cv.h / 2, b.dataset.z === 'in' ? 1.5 : 1 / 1.5);
     });
     UI$('#mp-rec').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; st.recency = +b.dataset.r; self.chrome(); self.cv.frame(); UI.save(); });
-    UI$('#mp-layers').addEventListener('click', function (e) { var b = e.target.closest('[data-l]'); if (!b) return; st.layers[b.dataset.l] = !st.layers[b.dataset.l]; UIAudio.cue('tap'); self.chrome(); self.cv.frame(); UI.save(); });
+    UI$('#mp-layers').addEventListener('click', function (e) { var b = e.target.closest('[data-l]'); if (!b) return; st.layers[b.dataset.l] = !st.layers[b.dataset.l]; UIAudio.cue('tap'); if (b.dataset.l === 'ww' && st.layers.ww && !self.hasWW) UItoast('No wastewater samples yet — start sampling from the Lab tab'); self.chrome(); self.cv.frame(); UI.save(); });
     this.anim();
   },
   show: function () { this.data(); this.chrome(); this.cv.resize(); this.cv.frame(); },
@@ -8123,11 +8124,18 @@ var UIMap = UI.views.map = {
     UI$$('#mp-rec button').forEach(function (b) { b.classList.toggle('on', +b.dataset.r === st.recency); });
     UI$('#mp-rec').hidden = !st.layers.cases;
     var shown = this.visiblePts().length, cl = this.clusters.length;
-    UI$('#mp-stat').innerHTML = '<b>' + UIesc(UIA.city().name) + '</b><span>' + UIfmt.n(UIA.city().pop) + ' people · ' + UIfmt.plural(shown, 'case') + ' shown' + (cl ? ' · ' + UIfmt.plural(cl, 'cluster') : '') + '</span>';
+    UI$('#mp-stat').innerHTML = '<b>' + UIesc(UIA.city().name) + '</b><span>' + UIfmt.n(UIA.city().pop) + ' people · ' + UIfmt.plural(shown, 'case') + (st.recency ? ' in ' + st.recency + ' days' : ' shown') + (cl ? ' · ' + UIfmt.plural(cl, 'cluster') : '') + '</span>';
     var leg = '';
     if (st.layers.cases) leg += '<div class="lg-row">' + UIMapR.RECENCY.map(function (R, i) { return '<span><i style="background:' + R.core + ';box-shadow:0 0 8px ' + R.halo + '"></i>' + (i === 0 ? 'Onset ≤2d' : i === 1 ? '≤7d' : i === 2 ? '≤14d' : 'older') + '</span>'; }).join('') + '</div>';
     if (st.layers.ww) leg += '<div class="lg-row"><span class="lg-grad"></span><span>Wastewater: low → high</span></div>';
     UI$('#mp-legend').innerHTML = leg; UI$('#mp-legend').hidden = !leg;
+  },
+  /** clusters worth drawing: recent ones at city scale, all of them once zoomed in; capped */
+  shownClusters: function () {
+    var day = UIA.day(), k = UIS.map.view.k;
+    var L = (this.clusters || []).filter(function (c) { return c.pos && (k >= 2.5 || c.lastOnset === null || day - c.lastOnset < 21); });
+    L.sort(function (a, b) { return (b.lastOnset || 0) - (a.lastOnset || 0) || b.size - a.size; });
+    return L.slice(0, Math.round(24 * Math.max(1, k)));
   },
   visiblePts: function () {
     var st = UIS.map; if (!st.layers.cases || !this.pts) return [];
@@ -8154,7 +8162,7 @@ var UIMap = UI.views.map = {
     if (st.layers.venues && !anim) {
       ctx.save();
       var near = T.s > 900, vs = UIclamp(T.s / 85, 6, 12), hot = {};
-      (this.clusters || []).forEach(function (c) { if (c.place) hot[c.place] = 1; });
+      if (st.layers.clusters) this.shownClusters().forEach(function (c) { if (c.place) hot[c.place] = 1; });
       city.places.forEach(function (p) {
         if (!p.pos) return; var q = UIMapR.toScreen(T, p.pos);
         if (q[0] < -20 || q[1] < -20 || q[0] > w + 20 || q[1] > h + 20) return;
@@ -8171,7 +8179,7 @@ var UIMap = UI.views.map = {
     // clusters: pulsing rings, labels kept on screen and apart
     if (st.layers.clusters && this.clusters) {
       var boxes = [], day = UIA.day(), maxLbl = Math.round(UIclamp(w * h / 60000, 4, 14) * Math.min(3, Math.sqrt(st.view.k)));
-      var cls = this.clusters.filter(function (c) { return c.pos; }).sort(function (a, b) { var ra = a.lastOnset !== null && day - a.lastOnset < 14 ? 1 : 0, rb = b.lastOnset !== null && day - b.lastOnset < 14 ? 1 : 0; return rb - ra || b.size - a.size; });
+      var cls = this.shownClusters().sort(function (a, b) { var ra = a.lastOnset !== null && day - a.lastOnset < 14 ? 1 : 0, rb = b.lastOnset !== null && day - b.lastOnset < 14 ? 1 : 0; return rb - ra || b.size - a.size; });
       cls.forEach(function (c, i) {
         var stale = c.lastOnset !== null && day - c.lastOnset >= 21;
         if (!c.pos) return; var q = UIMapR.toScreen(T, c.pos), rad = UIclamp(T.s / 60, 10, 30) * (0.8 + Math.sqrt(c.size) * .25), ph = (t * .6 + i * .37) % 1;
@@ -8193,7 +8201,7 @@ var UIMap = UI.views.map = {
     }
     // cases
     var vp = this.visiblePts();
-    if (!anim) UIMapR.dots(ctx, T, vp);
+    if (!anim) { var dens = UIclamp(Math.sqrt(400 / Math.max(1, vp.length)), .18, 1); vp.forEach(function (q) { q.a = dens * (q.b === 3 ? .6 : 1); }); UIMapR.dots(ctx, T, vp); }
     ctx.save();
     vp.forEach(function (q) {
       var c = UIMapR.toScreen(T, q.p);
@@ -8218,7 +8226,7 @@ var UIMap = UI.views.map = {
   tap: function (x, y) {
     var T = this.T, st = UIS.map, best = null, bd = 20, city = UIA.city();
     this.visiblePts().forEach(function (q) { var c = UIMapR.toScreen(T, q.p), d = Math.hypot(c[0] - x, c[1] - y); if (d < bd) { bd = d; best = { t: 'case', id: q.c.pid }; } });
-    if (st.layers.clusters) (this.clusters || []).forEach(function (c) { if (!c.pos) return; var q = UIMapR.toScreen(T, c.pos), d = Math.hypot(q[0] - x, q[1] - y); if (d < bd + 4) { bd = d; best = { t: 'cluster', id: c.id }; } });
+    if (st.layers.clusters) this.shownClusters().forEach(function (c) { if (!c.pos) return; var q = UIMapR.toScreen(T, c.pos), d = Math.hypot(q[0] - x, q[1] - y); if (d < bd + 4) { bd = d; best = { t: 'cluster', id: c.id }; } });
     if (st.layers.venues) city.places.forEach(function (p) { if (!p.pos) return; var q = UIMapR.toScreen(T, p.pos), d = Math.hypot(q[0] - x, q[1] - y); if (d < bd) { bd = d; best = { t: 'place', id: p.id }; } });
     if (best) {
       // several cases stacked at one spot: list them
@@ -8877,7 +8885,10 @@ var UIBrief = UI.views.brief = {
     if (sub === 'est') UIEst.render(UI$('#br-body'));
     else if (sub === 'mentor') UIMentor.render(UI$('#br-body'));
     else this.renderInbox();
-    UI$('.br').classList.toggle('reading', !!UIS.brief.open && sub === 'inbox');
+    var reading = !!UIS.brief.open && sub === 'inbox', doc = UI$('#br-doc');
+    UI$('.br').classList.toggle('reading', reading);
+    if (!reading) { doc.innerHTML = ''; doc.dataset.id = ''; UI$('#br-rt').innerHTML = ''; }
+    else if (doc.dataset.id !== UIS.brief.open && !this._opening) { var m = UIA.msg(UIS.brief.open); if (m) this.fillDoc(m); }
   },
   renderInbox: function () {
     var st = UIS.brief, all = UIA.inbox().map(function (m, i) { return { m: m, i: i }; }).sort(function (a, b) { return b.m.day - a.m.day || (b.m.urgent ? 1 : 0) - (a.m.urgent ? 1 : 0) || b.i - a.i; }).map(function (x) { return x.m; }), kinds = {};
@@ -8902,7 +8913,17 @@ var UIBrief = UI.views.brief = {
     if (UIS.tab !== 'brief') UI.go('brief');
     if (UIS.brief.sub !== 'inbox') { UIS.brief.sub = 'inbox'; }
     UIS.brief.open = id; UIS.read[id] = 1; UIA.markRead(id);
+    this._opening = true; this.fillDoc(m); this._opening = false;
+    this.render();
+    UI.badges();
+    if (window.innerWidth < 900 && !UIhist.stack.some(function (l) { return l.name === 'reader'; })) UIhist.push('reader', function () { UIS.brief.open = null; UIBrief.render(); });
+    if (m.kind === 'mayor') UIAudio.cue('phone');
+    UI.emit('msg', m);
+    UI.save();
+  },
+  fillDoc: function (m) {
     var K = UIKINDS[m.kind] || UIKINDS.report;
+    UI$('#br-doc').dataset.id = m.id;
     UI$('#br-rt').innerHTML = '<div class="eyebrow">' + UIesc(K.l) + ' · ' + UIesc(UIA.dateShort(m.day)) + '</div><b>' + UIesc(m.title) + '</b>';
     UI$('#br-doc').innerHTML = this.doc(m) + this.choices(m);
     var self = this;
@@ -8913,12 +8934,6 @@ var UIBrief = UI.views.brief = {
       UIAudio.cue('ok'); UItoast('Answer given'); UI.save(); UI.refresh(); self.openMsg(m.id);
     }); });
     UI$('#br-rs').scrollTop = 0;
-    this.render();
-    UI.badges();
-    if (window.innerWidth < 900) UIhist.push('reader', function () { UIS.brief.open = null; UIBrief.render(); });
-    if (m.kind === 'mayor') UIAudio.cue('phone');
-    UI.emit('msg', m);
-    UI.save();
   },
   choices: function (m) {
     if (!m.choices || !m.choices.length) return '';
@@ -9269,10 +9284,12 @@ var UIDebrief = {
     var cv = UIcanvas(host, function (ctx, w, h) {
       var T = UIMapR.base(ctx, w, h, { city: city, view: view });
       UIMapR.labels(ctx, T, city, {});
-      var pts = [], arcs = [];
-      fr.forEach(function (f) { if (f.day > cur) return; var age = cur - f.day; pts.push({ p: pos[f.pid], b: UIMapR.bucket(age), a: age > 21 ? .5 : 1 }); if (age <= 3 && f.by && pos[f.by]) arcs.push([pos[f.by], pos[f.pid], age]); });
+      var pts = [], arcs = [], nOn = 0;
+      fr.forEach(function (f) { if (f.day <= cur && cur - f.day <= 21) nOn++; });
+      var base = UIclamp(Math.sqrt(220 / Math.max(1, nOn)), 0.14, 1);
+      fr.forEach(function (f) { if (f.day > cur) return; var age = cur - f.day; pts.push({ p: pos[f.pid], b: UIMapR.bucket(age), a: base * (age > 21 ? .25 : 1) }); if (age <= 3 && f.by && pos[f.by] && arcs.length < 400) arcs.push([pos[f.by], pos[f.pid], age]); });
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      arcs.forEach(function (a) { var p = UIMapR.toScreen(T, a[0]), q = UIMapR.toScreen(T, a[1]); var mx = (p[0] + q[0]) / 2 - (q[1] - p[1]) * .2, my = (p[1] + q[1]) / 2 + (q[0] - p[0]) * .2; ctx.strokeStyle = 'rgba(255,150,90,' + (0.5 - a[2] * .11).toFixed(2) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.quadraticCurveTo(mx, my, q[0], q[1]); ctx.stroke(); });
+      arcs.forEach(function (a) { var p = UIMapR.toScreen(T, a[0]), q = UIMapR.toScreen(T, a[1]); var mx = (p[0] + q[0]) / 2 - (q[1] - p[1]) * .2, my = (p[1] + q[1]) / 2 + (q[0] - p[0]) * .2; ctx.strokeStyle = 'rgba(255,150,90,' + ((0.5 - a[2] * .11) * Math.max(.3, base)).toFixed(3) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.quadraticCurveTo(mx, my, q[0], q[1]); ctx.stroke(); });
       ctx.restore();
       UIMapR.dots(ctx, T, pts, { scale: .8 });
     });
@@ -9307,10 +9324,11 @@ var UIDebrief = {
       ctx.fillStyle = '#060a0f'; ctx.fillRect(0, 0, w, h);
       var L = 14, R = w - 14, T = 12, B = h - 22;
       var X = function (d) { return view.x + (L + (d - d0) / Math.max(1, d1 - d0) * (R - L)) * view.k; }, Y = function (v) { return view.y + (T + v / ny * (B - T)) * view.k; };
-      ctx.lineWidth = Math.max(0.6, 0.8 * Math.sqrt(view.k));
-      nodes.forEach(function (n) { var p = n.parent && by[n.parent]; if (!p) return; ctx.strokeStyle = col(n); ctx.globalAlpha = .55; ctx.beginPath(); ctx.moveTo(X(p.day), Y(p.y)); ctx.lineTo(X(p.day), Y(n.y)); ctx.lineTo(X(n.day), Y(n.y)); ctx.stroke(); });
+      ctx.lineWidth = Math.max(0.5, 0.8 * Math.sqrt(view.k) * (nodes.length > 1500 ? .7 : 1));
+      var la = nodes.length > 1500 ? UIclamp(.25 * Math.sqrt(view.k), .2, .6) : .55;
+      nodes.forEach(function (n) { var p = n.parent && by[n.parent]; if (!p) return; ctx.strokeStyle = col(n); ctx.globalAlpha = la; ctx.beginPath(); ctx.moveTo(X(p.day), Y(p.y)); ctx.lineTo(X(p.day), Y(n.y)); ctx.lineTo(X(n.day), Y(n.y)); ctx.stroke(); });
       ctx.globalAlpha = 1;
-      var r = UIclamp(1.2 * Math.sqrt(view.k) + (nodes.length < 300 ? 1.2 : 0), 1, 5);
+      var r = UIclamp((nodes.length > 1500 ? .7 : 1.2) * Math.sqrt(view.k) + (nodes.length < 300 ? 1.2 : 0), .8, 5);
       nodes.forEach(function (n) { ctx.fillStyle = n.died ? '#d9d3c7' : col(n); ctx.beginPath(); ctx.arc(X(n.day), Y(n.y), n === sel ? r + 3 : r, 0, Math.PI * 2); ctx.fill(); n.sx = X(n.day); n.sy = Y(n.y); });
       roots.forEach(function (n) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(n.day), Y(n.y), r + 4, 0, Math.PI * 2); ctx.stroke(); });
       ctx.fillStyle = 'rgba(164,179,192,.8)'; ctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--f-mono'); ctx.textAlign = 'left'; ctx.fillText(UIA.dateShort(d0), L, h - 7); ctx.textAlign = 'right'; ctx.fillText(UIA.dateShort(d1), R, h - 7);
