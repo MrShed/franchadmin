@@ -68,7 +68,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var r0 = hr === 'airborne' ? 1.8 + 3.1 * Math.pow(R.next(), 1.3) : hr === 'droplet' ? R.range(1.3, 3.4) : hr === 'contact' ? R.range(1.25, 2.1) : R.range(1.35, 2.6);
     if (P.route === 'animal') r0 = R.range(1.25, 2.0);
     r0 *= Math.exp(-0.06 * v);
-    if (grade === 'probationer') r0 = clamp(r0, 1.5, 3.5);
+    if (grade === 'probationer') r0 = clamp(r0, 1.4, 2.8);
     P.R = IX.round(clamp(fx.R || r0, 1.2, 5), 2);
 
     // who it hits
@@ -78,6 +78,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     P.ageRisk = fx.ageRisk || R.weighted(shapeW);
     P.sevScale = clamp(Math.pow(P.ifr / 0.01, 0.35), 0.6, 2.4);   // scales fatality among the hospitalised
 
+    // children's susceptibility relative to adults (many respiratory viruses spare them; gut bugs do not)
+    P.childSusc = IX.round(P.family === 'gut' ? R.range(0.9, 1.3) : P.ageRisk === 'children' ? R.range(0.8, 1.2) : R.range(0.45, 1.05), 2);
     // clinical course
     P.hospDelay = IX.round(P.family === 'gut' ? R.range(2, 4) : P.family === 'contact' ? R.range(3.5, 6) : R.range(4.5, 8), 1);   // onset -> admission
     P.deathDelay = IX.round(R.range(5, 12), 1);    // admission -> death

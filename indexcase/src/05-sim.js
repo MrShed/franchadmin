@@ -200,13 +200,15 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   };
 
   /** sick people stay home: probability by day of illness (children more) */
-  SP.sickHome = function (j, x, sd) {
+  SP.sickHome = function (j, x, sd, pol) {
     var on = this.xonset[x]; if (on < 0 || sd < on) return false;
     var rel = sd - on, age = this.C.age[j];
     var p = age < 16 ? 0.55 + 0.12 * rel : 0.3 + 0.12 * rel;
     if (this.C.flags[j] & (FLAG.HCW | FLAG.CARE_WORKER)) p -= 0.08;   // presenteeism
     if (this.P.family === 'gut') p += 0.1;
-    return u(this.K.beh, j, sd, 1) < Math.min(0.92, p);
+    // an isolation order (with support payments): the ill stay home from the first day of symptoms
+    if (pol && pol.isoSym && this.complies(j, 0, pol)) p = Math.max(p, 0.88);
+    return u(this.K.beh, j, sd, 1) < Math.min(0.94, p);
   };
 
   // ---------------------------------------------------------------- one day
@@ -232,7 +234,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var x = act[i], j = this.xwho[x], s = this.st[j];
       var a = 0;
       if (s === ST.H || s === ST.C || s === ST.D) a = 2;
-      else if (s === ST.I && this.sickHome(j, x, sd)) a = 1;
+      else if (s === ST.I && this.sickHome(j, x, sd, pol)) a = 1;
       if (a) { away[j] = a; L.push(j); }
     }
     // background inpatients, isolation and quarantine lists (maintained by the policy layer)
@@ -303,7 +305,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       }
       return 0;
     }
-    var f = 1;
+    var f = this.C.age[j] < 18 ? this.P.childSusc || 1 : 1;
     if (this.vac[j] > -30000 && sd >= this.vac[j] + 14) f *= 1 - (this.VE_inf || 0.65) * (vr && this.P.variant ? 1 - this.P.variant.escape : 1);
     return f;
   };

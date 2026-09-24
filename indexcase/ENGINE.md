@@ -42,7 +42,7 @@ IX.GRADES                      // [{id, label, blurb}]
 | `g.day` | current day index (0 = the morning of the alert). Days before 0 exist in data (onsets before the alert). **Player-facing day numbers are `g.day + 1`** (the alert morning is "Day 1"); engine text uses dates or day+1, never raw indices. All `day` fields in data are indices. |
 | `g.actNo` | 1 Detect, 2 Characterise, 3 Contain  (**`g.act(id, target, params)` is the action method**, see Actions) |
 | `g.actLabel` | `'Detect'` / `'Characterise'` / `'Contain'` |
-| `g.over`, `g.outcome` | finished? `{kind:'contained'|'vaccine'|'timeout'|'collapse', day, title, text}` |
+| `g.over`, `g.outcome` | finished? `{kind:'contained'|'vaccine'|'timeout'|'collapse'|'resigned', day, title, text}` |
 | `g.agentName` | `null` until the lab confirms a novel agent, then e.g. `'Agent SA-3'` |
 | `g.credibility` | 0..100, your personal standing with council/lab/press |
 | `g.dateLabel(d)` | `"Tue 14 Oct"`; `g.dateLong(d)` → `"Tuesday 14 October 2025"` |
@@ -254,6 +254,8 @@ Traits (`key` ones end act 2): `route` (airborne/droplet/contact/gut/animal) key
 `caseDef` (array of symptom ids). Percent values are given as numbers 0..100.
 
 ## Clock
+
+`g.resign()` -> {ok, msgs, outcome}: stand down (ends the game; `debrief()` still works).
 
 ```js
 g.endDay() -> {day, newMsgs:[msg], events:[{kind, text, day, ref?}], over, outcome}

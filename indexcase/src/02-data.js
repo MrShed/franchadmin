@@ -199,6 +199,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     'It came on {date}. {sym}. I kept going to work for a day because I thought it was a cold.',
     'Round about {date}. {sym}. I\'d have said flu, if you\'d asked me then.'
   ];
+  T.onset_proxy = [
+    '{who} first went poorly on {date}. {sym}. {pron} is not one to make a fuss, so we knew it was bad.',
+    'It started on {date}, as far as we can tell. {sym}.',
+    '{who} was off colour from about {date}. {sym}. By the weekend {pron2} could barely talk.'
+  ];
   T.event = [
     'We were at a {what} on {date}, at {where}. Lovely do. Everybody hugging everybody.',
     'There was a {what} on {date} at {where}. Packed. I was only there a couple of hours.',

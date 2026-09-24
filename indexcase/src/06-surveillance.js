@@ -907,7 +907,13 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var symS = L.map(function (id) { return D.SYM[id].label; });
       symS = symS.length > 1 ? symS.slice(0, -1).join(', ') + ' and ' + symS[symS.length - 1] : symS[0];
       symS = symS.charAt(0).toUpperCase() + symS.slice(1);
-      lines.push({ k: 'q', who: this.pref(pid), x: [IX.pickText(this, 'onset', pid, { date: cs.onset !== null ? this.dateLabel(cs.onset) : 'a few days ago', sym: symS })] });
+      var dateS = cs.onset !== null ? this.dateLabel(cs.onset) : 'a few days ago';
+      if (proxy) {
+        var age0 = C.age[pid], male = C.sex[pid];
+        var whoS = age0 < 16 ? (male ? 'My son' : 'My daughter') : age0 >= 70 ? (male ? 'Dad' : 'Mum') : (male ? 'My husband' : 'My wife');
+        if (C.flags[pid] & FLAG.CARE_RES) whoS = male ? 'Dad' : 'Mum';
+        lines.push({ k: 'q', x: [IX.pickText(this, 'onset_proxy', pid, { who: whoS, date: dateS, sym: symS, pron: male ? 'He' : 'She', pron2: male ? 'he' : 'she' })] });
+      } else lines.push({ k: 'q', who: this.pref(pid), x: [IX.pickText(this, 'onset', pid, { date: dateS, sym: symS })] });
     } else {
       cs.symptoms = [];
       lines.push({ k: 'q', who: this.pref(pid), x: ['I feel absolutely fine. I only had the test because I was told to.'] });
@@ -1095,6 +1101,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (rows.length) lines.push({ k: 'table', head: ['Contact', 'Age', 'Setting', 'Place', 'Last exposure', 'Now'], rows: rows });
     unnamed.forEach(function (un) { lines.push({ k: 'n', x: ['Also at ', self.plref(un.place), ' on ' + un.days.map(function (d) { return self.shortDate(d); }).join(', ') + ': other people there could not be named without an attendance list (site visit).'] }); });
     lines.push({ k: 'n', x: ['Tracers will call each contact daily until 14 days after exposure and report anyone who falls ill.'] });
+    if (params && params.quiet) return { ok: true, msgs: [], found: list.length };
     var m = this.msg('result', 'Contact tracing: ' + this.name(pid) + ' (' + list.length + ' contacts)', 'Contact tracing team', lines);
     return { ok: true, msgs: [m], found: list.length };
   };

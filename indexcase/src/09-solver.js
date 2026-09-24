@@ -17,6 +17,22 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   // ================================================================ estimators (observable data only)
   function erf(x) { var t = 1 / (1 + 0.3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; }
   IX.erf = erf;
+  /** gamma(mean, cv) + uniform(1..21) mixture fitted by grid search; returns {mean, sd, share} */
+  function incubationFit(L) {
+    var best = null, bestLL = -Infinity;
+    function lgamma(z) { var c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5]; var x = z, y = z, t = x + 5.5; t -= (x + 0.5) * Math.log(t); var ser = 1.000000000190015; for (var j = 0; j < 6; j++) ser += c[j] / ++y; return -t + Math.log(2.5066282746310005 * ser / x); }
+    for (var mu = 1.5; mu <= 16; mu += 0.25) for (var cv = 0.25; cv <= 0.55; cv += 0.1) for (var pi = 0.3; pi <= 1.0001; pi += 0.1) {
+      var k = 1 / (cv * cv), th = mu / k, ll = 0, lk = lgamma(k);
+      for (var i = 0; i < L.length; i++) {
+        var x = Math.max(0.5, L[i]);
+        var g = Math.exp((k - 1) * Math.log(x) - x / th - lk - k * Math.log(th));
+        ll += Math.log(pi * g + (1 - pi) / 21 + 1e-12);
+      }
+      if (ll > bestLL) { bestLL = ll; best = { mean: IX.round(mu, 1), sd: IX.round(mu * cv, 2), share: IX.round(pi, 1) }; }
+    }
+    return best;
+  }
+  IX.incubationFit = incubationFit;
   function robustMean(L) {
     if (!L.length) return NaN;
     var m = IX.median(L), keep = L.filter(function (v) { return v <= 2 * m + 2; });
@@ -79,7 +95,10 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     S.quests.forEach(function (q) { if (!EVENT_KINDS[q.kind] || (q.onsets || []).length < 3) return; q.onsets.forEach(function (v) { if (v >= 1 && v <= 21) inc.push(v); }); });
     pairs.forEach(function (p) { inc.push(p.inc); });
     E.n.incubation = inc.length;
-    if (inc.length >= 8) E.incubation = IX.round(IX.median(inc) * 1.04, 1);
+    // onsets after a single exposure are a mixture: the incubation distribution, plus illness caught elsewhere
+    // (roughly flat over the three-week window). Fit both by maximum likelihood.
+    var fit = inc.length >= 8 ? incubationFit(inc) : null;
+    if (fit) { E.incubation = fit.mean; E.incFit = fit; }
     // serial interval: households and pairs
     var si = [];
     S.hhStudies.forEach(function (st) { if (st.result && st.result.si) st.result.si.forEach(function (v) { if (v >= -5 && v <= 25) si.push(v); }); });
@@ -91,8 +110,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var pre = 0, post = 0;
     pairs.forEach(function (p) { if (p.si >= -3) { if (p.pre) pre++; else post++; } });
     E.n.presym = pre + post;
-    if (si.length >= 10 && inc.length >= 8) {
-      var mSi = IX.mean(si), vSi = Math.pow(IX.sd(si), 2), mIn = IX.median(inc) * 1.04, vIn = Math.pow(0.35 * mIn, 2);
+    if (si.length >= 10 && fit) {
+      var mSi = IX.median(si), madSi = IX.median(si.map(function (v) { return Math.abs(v - mSi); })) * 1.4826;
+      var vSi = Math.pow(Math.max(1, madSi), 2), mIn = fit.mean, vIn = Math.pow(fit.sd, 2);
       var mt = mSi - mIn, sdt = Math.sqrt(Math.max(1, vSi - vIn));
       E.presymModel = Math.round(100 * 0.5 * (1 + erf(-mt / sdt / Math.SQRT2)));
     }
@@ -332,7 +352,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   };
 
   // ================================================================ acceptance
-  IX.ACCEPT = { detectBy: { probationer: 10, consultant: 10, director: 12 }, charSlack: 21, needTraits: 5, minGhostDeaths: 6, minGhostHosp: 20, minPeakDay: 14, maxAlertInf: 0.06 };
+  IX.ACCEPT = { detectBy: { probationer: 10, consultant: 10, director: 12 }, charSlack: 21, needTraits: 5, minGhostDeaths: 6, minGhostHosp: 20, minPeakDay: 14, maxAlertInf: 0.06, maxAlertInfBy: { probationer: 0.03, consultant: 0.05, director: 0.07 } };
   var SINGLE_SET = {}; [SET.EVENT, SET.VISIT, SET.PUB, SET.RESTAURANT, SET.CHOIR, SET.FAITH, SET.STADIUM, SET.GYM, SET.MARKET, SET.DOORSTEP, SET.FUNERAL].forEach(function (s) { SINGLE_SET[s] = 1; });
 
   /** Fast acceptance (used by IX.newGame): the alert, the ghost city, and truth-side proxies for
@@ -345,7 +365,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var sim = g.sim, C = g.C, S = g.S, P = g.P;
     // detectable: the alert comes early, and it contains enough real cases to declare
     v.infAtAlert = sim.n;
-    if (sim.n > A.maxAlertInf * C.N) v.fails.push('alert late (' + sim.n + ' infected)');
+    if (sim.n > (A.maxAlertInfBy[g.grade] || A.maxAlertInf) * C.N) v.fails.push('alert late (' + sim.n + ' infected)');
     var sdA = g.sdOf(0) - 1, real = 0;
     S.caseOrder.forEach(function (pid) { if (g.infBy(pid, sdA) >= 0) real++; });
     v.realAtAlert = real;
@@ -502,5 +522,116 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       case 'ifr': txt = 'Roughly ' + (v >= 1 ? IX.round(v, 1) : IX.round(v, 2)) + '% of the people it infects die.'; break;
     }
     return { text: txt + ' I\'d stake my bees on it.', trait: weakest };
+  };
+})();
+
+/* ------------------------------------------------------------------------------------------
+ * A competent player (for balancing): the ideal epidemiologist's investigations plus a
+ * sensible, proportionate response. IX.playPolicy(g, 'none'|'competent'|'naive', {until})
+ * ------------------------------------------------------------------------------------------ */
+(function () {
+  'use strict';
+  IX.playPolicy = function (g, policy, opts) {
+    opts = opts || {};
+    var S = g.S, until = opts.until || IX.DAY_LIMIT + 1;
+    var done = { interview: {}, trace: {}, household: {}, site: {}, quest: {}, seq: {} }, lastSero = -99, lastBrief = -99, lastReview = -99, lastFund = -99;
+    var restrictSince = {};
+    function act(id, t, p) { var r = g.act(id, t, p); return r.ok; }
+    function ord(id, p) { if (g.ordersOf(id).length) return false; var r = g.order(id, p || {}); return r.ok; }
+    function lift(id) { g.ordersOf(id).forEach(function (o) { g.revoke(o.id); }); }
+    while (!g.over && S.day < until) {
+      if (policy === 'none') { g.endDay(); continue; }
+      var ll = g.lineList();
+      // answer the phone sensibly
+      S.msgs.forEach(function (m) {
+        if (!m.choices || m.answered) return;
+        var pick = m.choices[0].id;
+        if (m.meta && m.meta.ask === 'lift') pick = g.sim.hospNow < 0.5 * g.bedCap() ? 'lift' : 'hold';
+        if (m.meta && m.meta.ask === 'schools') pick = 'reopen';
+        if (m.meta && m.meta.ask === 'mayor') pick = { firstDeath: 'straight', lockdown: 'data', schools: 'depends', press: 'sorry', beds: 'surge' }[m.meta.topic] || pick;
+        g.answer(m.id, pick);
+      });
+      if (!S.recognized) {
+        ll.forEach(function (c) { if (c.status === 'suspected' && !c.tests.length) act('test', c.pid); });
+        ll.forEach(function (c) { if (c.status !== 'discarded' && !done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
+        if (!S.declared) act('declare_novel');
+        if (S.day - lastReview >= 4 && act('record_review')) lastReview = S.day;
+      } else {
+        var E = IX.estimate(g);
+        var live = ll.filter(function (c) { return c.status === 'confirmed' || c.status === 'probable'; });
+        live.sort(function (a, b) { return (b.onset === null ? -99 : b.onset) - (a.onset === null ? -99 : a.onset); });
+        // the basics, straight away
+        ord('isolate'); ord('quarantine'); ord('hospital_ipc'); ord('care_homes'); ord('wastewater');
+        if (policy === 'competent') {
+          // investigations
+          var hh = 0;
+          live.forEach(function (c) { if (hh < 1 && !done.household[c.pid] && Object.keys(done.household).length < 10 && c.status === 'confirmed' && g.canAct('household', c.pid) === null && act('household', c.pid)) { done.household[c.pid] = 1; hh++; } });
+          live.forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
+          live.forEach(function (c) { if (!done.trace[c.pid] && c.onset !== null && act('trace', c.pid, { daysBefore: 3 })) done.trace[c.pid] = 1; });
+          g.clusters().slice(0, 6).forEach(function (k) {
+            if (!k.place) return; var pi = g.placeIdx(k.place.id);
+            if (!done.site[pi] && act('site_visit', pi)) done.site[pi] = 1;
+            var ek = g.C.places[pi].kind;
+            if (k.size >= 3 && !done.quest[pi] && ['pub', 'restaurant', 'choir', 'church', 'mosque', 'temple', 'gurdwara', 'hotel', 'community_hall', 'gym'].indexOf(ek) >= 0 && act('questionnaire', pi)) done.quest[pi] = 1;
+            // shut venues that keep producing cases
+            if (k.size >= 5 && ['pub', 'restaurant', 'choir', 'gym', 'meat_plant', 'hotel', 'community_hall'].indexOf(ek) >= 0 && k.lastOnset !== null && S.day - k.lastOnset < 10) ord2('close_place', pi);
+          });
+          live.slice(0, 2).forEach(function (c) { if (!done.seq[c.pid] && g.canAct('sequence', c.pid) === null && act('sequence', c.pid)) done.seq[c.pid] = 1; });
+          if (S.day - lastSero >= 21 && live.length >= 30 && act('serosurvey', null, { n: 500 })) lastSero = S.day;
+          if (S.day - lastReview >= 10 && act('record_review')) lastReview = S.day;
+          if (S.seqPublished === undefined && g.canAct('publish_sequence') === null) act('publish_sequence');
+          // publish what we know
+          var pub = {};
+          IX.KEY_TRAITS.concat(['caseDef']).forEach(function (k) {
+            var v = E[k]; if (v === undefined) return;
+            var p = S.published[k];
+            if (!p || (typeof v === 'number' && Math.abs(v - p.value) > 0.25 * Math.max(1, Math.abs(p.value)) && S.day - p.day >= 7) || (typeof v === 'string' && v !== p.value && S.day - p.day >= 7)) pub[k] = v;
+          });
+          if (Object.keys(pub).length) g.publish(pub);
+          // proportionate orders by route and growth
+          var route = (S.published.route && S.published.route.value) || E.route;
+          if (route === 'airborne' || route === 'droplet') { ord('masks'); if (route === 'airborne') ord('ventilation'); }
+          if (route === 'contact' || route === 'gut') ord('hygiene');
+          if (route === 'gut') ord('food_safety');
+          if (route === 'animal' && S.animalFound !== undefined) ord2('close_animal', S.animalFound);
+          g.C.places.forEach(function (p) { if ((p.kind === 'market' || p.kind === 'farm' || p.kind === 'meat_plant') && !done.site['a' + p.i] && live.some(function (c) { return (c.exposures || []).some(function (e) { return e.kind === 'animal' && e.place && e.place.id === p.id; }); })) { if (act('animal_sampling', p.i)) done.site['a' + p.i] = 1; } });
+          if (live.length > 20) ord('mass_testing');
+          if ((E.ageRisk === 'elderly' || (S.published.ageRisk && S.published.ageRisk.value === 'elderly')) && live.length > 20) ord('shielding', { group: 'both' });
+          var beds = g.sim.hospNow, cap = g.bedCap();
+          if (beds > 0.6 * cap) ord('surge');
+          var wk = g.weekStats();
+          var rising = wk.cases > 1.15 * wk.casesPrev && wk.cases >= 8;
+          var basics = g.ordersOf('isolate')[0], since = basics ? S.day - basics.since : 0;
+          var Rest = (S.published.R && S.published.R.value) || E.R || 2;
+          // escalate in steps while cases keep rising despite isolation and tracing
+          if (rising && (since >= 7 || Rest > 2.2)) ord('gatherings', { max: 30 });
+          if (rising && (since >= 14 || Rest > 2.5)) { ord('close_hospitality'); ord('wfh'); }
+          if (rising && ((since >= 21 && beds > 0.4 * cap) || Rest > 3)) ord('close_schools');
+          if (beds > 0.7 * cap) ord('gatherings', { max: 30 });
+          if (beds > 1.05 * cap && rising) ord('lockdown');
+          // stand down when it is falling and the hospital is fine
+          if (!rising && wk.cases < 0.8 * wk.casesPrev && beds < 0.5 * cap) {
+            ['lockdown'].forEach(function (id) { if (g.ordersOf(id).length && S.day - g.ordersOf(id)[0].since >= 14) lift(id); });
+            if (!g.ordersOf('lockdown').length) ['close_hospitality', 'wfh'].forEach(function (id) { if (g.ordersOf(id).length && S.day - g.ordersOf(id)[0].since >= 21) lift(id); });
+            if (wk.cases < 5) ['gatherings', 'close_schools'].forEach(function (id) { if (g.ordersOf(id).length && S.day - g.ordersOf(id)[0].since >= 21) lift(id); });
+          }
+          // communication and money
+          if (S.day - lastBrief >= 7 && act('briefing')) lastBrief = S.day;
+          S.rumours.forEach(function (r) { if (r.reported && r.countered === undefined) act('counter_rumour', null, { rumour: r.id }); });
+          if (S.day - lastFund >= 7 && S.funding < 250) { act('request_funding', null, { money: 400, staff: 4 }); lastFund = S.day; }
+          if (S.funding > 150 && g.resources().staffHours.tracers < 3 && S.staff.tracers < 14) act('hire', null, { kind: 'tracers', n: 2 });
+          if (!S.trial && E.n && live.filter(function (c) { return c.admitted !== undefined; }).length >= 15) act('trial', null, { n: 80 });
+          if (S.trial && S.trial.result && S.trial.result.hi < 1) ord('treatment');
+          if (S.vaccine && S.vaccine.status === 'rollout') ord('vaccinate', {});
+        } else if (policy === 'naive') {
+          live.slice(0, 6).forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
+          if (live.length > 40) ord('lockdown');
+          if (S.vaccine && S.vaccine.status === 'rollout') ord('vaccinate', {});
+        }
+      }
+      g.endDay();
+    }
+    function ord2(id, target) { if (g.ordersActive().some(function (o) { return o.type === id && o.target === target; })) return false; return g.order(id, { target: target }).ok; }
+    return g;
   };
 })();

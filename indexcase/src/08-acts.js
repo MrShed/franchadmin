@@ -177,8 +177,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   GP.alertMessage = function (al, pids) {
     var S = this.S, C = this.C, self = this, place = C.places[al.place], P = this.P;
     var fam = P.family, n = pids.length;
-    var illness = fam === 'gut' ? 'severe vomiting and diarrhoea' : fam === 'contact' ? 'high fever and bleeding' : 'severe pneumonia';
-    if (P.tell) illness += (fam === 'resp' ? ', ' : ' with ') + D.SYM[P.tell].label;
+    var illness = fam === 'gut' ? 'severe vomiting and diarrhoea' : fam === 'contact' ? 'high fevers, aching and vomiting' : al.kind === 'hospital' ? 'severe pneumonia' : 'high fevers and a hacking cough';
+    if (P.tell) illness += ', and ' + D.SYM[P.tell].label;
     var from, lines = [], title;
     var rows = pids.map(function (q) { var cs = S.cases[q]; return [self.pref(q), String(C.age[q]), self.C.districts[C.dist[q]].name, cs.onset !== null ? self.shortDate(cs.onset) : '?', self.occLabel(q)]; });
     if (al.kind === 'hospital') {
@@ -188,7 +188,10 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     } else if (al.kind === 'care_home') {
       from = 'Care home manager, ' + place.name;
       title = place.name + ': ' + n + ' residents and staff ill';
-      lines.push({ k: 'q', x: ['We\'ve had ' + n + ' poorly in a week, residents and two of my carers. It started like a cold. Mrs ' + C.last[pids[0]] + ' went downhill very fast. The GP says it\'s probably the season. I don\'t think it is.'] });
+      var res = pids.filter(function (q) { return C.flags[q] & FLAG.CARE_RES; }), staff = pids.length - res.length;
+      var oldest = res.slice().sort(function (a, b) { return C.age[b] - C.age[a]; })[0];
+      var who = (res.length ? (res.length === 1 ? 'one resident' : res.length + ' residents') : '') + (res.length && staff ? ' and ' : '') + (staff ? (staff === 1 ? 'one of my carers' : staff + ' of my carers') : '');
+      lines.push({ k: 'q', x: ['We\'ve had ' + n + ' poorly in a week: ' + who + '. It started like a cold. ' + (oldest !== undefined ? (C.sex[oldest] ? 'Mr ' : 'Mrs ') + C.last[oldest] + ' went downhill very fast. ' : '') + 'The GP says it\'s probably the season. I don\'t think it is.'] });
     } else if (al.kind === 'school' || al.kind === 'nursery') {
       from = 'Headteacher, ' + place.name;
       title = place.name + ': unusual illness among pupils and staff';
@@ -221,6 +224,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     this._fresh = [];
     var events = this._events = [];
     var sd = this.sdOf(S.day);
+    this.autoTrace();
     var pol = this.compilePolicy(sd);
     sim.step(pol);
     S.testsLeft = Math.floor(S.testsEffCap || S.testsCap);
@@ -242,11 +246,30 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     this.updateCureClock();
     this.variantWatch();
     this.checkActs();
+    S.credibility = Math.min(100, S.credibility + (S.credibility < 60 ? 0.15 : 0));   // standing recovers slowly with quiet competence
     this.checkEnd();
     this.resetDay();
     var fresh = this._fresh; this._fresh = null; this._events = null;
     fresh.forEach(function (m) { if (m.day < S.day) m.day = S.day; });
     return { day: S.day, newMsgs: fresh, events: events, over: S.over, outcome: S.outcome };
+  };
+  /** with a quarantine order in force, tracers spend the hours left at the end of the day on routine tracing of
+   *  new cases (household, named friends, small teams and classes; no venue lists). 2 tracer hours each. */
+  GP.autoTrace = function () {
+    var S = this.S, self = this;
+    if (!S.recognized || !this.orderActive('quarantine')) return;
+    var left = S.staff.tracers * 7.5 - S.used.tracers;
+    var todo = S.caseOrder.filter(function (pid) { var cs = S.cases[pid]; return !cs.traced && (cs.status === 'confirmed' || cs.status === 'probable') && cs.outcome !== 'died' && S.day - cs.reported <= 7; });
+    todo.sort(function (a, b) { return S.cases[b].reported - S.cases[a].reported; });
+    var n = 0, contacts = 0;
+    for (var i = 0; i < todo.length && left >= 2; i++) {
+      var r = this.inv_trace(todo[i], { daysBefore: 2, quiet: true });
+      if (r.ok) { n++; contacts += r.found; left -= 2; S.used.tracers += 2; S.cases[todo[i]].autoTraced = true; }
+    }
+    var missed = todo.length - n;
+    if (n || missed) this.msg('report', 'Routine tracing: ' + n + ' case' + (n === 1 ? '' : 's') + ', ' + contacts + ' contacts' + (missed ? '; ' + missed + ' not reached' : ''), 'Contact tracing team', [
+      'With the hours left today the team traced ' + n + ' new case' + (n === 1 ? '' : 's') + ' (households, friends, workmates and classes) and asked ' + contacts + ' contacts to quarantine.' + (missed ? ' ' + missed + ' recent case' + (missed === 1 ? ' was' : 's were') + ' not reached: more tracers, or fewer other jobs, would help.' : ''),
+      { k: 'n', x: ['Routine tracing does not use venue attendance lists; for a pub or a choir, do it yourself after a site visit.'] }]);
   };
   GP.advance = function (n) {
     var out = { day: this.S.day, newMsgs: [], events: [], over: false, outcome: null };
@@ -310,6 +333,19 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       }
     }
     if (S.act === 1 && S.day >= 25 && this.communitySpread() && !S.act1Warn) { S.act1Warn = S.day; this.msg('mentor', 'A word from Dr Gethin', IX.MENTOR.name, [{ k: 'q', x: ['Whatever this is, it is everywhere now. Get three clean negative panels to the lab and declare it. Waiting for certainty is a decision too.'] }], { urgent: true }); }
+  };
+  /** stand down: end the response now (the debrief still works) */
+  GP.resign = function () {
+    var S = this.S;
+    if (S.over) return { ok: false, msgs: [], err: 'Already over.' };
+    this._fresh = [];
+    S.over = true;
+    S.outcome = { kind: 'resigned', day: S.day, title: 'You stood down', text: 'You handed the response over on ' + this.dateLong(S.day) + '. The debrief shows what happened next in the city you left, and in the one where nobody acted.' };
+    S.log.push([S.day, 'resign']);
+    this.event('end', S.outcome.title);
+    this.msg('system', S.outcome.title, 'Incident room', [S.outcome.text], { urgent: true });
+    var msgs = this._fresh; this._fresh = null;
+    return { ok: true, msgs: msgs, outcome: S.outcome };
   };
   GP.checkEnd = function () {
     var S = this.S, sim = this.sim, P = this.P, C = this.C;

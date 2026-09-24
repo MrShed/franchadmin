@@ -356,7 +356,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var e = self.orderEffectOf(o);
       if (e <= 0) return;
       switch (o.type) {
-        case 'isolate': comp(0); pol.isoList = S.isoList; pol.remoteGP = S.recognized; break;
+        case 'isolate': comp(0); pol.isoList = S.isoList; pol.isoSym = true; pol.remoteGP = S.recognized; break;
         case 'quarantine': comp(1); pol.quarList = S.quarList; break;
         case 'close_place': pol.closed[o.target] = 1; if (C.places[o.target].kind === 'choir' && C.places[o.target].host !== undefined) { /* the choir, not the church */ } hist.push({ place: o.target }); break;
         case 'close_animal': pol.closed[o.target] = 1; hist.push({ place: o.target }); break;
@@ -375,7 +375,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           var cm = self.complianceOf(3) * e;
           var fam = P.family, resp = P.humanRoute === 'airborne' || P.humanRoute === 'droplet';
           [SET.WORK, SET.UNI, SET.TRANSPORT, SET.SHOP, SET.FAITH, SET.MARKET, SET.GP, SET.HOSP, SET.PATIENT, SET.CARE].forEach(function (s) {
-            pol.mult[s] *= 1 - (resp ? 0.4 : 0.05) * cm; pol.roomMult[s] *= 1 - (resp ? 0.3 : 0) * cm;
+            pol.mult[s] *= 1 - (resp ? 0.28 : 0.04) * cm; pol.roomMult[s] *= 1 - (resp ? 0.2 : 0) * cm;
           });
           pol.mult[SET.SCHOOL] *= 1 - (resp ? 0.2 : 0.02) * cm;
           break;
@@ -458,9 +458,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       for (var b = 0; b < 3; b++) {
         var i = d * 3 + b, T = S.trust[i];
         var drift = 0.03 * (S.trust0[i] - T);
-        var p = -0.05 * pain * (1 - 0.7 * justify) * (1 + 0.6 * dep) * (b === 2 ? 0.6 : 1);
+        var p = -0.035 * pain * (1 - 0.7 * justify) * (1 + 0.6 * dep) * (b === 2 ? 0.6 : 1);
         var rum = S.rumourShare ? S.rumourShare[i] || 0 : 0;
-        var r = -0.6 * rum;
+        var r = -0.25 * rum;
         var over = this.sim.hospNow > this.bedCap() ? -0.25 : 0;
         S.trust[i] = IX.clamp(T + drift + p + r + over, 2, 98);
       }
@@ -495,7 +495,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     for (var a = 0; a < C.N; a++) cnt[C.dist[a] * 3 + D.trustBand(C.age[a])]++;
     S.rumours.forEach(function (r) {
       var B = r.bel, nb = new Uint8Array(B.length), tot = 0, damp = r.damp || 0;
-      var pSpread = 0.06 * (1 - damp), pForget = 0.025 + 0.08 * damp;
+      var pSpread = 0.022 * (1 - damp), pForget = 0.03 + 0.08 * damp, kh = IX.hash(r.kind);
       for (var i = 0; i < B.length; i++) {
         if (!B[i]) continue;
         if (u(K, i, S.day, 1) < pForget) continue;
@@ -504,6 +504,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           var j = C.fList[f];
           if (B[j] || nb[j]) continue;
           var tr = self.trustOf(j) / 100;
+          // only some people are open to a given rumour (fewer when they trust the authorities)
+          if (u(K, j, kh, 77) >= 0.5 - 0.35 * tr) continue;
           if (u(K, i * 7 + 1, j, S.day) < pSpread * (1.4 - tr)) nb[j] = 1;
         }
       }
@@ -632,8 +634,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var good = [], bad = [];
     due.forEach(function (k) { var p = S.published[k]; p.checked = S.day; var e = self.estimateError(k, p.value); if (e <= 0.35) good.push(k); else if (e >= 0.75) bad.push(k); });
     if (!good.length && !bad.length) return;
-    this.trustAll(1.2 * good.length - 2.2 * bad.length);
-    this.credit(2 * good.length - 3 * bad.length, 'estimates checked');
+    this.trustAll(1.2 * good.length - 1.5 * bad.length);
+    this.credit(2 * good.length - 1.5 * bad.length, 'estimates checked');
     var lines = [];
     if (good.length) lines.push('Modellers at the university say the data now support your figures for ' + good.map(function (k) { return self.traitLabel(k); }).join(', ') + '.');
     if (bad.length) lines.push('They also say the data no longer fit your ' + bad.map(function (k) { return self.traitLabel(k); }).join(', ') + '. The Echo has noticed.');
@@ -645,8 +647,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   GP.checkCureClock = function () {
     var S = this.S, self = this;
     if (S.vaccine || S.seqPublished === undefined) return;
-    var need = ['route', 'incubation', 'R', 'ifr'];
-    if (!need.every(function (k) { return S.published[k]; })) return;
+    // enough of a characterisation to design a vaccine against: four of the key traits published
+    if (IX.KEY_TRAITS.filter(function (k) { return S.published[k]; }).length < 4) return;
     // the better the characterisation, the sooner it lands
     var err = 0;
     IX.KEY_TRAITS.forEach(function (k) { var p = S.published[k]; err += p ? self.estimateError(k, p.value) : 1; });
@@ -742,7 +744,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     // pressures
     var act = this.ordersActive(), restrictive = act.filter(function (o) { return RESTRICTIVE.indexOf(o.type) >= 0; });
     var choices = null, meta = null;
-    if (restrictive.length && wk.cases < wk.casesPrev && S.day - Math.max.apply(null, restrictive.map(function (o) { return o.since; })) > 10) {
+    var lastAsk = S.councilAsked || -99;
+    if (restrictive.length && wk.cases < 0.8 * wk.casesPrev && S.day - lastAsk >= 14 && S.day - Math.max.apply(null, restrictive.map(function (o) { return o.since; })) > 13) {
+      S.councilAsked = S.day;
       var target = restrictive.filter(function (o) { return o.type === 'lockdown'; })[0] || restrictive.filter(function (o) { return o.type === 'close_hospitality'; })[0] || restrictive.filter(function (o) { return o.type === 'close_schools'; })[0] || restrictive[0];
       lines.push('2. ' + PE.chamber.name + ' said footfall in the town centre is down ' + (20 + (S.day % 7) * 5) + '% and three businesses on Market Street have closed for good. ' + PE.leader.name + ' asked the Director to lift the ' + ORD[target.type].label.toLowerCase() + ' "now that cases are falling".');
       choices = [{ id: 'lift', label: 'Agree to lift it', hint: 'Council goodwill; the curve may turn' }, { id: 'hold', label: 'Hold for another fortnight', hint: 'Costs credibility with the council' }];
@@ -793,7 +797,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var meta = m.meta || {}, self = this, PE = IX.PEOPLE;
     if (meta.ask === 'lift') {
       if (choiceId === 'lift') { var o = S.orders.filter(function (q) { return q.id === meta.order; })[0]; if (o && o.until === undefined) this.revoke(o.id); this.credit(4, 'council'); this.trustAll(1); }
-      else { this.credit(-4, 'council'); }
+      else { this.credit(-2, 'council'); }
     } else if (meta.ask === 'surge') {
       if (choiceId === 'surge') { if (!this.orderActive('surge') && !this.ordersOf('surge').length) this.order('surge', {}); this.credit(2, 'hospital'); } else this.credit(-3, 'hospital');
     } else if (meta.ask === 'schools') {
@@ -849,9 +853,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var item = S.pressQueue.shift();
     var story = null;
     // leaks: the paper finds a cluster the player has not linked
-    if (!item && S.day >= 2 && u(this.keys.press, S.day, 1, 0) < 0.12) {
+    if (!item && S.day >= 2 && S.day - (S.lastLeak || -99) >= 7 && u(this.keys.press, S.day, 1, 0) < 0.1) {
       var leak = this.findUnseenCluster();
-      if (leak) item = { kind: 'leak', place: leak.place, n: leak.n };
+      if (leak) { item = { kind: 'leak', place: leak.place, n: leak.n }; S.lastLeak = S.day; }
     }
     if (!item) return;
     switch (item.kind) {
@@ -867,7 +871,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (!story) return;
     this.msg('press', story.h, paper, [{ k: 'h', x: [story.h] }, story.b], { meta: { place: item.place } });
     if (story.mayor) S.mayorQueue.push({ kind: story.mayor });
-    if (item.kind === 'leak') { this.credit(-2, 'press got there first'); this.trustAll(-0.5); }
+    if (item.kind === 'leak') { this.credit(-1, 'press got there first'); this.trustAll(-0.3); }
   };
   GP.findUnseenCluster = function () {
     var S = this.S, sim = this.sim, C = this.C, sd = this.sdOf(S.day) - 1, byP = {};
