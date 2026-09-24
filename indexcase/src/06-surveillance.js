@@ -1128,6 +1128,51 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     return { ok: true, msgs: [m], found: list.length };
   };
 
+  // ============================================================== transmission timing study
+  GP.inv_timing_study = function (pid) {
+    var S = this.S, cs = S.cases[pid];
+    if (!cs || !cs.traced || cs.onset === null) return { ok: false, err: 'Trace a case with a known onset first.' };
+    cs.timing = true;
+    if (!S.timingStudies) S.timingStudies = [];
+    var st = { id: S.timingStudies.length, index: pid, start: S.day };
+    S.timingStudies.push(st);
+    this.schedule('timing', S.day + 14, { study: st.id });
+    var m = this.msg('result', 'Timing study started: contacts of ' + this.name(pid), 'Field epidemiology team', [
+      ['Everyone traced from ', this.pref(pid), ' keeps a contact diary and is swabbed daily for two weeks; positives are sequenced to confirm who caught it from whom. Result on ' + this.dateLabel(S.day + 15) + '.']]);
+    return { ok: true, msgs: [m] };
+  };
+  GP.job_timing = function (d, sd) {
+    var S = this.S, sim = this.sim, C = this.C, K = this.keys, self = this, st = S.timingStudies[d.study], a = st.index;
+    var xa = this.infBy(a, sd), onA = xa >= 0 && sim.xonset[xa] >= 0 ? sim.xonset[xa] : this.sdOf(S.cases[a].onset);
+    var rows = [], before = 0, after = 0, unclear = 0, elsewhere = 0;
+    var slow = this.P.mutRate < 0.2;
+    Object.keys(S.contacts).forEach(function (k) {
+      var q = +k, c = S.contacts[k];
+      if (c.of.indexOf(a) < 0) return;
+      var xq = self.infBy(q, sd);
+      if (xq < 0) return;
+      if (sim.xday[xq] < self.sdOf(c.first !== undefined ? c.first : c.exposure) - 1) return;   // infected before they ever met
+      var fromA = sim.xby[xq] >= 0 && sim.xwho[sim.xby[xq]] === a;
+      var verdict;
+      if (!fromA) {
+        // sequencing tells a different source apart, unless the virus barely mutates
+        if (!slow || u(K.seq, q, a, 5) < 0.5) { elsewhere++; verdict = 'caught it elsewhere (genome does not match)'; }
+        else { var guess = u(K.seq, q, a, 6) < 0.5; if (guess) before++; else after++; verdict = guess ? 'before (link not confirmable)' : 'after (link not confirmable)'; }
+      } else {
+        var days = (c.days && c.days[a]) || [];
+        var infDay = sim.xday[xq];
+        if (u(K.seq, q, a, 7) < 0.12) { unclear++; verdict = 'cannot tell'; }
+        else if (infDay < onA) { before++; verdict = 'before ' + self.name(a) + ' felt ill'; }
+        else { after++; verdict = 'after ' + self.name(a) + ' felt ill'; }
+      }
+      rows.push([self.pref(q), c.setting, sim.xonset[xq] >= 0 ? 'ill from ' + self.shortDate(self.gd(sim.xonset[xq])) : 'infected, never ill', verdict]);
+    });
+    st.result = { before: before, after: after, unclear: unclear, elsewhere: elsewhere };
+    this.msg('result', 'Timing study: ' + this.name(a) + ' — ' + before + ' infected before symptoms, ' + after + ' after', 'Field epidemiology team', [
+      rows.length ? { k: 'table', head: ['Contact', 'Setting', 'Illness', 'Infected by the index case'], rows: rows } : 'None of the traced contacts was infected.',
+      { k: 'n', x: ['Index case: ', this.pref(a), ', ill from ' + this.shortDate(S.cases[a].onset) + '.' + (slow ? ' This virus mutates slowly, so sequencing cannot always confirm a link.' : '')] }], { day: S.day + 1 });
+  };
+
   // ============================================================== household study
   GP.inv_household = function (pid) {
     var S = this.S, C = this.C, self = this;

@@ -55,42 +55,64 @@ var UIChart = (function () {
     return { hide: hide };
   };
 
-  /** epidemic curve: bars by onset + nowcast band + reported line */
+  /** epidemic curve: bars by onset (confirmed + probable), suspected cases stacked pale on top,
+   * nowcast band, 7-day average, optional reported line, and orders/events as labelled markers.
+   * o: {from, sus: [], marks: [{day, label, kind}], showReport, today, h} */
   C.epi = function (host, cv, o) {
     o = o || {};
-    var W = C.width(host), Hh = o.h || 210, L = 34, R = W - 8, T = 14, B = Hh - 24;
+    var W = C.width(host), Hh = o.h || 210, L = 30, R = W - 6, T = 16, B = Hh - 24;
     var from = o.from || 0, n = cv.n - from;
     if (n <= 0) { host.innerHTML = '<div class="empty">No cases yet.</div>'; return; }
-    var on = cv.byOnset.slice(from), rep = cv.byReport.slice(from), nc = cv.nowcast.slice(from);
-    var mx = 1; for (var i = 0; i < n; i++) mx = Math.max(mx, on[i], nc[i] ? nc[i].hi : 0, o.showReport ? rep[i] : 0);
-    var sc = C.nice(mx, 4), bw = (R - L) / n, gap = bw > 6 ? 2 : bw > 3 ? 1 : 0;
+    var on = cv.byOnset.slice(from), rep = cv.byReport.slice(from), nc = cv.nowcast.slice(from), sus = (o.sus || []).slice(from);
+    var tot = on.map(function (v, i) { return v + (sus[i] || 0); });
+    var mx = 1; for (var i = 0; i < n; i++) mx = Math.max(mx, tot[i], nc[i] ? nc[i].hi + (sus[i] || 0) : 0, o.showReport ? rep[i] : 0);
+    var sc = C.nice(mx * 1.08, 4), bw = (R - L) / n, gap = bw > 6 ? 2 : bw > 3 ? 1 : 0;
     var x = function (i) { return L + i * bw; }, y = function (v) { return B - (v / sc.max) * (B - T); };
-    var s = '<svg width="' + W + '" height="' + Hh + '" viewBox="0 0 ' + W + ' ' + Hh + '" class="chart" role="img" aria-label="' + UIesc(o.label || 'Epidemic curve') + '"><defs>' + hatch('hn', '#ff7a45') +
-      '<linearGradient id="gb" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff9a66"/><stop offset="1" stop-color="#e5562a"/></linearGradient></defs>';
+    var s = '<svg width="' + W + '" height="' + Hh + '" viewBox="0 0 ' + W + ' ' + Hh + '" class="chart" role="img" aria-label="' + UIesc(o.label || 'Epidemic curve') + '"><defs>' + hatch('hn', '#ff8a57') +
+      '<linearGradient id="gb" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ffb088"/><stop offset=".35" stop-color="#ff7a45"/><stop offset="1" stop-color="#c9431b"/></linearGradient>' +
+      '<linearGradient id="gw" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff7a45" stop-opacity=".16"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></linearGradient></defs>';
     s += yGrid(sc, y, L, R);
+    // annotations: orders and key decisions as hairlines with vertical labels
+    var marks = (o.marks || []).filter(function (m) { return m.day - cv.start - from >= 0 && m.day - cv.start - from <= n; }), lastX = -99;
+    marks.sort(function (a, b) { return a.day - b.day; }).forEach(function (m) {
+      var mx0 = x(m.day - cv.start - from), col = m.kind === 'event' ? '#c5e4ff' : '#8ce8cf';
+      s += '<line x1="' + mx0.toFixed(1) + '" x2="' + mx0.toFixed(1) + '" y1="' + T + '" y2="' + B + '" stroke="' + col + '" stroke-opacity=".35" stroke-dasharray="1 3"/>';
+      s += '<circle cx="' + mx0.toFixed(1) + '" cy="' + B + '" r="2.5" fill="' + col + '"/>';
+      if (mx0 - lastX > 11) { s += '<text transform="translate(' + (mx0 + 3.5).toFixed(1) + ' ' + (T + 2) + ') rotate(90)" class="tk mk" fill="' + col + '">' + UIesc(String(m.label).toUpperCase().slice(0, 24)) + '</text>'; lastX = mx0; }
+    });
     s += '<rect class="cursor" x="0" y="' + T + '" width="0" height="' + (B - T) + '"/>';
+    // a soft glow of the curve's area
+    var ad = 'M' + L + ',' + B; for (i = 0; i < n; i++) ad += 'L' + (x(i) + bw / 2).toFixed(1) + ',' + y(tot[i]).toFixed(1); ad += 'L' + R + ',' + B + 'Z';
+    s += '<path d="' + ad + '" fill="url(#gw)"/>';
     s += '<g class="bars">';
     for (i = 0; i < n; i++) {
-      var bx = x(i) + gap / 2, w = Math.max(1, bw - gap);
+      var bx = x(i) + gap / 2, w = Math.max(1, bw - gap), dl = 'animation-delay:' + Math.min(600, i * 8) + 'ms';
       if (nc[i] && nc[i].hi > on[i]) {
-        var yt = y(nc[i].hi), yb = y(on[i]);
-        s += '<rect x="' + bx.toFixed(1) + '" y="' + yt.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + Math.max(0, yb - yt).toFixed(1) + '" fill="url(#hn)" rx="' + Math.min(3, w / 2) + '"/>';
-        if (nc[i].lo > on[i]) s += '<line x1="' + bx.toFixed(1) + '" x2="' + (bx + w).toFixed(1) + '" y1="' + y(nc[i].lo).toFixed(1) + '" y2="' + y(nc[i].lo).toFixed(1) + '" stroke="#ffa477" stroke-width="1.5" stroke-dasharray="2 2"/>';
+        var yt = y(nc[i].hi + (sus[i] || 0)), yb = y(tot[i]);
+        s += '<rect x="' + bx.toFixed(1) + '" y="' + yt.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + Math.max(0, yb - yt).toFixed(1) + '" fill="url(#hn)" rx="' + Math.min(2, w / 2) + '"/>';
+        if (nc[i].lo > on[i]) s += '<line x1="' + bx.toFixed(1) + '" x2="' + (bx + w).toFixed(1) + '" y1="' + y(nc[i].lo + (sus[i] || 0)).toFixed(1) + '" y2="' + y(nc[i].lo + (sus[i] || 0)).toFixed(1) + '" stroke="#ffa477" stroke-width="1" stroke-dasharray="2 2"/>';
       }
-      if (on[i] > 0) s += '<path d="' + barPath(bx, y(on[i]), w, B - y(on[i]), 3) + '" fill="url(#gb)" style="animation-delay:' + Math.min(600, i * 8) + 'ms"/>';
+      if (on[i] > 0) s += '<path d="' + barPath(bx, y(on[i]), w, B - y(on[i]), 2) + '" fill="url(#gb)" style="' + dl + '"/>';
+      if (sus[i] > 0) { var sy = y(tot[i]), sh = y(on[i]) - sy; s += '<path d="' + barPath(bx + .5, sy + .5, Math.max(.5, w - 1), Math.max(.5, sh - 1), 2) + '" fill="rgba(217,211,199,.14)" stroke="rgba(233,226,212,.7)" stroke-width="1" style="' + dl + '"/>'; }
     }
     s += '</g>';
+    // 7-day average of all cases by onset
+    if (n >= 10) {
+      var avg = '', started = false;
+      for (i = 0; i < n; i++) { var a0 = Math.max(0, i - 6), sm = 0; for (var j = a0; j <= i; j++) sm += tot[j]; var v = sm / (i - a0 + 1); if (!started && !sm) continue; avg += (started ? 'L' : 'M') + (x(i) + bw / 2).toFixed(1) + ',' + y(v).toFixed(1); started = true; }
+      if (avg) s += '<path d="' + avg + '" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" class="draw"/>';
+    }
     if (o.showReport) {
       var d = ''; for (i = 0; i < n; i++) d += (i ? 'L' : 'M') + (x(i) + bw / 2).toFixed(1) + ',' + y(rep[i]).toFixed(1);
-      s += '<path d="' + d + '" fill="none" stroke="#8fcbff" stroke-width="2" stroke-linejoin="round" class="draw"/>';
+      s += '<path d="' + d + '" fill="none" stroke="#8fcbff" stroke-width="1.8" stroke-linejoin="round" class="draw"/>';
     }
-    if (o.today !== undefined) { var tx = x(n - 1) + bw; s += '<line x1="' + tx + '" x2="' + tx + '" y1="' + T + '" y2="' + B + '" class="today"/><text x="' + (tx - 3) + '" y="' + (T + 8) + '" text-anchor="end" class="tk today-l">TODAY</text>'; }
+    if (o.today !== undefined) { var tx = x(n - 1) + bw; s += '<line x1="' + tx + '" x2="' + tx + '" y1="' + (T - 6) + '" y2="' + B + '" class="today"/><text x="' + (tx - 4) + '" y="' + (T - 1) + '" text-anchor="end" class="tk today-l">TODAY</text>'; }
     s += xTicks(n, cv.start + from, x, bw, B) + '</svg>';
     host.innerHTML = s;
     var svg = host.querySelector('svg');
     C.scrub(host, svg, { L: L, bw: bw, n: n, text: function (i) {
       var d = cv.start + from + i;
-      return '<b>' + UIesc(UIA.dateLabel(d)) + '</b><span><i style="background:#ff8a57"></i>Onset <em>' + on[i] + '</em></span>' + (nc[i] ? '<span><i class="hz"></i>Not yet reported <em>' + Math.max(0, nc[i].lo - on[i]) + '–' + Math.max(0, nc[i].hi - on[i]) + '</em></span>' : '') + (o.showReport ? '<span><i style="background:#8fcbff"></i>Reported <em>' + rep[i] + '</em></span>' : '');
+      return '<b>' + UIesc(UIA.dateLabel(d)) + '</b><span><i style="background:#ff8a57"></i>Confirmed or probable <em>' + on[i] + '</em></span>' + (sus[i] ? '<span><i class="su"></i>Suspected <em>' + sus[i] + '</em></span>' : '') + (nc[i] ? '<span><i class="hz"></i>Not yet reported <em>' + Math.max(0, nc[i].lo - on[i]) + '–' + Math.max(0, nc[i].hi - on[i]) + '</em></span>' : '') + (o.showReport ? '<span><i style="background:#8fcbff"></i>Reported <em>' + rep[i] + '</em></span>' : '');
     } });
   };
 
@@ -118,8 +140,9 @@ var UIChart = (function () {
     series.forEach(function (se, k) {
       var d = ''; se.vals.forEach(function (v, i) { d += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1); });
       if (se.fill) s += '<path d="' + d + 'L' + x(se.vals.length - 1).toFixed(1) + ',' + B + 'L' + L + ',' + B + 'Z" fill="url(#lg' + k + ')"/>';
-      s += '<path d="' + d + '" fill="none" stroke="' + se.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"' + (se.dash ? ' stroke-dasharray="5 4"' : ' class="draw"') + '/>';
-      var li = se.vals.length - 1; if (li >= 0 && se.label) s += '<circle cx="' + x(li).toFixed(1) + '" cy="' + y(se.vals[li]).toFixed(1) + '" r="3.5" fill="' + se.color + '" stroke="#0b1219" stroke-width="2"/>';
+      if (se.dash) s += '<path d="' + d + '" fill="none" stroke="' + se.color + '" stroke-opacity=".18" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="' + d + '" fill="none" stroke="' + se.color + '" stroke-opacity=".85" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="1 3.5" class="ghost"/>';
+      else s += '<path d="' + d + '" fill="none" stroke="' + se.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" class="draw"/>';
+      var li = se.vals.length - 1; if (li >= 0 && se.label) { s += '<circle cx="' + x(li).toFixed(1) + '" cy="' + y(se.vals[li]).toFixed(1) + '" r="3.5" fill="' + se.color + '" stroke="#0b1219" stroke-width="2"/>'; if (o.endLabels) s += '<text x="' + (x(li) - 6).toFixed(1) + '" y="' + (y(se.vals[li]) - 8).toFixed(1) + '" text-anchor="end" class="tk el" fill="' + se.color + '">' + UIesc(se.label) + '</text>'; }
     });
     s += xTicks(n, start, function (i) { return x(i) - bw / 2; }, bw, B, o.every) + '</svg>';
     host.innerHTML = s;

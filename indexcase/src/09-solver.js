@@ -222,7 +222,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var D = days.filter(function (d0) { return d0 >= ca.onset - 6 && d0 <= ca.onset + 12 && d0 < cb.onset; });
       if (!D.length) return;
       var key = b + ':' + a; if (seenPair[key]) return; seenPair[key] = 1;
-      tp.push({ b: b, a: a, t: cb.onset, oA: ca.onset, D: D, single: D.length === 1 });
+      tp.push({ b: b, a: a, t: cb.onset, oA: ca.onset, D: D, single: D.length === 1, hh: g.C.hh[b] === g.C.hh[a] });
     }
     cons.forEach(function (c) {
       if (c.onset === undefined) return;
@@ -255,20 +255,21 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (links.length === 1) addPair(c.pid, links[0].src, [links[0].day]);
     });
     E.n.pairs = tp.length;
-    // incubation and the timing of transmission, estimated together from every pair (and point-source events)
+    // incubation: fitted jointly with the timing of transmission, on household pairs, narrow exposures and point-source events
     var exact = [];
     S.quests.forEach(function (q) { if (!q.event || (q.onsets || []).length < 2) return; q.onsets.forEach(function (v) { if (v >= 1 && v <= 21) exact.push(v); }); });
-    E.n.incubation = tp.length + exact.length;
-    var narrow = tp.filter(function (p) { return p.D[p.D.length - 1] - p.D[0] <= 2; }).length + exact.length;
-    if (tp.length >= 12 || (tp.length + exact.length >= 12 && exact.length >= 5)) {
-      var jf = jointFit(tp, exact);
-      E.joint = { incMean: jf.incMean, incSd: jf.incSd, pre: IX.round(jf.pre, 2), share: IX.round(jf.share, 2), narrow: narrow };
-      if (narrow >= 4) E.incubation = jf.incMean;
-      E.n.presym = tp.length;
-      if (tp.length >= 15) E.presym = Math.round(100 * jf.pre);
+    var use = tp.filter(function (p) { return p.hh || p.D[p.D.length - 1] - p.D[0] <= 2; });
+    E.n.incubation = use.length + exact.length;
+    if (use.length + exact.length >= 15) {
+      var jf = jointFit(use, exact);
+      E.incubation = jf.incMean;
       E.serial = IX.round(jf.incMean + jf.meanOffset, 1);   // mean serial interval = incubation + mean infection time after onset
-      E.timing = jf.w.map(function (v) { return IX.round(v, 3); });
     }
+    // transmission before symptoms: transmission-timing studies (diaries, daily tests, sequencing)
+    var tb = 0, ta = 0;
+    (S.timingStudies || []).forEach(function (t) { if (t.result) { tb += t.result.before; ta += t.result.after; } });
+    E.n.presym = tb + ta;
+    if (tb + ta >= 8) E.presym = Math.round(100 * tb / (tb + ta));
     E.n.si = tp.length;
 
     // --- hidden infections: household studies
@@ -469,6 +470,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
         live.forEach(function (c) { if (hhDone < 12 && !done.household[c.pid] && c.status === 'confirmed' && g.canAct('household', c.pid) === null && act('household', c.pid)) { done.household[c.pid] = 1; hhDone++; } });
         live.forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
         live.forEach(function (c) { if (!done.trace[c.pid] && c.onset !== null && act('trace', c.pid, { daysBefore: 5 })) done.trace[c.pid] = 1; });
+        var nt = (S.timingStudies || []).length;
+        live.forEach(function (c) { if (nt < 8 && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
         g.clusters().forEach(function (k) {
           if (!k.place) return;
           var pi = g.placeIdx(k.place.id);
@@ -718,6 +721,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           live.forEach(function (c) { if (hh < 1 && !done.household[c.pid] && Object.keys(done.household).length < 10 && c.status === 'confirmed' && g.canAct('household', c.pid) === null && act('household', c.pid)) { done.household[c.pid] = 1; hh++; } });
           live.forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
           live.forEach(function (c) { if (!done.trace[c.pid] && c.onset !== null && act('trace', c.pid, { daysBefore: 3 })) done.trace[c.pid] = 1; });
+          var nt = (S.timingStudies || []).length;
+          live.forEach(function (c) { if (nt < 6 && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
           g.clusters().slice(0, 6).forEach(function (k) {
             if (!k.place) return; var pi = g.placeIdx(k.place.id);
             if (!done.site[pi] && act('site_visit', pi)) done.site[pi] = 1;

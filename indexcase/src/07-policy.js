@@ -59,6 +59,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   var ACTS = IX.ACTIONS = {
     interview: { label: 'Interview', area: 'investigate', target: 'case', hours: { tracers: 1.5 }, desc: 'Where they went, who they saw, when they fell ill, who else was ill.' },
     trace: { label: 'Trace contacts', area: 'investigate', target: 'case', hours: { tracers: 3 }, params: [{ id: 'daysBefore', label: 'From', type: 'choice', options: [{ id: 2, label: '2 days before onset' }, { id: 5, label: '5 days before onset' }], default: 2 }], desc: 'Finds and follows up their contacts for 14 days.' },
+    timing_study: { label: 'Transmission timing study', area: 'investigate', target: 'case', hours: { field: 3, tracers: 2 }, seq: 1, desc: 'Diaries, daily tests and sequencing for everyone traced from this case: who caught it from them before they felt ill, and who after. Needs the case traced first.' },
     household: { label: 'Household study', area: 'investigate', target: 'case', hours: { field: 3 }, tests: 'household', desc: 'Swabs everyone at home three times, then antibodies: who was infected, and who never felt ill.' },
     site_visit: { label: 'Site visit', area: 'investigate', target: 'place', hours: { field: 4 }, desc: 'Attendance lists for 14 days, ventilation, layout, kitchens.' },
     questionnaire: { label: 'Cluster questionnaire', area: 'investigate', target: 'place', hours: { analysts: 3, field: 2 }, desc: 'Attack rates by activity and exposure among everyone at the cluster event.' },
@@ -153,6 +154,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (T === 'place') { var pi = this.placeIdx(target); if (pi < 0 || !this.C.places[pi]) return 'Pick a place.'; if (A.targetKinds && A.targetKinds.indexOf(this.C.places[pi].kind) < 0) return 'Not the right kind of place.'; }
     if (id === 'test' && res.testsLeft < 1) return 'The lab is at capacity today.';
     if (id === 'interview' && S.cases[+target].interviewDay === S.day) return 'Already interviewed today.';
+    if (id === 'timing_study') { var ct = S.cases[+target]; if (!S.recognized) return 'Only once the lab has identified the agent.'; if (!ct.traced) return 'Trace their contacts first.'; if (ct.onset === null) return 'Needs a case with a known onset.'; if (ct.timing) return 'Already studied.'; }
     if (id === 'household') { var C = this.C, hh = C.hh[+target]; if (C.hStart[hh + 1] - C.hStart[hh] < 2) return 'Lives alone.'; if (S.cases[+target].household) return 'Household study already done.'; if (res.testsLeft < c.tests) return 'Not enough tests left today.'; }
     return null;
   };

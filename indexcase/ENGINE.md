@@ -185,6 +185,7 @@ One-off action ids:
 |---|---|---|
 | `interview` | case | exposures in the 14 days before onset, symptoms, onset date, named contacts (tracers 2h) |
 | `trace` | case | finds contacts (household always, others with probability); they are followed up for 14 days (tracers 3h) |
+| `timing_study` | case (traced) | diaries, daily tests and sequencing of the case's contacts: infected before or after the case's onset (field 3h, tracers 2h, seq 1; 15 days) |
 | `household` | case | tests every household member now and at day 7/14 and records who stays well (field 3h + tests) |
 | `test` | person | a PCR (after the agent is confirmed) or the extended panel (before); result after 1-2 days |
 | `site_visit` | place | attendance lists (last 14 days), ventilation (CO2), layout, observations (field 4h) |
