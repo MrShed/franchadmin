@@ -211,10 +211,18 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       return s;
     }
 
+    var usedFull = {};
     function addPerson(hid, di, her, sex, age, last) {
       var i = A.age.length;
       A.age.push(Math.max(0, Math.min(104, Math.round(age)))); A.sex.push(sex); A.hh.push(hid); A.dist.push(di); A.her.push(D.HERITAGES.indexOf(her));
-      A.first.push(firstName(her, sex, age)); A.last.push(gendered(last, sex, her)); A.occ.push(0); A.work.push(-1);
+      // full names are unique in the city (so a tap on a name is never ambiguous)
+      var ln = gendered(last, sex, her), fn = firstName(her, sex, age);
+      for (var tries = 0; tries < 12 && usedFull[fn + ' ' + ln]; tries++) fn = firstName(her, sex, age);
+      var base0 = fn;
+      for (tries = 0; tries < 30 && usedFull[fn + ' ' + ln]; tries++) { var mid = firstName(her, sex, age); if (mid !== base0) fn = base0 + ' ' + mid; }   // a middle name
+      if (usedFull[fn + ' ' + ln]) fn = base0 + ' ' + 'ABCDEFGHJKLMNPRSTW'.charAt(R.int(0, 17)) + '.';
+      usedFull[fn + ' ' + ln] = 1;
+      A.first.push(fn); A.last.push(ln); A.occ.push(0); A.work.push(-1);
       var f = 0;
       var vulnP = age < 18 ? 0.01 : age < 50 ? 0.04 : age < 65 ? 0.1 : age < 80 ? 0.2 : 0.3;
       if (R.chance(vulnP)) f |= FLAG.VULNERABLE;

@@ -14,11 +14,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   // ---------------------------------------------------------------- grades
   IX.GRADES = [
     { id: 'probationer', label: 'Probationer', blurb: 'Respiratory viruses only, a bigger team, quicker lab results and a patient council.',
-      staff: { tracers: 5, field: 3, analysts: 2 }, panel: 16, pcrStart: 40, pcrGrow: 3, pcrMax: 160, seq: 4, funding: 450, vaccineBase: 50, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
+      staff: { tracers: 5, field: 3, analysts: 2 }, trust: 6, comply: 1.06, beds: 1.15, fund: 1.2, panel: 16, pcrStart: 40, pcrGrow: 3, pcrMax: 160, seq: 4, funding: 450, vaccineBase: 50, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
     { id: 'consultant', label: 'Consultant', blurb: 'The full range of diseases, a small team and a lab that is doing its best.',
-      staff: { tracers: 4, field: 2, analysts: 2 }, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 60, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
+      staff: { tracers: 4, field: 2, analysts: 2 }, trust: 0, comply: 1, beds: 1, fund: 1, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 60, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
     { id: 'director', label: 'Director', blurb: 'Wider and nastier diseases, noisier data, slower results and a council that wants the city open.',
-      staff: { tracers: 3, field: 1, analysts: 1 }, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 75, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
+      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -8, comply: 0.9, beds: 0.85, fund: 0.7, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 75, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
   ];
   IX.gradeOf = function (id) { return IX.GRADES.filter(function (g) { return g.id === id; })[0] || IX.GRADES[1]; };
   GP.grades = function () { return IX.gradeOf(this.grade); };
@@ -334,7 +334,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     for (var d = 0; d < nd; d++) for (var b = 0; b < 3; b++) {
       var tr = S.trust[d * 3 + b] / 100;
       var rum = S.rumourShare ? S.rumourShare[d * 3 + b] || 0 : 0;
-      var c = base * (0.45 + 0.75 * tr) * fatigue * (1 - 0.5 * rum) + fear;
+      var c = base * (0.45 + 0.75 * tr) * fatigue * (1 - 0.5 * rum) * (this.grades().comply || 1) + fear;
       if (slot === 6 && b !== 2) c *= 0.9;
       t[d * 3 + b] = IX.clamp(c, 0.05, 0.97);
     }
@@ -780,7 +780,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var reqs = S.fundingRequests.filter(function (r) { return !r.decided; });
     if (reqs.length) {
       var sev = Math.min(1, (wk.adm + 3 * wk.deaths) / (6 * C.N / 8000) + (S.recognized ? 0.2 : 0));
-      var frac = IX.clamp(0.25 + 0.5 * S.credibility / 100 + 0.4 * sev, 0.1, 1);
+      var frac = IX.clamp((0.25 + 0.5 * S.credibility / 100 + 0.4 * sev) * (this.grades().fund || 1), 0.1, 1);
       reqs.forEach(function (r) {
         r.decided = S.day;
         var money = Math.round(r.money * frac / 10) * 10, staff = Math.round(r.staff * frac);

@@ -23,7 +23,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var keys = this.keys = {};
     OBS_KEYS.forEach(function (k) { keys[k] = IX.hash(key + '/obs/' + k); });
     this.sim = new IX.Sim(C, P, key + '/sim');
-    this.sim.baseBeds = Math.round(22 * C.N / 8000); this.sim.baseIcu = Math.max(3, Math.round(4 * C.N / 8000));
+    var GR = IX.gradeOf(this.grade);
+    this.sim.baseBeds = Math.round(22 * C.N / 8000 * (GR.beds || 1)); this.sim.baseIcu = Math.max(3, Math.round(4 * C.N / 8000 * (GR.beds || 1)));
     this.sim.deadList = [];
     this.sim.VE_inf = 0.65;
     var R = IX.rng(key + '/cal');
@@ -39,7 +40,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   GP.freshState = function (R) {
     var G = IX.gradeOf(this.grade), C = this.C, nd = C.districts.length;
     var trust = [];
-    for (var d = 0; d < nd; d++) for (var b = 0; b < 3; b++) trust.push(IX.round(IX.clamp(64 - 30 * C.districts[d].deprivation + (b === 2 ? 8 : b === 0 ? -6 : 0) + R.range(-5, 5), 20, 90), 1));
+    for (var d = 0; d < nd; d++) for (var b = 0; b < 3; b++) trust.push(IX.round(IX.clamp(64 + (G.trust || 0) - 30 * C.districts[d].deprivation + (b === 2 ? 8 : b === 0 ? -6 : 0) + R.range(-5, 5), 20, 90), 1));
     return {
       v: 1, day: 0, act: 1, over: false, outcome: null, sd0: null, from: -56, alerted: false, alert: null,
       msgSeq: 0, msgs: [], cases: {}, caseOrder: [], people: {}, contacts: {}, tests: [], testQueue: [], pendingResults: [], samples: {}, seqs: {},

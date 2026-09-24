@@ -42,57 +42,76 @@ var UITree = (function () {
     function size(n) { return n.kids.length ? n.kids.reduce(function (s, k) { return s + size(k); }, 0) : 1; }
     return { root: root, leaves: leaves, maxX: Math.max(1, maxX) };
   };
-  /** draw into ctx. o: {view:{x,y,k}, w, h, labels, sel} */
+  T.COL = ['#ff9d6e', '#8ce8cf', '#8fcbff', '#f2c25a', '#c5a3ff', '#ff8fa3', '#6fd6ff', '#b8e986', '#ffd9a0', '#5fe0b0', '#e6a8ff', '#a9c1ff', '#ffb35c', '#9ee7f5'];
+  /** draw into ctx. o: {view:{x,y,k}, w, h, labels, sel, grow (0..1 reveal from the root)} */
   T.draw = function (ctx, w, h, L, o) {
-    var v = o.view || { x: 0, y: 0, k: 1 }, padL = 18, padR = o.labels ? Math.min(170, w * .42) : 16, padT = 16;
+    var v = o.view || { x: 0, y: 0, k: 1 }, padL = 20, padR = o.labels ? Math.min(170, w * .42) : 18, padT = o.labels ? 22 : 14;
     var rowH = Math.max(o.labels ? 22 : 6, (h - padT * 2) / Math.max(1, L.leaves.length));
-    var sx = (w - padL - padR) / L.maxX;
+    var sx = (w - padL - padR) / L.maxX, grow = o.grow === undefined ? 1 : o.grow;
     function X(n) { return v.x + (padL + n.x * sx) * v.k; }
     function Y(n) { return v.y + (padT + n.y * rowH + rowH / 2) * v.k; }
     function X0(xx) { return v.x + (padL + xx * sx) * v.k; }
+    var fb = getComputedStyle(document.body).getPropertyValue('--f-body'), fm = getComputedStyle(document.body).getPropertyValue('--f-mono');
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     var cases = {}; UIA.cases().forEach(function (c) { cases[c.pid] = c; });
-    var dcol = {}; UIA.city().districts.forEach(function (d, i) { dcol[d.id] = 'hsl(' + (160 + i * 29) % 360 + ',55%,68%)'; });
-    (function edges(n, px, variant) {
+    var dcol = {}; UIA.city().districts.forEach(function (d, i) { dcol[d.id] = T.COL[i % T.COL.length]; });
+    var reveal = X0(0) + (X0(L.maxX) - X0(0) + 60) * grow;
+    ctx.save(); ctx.beginPath(); ctx.rect(-10, -10, reveal + 10, h + 20); ctx.clip();
+    // branches: a soft glow pass then a fine core, elbows rounded
+    var segs = [];
+    (function edges(n, variant) {
       var vv = variant || n.variant;
-      var col = vv ? 'rgba(255,122,69,.9)' : 'rgba(140,232,207,.72)';
-      if (n.id !== 'root') {
-        ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.2, 1.6 * Math.sqrt(v.k));
-        ctx.beginPath(); ctx.moveTo(X0(px), Y(n)); ctx.lineTo(X(n), Y(n)); ctx.stroke();
-      }
-      if (n.kids.length) {
-        ctx.strokeStyle = vv ? 'rgba(255,122,69,.7)' : 'rgba(140,232,207,.5)'; ctx.lineWidth = Math.max(1, 1.3 * Math.sqrt(v.k));
-        ctx.beginPath(); ctx.moveTo(X(n), Y(n.kids[0])); ctx.lineTo(X(n), Y(n.kids[n.kids.length - 1])); ctx.stroke();
-        n.kids.forEach(function (k) { edges(k, n.x, vv); });
-        if (n.id !== 'root' && n.kids.length > 1) { ctx.fillStyle = vv ? '#ff7a45' : '#ff9a66'; ctx.beginPath(); ctx.arc(X(n), Y(n), 3.2, 0, Math.PI * 2); ctx.fill(); }
-      }
-    })(L.root, 0, false);
-    // root
-    ctx.fillStyle = '#e9eff4'; ctx.beginPath(); ctx.arc(X(L.root), Y(L.root), 3, 0, Math.PI * 2); ctx.fill();
-    // leaves
+      n.kids.forEach(function (k) { segs.push([X(n), Y(n), X(k), Y(k), vv || k.variant]); edges(k, vv || k.variant); });
+    })(L.root, false);
+    var rr = Math.max(2, Math.min(6, rowH * v.k * .3));
+    function path(sg) { var x0 = sg[0], y0 = sg[1], x1 = sg[2], y1 = sg[3], r = Math.min(rr, Math.abs(y1 - y0), Math.abs(x1 - x0)); ctx.moveTo(x0, y0); if (r > .5 && y1 !== y0) { ctx.lineTo(x0, y1 - Math.sign(y1 - y0) * r); ctx.quadraticCurveTo(x0, y1, x0 + r, y1); } else ctx.lineTo(x0, y1); ctx.lineTo(x1, y1); }
+    [[false, 'rgba(120,220,200,'], [true, 'rgba(255,122,69,']].forEach(function (pass) {
+      var list = segs.filter(function (sg) { return !!sg[4] === pass[0]; }); if (!list.length) return;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = pass[1] + '.1)'; ctx.lineWidth = Math.max(3, 4.5 * Math.sqrt(v.k)); ctx.beginPath(); list.forEach(path); ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = pass[1] + '.8)'; ctx.lineWidth = Math.max(1, 1.25 * Math.sqrt(v.k)); ctx.beginPath(); list.forEach(path); ctx.stroke();
+    });
+    // branch points
+    (function nodes(n) { if (n.kids.length > 1 && n.id !== 'root') { ctx.fillStyle = n.variant ? '#ffb48d' : 'rgba(220,245,238,.85)'; ctx.beginPath(); ctx.arc(X(n), Y(n), 2.2, 0, Math.PI * 2); ctx.fill(); } n.kids.forEach(nodes); })(L.root);
+    // root: the index sequence
+    var rx = X(L.root), ry = Y(L.root), rg = ctx.createRadialGradient(rx, ry, 0, rx, ry, 14); rg.addColorStop(0, 'rgba(255,255,255,.5)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = rg; ctx.fillRect(rx - 14, ry - 14, 28, 28); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(rx, ry, 3, 0, Math.PI * 2); ctx.fill();
+    // tips: glowing, coloured by district
     ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    var tipR = o.labels ? 4 : UIclamp(rowH * .42, 2.2, 4);
     L.leaves.forEach(function (n) {
       var c = cases[n.pid], x = X(n), y = Y(n);
-      if (y < -20 || y > h + 20) return;
-      var col = c ? dcol[c.district] || '#8ce8cf' : '#8ce8cf';
-      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(x, y, 6.5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, o.sel === n.pid ? 6 : 4.2, 0, Math.PI * 2); ctx.fill();
-      if (o.sel === n.pid) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.stroke(); }
-      if (o.labels && rowH * v.k >= 13) {
-        var d = c ? UIA.district(c.district) : null;
-        ctx.font = '600 12.5px ' + getComputedStyle(document.body).getPropertyValue('--f-body'); ctx.fillStyle = '#e9eff4';
-        var nm = c ? c.name : (n.pid || '');
-        ctx.fillText(nm, x + 10, y - (rowH * v.k > 30 ? 6 : 0));
-        if (rowH * v.k > 30) { ctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--f-mono'); ctx.fillStyle = 'rgba(164,179,192,.85)'; ctx.fillText((d ? d.name : '') + (c && c.onset !== null ? ' · onset ' + UIA.dateShort(c.onset) : ''), x + 10, y + 8); }
-      }
       n.sx = x; n.sy = y;
+      if (y < -20 || y > h + 20 || x > reveal) return;
+      var col = c ? dcol[c.district] || '#8ce8cf' : '#8ce8cf';
+      var g = ctx.createRadialGradient(x, y, 0, x, y, tipR * 3.2); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = .45; ctx.fillStyle = g; ctx.fillRect(x - tipR * 3.2, y - tipR * 3.2, tipR * 6.4, tipR * 6.4); ctx.globalAlpha = 1;
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, o.sel === n.pid ? tipR + 1.8 : tipR, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(x - tipR * .3, y - tipR * .3, tipR * .35, 0, Math.PI * 2); ctx.fill();
+      if (c && c.status === 'died') { ctx.strokeStyle = 'rgba(217,211,199,.9)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, tipR + 3, 0, Math.PI * 2); ctx.stroke(); }
+      if (o.sel === n.pid) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, tipR + 6, 0, Math.PI * 2); ctx.stroke(); }
+      if (o.labels && rowH * v.k >= 13) {
+        var d = c ? UIA.district(c.district) : null, two = rowH * v.k > 30;
+        ctx.font = '600 13px ' + fb; ctx.fillStyle = '#eef4f9';
+        ctx.fillText(c ? c.name : (n.pid || ''), x + 11, y - (two ? 7 : 0));
+        if (two) { ctx.font = '500 10px ' + fm; ctx.fillStyle = col; ctx.globalAlpha = .9; ctx.fillText((d ? d.name.toUpperCase() : '') + (c && c.onset !== null ? '  ·  ' + UIA.dateShort(c.onset) : ''), x + 11, y + 8); ctx.globalAlpha = 1; }
+      }
     });
+    ctx.restore();
     // scale bar
     if (o.labels) {
-      var one = sx * v.k; var units = one < 12 ? 5 : 1;
-      ctx.strokeStyle = 'rgba(233,239,244,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(16, h - 14); ctx.lineTo(16 + one * units, h - 14); ctx.stroke();
-      ctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--f-mono'); ctx.fillStyle = 'rgba(164,179,192,.9)'; ctx.fillText(units + ' mutation' + (units > 1 ? 's' : ''), 22 + one * units, h - 14);
+      var one = sx * v.k, units = one < 12 ? 5 : 1, bx = 16, by = h - 16;
+      ctx.fillStyle = 'rgba(5,9,14,.85)'; ctx.fillRect(bx - 8, by - 12, one * units + 110, 24);
+      ctx.strokeStyle = 'rgba(233,239,244,.7)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(bx, by - 3); ctx.lineTo(bx, by); ctx.lineTo(bx + one * units, by); ctx.lineTo(bx + one * units, by - 3); ctx.stroke();
+      ctx.font = '500 10px ' + fm; ctx.fillStyle = 'rgba(164,179,192,.95)'; ctx.textBaseline = 'middle'; ctx.fillText(units + ' mutation' + (units > 1 ? 's' : ''), bx + 8 + one * units, by - 1);
     }
+  };
+  /** run a growth animation: draw(grow) is called each frame until 1 */
+  T.grow = function (draw, ms) {
+    if (!UImotion()) { draw(1); return; }
+    var t0 = performance.now(); ms = ms || 1000;
+    (function step() { var f = Math.min(1, (performance.now() - t0) / ms); draw(1 - Math.pow(1 - f, 3)); if (f < 1) requestAnimationFrame(step); })();
   };
   return T;
 })();
@@ -172,7 +191,9 @@ var UILab = UI.views.lab = {
     if (L) {
       var cv = UI$('#tree-prev'), host = cv.parentNode, w = host.clientWidth || 320, h = Math.min(220, Math.max(120, L.leaves.length * 9)), dpr = Math.min(2, window.devicePixelRatio || 1);
       cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px';
-      var ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); UITree.draw(ctx, w, h, L, { labels: false });
+      var ctx = cv.getContext('2d'), n0 = UILab._treeN || 0; UILab._treeN = L.leaves.length;
+      var pd = function (g) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h); var bg = ctx.createRadialGradient(w * .1, h * .5, 0, w * .1, h * .5, w * .9); bg.addColorStop(0, '#0d1a22'); bg.addColorStop(1, '#05090e'); ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); UITree.draw(ctx, w, h, L, { labels: false, grow: g }); };
+      if (L.leaves.length !== n0) UITree.grow(pd, 1100); else pd(1);
     }
   },
   /** full-screen tree viewer */
@@ -183,7 +204,9 @@ var UILab = UI.views.lab = {
     document.body.appendChild(el);
     requestAnimationFrame(function () { el.classList.add('on'); });
     var view = { x: 0, y: 0, k: 1 }, sel = focusPid || null;
-    var cv = UIcanvas(UI$('#tv-cv', el), function (ctx, w, h) { ctx.fillStyle = '#060a0f'; ctx.fillRect(0, 0, w, h); UITree.draw(ctx, w, h, L, { view: view, labels: true, sel: sel }); });
+    var grow = 0;
+    var cv = UIcanvas(UI$('#tv-cv', el), function (ctx, w, h) { var bg = ctx.createRadialGradient(w * .15, h * .55, 0, w * .15, h * .55, Math.max(w, h)); bg.addColorStop(0, '#0c1820'); bg.addColorStop(1, '#04070b'); ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); UITree.draw(ctx, w, h, L, { view: view, labels: true, sel: sel, grow: grow }); });
+    setTimeout(function () { UITree.grow(function (g) { grow = g; cv.frame(); }, 1200); }, 120);
     function fit() {
       view.x = 0; view.y = 0; view.k = 1;
       var rowH = Math.max(22, (cv.h - 32) / L.leaves.length);

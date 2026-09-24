@@ -94,6 +94,7 @@ var UIBrief = UI.views.brief = {
         return '<article class="d-minutes"><div class="mn-h"><span class="eyebrow">' + UIesc(m.from || (city + ' City Council')) + '</span><h1>' + UIesc(m.title) + '</h1><span class="mn-d">' + UIesc(d) + '</span></div>' + b + '</article>';
       case 'lab':
         var pos = /posit|confirm|novel|new agent/i.test(m.title), neg = /negat/i.test(m.title), flu = /influenza|flu /i.test(m.title);
+        if (pos && /novel|new agent/i.test(m.title)) return '<article class="d-lab novel"><div class="nv-hero">' + UIvirion(m.id) + '<div class="nv-stamp"><span>Novel agent</span><b>Confirmed</b></div></div><div class="lb-h"><span class="eyebrow">' + UIesc(m.from || 'Public Health Laboratory') + '</span><span class="lb-d">' + UIesc(d) + '</span></div><h1>' + UIesc(m.title) + '</h1>' + b + '</article>';
         return '<article class="d-lab"><div class="lb-h"><span class="eyebrow">' + UIesc(m.from || 'Public Health Laboratory') + '</span><span class="lb-d">' + UIesc(d) + '</span></div><h1>' + UIesc(m.title) + '</h1>' + (pos || neg || flu ? '<div class="lb-stamp ' + (pos ? 'pos' : flu ? 'flu' : 'neg') + '">' + (pos ? (/novel|agent/i.test(m.title) ? 'Novel agent' : 'Positive') : flu ? 'Known virus' : 'Negative') + '</div>' : '') + b + '</article>';
       case 'alert':
         return '<article class="d-memo d-alert"><div class="al-band">' + UIICON.warn + '<span>Alert</span></div><div class="mm-h"><div><span class="eyebrow">From</span><b>' + UIesc(m.from || 'Surveillance') + '</b></div><div><span class="eyebrow">Date</span><b>' + UIesc(d) + '</b></div></div><h1>' + UIesc(m.title) + '</h1>' + b + '</article>';
@@ -254,3 +255,18 @@ var UIMentor = {
     };
   }
 };
+
+/** a stylised electron micrograph of the new agent: envelope, spikes, genome, drawn from a seed */
+function UIvirion(seed) {
+  var r = UIrand('virion:' + seed), sp = '', n = 26, R = 62, g = '';
+  for (var i = 0; i < n; i++) {
+    var a = i / n * Math.PI * 2 + r() * .08, l = 12 + r() * 5, x0 = 100 + Math.cos(a) * R, y0 = 100 + Math.sin(a) * R, x1 = 100 + Math.cos(a) * (R + l), y1 = 100 + Math.sin(a) * (R + l);
+    sp += '<line x1="' + x0.toFixed(1) + '" y1="' + y0.toFixed(1) + '" x2="' + x1.toFixed(1) + '" y2="' + y1.toFixed(1) + '"/><circle cx="' + x1.toFixed(1) + '" cy="' + y1.toFixed(1) + '" r="' + (3.4 + r() * 1.6).toFixed(1) + '"/>';
+  }
+  var d = 'M100,100'; for (var k = 0; k < 40; k++) { var aa = k * .9 + r(), rr = 8 + k * 1.05; d += 'Q' + (100 + Math.cos(aa - .4) * rr * 1.1).toFixed(1) + ',' + (100 + Math.sin(aa - .4) * rr * 1.1).toFixed(1) + ' ' + (100 + Math.cos(aa) * rr).toFixed(1) + ',' + (100 + Math.sin(aa) * rr).toFixed(1); }
+  for (var j = 0; j < 18; j++) { var ab = r() * Math.PI * 2, rb = Math.sqrt(r()) * 44; g += '<circle cx="' + (100 + Math.cos(ab) * rb).toFixed(1) + '" cy="' + (100 + Math.sin(ab) * rb).toFixed(1) + '" r="' + (1.5 + r() * 2.5).toFixed(1) + '"/>'; }
+  return '<svg class="nv-virion" viewBox="0 0 200 200" aria-hidden="true"><defs><radialGradient id="nvg" cx=".38" cy=".34" r=".75"><stop offset="0" stop-color="#ffd9c2"/><stop offset=".45" stop-color="#ff8a57"/><stop offset="1" stop-color="#6a1d08"/></radialGradient><radialGradient id="nvh" cx=".5" cy=".5" r=".5"><stop offset=".55" stop-color="#ff7a45" stop-opacity=".35"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></radialGradient></defs>' +
+    '<circle cx="100" cy="100" r="98" fill="url(#nvh)"/><g class="nv-rot"><g stroke="#ffb48d" stroke-width="2.2" fill="#ffc9a8">' + sp + '</g><circle cx="100" cy="100" r="' + R + '" fill="url(#nvg)"/><circle cx="100" cy="100" r="' + (R - 5) + '" fill="none" stroke="#ffe6d6" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 5"/>' +
+    '<g fill="#3a0f04" opacity=".35">' + g + '</g><path d="' + d + '" fill="none" stroke="#fff3ea" stroke-opacity=".55" stroke-width="1.4" stroke-linecap="round"/></g>' +
+    '<circle class="nv-scan" cx="100" cy="100" r="92" fill="none" stroke="#c5e4ff" stroke-opacity=".5" stroke-width="1" stroke-dasharray="2 6"/></svg>';
+}

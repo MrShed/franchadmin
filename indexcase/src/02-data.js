@@ -221,6 +221,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   ];
   T.illcontact = [
     '{who} was poorly before me, from about {date}. That\'s my {rel}.',
+    '{who}, my {rel}, went down with it first. {date}, or thereabouts.',
     'Now you mention it, {who} had it first. From {date}, I think.',
     '{who} was off sick from {date}. We\'re in and out of each other\'s pockets.'
   ];

@@ -263,8 +263,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (use.length + exact.length >= 15) {
       var jf = jointFit(use, exact);
       E.incubation = jf.incMean;
-      E.serial = IX.round(jf.incMean + jf.meanOffset, 1);   // mean serial interval = incubation + mean infection time after onset
     }
+    // serial interval (for the generation time behind R): pairs and household studies, co-primaries excluded
+    var siL = tp.map(function (p) { return p.t - p.oA; }).filter(function (v) { return v >= 1 && v <= 21; });
+    S.hhStudies.forEach(function (st) { if (st.result && st.result.si) st.result.si.forEach(function (v) { if (v >= 1 && v <= 21) siL.push(v); }); });
+    if (siL.length >= 8) E.serial = IX.round(robustMean(siL), 1);
     // transmission before symptoms: transmission-timing studies (diaries, daily tests, sequencing)
     var tb = 0, ta = 0;
     (S.timingStudies || []).forEach(function (t) { if (t.result) { tb += t.result.before; ta += t.result.after; } });
@@ -406,20 +409,25 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var ate = cats[IX.QCAT.ate], nate = cats[IX.QCAT.nate];
       if (ate && nate && ate.n >= 5 && nate.n >= 3) { var ra = ate.ill / ate.n, rn = (nate.ill + 0.5) / (nate.n + 1); if (ra > 2.5 * rn && ra > 0.12) { ev.gut += 2.5; foodQ++; return; } }
       if (q.ill < 3 || !close || !far || (!q.event && ['choir', 'pub', 'restaurant', 'church', 'mosque', 'temple', 'gurdwara'].indexOf(q.kind) < 0)) return;
+      if (q.day > (S.recognizedDay || 0) + 12) return;   // later, everyone is catching it everywhere: attack rates stop meaning much
       pc.n += close.n; pc.ill += close.ill; pf.n += far.n; pf.ill += far.ill;
     });
     E.qPool = { close: pc.n ? IX.round(pc.ill / pc.n, 3) : null, far: pf.n ? IX.round(pf.ill / pf.n, 3) : null, nc: pc.n, nf: pf.n, food: foodQ };
     if (pc.n >= 6 && pf.n >= 12 && pc.ill >= 2) {
-      var rc = pc.ill / pc.n, rf = pf.ill / pf.n;
-      if (rf >= 0.35 * rc && rf >= 0.06) ev.airborne += 2.2;
-      else if (rf < 0.2 * rc) { ev.droplet += 1.2; ev.contact += 0.8; }
+      var rc = pc.ill / pc.n, rf = pf.ill / pf.n, ratio = rf / Math.max(0.001, rc);
+      if (ratio >= 0.5 && rc >= 0.08) ev.airborne += 2.2;
+      else if (ratio <= 0.42) { ev.droplet += 1.4; ev.contact += 0.8; }
     }
+    // explosive single-day clusters in shared air (choirs, pubs, gyms, services, parties) are the airborne signature
+    var big = 0;
+    g.clusters().forEach(function (k) { if (k.place && ['choir', 'pub', 'gym', 'church', 'mosque', 'temple', 'gurdwara', 'hotel', 'community_hall', 'restaurant'].indexOf(k.kind) >= 0 && k.size >= 6 && k.lastOnset !== null && k.lastOnset - k.firstOnset <= 7) big++; });
+    if (big >= 2) ev.airborne += 0.8;
+    // transmission almost only after symptoms points to contact (or faecal-oral) spread
+    if (E.presym !== undefined) { if (E.presym < 10) { ev.contact += 1.5; ev.gut += 0.3; } else if (E.presym > 25) { ev.airborne += 0.4; ev.droplet += 0.6; ev.contact -= 1; } }
     // cluster settings
     var cl = g.clusters(), venue = 0, hh = 0, care = 0;
     cl.forEach(function (c) { if (c.kind === 'household') hh++; else if (c.kind === 'care_home' || c.kind === 'hospital') care += c.size; else venue += c.size >= 3 ? 1 : 0; });
-    if (venue <= 1 && hh + care >= 4 && E.presym !== undefined && E.presym < 10) ev.contact += 1.5;
-    if (E.presym !== undefined && E.presym < 8) ev.contact += 1;
-    if (E.presym !== undefined && E.presym > 15) { ev.droplet += 0.8; ev.contact -= 1; }
+    if (venue <= 1 && hh + care >= 4) ev.contact += 0.5;
     if (E.serial !== undefined && E.incubation !== undefined && E.serial > E.incubation + 1.5) ev.contact += 0.6;
     if (nC >= 5 && gutS / nC > 0.6) ev.airborne -= 1;
     // animal: positive animal samples, or early cases with animal exposure and no human source
@@ -657,16 +665,29 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (act === 'household') { var c2 = live.filter(function (c) { if (c.household) return false; var hh = C.hh[c.pid]; return C.hStart[hh + 1] - C.hStart[hh] >= 3; })[0]; if (c2) target = c2.pid; }
       if (act === 'questionnaire') { var cl = g.clusters().filter(function (k) { return k.place && S.quests.every(function (q) { return q.place !== g.placeIdx(k.place.id); }); })[0]; if (cl) target = g.placeIdx(cl.place.id); }
       if (act === 'serosurvey') params = { n: 600 };
-      var lab = { trace: 'Trace the contacts of', household: 'Run a household study on', questionnaire: 'Send a questionnaire to everyone at', record_review: 'Run a hospital record review.', serosurvey: 'Run a serosurvey of 600 people.' }[act];
+      // nothing to aim that at yet: find the cases and the places first
+      if (target === null && (act === 'trace' || act === 'household' || act === 'questionnaire')) {
+        var unint = live.filter(function (c) { return !c.interviewed; })[0];
+        var places = {};
+        live.forEach(function (c) { (c.exposures || []).forEach(function (e) { if (e.kind === 'place' && e.place) places[e.place.id] = (places[e.place.id] || 0) + 1; }); });
+        var topP = Object.keys(places).sort(function (a, b) { return places[b] - places[a]; })[0];
+        if (unint) { act = 'interview'; target = unint.pid; params = {}; }
+        else if (topP && !S.siteVisits[g.placeIdx(topP)]) { act = 'site_visit'; target = g.placeIdx(topP); params = {}; }
+        else { act = 'record_review'; params = {}; }
+      }
+      var lab = { trace: 'Trace the contacts of', household: 'Run a household study on', questionnaire: 'Send a questionnaire to everyone at', record_review: 'Run a hospital record review.', serosurvey: 'Run a serosurvey of 600 people.', interview: 'Start by interviewing', site_visit: 'Go and look at' }[act];
+      var isPlace = act === 'questionnaire' || act === 'site_visit';
       var segs2 = [lab];
-      if (target !== null && act !== 'questionnaire') segs2.push(' ', g.pref(target), act === 'trace' ? ', five days back from onset.' : '.');
-      if (target !== null && act === 'questionnaire') segs2.push(' ', g.plref(target), '.');
-      return { segs: segs2, text: lab + (target !== null ? ' ' + (act === 'questionnaire' ? C.places[target].name : name(target)) : ''), action: { id: act, target: target, params: params }, trait: weakest };
+      if (target !== null && !isPlace) segs2.push(' ', g.pref(target), act === 'trace' ? ', five days back from onset.' : '.');
+      if (target !== null && isPlace) segs2.push(' ', g.plref(target), act === 'site_visit' ? ': get the attendance lists.' : '.');
+      return { segs: segs2, text: lab + (target !== null ? ' ' + (isPlace ? C.places[target].name : name(target)) : ''), action: { id: act, target: target, params: params }, trait: weakest };
     }
     // answer: the truth about the weakest trait
     var v = T[weakest], txt;
     switch (weakest) {
-      case 'route': txt = 'It spreads by ' + D.ROUTE_LABEL[T.route] + (T.route === 'animal' ? ', and person to person by ' + D.ROUTE_LABEL[T.humanRoute] : '') + '.'; break;
+      case 'route':
+        var RW = { airborne: 'through shared indoor air, well beyond arm\'s length', droplet: 'by droplets at close range', contact: 'by direct contact with the sick and their body fluids', gut: 'by the faecal-oral route: hands, food, toilets' };
+        txt = T.route === 'animal' ? 'It comes from animals, and it is still spilling over at the source. Between people it spreads ' + RW[T.humanRoute] + '.' : 'It spreads ' + RW[T.route] + '.'; break;
       case 'incubation': txt = 'Incubation is about ' + Math.round(v) + ' days, on average.'; break;
       case 'presym': txt = 'About ' + (Math.round(v / 5) * 5) + '% of transmission happens before symptoms.'; break;
       case 'asym': txt = 'About ' + (Math.round(v / 5) * 5) + '% of infections never cause symptoms.'; break;

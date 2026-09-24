@@ -72,20 +72,27 @@ var UICases = UI.views.cases = {
   },
   renderCurve: function () {
     var cv = UIA.curve(), day = UIA.day(), all = UIA.cases();
-    var rep = cv.byReport, n = rep.length, l7 = UIsum(rep.slice(Math.max(0, n - 7))), p7 = UIsum(rep.slice(Math.max(0, n - 14), Math.max(0, n - 7)));
-    var growth = p7 > 2 && l7 > 2 ? Math.log(l7 / p7) / 7 : null, dbl = growth ? Math.log(2) / growth : null;
+    // the engine's curve counts confirmed and probable cases; suspected ones on the line list are stacked on top
+    var sus = []; for (var k = 0; k < cv.n; k++) sus.push(0);
+    all.forEach(function (c) { if (c.caseStatus !== 'suspected' || c.status === 'negative' || c.status === 'contact' || c.onset === null) return; var q = c.onset - cv.start; if (q >= 0 && q < cv.n) sus[q]++; });
+    this.sus = sus;
+    var rep = cv.byReport, n = rep.length, l7 = all.filter(function (c) { return c.reported !== null && day - c.reported < 7 && c.status !== 'negative' && c.status !== 'contact'; }).length, p7 = UIsum(rep.slice(Math.max(0, n - 14), Math.max(0, n - 7)));
+    var r7 = UIsum(rep.slice(Math.max(0, n - 7)));
+    var growth = p7 > 2 && r7 > 2 ? Math.log(r7 / p7) / 7 : null, dbl = growth ? Math.log(2) / growth : null;
     var trend = growth === null ? '—' : dbl > 0 && dbl < 60 ? 'doubling ~' + dbl.toFixed(dbl < 10 ? 1 : 0) + 'd' : dbl < 0 && dbl > -60 ? 'halving ~' + (-dbl).toFixed(-dbl < 10 ? 1 : 0) + 'd' : 'flat';
-    var from = 0; for (var i = 0; i < cv.n; i++) if (cv.byOnset[i] || cv.byReport[i]) { from = Math.max(0, i - 3); break; }
-    var html = '<div class="tiles"><div class="stat"><b>' + UIfmt.n(all.length) + '</b><span>on the line list</span></div><div class="stat"><b style="color:var(--ember)">' + l7 + '</b><span>reported, last 7 days</span></div><div class="stat"><b>' + UIesc(trend) + '</b><span>last 7 vs previous 7</span></div></div>' +
+    var from = Math.max(0, cv.n - 21); for (var i = 0; i < cv.n; i++) if (cv.byOnset[i] || cv.byReport[i] || sus[i]) { from = Math.max(0, Math.min(i - 3, cv.n - 14)); break; }
+    var html = '<div class="tiles"><div class="stat"><b>' + UIfmt.n(all.length) + '</b><span>on the line list</span></div><div class="stat"><b style="color:var(--ember)">' + l7 + '</b><span>reported, last 7 days</span></div><div class="stat"><b' + (trend.length > 4 ? ' style="font:600 16px/1.2 var(--f-body);padding-top:6px"' : '') + '>' + UIesc(trend) + '</b><span>last 7 vs previous 7</span></div></div>' +
       '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Cases by date of onset</div><h3>Epidemic curve</h3></div></div><div class="card-b"><div class="ch-host" id="ch-epi"></div>' +
-      '<div class="legend"><span><i style="background:linear-gradient(#ff9a66,#e5562a)"></i>Onset</span><span><i class="hz"></i>Nowcast — likely not yet reported</span><button class="chip' + (UIS.cases.showReport ? ' on' : '') + '" data-rep style="min-height:30px"><i style="background:#8fcbff;height:2px;width:14px;border-radius:1px;display:inline-block"></i>By report date</button></div>' +
+      '<div class="legend"><span><i style="background:linear-gradient(#ffb088,#c9431b)"></i>Confirmed or probable</span>' + (UIsum(sus) ? '<span><i class="su"></i>Suspected</span>' : '') + '<span><i class="hz"></i>Nowcast — not yet reported</span>' + (UIsum(cv.byOnset) + UIsum(sus) >= 20 && cv.n - from >= 10 ? '<span><i class="av"></i>7-day average</span>' : '') + '<button class="chip' + (UIS.cases.showReport ? ' on' : '') + '" data-rep style="min-height:30px"><i style="background:#8fcbff;height:2px;width:14px;border-radius:1px;display:inline-block"></i>By report date</button></div>' +
       '<p class="note">Recent days always look lower than they will: people fall ill days before they are tested and reported. The hatched band is how many more are probably on their way.</p></div></div>' +
       '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Hospital</div><h3>Admissions</h3></div><div class="aside">' + UIsum(cv.admissions) + ' total</div></div><div class="card-b"><div class="ch-host" id="ch-adm"></div></div></div>' +
       '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Mortality</div><h3>Deaths</h3></div><div class="aside">' + UIsum(cv.deaths) + ' total</div></div><div class="card-b"><div class="ch-host" id="ch-dth"></div></div></div>' +
       (cv.ili ? '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Includes ordinary flu</div><h3>Flu-like illness at GPs</h3></div></div><div class="card-b"><div class="ch-host" id="ch-ili"></div><p class="note">The background every new disease hides in. A rise here that is not flu is worth a look.</p></div></div>' : '') +
       (cv.tests && cv.positive ? '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">' + UIsum(cv.positive) + ' of ' + UIsum(cv.tests) + ' resulted tests</div><h3>Positive tests</h3></div></div><div class="card-b"><div class="ch-host" id="ch-pos"></div></div></div>' : '');
     UI$('#cs-body').innerHTML = '<div class="stack">' + html + '</div>';
-    UIChart.epi(UI$('#ch-epi'), cv, { from: from, showReport: UIS.cases.showReport, today: day, h: window.innerWidth >= 900 ? 280 : 220 });
+    var marks = UIA.orders().map(function (o) { return { day: o.since, label: o.label, kind: 'order' }; });
+    (UIS.log || []).forEach(function (e) { if (e.id === 'declare_novel') marks.push({ day: e.day, label: 'Novel agent declared', kind: 'event' }); });
+    UIChart.epi(UI$('#ch-epi'), cv, { from: from, sus: sus, marks: marks, showReport: UIS.cases.showReport, today: day, h: window.innerWidth >= 900 ? 300 : 250 });
     UIChart.mini(UI$('#ch-adm'), cv.admissions.slice(from), cv.start + from, { color: '#f2b640', label: 'Admitted', h: 100 });
     UIChart.mini(UI$('#ch-dth'), cv.deaths.slice(from), cv.start + from, { color: '#d9d3c7', label: 'Died', h: 100 });
     if (cv.ili) UIChart.mini(UI$('#ch-ili'), cv.ili.slice(from), cv.start + from, { color: '#8fcbff', label: 'GP consultations', h: 100 });

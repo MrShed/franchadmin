@@ -233,10 +233,10 @@ svg{display:block}
 #night .n-clock{position:relative;width:156px;height:156px;margin-bottom:22px}
 #night .n-ring{width:156px;height:156px}
 #night .n-time{position:absolute;inset:0;display:grid;place-items:center;font:500 26px var(--f-mono);letter-spacing:.02em;color:var(--ink);text-shadow:0 0 18px rgba(143,203,255,.35)}
-#night .n-time small{display:block;font-size:8.5px;letter-spacing:.3em;color:var(--ink3);margin-top:4px}
+#night .n-time small{display:block;font-size:8.5px;letter-spacing:.3em;color:var(--ink3);margin-top:5px;text-transform:uppercase}
 #night .n-k{font:600 10px var(--f-mono);letter-spacing:.34em;color:var(--ink3);text-transform:uppercase}
 #night.dawn .n-k{color:var(--ember2);text-shadow:0 0 14px rgba(255,122,69,.5)}
-#night .n-day{font:400 104px/.9 var(--f-disp);letter-spacing:-.035em;margin:4px 0 2px;background:linear-gradient(180deg,#fff 35%,#aebfd0);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 30px rgba(0,0,0,.6))}
+#night .n-day{font:400 104px/1.05 var(--f-disp);letter-spacing:-.035em;margin:0 0 -6px;padding:0 .08em .06em;background:linear-gradient(180deg,#fff 35%,#aebfd0);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 30px rgba(0,0,0,.6))}
 #night .n-date{font:italic 19px var(--f-serif);color:var(--ink2)}
 #night .n-sum{margin-top:26px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;width:min(420px,100%);min-height:70px;border-radius:16px;overflow:hidden;background:rgba(143,203,255,.08);border:1px solid rgba(143,203,255,.1)}
 #night .n-sum div{padding:12px 4px 11px;background:rgba(6,11,17,.88);opacity:0;transform:translateY(8px);transition:opacity .5s var(--ease),transform .6s var(--ease)}
@@ -273,8 +273,8 @@ svg{display:block}
 .t-frame i{position:absolute;width:14px;height:14px;border:1px solid rgba(143,203,255,.35)}
 .t-frame i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}.t-frame i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}.t-frame i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0}.t-frame i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0}
 .t-coord{position:absolute;font:500 8.5px var(--f-mono);letter-spacing:.18em;color:rgba(143,203,255,.45);text-transform:uppercase;white-space:nowrap}
-.t-coord.a{left:22px;top:50%;transform:rotate(-90deg);transform-origin:0 0}
-.t-coord.b{right:22px;top:34%;writing-mode:vertical-rl}
+.t-coord.a{left:-1px;top:62%;transform:rotate(-90deg);transform-origin:0 0}
+.t-coord.b{right:-3px;top:30%;writing-mode:vertical-rl}
 .t-wrap{position:absolute;inset:0;overflow-y:auto;display:flex;flex-direction:column;padding:calc(26px + var(--safe-t)) calc(24px + var(--safe-r)) calc(24px + var(--safe-b)) calc(24px + var(--safe-l))}
 .t-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .t-brand{flex:1 0 auto;display:flex;flex-direction:column;justify-content:flex-end;padding:24px 0 24px;min-height:330px}
@@ -294,7 +294,7 @@ svg{display:block}
 .t-panel{width:100%;max-width:520px;display:flex;flex-direction:column;gap:12px}
 .t-grades{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .t-grade{position:relative;display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;padding:12px 11px 11px;min-width:0;border-radius:15px;min-height:76px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,0)),rgba(10,17,24,.66);border:1px solid rgba(143,203,255,.12);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transition:background .2s,border-color .2s,box-shadow .2s}
-.t-grade b{font:600 clamp(14px,3.9vw,17px)/1.1 var(--f-body);letter-spacing:-.005em;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.t-grade b{font:600 clamp(13.5px,3.8vw,17px)/1.1 var(--f-body);font-stretch:84%;letter-spacing:-.005em;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .t-grade i{font:600 8.5px var(--f-mono);font-style:normal;letter-spacing:.2em;color:var(--ink3);text-transform:uppercase}
 .t-grade .lv{display:flex;gap:3px;margin-top:auto}
 .t-grade .lv u{width:14px;height:3px;border-radius:2px;background:var(--line3)}
@@ -360,27 +360,33 @@ svg{display:block}
 .chart-card .card-b{padding-top:8px}
 .ch-host{position:relative;width:100%;touch-action:pan-y}
 .chart{display:block;overflow:visible;user-select:none;-webkit-user-select:none}
-.chart .tk{font:10.5px var(--f-mono);fill:#7d8e9e}
+.chart .tk{font:500 10px var(--f-mono);fill:#71849a;letter-spacing:.02em}
+.chart .tk.mk{font-size:8px;letter-spacing:.14em;font-weight:600;fill-opacity:.9}
+.chart .tk.el{font-size:9.5px;letter-spacing:.08em;font-weight:600}
 .chart .tk.v{fill:var(--ink2)}
-.chart .grid{stroke:rgba(143,203,255,.07);stroke-width:1}
-.chart .base{stroke:rgba(233,239,244,.35);stroke-width:1}
+.chart .grid{stroke:rgba(143,203,255,.07);stroke-width:1;stroke-dasharray:1 3}
+.chart .base{stroke:rgba(233,239,244,.28);stroke-width:1}
 .chart .ax{stroke:rgba(233,239,244,.25)}
 .chart .cursor{fill:rgba(143,203,255,.1);opacity:0;transition:opacity .12s}
-.chart .today{stroke:rgba(255,224,194,.5);stroke-dasharray:2 3}
-.chart .today-l{fill:rgba(255,224,194,.7);font-size:9.5px;letter-spacing:.1em}
+.chart .today{stroke:rgba(255,224,194,.55);stroke-dasharray:1 2.5}
+.chart .today-l{fill:rgba(255,224,194,.8);font-size:8.5px;letter-spacing:.16em}
 .chart .bars path{transform-box:fill-box;transform-origin:50% 100%;animation:grow .7s var(--ease) both}
 @keyframes grow{from{transform:scaleY(0)}}
 .chart .grow{transform-box:fill-box;transform-origin:0 50%;animation:growx .8s var(--ease) both}
 @keyframes growx{from{transform:scaleX(0)}}
-.chart .draw{stroke-dasharray:4000;stroke-dashoffset:4000;animation:draw 1.4s .2s var(--ease) forwards}
+.chart .draw{stroke-dasharray:4000;stroke-dashoffset:4000;animation:draw 1.6s .25s var(--ease) forwards}
+.chart .ghost{animation:ghost 2.4s .3s ease both}
+@keyframes ghost{from{opacity:0}}
 @keyframes draw{to{stroke-dashoffset:0}}
-.ch-tip{position:absolute;top:-8px;transform:translateY(-100%);pointer-events:none;opacity:0;transition:opacity .12s;z-index:3;background:rgba(10,16,22,.96);border:1px solid var(--line3);border-radius:10px;padding:8px 10px;font-size:12px;box-shadow:0 10px 24px rgba(0,0,0,.5);white-space:nowrap}
+.ch-tip{position:absolute;top:-8px;transform:translateY(-100%);pointer-events:none;opacity:0;transition:opacity .12s;z-index:3;background:linear-gradient(180deg,rgba(26,38,50,.96),rgba(12,19,26,.97));border:1px solid rgba(143,203,255,.16);border-radius:12px;padding:9px 11px;font-size:12px;box-shadow:0 16px 34px -6px rgba(0,0,0,.7);white-space:nowrap;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .ch-tip.on{opacity:1}
 .ch-tip b{display:block;font:600 11px var(--f-mono);color:var(--ink2);margin-bottom:3px;letter-spacing:.04em}
 .ch-tip span{display:flex;align-items:center;gap:6px;color:var(--ink2)} .ch-tip em{font-style:normal;font:600 12px var(--f-mono);color:var(--ink);margin-left:auto;padding-left:10px}
 .ch-tip i,.legend i{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
-i.hz{background:repeating-linear-gradient(45deg,rgba(255,122,69,.6) 0 2px,rgba(255,122,69,.12) 2px 4px);border:1px solid rgba(255,164,119,.5)}
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:10px 0 4px;font-size:12px;color:var(--ink2)}
+i.hz{background:repeating-linear-gradient(45deg,rgba(255,138,87,.75) 0 1px,rgba(255,138,87,.08) 1px 3px);border:1px solid rgba(255,164,119,.5)}
+i.su{background:rgba(217,211,199,.14);border:1px solid rgba(233,226,212,.7)}
+.legend i.av{height:2px;border-radius:1px;background:#fff;width:14px}
+.legend{display:flex;flex-wrap:wrap;gap:7px 14px;align-items:center;margin:12px 0 6px;font-size:12px;color:var(--ink2)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .tiles .stat{padding:10px 11px} .tiles .stat b{font-size:24px} .tiles .stat span{font-size:11px;line-height:1.3}
@@ -464,7 +470,8 @@ i.hz{background:repeating-linear-gradient(45deg,rgba(255,122,69,.6) 0 2px,rgba(2
 .kn>.eyebrow{display:block;margin-bottom:8px}
 .sym{display:flex;flex-wrap:wrap;gap:6px}
 .sym span{padding:5px 10px;border-radius:14px;background:rgba(255,122,69,.1);border:1px solid rgba(255,122,69,.25);color:var(--ember2);font-size:13px}
-.iv{padding:12px 14px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid var(--line);font-size:14px}
+.iv{padding:13px 15px;border-radius:14px;background:rgba(2,6,10,.35);border:1px solid rgba(143,203,255,.08);font-size:14px}
+.iv blockquote{margin:0 0 10px}
 .iv p{margin:0 0 8px} .iv p:last-child{margin:0}
 .tests{display:flex;flex-direction:column;gap:6px}
 .tst{display:flex;flex-direction:column;gap:1px;padding:9px 12px;border-radius:10px;border-left:3px solid var(--ink3);background:rgba(0,0,0,.2)}
@@ -510,7 +517,8 @@ i.hz{background:repeating-linear-gradient(45deg,rgba(255,122,69,.6) 0 2px,rgba(2
 .tv.on{opacity:1;transform:none}
 .tv-bar{display:flex;align-items:center;gap:6px;padding:calc(6px + var(--safe-t)) 8px 6px;border-bottom:1px solid var(--line);background:rgba(10,16,22,.95)}
 .tv-bar .t{flex:1} .tv-bar b{font:400 24px/1 var(--f-disp)}
-.tv-cv{flex:1;position:relative;touch-action:none}
+.tv-cv{flex:1;position:relative;touch-action:none;min-height:0;overflow:hidden}
+.tv-cv canvas{display:block;position:absolute;left:0;top:0}
 .tv-foot{padding:10px 16px calc(10px + var(--safe-b));font:11px var(--f-mono);color:var(--ink3);text-align:center;border-top:1px solid var(--line)}
 
 /* ---------- actions ---------- */
@@ -593,8 +601,9 @@ article{max-width:680px;margin:0 auto;font-size:15.5px;line-height:1.6}
 article h1{margin:6px 0 12px;font:400 36px/1.02 var(--f-disp);letter-spacing:-.015em;}
 article p{margin:0 0 12px;color:#d3dde6}
 article h5{margin:18px 0 6px;font:600 11px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ember2)}
-article blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid var(--ice);background:rgba(143,203,255,.06);border-radius:0 10px 10px 0;font:italic 16px/1.55 var(--f-serif);color:#e3ecf3}
-article blockquote cite{display:block;font:600 10.5px var(--f-mono);font-style:normal;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+blockquote{margin:12px 0;padding:11px 15px 12px;border-left:2px solid var(--ice);background:linear-gradient(90deg,rgba(143,203,255,.08),rgba(143,203,255,.02));border-radius:0 12px 12px 0;font:italic 18px/1.45 var(--f-serif);color:#e6eef5}
+blockquote cite{display:block;font:600 9.5px var(--f-mono);font-style:normal;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+blockquote cite .lnk{font-style:normal}
 .m-mono{font:12.5px/1.6 var(--f-mono);background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:10px;padding:10px 12px;white-space:pre-wrap;color:var(--teal2);margin:0 0 12px;overflow-x:auto}
 .m-note{font-size:13px;color:var(--ink3)!important;font-style:italic}
 .m-tbl{overflow-x:auto;margin:6px 0 14px;border:1px solid var(--line);border-radius:12px}
@@ -634,7 +643,18 @@ article blockquote cite{display:block;font:600 10.5px var(--f-mono);font-style:n
 .d-minutes h1{font:700 26px/1.1 var(--f-serif);font-stretch:normal;text-transform:none}
 .d-minutes .mn-d{font:12px var(--f-mono);color:var(--ink3)}
 .d-minutes p{font:15.5px/1.6 var(--f-serif)}
-.d-lab{position:relative;padding:16px;border-radius:14px;background:linear-gradient(180deg,#0f1c1e,#0b1416);border:1px solid rgba(63,208,170,.25)}
+.d-lab{position:relative;padding:18px;border-radius:18px;background:linear-gradient(180deg,rgba(63,208,170,.06),transparent 120px),linear-gradient(180deg,#0e1b1d,#091214);border:1px solid rgba(63,208,170,.22);box-shadow:0 24px 50px -20px rgba(0,0,0,.8)}
+.d-lab h1{font-size:30px}
+.d-lab.novel{border-color:rgba(255,122,69,.4);background:radial-gradient(90% 50% at 50% 0,rgba(255,110,60,.2),transparent 70%),linear-gradient(180deg,#1a1210,#0c0908);overflow:hidden}
+.nv-hero{position:relative;height:250px;margin:-18px -18px 14px;display:grid;place-items:center;background:radial-gradient(60% 60% at 50% 50%,rgba(255,110,60,.12),transparent 70%),repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px);border-bottom:1px solid rgba(255,164,119,.18)}
+.nv-virion{width:210px;height:210px;filter:drop-shadow(0 0 24px rgba(255,110,60,.45))}
+.nv-rot{transform-origin:100px 100px;animation:nvrot 60s linear infinite}
+.nv-scan{transform-origin:100px 100px;animation:nvrot 9s linear infinite reverse}
+@keyframes nvrot{to{transform:rotate(360deg)}}
+.nv-stamp{position:absolute;right:16px;bottom:16px;display:flex;flex-direction:column;align-items:flex-end;padding:7px 12px 8px;border:2px solid var(--ember);border-radius:8px;color:var(--ember2);transform:rotate(-6deg);background:rgba(20,8,4,.55);box-shadow:0 0 30px rgba(255,90,40,.3);animation:stamp .7s .5s cubic-bezier(.2,1.6,.4,1) both}
+.nv-stamp span{font:600 9.5px var(--f-mono);letter-spacing:.3em;text-transform:uppercase}
+.nv-stamp b{font:400 30px/1 var(--f-disp);letter-spacing:-.01em;color:#ffe1cf}
+@keyframes stamp{from{opacity:0;transform:rotate(-14deg) scale(1.8)}to{opacity:1;transform:rotate(-6deg) scale(1)}}
 .d-lab .lb-h{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px dashed rgba(63,208,170,.3);padding-bottom:8px;margin-bottom:4px}
 .d-lab .lb-d{font:12px var(--f-mono);color:var(--ink3)}
 .lb-stamp{display:inline-block;margin:0 0 12px;padding:5px 12px;border:2px solid currentColor;border-radius:6px;font:800 14px var(--f-mono);letter-spacing:.2em;text-transform:uppercase;transform:rotate(-3deg)}
@@ -716,30 +736,37 @@ article blockquote cite{display:block;font:600 10.5px var(--f-mono);font-style:n
 #debrief{overflow-y:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(90% 40% at 50% 0,rgba(255,122,69,.12),transparent 70%),#04070a}
 .db-bg{display:none}
 .db-in{max-width:760px;margin:0 auto;padding:calc(40px + var(--safe-t)) calc(18px + var(--safe-r)) calc(40px + var(--safe-b)) calc(18px + var(--safe-l))}
-.db-hero h1{font:400 clamp(66px,20vw,132px)/.86 var(--f-disp);letter-spacing:-.035em;margin:12px 0 14px;letter-spacing:-.005em;text-shadow:0 0 50px rgba(255,122,69,.25)}
+.db-hero h1{font:400 clamp(66px,20vw,132px)/.88 var(--f-disp);letter-spacing:-.035em;margin:14px 0 18px;background:linear-gradient(180deg,#fff 30%,#c9b9ae);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 40px rgba(255,122,69,.2));padding-bottom:.04em}
 .db-hero>p{font-size:17px;color:var(--ink2);margin:0 0 20px;max-width:32em}
-.db-big{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.db-big div{background:#0b1218;padding:14px}
+.db-big{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:rgba(143,203,255,.1);border:1px solid rgba(143,203,255,.1);border-radius:18px;overflow:hidden;box-shadow:0 24px 50px -20px rgba(0,0,0,.8)}
+.db-big div{background:linear-gradient(180deg,rgba(255,255,255,.025),transparent),#0a1016;padding:16px 16px 14px}
 .db-big b{display:block;font:400 50px/1 var(--f-disp);letter-spacing:-.02em}
-.db-big span{font-size:12px;color:var(--ink3)}
-.db-saved{margin:16px 0 0;font:italic 17px var(--f-serif);color:var(--teal2)}
+.db-big span{display:block;margin-top:6px;font-size:12px;line-height:1.35;color:var(--ink3)}
+.db-saved{margin:18px 0 0;font:italic 22px/1.3 var(--f-serif);color:var(--teal2);text-shadow:0 0 24px rgba(63,208,170,.3)}
 .db-score{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.db-score div{display:flex;gap:8px;align-items:baseline;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--line);font-size:12.5px;color:var(--ink2)} .db-score b{font:600 13px var(--f-mono);color:var(--ink)}
+.db-score div{display:flex;gap:10px;align-items:baseline;padding:7px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(143,203,255,.08);font-size:12.5px;color:var(--ink2)} .db-score b{font:600 13px var(--f-mono);color:var(--ink)}
 .db-sec{margin-top:56px;opacity:0;transform:translateY(20px);transition:all .8s var(--ease)}
 .db-sec.in{opacity:1;transform:none}
 .db-sec>h2{margin:6px 0 14px;font:400 44px/.95 var(--f-disp);letter-spacing:-.02em}
 .db-sec>p{color:var(--ink2);margin:-4px 0 14px}
 .db-sec .card{margin-bottom:12px}
-.pc{border-radius:18px;overflow:hidden;border:1px solid rgba(255,122,69,.35);background:linear-gradient(180deg,#1a1410,#0e0c0b);box-shadow:0 30px 60px rgba(0,0,0,.5),0 0 60px rgba(255,122,69,.08)}
+.pc{border-radius:22px;overflow:hidden;border:1px solid rgba(255,140,90,.35);background:radial-gradient(100% 40% at 50% 0,rgba(255,110,60,.16),transparent 70%),linear-gradient(180deg,#1a1310,#0c0a09);box-shadow:0 40px 80px -30px rgba(0,0,0,.9),0 0 80px rgba(255,110,60,.1),inset 0 1px 0 rgba(255,210,180,.12)}
+.pc-hero{display:flex;align-items:center;gap:6px;padding:10px 16px 6px 6px;border-bottom:1px solid rgba(255,164,119,.14);background:repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0 1px,transparent 1px 3px)}
+.pc-hero .nv-virion{width:130px;height:130px;flex:none;filter:drop-shadow(0 0 20px rgba(255,110,60,.4));opacity:0;transform:scale(.6) rotate(-30deg);transition:opacity 1.2s .2s,transform 1.8s .2s var(--ease)}
+.pc.in .pc-hero .nv-virion{opacity:1;transform:none}
+.pc-id{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pc-id span{font:600 9px var(--f-mono);letter-spacing:.26em;text-transform:uppercase;color:var(--ember2)}
+.pc-id b{font:400 38px/1 var(--f-disp);letter-spacing:-.02em;color:#fff1e8}
+.pc-id em{font:italic 15px var(--f-serif);color:var(--ink3)}
 .pc-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 28px;gap:10px;padding:10px 14px 8px;border-bottom:1px solid rgba(255,164,119,.18);font:600 10px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
 .pc-head span:first-child{color:#ffb48d}
-.pc-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 28px;grid-template-areas:"l l m" "t y m";gap:2px 10px;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,164,119,.12);opacity:0;transform:rotateX(-80deg);transform-origin:50% 0;transition:all .6s var(--ease);transition-delay:calc(var(--i) * 110ms)}
+.pc-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 28px;grid-template-areas:"l l m" "t y m";gap:6px 12px;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(255,164,119,.12);opacity:0;transform:rotateX(-80deg);transform-origin:50% 0;transition:all .6s var(--ease);transition-delay:calc(var(--i) * 110ms)}
 .pc.in .pc-r{opacity:1;transform:none}
 .pc-r:last-child{border-bottom:0}
 .pc-l{grid-area:l;font:700 12.5px/1.15 var(--f-cond);font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;color:var(--ink2)}
 .pc-l i{display:inline;margin-left:6px;vertical-align:.2em;font:600 8.5px var(--f-mono);font-style:normal;letter-spacing:.14em;color:var(--ember)}
-.pc-t{grid-area:t;font:600 15px var(--f-mono);color:#ffe0c2}
-.pc-y{grid-area:y;font:13.5px var(--f-mono);color:var(--ink2)} .pc-y small{display:block;font-size:10.5px;color:var(--ink3)} .pc-y em{font-style:normal;color:var(--ink4)}
+.pc-t{grid-area:t;font:400 22px/1.1 var(--f-disp);color:#ffe3cf;letter-spacing:-.005em}
+.pc-y{grid-area:y;font:500 12.5px var(--f-mono);color:var(--ink2)} .pc-y small{display:block;font-size:10px;color:var(--ink3)} .pc-y em{font-style:normal;color:var(--ink4)}
 .pc-m{grid-area:m;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 16px var(--f-mono)}
 .pc-m svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.6}
 .pc-m.good{background:rgba(63,208,170,.18);color:var(--teal)} .pc-m.near{background:rgba(242,182,64,.16);color:var(--amber)} .pc-m.off{background:rgba(255,90,79,.16);color:var(--red)} .pc-m.none{color:var(--ink4)}
@@ -763,10 +790,12 @@ article blockquote cite{display:block;font:600 10.5px var(--f-mono);font-style:n
 .mem-h{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:10px}
 .mem-h span{flex:0 1 80px;height:1px;background:rgba(217,211,199,.35)}
 .mem-h .eyebrow{color:var(--bone);letter-spacing:.3em}
-.mem-d{font:italic 17px var(--f-serif);color:#cfc9bd;margin:0 0 22px}
-.mem{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px 22px;text-align:left}
-.mem-p{border-top:1px solid rgba(217,211,199,.14);padding-top:8px}
-.mem-p b{display:block;font:500 17px var(--f-serif);color:var(--bone)} .mem-p span{font-size:12.5px;color:var(--ink3)}
+.mem-d{font:italic 20px/1.4 var(--f-serif);color:#cfc9bd;margin:0 0 24px}
+.mem{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px 22px;text-align:left}
+.mem-p{display:flex;align-items:center;gap:12px;border-top:1px solid rgba(217,211,199,.14);padding-top:10px}
+.mem-f{width:46px;height:46px;border-radius:50%;overflow:hidden;flex:none;filter:grayscale(1) sepia(.35) brightness(.85) contrast(.95);box-shadow:0 0 0 1px rgba(217,211,199,.25)}
+.mem-f svg{width:100%;height:100%}
+.mem-p b{display:block;font:400 20px/1.1 var(--f-serif);color:var(--bone)} .mem-p span{font-size:12px;color:var(--ink3)}
 .db-foot{margin-top:56px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 
 /* ---------- wide screens ---------- */
@@ -1278,6 +1307,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   ];
   T.illcontact = [
     '{who} was poorly before me, from about {date}. That\'s my {rel}.',
+    '{who}, my {rel}, went down with it first. {date}, or thereabouts.',
     'Now you mention it, {who} had it first. From {date}, I think.',
     '{who} was off sick from {date}. We\'re in and out of each other\'s pockets.'
   ];
@@ -1713,10 +1743,18 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       return s;
     }
 
+    var usedFull = {};
     function addPerson(hid, di, her, sex, age, last) {
       var i = A.age.length;
       A.age.push(Math.max(0, Math.min(104, Math.round(age)))); A.sex.push(sex); A.hh.push(hid); A.dist.push(di); A.her.push(D.HERITAGES.indexOf(her));
-      A.first.push(firstName(her, sex, age)); A.last.push(gendered(last, sex, her)); A.occ.push(0); A.work.push(-1);
+      // full names are unique in the city (so a tap on a name is never ambiguous)
+      var ln = gendered(last, sex, her), fn = firstName(her, sex, age);
+      for (var tries = 0; tries < 12 && usedFull[fn + ' ' + ln]; tries++) fn = firstName(her, sex, age);
+      var base0 = fn;
+      for (tries = 0; tries < 30 && usedFull[fn + ' ' + ln]; tries++) { var mid = firstName(her, sex, age); if (mid !== base0) fn = base0 + ' ' + mid; }   // a middle name
+      if (usedFull[fn + ' ' + ln]) fn = base0 + ' ' + 'ABCDEFGHJKLMNPRSTW'.charAt(R.int(0, 17)) + '.';
+      usedFull[fn + ' ' + ln] = 1;
+      A.first.push(fn); A.last.push(ln); A.occ.push(0); A.work.push(-1);
       var f = 0;
       var vulnP = age < 18 ? 0.01 : age < 50 ? 0.04 : age < 65 ? 0.1 : age < 80 ? 0.2 : 0.3;
       if (R.chance(vulnP)) f |= FLAG.VULNERABLE;
@@ -2868,6 +2906,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     this.extraSpill(sd, wd, pol);
     // 3. vaccination (policy layer fills pol.vaccinate with agent ids)
     if (pol.vaccinate) for (i = 0; i < pol.vaccinate.length; i++) { j = pol.vaccinate[i]; if (this.vac[j] < -30000) this.vac[j] = sd; }
+    // a new variant often dies out by chance; if its lineage vanishes early, let it arise again (up to three times)
+    if (this.variantBorn >= 0 && (this.variantBirths || 1) < 3 && sd < (this.variantSd || 0) + 40) {
+      var vAct = 0; for (i = 0; i < this.active.length; i++) if (this.xvr[this.active[i]]) { vAct = 1; break; }
+      if (!vAct && this.xday[this.variantBorn] < sd - 3) { this.variantBirths = (this.variantBirths || 1) + 1; this.variantBorn = -1; this.variantSd = sd + 3; }
+    }
     var newInf = 0; for (i = this.n - 1; i >= 0 && this.xday[i] === sd; i--) newInf++;
     this.daily.push({ sd: sd, newInf: newInf, infectious: nInfectious, hosp: this.hospNow, icu: this.icuNow, adm: adm, deaths: deaths, overflow: this.hospNow > beds ? 1 : 0 });
     this.sd = sd + 1;
@@ -3010,7 +3053,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
 
   // ---------------------------------------------------------------- snapshot
   SP.snapshot = function () {
-    var o = { sd: this.sd, n: this.n, mutN: this.mutN, variantBorn: this.variantBorn, variantSd: this.variantSd, spills: this.spills, primary: this.primary, sourcePlace: this.sourcePlace,
+    var o = { sd: this.sd, n: this.n, mutN: this.mutN, variantBorn: this.variantBorn, variantSd: this.variantSd, variantBirths: this.variantBirths, spills: this.spills, primary: this.primary, sourcePlace: this.sourcePlace,
       spillSite: this.spillSite, spillRate: this.spillRate, extra: this.extra || null, active: this.active, deadList: this.deadList, bgList: this.bgList || [], admLog: this.admLog, daily: this.daily,
       hospNow: this.hospNow, icuNow: this.icuNow, fear: this.fear, baseBeds: this.baseBeds, baseIcu: this.baseIcu, VE_inf: this.VE_inf,
       funerals: (this.funerals || []).map(function (f) { return { sd: f.sd, place: f.place, att: f.att, dead: f.dead }; }), funeralDays: this.funeralDays || {} };
@@ -3342,6 +3385,17 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   OCC_LABEL[OCC.STUDENT] = 'university student'; OCC_LABEL[OCC.PUPIL] = 'pupil'; OCC_LABEL[OCC.NURSERY_CHILD] = 'goes to nursery'; OCC_LABEL[OCC.CARE_RES] = 'care home resident';
   OCC_LABEL[OCC.HOME] = 'looks after the home'; OCC_LABEL[OCC.RETIRED] = 'retired'; OCC_LABEL[OCC.GP_STAFF] = 'GP surgery staff'; OCC_LABEL[OCC.UNEMPLOYED] = 'between jobs';
   OCC_LABEL[OCC.OUT] = 'works out of town / from home'; OCC_LABEL[OCC.UNI_STAFF] = 'university lecturer'; OCC_LABEL[OCC.HOTEL] = 'hotel staff'; OCC_LABEL[OCC.CHILD_HOME] = 'at home with family';
+  /** what pid would call q, who lives with them */
+  GP.kinWord = function (pid, q) {
+    var C = this.C, kind = C.hKind[C.hh[pid]], d = C.age[q] - C.age[pid], m = C.sex[q] === 1;
+    if (kind === 'sharers' || kind === 'students') return 'housemate';
+    if (Math.abs(d) <= 12 && C.age[q] >= 20 && C.age[pid] >= 20) return C.last[q] === C.last[pid] || kind === 'couple' || kind === 'oldcouple' ? (m ? 'husband' : 'wife') : 'partner';
+    if (Math.abs(d) <= 12) return m ? 'brother' : 'sister';
+    if (d >= 45) return m ? 'grandad' : 'gran';
+    if (d <= -45) return m ? 'grandson' : 'granddaughter';
+    if (d > 0) return m ? 'dad' : 'mum';
+    return m ? 'son' : 'daughter';
+  };
   GP.occLabel = function (pid) {
     var C = this.C, o = C.occ[pid], w = C.work[pid];
     var base = OCC_LABEL[o] || '';
@@ -4103,7 +4157,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (!self.wasAtFuneral(pid, f)) return;
       var ent = { kind: 'place', place: f.place >= 0 ? self.plref(f.place) : null, days: [self.gd(f.sd)], setting: 'funeral', note: 'funeral of ' + self.name(f.dead), persons: [f.dead] };
       exps.push(ent);
-      rows.push(['Funeral', ['of ', self.pref(f.dead)].concat(f.place >= 0 ? [', ', self.plref(f.place)] : []), self.shortDate(self.gd(f.sd))]);
+      rows.push(['Funeral', self.pref(f.dead), self.shortDate(self.gd(f.sd)) + (f.place >= 0 ? ', ' + C.places[f.place].name : '')]);
     });
     // friends visited
     var vis = this.visitsIn(pid, win.from, win.to);
@@ -4153,7 +4207,10 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     });
     cs.illContacts = ill;
     if (ill.length) {
-      lines.push({ k: 'q', who: this.pref(pid), x: [ill.length === 1 ? IX.pickText(this, 'illcontact', pid, { who: ill[0].person.d, rel: ill[0].relation, date: this.dateLabel(ill[0].onset) }) : 'A few people I know were poorly before me, now you mention it.'] });
+      if (proxy) {
+        var pr2 = C.sex[pid] ? 'him' : 'her', pos2 = C.sex[pid] ? 'his' : 'her';
+        lines.push({ k: 'q', x: [ill.length === 1 ? ill[0].person.d + ' was poorly before ' + pr2 + ', from about ' + this.dateLabel(ill[0].onset) + ' (' + pos2 + ' ' + (ill[0].relation === 'household' ? this.kinWord(pid, ill[0].person.id) : ill[0].relation) + ').' : 'A few people around ' + pr2 + ' were poorly first.'] });
+      } else lines.push({ k: 'q', who: this.pref(pid), x: [ill.length === 1 ? IX.pickText(this, 'illcontact', pid, { who: ill[0].person.d, rel: ill[0].relation === 'care home' ? 'neighbour at the home' : ill[0].relation === 'household' ? this.kinWord(pid, ill[0].person.id) : ill[0].relation, date: this.dateLabel(ill[0].onset) }) : 'A few people I know were poorly before me, now you mention it.'] });
       rows.push(['Knew someone ill', ill.map(function (i) { return i.person.d + ' (' + i.relation + ', ill from ' + self.shortDate(i.onset) + ')'; }).join('; '), '']);
     }
     cs.exposures = exps;
@@ -4254,6 +4311,51 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (params && params.quiet) return { ok: true, msgs: [], found: list.length };
     var m = this.msg('result', 'Contact tracing: ' + this.name(pid) + ' (' + list.length + ' contacts)', 'Contact tracing team', lines);
     return { ok: true, msgs: [m], found: list.length };
+  };
+
+  // ============================================================== transmission timing study
+  GP.inv_timing_study = function (pid) {
+    var S = this.S, cs = S.cases[pid];
+    if (!cs || !cs.traced || cs.onset === null) return { ok: false, err: 'Trace a case with a known onset first.' };
+    cs.timing = true;
+    if (!S.timingStudies) S.timingStudies = [];
+    var st = { id: S.timingStudies.length, index: pid, start: S.day };
+    S.timingStudies.push(st);
+    this.schedule('timing', S.day + 14, { study: st.id });
+    var m = this.msg('result', 'Timing study started: contacts of ' + this.name(pid), 'Field epidemiology team', [
+      ['Everyone traced from ', this.pref(pid), ' keeps a contact diary and is swabbed daily for two weeks; positives are sequenced to confirm who caught it from whom. Result on ' + this.dateLabel(S.day + 15) + '.']]);
+    return { ok: true, msgs: [m] };
+  };
+  GP.job_timing = function (d, sd) {
+    var S = this.S, sim = this.sim, C = this.C, K = this.keys, self = this, st = S.timingStudies[d.study], a = st.index;
+    var xa = this.infBy(a, sd), onA = xa >= 0 && sim.xonset[xa] >= 0 ? sim.xonset[xa] : this.sdOf(S.cases[a].onset);
+    var rows = [], before = 0, after = 0, unclear = 0, elsewhere = 0;
+    var slow = this.P.mutRate < 0.2;
+    Object.keys(S.contacts).forEach(function (k) {
+      var q = +k, c = S.contacts[k];
+      if (c.of.indexOf(a) < 0) return;
+      var xq = self.infBy(q, sd);
+      if (xq < 0) return;
+      if (sim.xday[xq] < self.sdOf(c.first !== undefined ? c.first : c.exposure) - 1) return;   // infected before they ever met
+      var fromA = sim.xby[xq] >= 0 && sim.xwho[sim.xby[xq]] === a;
+      var verdict;
+      if (!fromA) {
+        // sequencing tells a different source apart, unless the virus barely mutates
+        if (!slow || u(K.seq, q, a, 5) < 0.5) { elsewhere++; verdict = 'caught it elsewhere (genome does not match)'; }
+        else { var guess = u(K.seq, q, a, 6) < 0.5; if (guess) before++; else after++; verdict = guess ? 'before (link not confirmable)' : 'after (link not confirmable)'; }
+      } else {
+        var days = (c.days && c.days[a]) || [];
+        var infDay = sim.xday[xq];
+        if (u(K.seq, q, a, 7) < 0.12) { unclear++; verdict = 'cannot tell'; }
+        else if (infDay < onA) { before++; verdict = 'before ' + self.name(a) + ' felt ill'; }
+        else { after++; verdict = 'after ' + self.name(a) + ' felt ill'; }
+      }
+      rows.push([self.pref(q), c.setting, sim.xonset[xq] >= 0 ? 'ill from ' + self.shortDate(self.gd(sim.xonset[xq])) : 'infected, never ill', verdict]);
+    });
+    st.result = { before: before, after: after, unclear: unclear, elsewhere: elsewhere };
+    this.msg('result', 'Timing study: ' + this.name(a) + ' — ' + before + ' infected before symptoms, ' + after + ' after', 'Field epidemiology team', [
+      rows.length ? { k: 'table', head: ['Contact', 'Setting', 'Illness', 'Infected by the index case'], rows: rows } : 'None of the traced contacts was infected.',
+      { k: 'n', x: ['Index case: ', this.pref(a), ', ill from ' + this.shortDate(S.cases[a].onset) + '.' + (slow ? ' This virus mutates slowly, so sequencing cannot always confirm a link.' : '')] }], { day: S.day + 1 });
   };
 
   // ============================================================== household study
@@ -4700,11 +4802,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   // ---------------------------------------------------------------- grades
   IX.GRADES = [
     { id: 'probationer', label: 'Probationer', blurb: 'Respiratory viruses only, a bigger team, quicker lab results and a patient council.',
-      staff: { tracers: 5, field: 3, analysts: 2 }, panel: 16, pcrStart: 40, pcrGrow: 3, pcrMax: 160, seq: 4, funding: 450, vaccineBase: 50, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
+      staff: { tracers: 5, field: 3, analysts: 2 }, trust: 6, comply: 1.06, beds: 1.15, fund: 1.2, panel: 16, pcrStart: 40, pcrGrow: 3, pcrMax: 160, seq: 4, funding: 450, vaccineBase: 50, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
     { id: 'consultant', label: 'Consultant', blurb: 'The full range of diseases, a small team and a lab that is doing its best.',
-      staff: { tracers: 4, field: 2, analysts: 2 }, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 60, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
+      staff: { tracers: 4, field: 2, analysts: 2 }, trust: 0, comply: 1, beds: 1, fund: 1, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 60, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
     { id: 'director', label: 'Director', blurb: 'Wider and nastier diseases, noisier data, slower results and a council that wants the city open.',
-      staff: { tracers: 3, field: 1, analysts: 1 }, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 75, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
+      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -8, comply: 0.9, beds: 0.85, fund: 0.7, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 75, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
   ];
   IX.gradeOf = function (id) { return IX.GRADES.filter(function (g) { return g.id === id; })[0] || IX.GRADES[1]; };
   GP.grades = function () { return IX.gradeOf(this.grade); };
@@ -4745,6 +4847,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   var ACTS = IX.ACTIONS = {
     interview: { label: 'Interview', area: 'investigate', target: 'case', hours: { tracers: 1.5 }, desc: 'Where they went, who they saw, when they fell ill, who else was ill.' },
     trace: { label: 'Trace contacts', area: 'investigate', target: 'case', hours: { tracers: 3 }, params: [{ id: 'daysBefore', label: 'From', type: 'choice', options: [{ id: 2, label: '2 days before onset' }, { id: 5, label: '5 days before onset' }], default: 2 }], desc: 'Finds and follows up their contacts for 14 days.' },
+    timing_study: { label: 'Transmission timing study', area: 'investigate', target: 'case', hours: { field: 3, tracers: 2 }, seq: 1, desc: 'Diaries, daily tests and sequencing for everyone traced from this case: who caught it from them before they felt ill, and who after. Needs the case traced first.' },
     household: { label: 'Household study', area: 'investigate', target: 'case', hours: { field: 3 }, tests: 'household', desc: 'Swabs everyone at home three times, then antibodies: who was infected, and who never felt ill.' },
     site_visit: { label: 'Site visit', area: 'investigate', target: 'place', hours: { field: 4 }, desc: 'Attendance lists for 14 days, ventilation, layout, kitchens.' },
     questionnaire: { label: 'Cluster questionnaire', area: 'investigate', target: 'place', hours: { analysts: 3, field: 2 }, desc: 'Attack rates by activity and exposure among everyone at the cluster event.' },
@@ -4839,6 +4942,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (T === 'place') { var pi = this.placeIdx(target); if (pi < 0 || !this.C.places[pi]) return 'Pick a place.'; if (A.targetKinds && A.targetKinds.indexOf(this.C.places[pi].kind) < 0) return 'Not the right kind of place.'; }
     if (id === 'test' && res.testsLeft < 1) return 'The lab is at capacity today.';
     if (id === 'interview' && S.cases[+target].interviewDay === S.day) return 'Already interviewed today.';
+    if (id === 'timing_study') { var ct = S.cases[+target]; if (!S.recognized) return 'Only once the lab has identified the agent.'; if (!ct.traced) return 'Trace their contacts first.'; if (ct.onset === null) return 'Needs a case with a known onset.'; if (ct.timing) return 'Already studied.'; }
     if (id === 'household') { var C = this.C, hh = C.hh[+target]; if (C.hStart[hh + 1] - C.hStart[hh] < 2) return 'Lives alone.'; if (S.cases[+target].household) return 'Household study already done.'; if (res.testsLeft < c.tests) return 'Not enough tests left today.'; }
     return null;
   };
@@ -5018,7 +5122,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     for (var d = 0; d < nd; d++) for (var b = 0; b < 3; b++) {
       var tr = S.trust[d * 3 + b] / 100;
       var rum = S.rumourShare ? S.rumourShare[d * 3 + b] || 0 : 0;
-      var c = base * (0.45 + 0.75 * tr) * fatigue * (1 - 0.5 * rum) + fear;
+      var c = base * (0.45 + 0.75 * tr) * fatigue * (1 - 0.5 * rum) * (this.grades().comply || 1) + fear;
       if (slot === 6 && b !== 2) c *= 0.9;
       t[d * 3 + b] = IX.clamp(c, 0.05, 0.97);
     }
@@ -5464,7 +5568,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var reqs = S.fundingRequests.filter(function (r) { return !r.decided; });
     if (reqs.length) {
       var sev = Math.min(1, (wk.adm + 3 * wk.deaths) / (6 * C.N / 8000) + (S.recognized ? 0.2 : 0));
-      var frac = IX.clamp(0.25 + 0.5 * S.credibility / 100 + 0.4 * sev, 0.1, 1);
+      var frac = IX.clamp((0.25 + 0.5 * S.credibility / 100 + 0.4 * sev) * (this.grades().fund || 1), 0.1, 1);
       reqs.forEach(function (r) {
         r.decided = S.day;
         var money = Math.round(r.money * frac / 10) * 10, staff = Math.round(r.staff * frac);
@@ -5678,7 +5782,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var keys = this.keys = {};
     OBS_KEYS.forEach(function (k) { keys[k] = IX.hash(key + '/obs/' + k); });
     this.sim = new IX.Sim(C, P, key + '/sim');
-    this.sim.baseBeds = Math.round(22 * C.N / 8000); this.sim.baseIcu = Math.max(3, Math.round(4 * C.N / 8000));
+    var GR = IX.gradeOf(this.grade);
+    this.sim.baseBeds = Math.round(22 * C.N / 8000 * (GR.beds || 1)); this.sim.baseIcu = Math.max(3, Math.round(4 * C.N / 8000 * (GR.beds || 1)));
     this.sim.deadList = [];
     this.sim.VE_inf = 0.65;
     var R = IX.rng(key + '/cal');
@@ -5694,7 +5799,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   GP.freshState = function (R) {
     var G = IX.gradeOf(this.grade), C = this.C, nd = C.districts.length;
     var trust = [];
-    for (var d = 0; d < nd; d++) for (var b = 0; b < 3; b++) trust.push(IX.round(IX.clamp(64 - 30 * C.districts[d].deprivation + (b === 2 ? 8 : b === 0 ? -6 : 0) + R.range(-5, 5), 20, 90), 1));
+    for (var d = 0; d < nd; d++) for (var b = 0; b < 3; b++) trust.push(IX.round(IX.clamp(64 + (G.trust || 0) - 30 * C.districts[d].deprivation + (b === 2 ? 8 : b === 0 ? -6 : 0) + R.range(-5, 5), 20, 90), 1));
     return {
       v: 1, day: 0, act: 1, over: false, outcome: null, sd0: null, from: -56, alerted: false, alert: null,
       msgSeq: 0, msgs: [], cases: {}, caseOrder: [], people: {}, contacts: {}, tests: [], testQueue: [], pendingResults: [], samples: {}, seqs: {},
@@ -6581,7 +6686,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var D = days.filter(function (d0) { return d0 >= ca.onset - 6 && d0 <= ca.onset + 12 && d0 < cb.onset; });
       if (!D.length) return;
       var key = b + ':' + a; if (seenPair[key]) return; seenPair[key] = 1;
-      tp.push({ b: b, a: a, t: cb.onset, oA: ca.onset, D: D, single: D.length === 1 });
+      tp.push({ b: b, a: a, t: cb.onset, oA: ca.onset, D: D, single: D.length === 1, hh: g.C.hh[b] === g.C.hh[a] });
     }
     cons.forEach(function (c) {
       if (c.onset === undefined) return;
@@ -6614,20 +6719,24 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (links.length === 1) addPair(c.pid, links[0].src, [links[0].day]);
     });
     E.n.pairs = tp.length;
-    // incubation and the timing of transmission, estimated together from every pair (and point-source events)
+    // incubation: fitted jointly with the timing of transmission, on household pairs, narrow exposures and point-source events
     var exact = [];
     S.quests.forEach(function (q) { if (!q.event || (q.onsets || []).length < 2) return; q.onsets.forEach(function (v) { if (v >= 1 && v <= 21) exact.push(v); }); });
-    E.n.incubation = tp.length + exact.length;
-    var narrow = tp.filter(function (p) { return p.D[p.D.length - 1] - p.D[0] <= 2; }).length + exact.length;
-    if (tp.length >= 12 || (tp.length + exact.length >= 12 && exact.length >= 5)) {
-      var jf = jointFit(tp, exact);
-      E.joint = { incMean: jf.incMean, incSd: jf.incSd, pre: IX.round(jf.pre, 2), share: IX.round(jf.share, 2), narrow: narrow };
-      if (narrow >= 4) E.incubation = jf.incMean;
-      E.n.presym = tp.length;
-      if (tp.length >= 15) E.presym = Math.round(100 * jf.pre);
-      E.serial = IX.round(jf.incMean + jf.meanOffset, 1);   // mean serial interval = incubation + mean infection time after onset
-      E.timing = jf.w.map(function (v) { return IX.round(v, 3); });
+    var use = tp.filter(function (p) { return p.hh || p.D[p.D.length - 1] - p.D[0] <= 2; });
+    E.n.incubation = use.length + exact.length;
+    if (use.length + exact.length >= 15) {
+      var jf = jointFit(use, exact);
+      E.incubation = jf.incMean;
     }
+    // serial interval (for the generation time behind R): pairs and household studies, co-primaries excluded
+    var siL = tp.map(function (p) { return p.t - p.oA; }).filter(function (v) { return v >= 1 && v <= 21; });
+    S.hhStudies.forEach(function (st) { if (st.result && st.result.si) st.result.si.forEach(function (v) { if (v >= 1 && v <= 21) siL.push(v); }); });
+    if (siL.length >= 8) E.serial = IX.round(robustMean(siL), 1);
+    // transmission before symptoms: transmission-timing studies (diaries, daily tests, sequencing)
+    var tb = 0, ta = 0;
+    (S.timingStudies || []).forEach(function (t) { if (t.result) { tb += t.result.before; ta += t.result.after; } });
+    E.n.presym = tb + ta;
+    if (tb + ta >= 8) E.presym = Math.round(100 * tb / (tb + ta));
     E.n.si = tp.length;
 
     // --- hidden infections: household studies
@@ -6764,20 +6873,25 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var ate = cats[IX.QCAT.ate], nate = cats[IX.QCAT.nate];
       if (ate && nate && ate.n >= 5 && nate.n >= 3) { var ra = ate.ill / ate.n, rn = (nate.ill + 0.5) / (nate.n + 1); if (ra > 2.5 * rn && ra > 0.12) { ev.gut += 2.5; foodQ++; return; } }
       if (q.ill < 3 || !close || !far || (!q.event && ['choir', 'pub', 'restaurant', 'church', 'mosque', 'temple', 'gurdwara'].indexOf(q.kind) < 0)) return;
+      if (q.day > (S.recognizedDay || 0) + 12) return;   // later, everyone is catching it everywhere: attack rates stop meaning much
       pc.n += close.n; pc.ill += close.ill; pf.n += far.n; pf.ill += far.ill;
     });
     E.qPool = { close: pc.n ? IX.round(pc.ill / pc.n, 3) : null, far: pf.n ? IX.round(pf.ill / pf.n, 3) : null, nc: pc.n, nf: pf.n, food: foodQ };
     if (pc.n >= 6 && pf.n >= 12 && pc.ill >= 2) {
-      var rc = pc.ill / pc.n, rf = pf.ill / pf.n;
-      if (rf >= 0.35 * rc && rf >= 0.06) ev.airborne += 2.2;
-      else if (rf < 0.2 * rc) { ev.droplet += 1.2; ev.contact += 0.8; }
+      var rc = pc.ill / pc.n, rf = pf.ill / pf.n, ratio = rf / Math.max(0.001, rc);
+      if (ratio >= 0.5 && rc >= 0.08) ev.airborne += 2.2;
+      else if (ratio <= 0.42) { ev.droplet += 1.4; ev.contact += 0.8; }
     }
+    // explosive single-day clusters in shared air (choirs, pubs, gyms, services, parties) are the airborne signature
+    var big = 0;
+    g.clusters().forEach(function (k) { if (k.place && ['choir', 'pub', 'gym', 'church', 'mosque', 'temple', 'gurdwara', 'hotel', 'community_hall', 'restaurant'].indexOf(k.kind) >= 0 && k.size >= 6 && k.lastOnset !== null && k.lastOnset - k.firstOnset <= 7) big++; });
+    if (big >= 2) ev.airborne += 0.8;
+    // transmission almost only after symptoms points to contact (or faecal-oral) spread
+    if (E.presym !== undefined) { if (E.presym < 10) { ev.contact += 1.5; ev.gut += 0.3; } else if (E.presym > 25) { ev.airborne += 0.4; ev.droplet += 0.6; ev.contact -= 1; } }
     // cluster settings
     var cl = g.clusters(), venue = 0, hh = 0, care = 0;
     cl.forEach(function (c) { if (c.kind === 'household') hh++; else if (c.kind === 'care_home' || c.kind === 'hospital') care += c.size; else venue += c.size >= 3 ? 1 : 0; });
-    if (venue <= 1 && hh + care >= 4 && E.presym !== undefined && E.presym < 10) ev.contact += 1.5;
-    if (E.presym !== undefined && E.presym < 8) ev.contact += 1;
-    if (E.presym !== undefined && E.presym > 15) { ev.droplet += 0.8; ev.contact -= 1; }
+    if (venue <= 1 && hh + care >= 4) ev.contact += 0.5;
     if (E.serial !== undefined && E.incubation !== undefined && E.serial > E.incubation + 1.5) ev.contact += 0.6;
     if (nC >= 5 && gutS / nC > 0.6) ev.airborne -= 1;
     // animal: positive animal samples, or early cases with animal exposure and no human source
@@ -6828,6 +6942,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
         live.forEach(function (c) { if (hhDone < 12 && !done.household[c.pid] && c.status === 'confirmed' && g.canAct('household', c.pid) === null && act('household', c.pid)) { done.household[c.pid] = 1; hhDone++; } });
         live.forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
         live.forEach(function (c) { if (!done.trace[c.pid] && c.onset !== null && act('trace', c.pid, { daysBefore: 5 })) done.trace[c.pid] = 1; });
+        var nt = (S.timingStudies || []).length;
+        live.forEach(function (c) { if (nt < 8 && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
         g.clusters().forEach(function (k) {
           if (!k.place) return;
           var pi = g.placeIdx(k.place.id);
@@ -7013,16 +7129,29 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (act === 'household') { var c2 = live.filter(function (c) { if (c.household) return false; var hh = C.hh[c.pid]; return C.hStart[hh + 1] - C.hStart[hh] >= 3; })[0]; if (c2) target = c2.pid; }
       if (act === 'questionnaire') { var cl = g.clusters().filter(function (k) { return k.place && S.quests.every(function (q) { return q.place !== g.placeIdx(k.place.id); }); })[0]; if (cl) target = g.placeIdx(cl.place.id); }
       if (act === 'serosurvey') params = { n: 600 };
-      var lab = { trace: 'Trace the contacts of', household: 'Run a household study on', questionnaire: 'Send a questionnaire to everyone at', record_review: 'Run a hospital record review.', serosurvey: 'Run a serosurvey of 600 people.' }[act];
+      // nothing to aim that at yet: find the cases and the places first
+      if (target === null && (act === 'trace' || act === 'household' || act === 'questionnaire')) {
+        var unint = live.filter(function (c) { return !c.interviewed; })[0];
+        var places = {};
+        live.forEach(function (c) { (c.exposures || []).forEach(function (e) { if (e.kind === 'place' && e.place) places[e.place.id] = (places[e.place.id] || 0) + 1; }); });
+        var topP = Object.keys(places).sort(function (a, b) { return places[b] - places[a]; })[0];
+        if (unint) { act = 'interview'; target = unint.pid; params = {}; }
+        else if (topP && !S.siteVisits[g.placeIdx(topP)]) { act = 'site_visit'; target = g.placeIdx(topP); params = {}; }
+        else { act = 'record_review'; params = {}; }
+      }
+      var lab = { trace: 'Trace the contacts of', household: 'Run a household study on', questionnaire: 'Send a questionnaire to everyone at', record_review: 'Run a hospital record review.', serosurvey: 'Run a serosurvey of 600 people.', interview: 'Start by interviewing', site_visit: 'Go and look at' }[act];
+      var isPlace = act === 'questionnaire' || act === 'site_visit';
       var segs2 = [lab];
-      if (target !== null && act !== 'questionnaire') segs2.push(' ', g.pref(target), act === 'trace' ? ', five days back from onset.' : '.');
-      if (target !== null && act === 'questionnaire') segs2.push(' ', g.plref(target), '.');
-      return { segs: segs2, text: lab + (target !== null ? ' ' + (act === 'questionnaire' ? C.places[target].name : name(target)) : ''), action: { id: act, target: target, params: params }, trait: weakest };
+      if (target !== null && !isPlace) segs2.push(' ', g.pref(target), act === 'trace' ? ', five days back from onset.' : '.');
+      if (target !== null && isPlace) segs2.push(' ', g.plref(target), act === 'site_visit' ? ': get the attendance lists.' : '.');
+      return { segs: segs2, text: lab + (target !== null ? ' ' + (isPlace ? C.places[target].name : name(target)) : ''), action: { id: act, target: target, params: params }, trait: weakest };
     }
     // answer: the truth about the weakest trait
     var v = T[weakest], txt;
     switch (weakest) {
-      case 'route': txt = 'It spreads by ' + D.ROUTE_LABEL[T.route] + (T.route === 'animal' ? ', and person to person by ' + D.ROUTE_LABEL[T.humanRoute] : '') + '.'; break;
+      case 'route':
+        var RW = { airborne: 'through shared indoor air, well beyond arm\'s length', droplet: 'by droplets at close range', contact: 'by direct contact with the sick and their body fluids', gut: 'by the faecal-oral route: hands, food, toilets' };
+        txt = T.route === 'animal' ? 'It comes from animals, and it is still spilling over at the source. Between people it spreads ' + RW[T.humanRoute] + '.' : 'It spreads ' + RW[T.route] + '.'; break;
       case 'incubation': txt = 'Incubation is about ' + Math.round(v) + ' days, on average.'; break;
       case 'presym': txt = 'About ' + (Math.round(v / 5) * 5) + '% of transmission happens before symptoms.'; break;
       case 'asym': txt = 'About ' + (Math.round(v / 5) * 5) + '% of infections never cause symptoms.'; break;
@@ -7077,6 +7206,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           live.forEach(function (c) { if (hh < 1 && !done.household[c.pid] && Object.keys(done.household).length < 10 && c.status === 'confirmed' && g.canAct('household', c.pid) === null && act('household', c.pid)) { done.household[c.pid] = 1; hh++; } });
           live.forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
           live.forEach(function (c) { if (!done.trace[c.pid] && c.onset !== null && act('trace', c.pid, { daysBefore: 3 })) done.trace[c.pid] = 1; });
+          var nt = (S.timingStudies || []).length;
+          live.forEach(function (c) { if (nt < 6 && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
           g.clusters().slice(0, 6).forEach(function (k) {
             if (!k.place) return; var pi = g.placeIdx(k.place.id);
             if (!done.site[pi] && act('site_visit', pi)) done.site[pi] = 1;
@@ -8257,7 +8388,7 @@ var UIChart = (function () {
   function yGrid(sc, y, L, R, lbl) {
     return sc.ticks.map(function (t) { var yy = y(t).toFixed(1); return '<line x1="' + L + '" x2="' + R + '" y1="' + yy + '" y2="' + yy + '" class="' + (t === 0 ? 'base' : 'grid') + '"/>' + (lbl !== false ? '<text x="' + (L - 6) + '" y="' + (+yy + 4) + '" text-anchor="end" class="tk">' + fmtTick(t) + '</text>' : ''); }).join('');
   }
-  function hatch(id, col) { return '<pattern id="' + id + '" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="' + col + '" fill-opacity=".10"/><line x1="0" y1="0" x2="0" y2="6" stroke="' + col + '" stroke-width="2" stroke-opacity=".55"/></pattern>'; }
+  function hatch(id, col) { return '<pattern id="' + id + '" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="' + col + '" fill-opacity=".07"/><line x1="0" y1="0" x2="0" y2="4" stroke="' + col + '" stroke-width="1" stroke-opacity=".7"/></pattern>'; }
   function barPath(x, y, w, h, r) { r = Math.min(r, w / 2, h); if (h <= 0) return ''; return 'M' + x + ',' + (y + h) + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + w - r) + 'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + h) + 'Z'; }
 
   /** attach scrub tooltip: cols = number of columns, geom(i)->{x}, text(i)->html */
@@ -8281,42 +8412,61 @@ var UIChart = (function () {
     return { hide: hide };
   };
 
-  /** epidemic curve: bars by onset + nowcast band + reported line */
+  /** epidemic curve: bars by onset (confirmed + probable), suspected cases stacked pale on top,
+   * nowcast band, 7-day average, optional reported line, and orders/events as labelled markers.
+   * o: {from, sus: [], marks: [{day, label, kind}], showReport, today, h} */
   C.epi = function (host, cv, o) {
     o = o || {};
-    var W = C.width(host), Hh = o.h || 210, L = 34, R = W - 8, T = 14, B = Hh - 24;
+    var W = C.width(host), Hh = o.h || 210, L = 30, R = W - 6, T = 16, B = Hh - 24;
     var from = o.from || 0, n = cv.n - from;
     if (n <= 0) { host.innerHTML = '<div class="empty">No cases yet.</div>'; return; }
-    var on = cv.byOnset.slice(from), rep = cv.byReport.slice(from), nc = cv.nowcast.slice(from);
-    var mx = 1; for (var i = 0; i < n; i++) mx = Math.max(mx, on[i], nc[i] ? nc[i].hi : 0, o.showReport ? rep[i] : 0);
-    var sc = C.nice(mx, 4), bw = (R - L) / n, gap = bw > 6 ? 2 : bw > 3 ? 1 : 0;
+    var on = cv.byOnset.slice(from), rep = cv.byReport.slice(from), nc = cv.nowcast.slice(from), sus = (o.sus || []).slice(from);
+    var tot = on.map(function (v, i) { return v + (sus[i] || 0); });
+    var mx = 1; for (var i = 0; i < n; i++) mx = Math.max(mx, tot[i], nc[i] ? nc[i].hi + (sus[i] || 0) : 0, o.showReport ? rep[i] : 0);
+    var sc = C.nice(mx * 1.08, 4), bw = (R - L) / n, gap = bw > 6 ? 2 : bw > 3 ? 1 : 0;
     var x = function (i) { return L + i * bw; }, y = function (v) { return B - (v / sc.max) * (B - T); };
-    var s = '<svg width="' + W + '" height="' + Hh + '" viewBox="0 0 ' + W + ' ' + Hh + '" class="chart" role="img" aria-label="' + UIesc(o.label || 'Epidemic curve') + '"><defs>' + hatch('hn', '#ff7a45') +
-      '<linearGradient id="gb" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff9a66"/><stop offset="1" stop-color="#e5562a"/></linearGradient></defs>';
+    var s = '<svg width="' + W + '" height="' + Hh + '" viewBox="0 0 ' + W + ' ' + Hh + '" class="chart" role="img" aria-label="' + UIesc(o.label || 'Epidemic curve') + '"><defs>' + hatch('hn', '#ff8a57') +
+      '<linearGradient id="gb" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ffb088"/><stop offset=".35" stop-color="#ff7a45"/><stop offset="1" stop-color="#c9431b"/></linearGradient>' +
+      '<linearGradient id="gw" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff7a45" stop-opacity=".16"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></linearGradient></defs>';
     s += yGrid(sc, y, L, R);
+    // annotations: orders and key decisions as hairlines with vertical labels
+    var marks = (o.marks || []).filter(function (m) { return m.day - cv.start - from >= 0 && m.day - cv.start - from <= n; }), lastX = -99;
+    marks.sort(function (a, b) { return a.day - b.day; }).forEach(function (m) {
+      var mx0 = x(m.day - cv.start - from), col = m.kind === 'event' ? '#c5e4ff' : '#8ce8cf';
+      s += '<line x1="' + mx0.toFixed(1) + '" x2="' + mx0.toFixed(1) + '" y1="' + T + '" y2="' + B + '" stroke="' + col + '" stroke-opacity=".35" stroke-dasharray="1 3"/>';
+      s += '<circle cx="' + mx0.toFixed(1) + '" cy="' + B + '" r="2.5" fill="' + col + '"/>';
+      if (mx0 - lastX > 11) { s += '<text transform="translate(' + (mx0 + 3.5).toFixed(1) + ' ' + (T + 2) + ') rotate(90)" class="tk mk" fill="' + col + '">' + UIesc(String(m.label).toUpperCase().slice(0, 24)) + '</text>'; lastX = mx0; }
+    });
     s += '<rect class="cursor" x="0" y="' + T + '" width="0" height="' + (B - T) + '"/>';
     s += '<g class="bars">';
     for (i = 0; i < n; i++) {
-      var bx = x(i) + gap / 2, w = Math.max(1, bw - gap);
+      var bx = x(i) + gap / 2, w = Math.max(1, bw - gap), dl = 'animation-delay:' + Math.min(600, i * 8) + 'ms';
       if (nc[i] && nc[i].hi > on[i]) {
-        var yt = y(nc[i].hi), yb = y(on[i]);
-        s += '<rect x="' + bx.toFixed(1) + '" y="' + yt.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + Math.max(0, yb - yt).toFixed(1) + '" fill="url(#hn)" rx="' + Math.min(3, w / 2) + '"/>';
-        if (nc[i].lo > on[i]) s += '<line x1="' + bx.toFixed(1) + '" x2="' + (bx + w).toFixed(1) + '" y1="' + y(nc[i].lo).toFixed(1) + '" y2="' + y(nc[i].lo).toFixed(1) + '" stroke="#ffa477" stroke-width="1.5" stroke-dasharray="2 2"/>';
+        var yt = y(nc[i].hi + (sus[i] || 0)), yb = y(tot[i]);
+        s += '<rect x="' + bx.toFixed(1) + '" y="' + yt.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + Math.max(0, yb - yt).toFixed(1) + '" fill="url(#hn)" rx="' + Math.min(2, w / 2) + '"/>';
+        if (nc[i].lo > on[i]) s += '<line x1="' + bx.toFixed(1) + '" x2="' + (bx + w).toFixed(1) + '" y1="' + y(nc[i].lo + (sus[i] || 0)).toFixed(1) + '" y2="' + y(nc[i].lo + (sus[i] || 0)).toFixed(1) + '" stroke="#ffa477" stroke-width="1" stroke-dasharray="2 2"/>';
       }
-      if (on[i] > 0) s += '<path d="' + barPath(bx, y(on[i]), w, B - y(on[i]), 3) + '" fill="url(#gb)" style="animation-delay:' + Math.min(600, i * 8) + 'ms"/>';
+      if (on[i] > 0) s += '<path d="' + barPath(bx, y(on[i]), w, B - y(on[i]), 2) + '" fill="url(#gb)" style="' + dl + '"/>';
+      if (sus[i] > 0) { var sy = y(tot[i]), sh = y(on[i]) - sy; s += '<path d="' + barPath(bx + .5, sy + .5, Math.max(.5, w - 1), Math.max(.5, sh - 1), 2) + '" fill="rgba(217,211,199,.14)" stroke="rgba(233,226,212,.7)" stroke-width="1" style="' + dl + '"/>'; }
     }
     s += '</g>';
+    // 7-day average of all cases by onset
+    if (n >= 10 && UIsum(tot) >= 20) {
+      var avg = '', started = false;
+      for (i = 0; i < n; i++) { var a0 = Math.max(0, i - 6), sm = 0; for (var j = a0; j <= i; j++) sm += tot[j]; var v = sm / (i - a0 + 1); if (!started && !sm) continue; avg += (started ? 'L' : 'M') + (x(i) + bw / 2).toFixed(1) + ',' + y(v).toFixed(1); started = true; }
+      if (avg) s += '<path d="' + avg + '" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" class="draw"/>';
+    }
     if (o.showReport) {
       var d = ''; for (i = 0; i < n; i++) d += (i ? 'L' : 'M') + (x(i) + bw / 2).toFixed(1) + ',' + y(rep[i]).toFixed(1);
-      s += '<path d="' + d + '" fill="none" stroke="#8fcbff" stroke-width="2" stroke-linejoin="round" class="draw"/>';
+      s += '<path d="' + d + '" fill="none" stroke="#8fcbff" stroke-width="1.8" stroke-linejoin="round" class="draw"/>';
     }
-    if (o.today !== undefined) { var tx = x(n - 1) + bw; s += '<line x1="' + tx + '" x2="' + tx + '" y1="' + T + '" y2="' + B + '" class="today"/><text x="' + (tx - 3) + '" y="' + (T + 8) + '" text-anchor="end" class="tk today-l">TODAY</text>'; }
+    if (o.today !== undefined) { var tx = x(n - 1) + bw; s += '<line x1="' + tx + '" x2="' + tx + '" y1="' + (T - 6) + '" y2="' + B + '" class="today"/><text x="' + (tx - 4) + '" y="' + (T - 1) + '" text-anchor="end" class="tk today-l">TODAY</text>'; }
     s += xTicks(n, cv.start + from, x, bw, B) + '</svg>';
     host.innerHTML = s;
     var svg = host.querySelector('svg');
     C.scrub(host, svg, { L: L, bw: bw, n: n, text: function (i) {
       var d = cv.start + from + i;
-      return '<b>' + UIesc(UIA.dateLabel(d)) + '</b><span><i style="background:#ff8a57"></i>Onset <em>' + on[i] + '</em></span>' + (nc[i] ? '<span><i class="hz"></i>Not yet reported <em>' + Math.max(0, nc[i].lo - on[i]) + '–' + Math.max(0, nc[i].hi - on[i]) + '</em></span>' : '') + (o.showReport ? '<span><i style="background:#8fcbff"></i>Reported <em>' + rep[i] + '</em></span>' : '');
+      return '<b>' + UIesc(UIA.dateLabel(d)) + '</b><span><i style="background:#ff8a57"></i>Confirmed or probable <em>' + on[i] + '</em></span>' + (sus[i] ? '<span><i class="su"></i>Suspected <em>' + sus[i] + '</em></span>' : '') + (nc[i] ? '<span><i class="hz"></i>Not yet reported <em>' + Math.max(0, nc[i].lo - on[i]) + '–' + Math.max(0, nc[i].hi - on[i]) + '</em></span>' : '') + (o.showReport ? '<span><i style="background:#8fcbff"></i>Reported <em>' + rep[i] + '</em></span>' : '');
     } });
   };
 
@@ -8344,8 +8494,9 @@ var UIChart = (function () {
     series.forEach(function (se, k) {
       var d = ''; se.vals.forEach(function (v, i) { d += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1); });
       if (se.fill) s += '<path d="' + d + 'L' + x(se.vals.length - 1).toFixed(1) + ',' + B + 'L' + L + ',' + B + 'Z" fill="url(#lg' + k + ')"/>';
-      s += '<path d="' + d + '" fill="none" stroke="' + se.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"' + (se.dash ? ' stroke-dasharray="5 4"' : ' class="draw"') + '/>';
-      var li = se.vals.length - 1; if (li >= 0 && se.label) s += '<circle cx="' + x(li).toFixed(1) + '" cy="' + y(se.vals[li]).toFixed(1) + '" r="3.5" fill="' + se.color + '" stroke="#0b1219" stroke-width="2"/>';
+      if (se.dash) s += '<path d="' + d + '" fill="none" stroke="' + se.color + '" stroke-opacity=".18" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="' + d + '" fill="none" stroke="' + se.color + '" stroke-opacity=".85" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="1 3.5" class="ghost"/>';
+      else s += '<path d="' + d + '" fill="none" stroke="' + se.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" class="draw"/>';
+      var li = se.vals.length - 1; if (li >= 0 && se.label) { s += '<circle cx="' + x(li).toFixed(1) + '" cy="' + y(se.vals[li]).toFixed(1) + '" r="3.5" fill="' + se.color + '" stroke="#0b1219" stroke-width="2"/>'; if (o.endLabels) s += '<text x="' + (x(li) - 6).toFixed(1) + '" y="' + (y(se.vals[li]) - 8).toFixed(1) + '" text-anchor="end" class="tk el" fill="' + se.color + '">' + UIesc(se.label) + '</text>'; }
     });
     s += xTicks(n, start, function (i) { return x(i) - bw / 2; }, bw, B, o.every) + '</svg>';
     host.innerHTML = s;
@@ -9077,11 +9228,13 @@ var UIMap = UI.views.map = {
     var st = UIS.map, city = UIA.city(), day = UIA.day();
     if (!anim) UIMapR.base(ctx, w, h, { city: city, view: st.view, T: T, sel: this.sel, ww: st.layers.ww ? this.wv : null, noVignette: true, T: T });
     var t = (performance.now() / 1000), fb = UIMapR.FONT('--f-body'), fm = UIMapR.FONT('--f-mono');
+    var maxLbl = Math.round(UIclamp(w * h / 80000, 3, 12) * Math.min(3, Math.sqrt(st.view.k)));
+    var cls = st.layers.clusters && this.clusters ? this.shownClusters().sort(function (a, b) { var ra = a.lastOnset !== null && day - a.lastOnset < 14 ? 1 : 0, rb = b.lastOnset !== null && day - b.lastOnset < 14 ? 1 : 0; return rb - ra || b.size - a.size; }) : [];
     // venues: pinpoints at city scale, labelled diamonds when zoomed in; cluster venues always stand out
     if (st.layers.venues && !anim) {
       ctx.save();
       var near = T.s > 900, vs = UIclamp(T.s / 85, 6, 12), hot = {};
-      if (st.layers.clusters) this.shownClusters().forEach(function (c) { if (c.place) hot[c.place] = 1; });
+      cls.forEach(function (c, i) { if (c.place && i < maxLbl) hot[c.place] = 1; });
       city.places.forEach(function (p) {
         if (!p.pos) return; var q = UIMapR.toScreen(T, p.pos);
         if (q[0] < -20 || q[1] < -20 || q[0] > w + 20 || q[1] > h + 20) return;
@@ -9108,8 +9261,7 @@ var UIMap = UI.views.map = {
     }
     // clusters: dashed rings with pulses, labels kept on screen and apart
     if (st.layers.clusters && this.clusters) {
-      var boxes = [], maxLbl = Math.round(UIclamp(w * h / 60000, 4, 14) * Math.min(3, Math.sqrt(st.view.k)));
-      var cls = this.shownClusters().sort(function (a, b) { var ra = a.lastOnset !== null && day - a.lastOnset < 14 ? 1 : 0, rb = b.lastOnset !== null && day - b.lastOnset < 14 ? 1 : 0; return rb - ra || b.size - a.size; });
+      var boxes = [];
       cls.forEach(function (c, i) {
         var stale = c.lastOnset !== null && day - c.lastOnset >= 21;
         if (!c.pos) return; var q = UIMapR.toScreen(T, c.pos), rad = UIclamp(T.s / 60, 10, 30) * (0.8 + Math.sqrt(c.size) * .25), ph = (t * .5 + i * .37) % 1;
@@ -9118,9 +9270,11 @@ var UIMap = UI.views.map = {
           return;
         }
         ctx.save();
-        if (stale) ctx.globalAlpha = 0.4;
+        var minor = i >= maxLbl && c.size < 4 && st.view.k < 2;
+        if (stale || minor) ctx.globalAlpha = minor ? 0.35 : 0.4;
         ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(255,224,194,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(q[0], q[1], rad, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
         ctx.strokeStyle = 'rgba(255,224,194,.25)'; ctx.beginPath(); ctx.arc(q[0], q[1], rad + 4, 0, Math.PI * 2); ctx.stroke();
+        if (minor) { ctx.restore(); return; }
         if (i >= maxLbl || stale) { ctx.fillStyle = 'rgba(20,12,8,.92)'; ctx.beginPath(); ctx.arc(q[0] + rad * .7, q[1] - rad * .7, 8.5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,164,119,.55)'; ctx.stroke(); ctx.fillStyle = '#ffe0c2'; ctx.font = '600 10px ' + fm; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(c.size), q[0] + rad * .7, q[1] - rad * .7 + .5); ctx.restore(); return; }
         var nm = c.name.length > 26 ? c.name.slice(0, 25) + '…' : c.name, ns = String(c.size);
         ctx.font = '600 11.5px ' + fb; var tw = ctx.measureText(nm).width; ctx.font = '600 11px ' + fm; var cw = ctx.measureText(ns).width;
@@ -9305,20 +9459,27 @@ var UICases = UI.views.cases = {
   },
   renderCurve: function () {
     var cv = UIA.curve(), day = UIA.day(), all = UIA.cases();
-    var rep = cv.byReport, n = rep.length, l7 = UIsum(rep.slice(Math.max(0, n - 7))), p7 = UIsum(rep.slice(Math.max(0, n - 14), Math.max(0, n - 7)));
-    var growth = p7 > 2 && l7 > 2 ? Math.log(l7 / p7) / 7 : null, dbl = growth ? Math.log(2) / growth : null;
+    // the engine's curve counts confirmed and probable cases; suspected ones on the line list are stacked on top
+    var sus = []; for (var k = 0; k < cv.n; k++) sus.push(0);
+    all.forEach(function (c) { if (c.caseStatus !== 'suspected' || c.status === 'negative' || c.status === 'contact' || c.onset === null) return; var q = c.onset - cv.start; if (q >= 0 && q < cv.n) sus[q]++; });
+    this.sus = sus;
+    var rep = cv.byReport, n = rep.length, l7 = all.filter(function (c) { return c.reported !== null && day - c.reported < 7 && c.status !== 'negative' && c.status !== 'contact'; }).length, p7 = UIsum(rep.slice(Math.max(0, n - 14), Math.max(0, n - 7)));
+    var r7 = UIsum(rep.slice(Math.max(0, n - 7)));
+    var growth = p7 > 2 && r7 > 2 ? Math.log(r7 / p7) / 7 : null, dbl = growth ? Math.log(2) / growth : null;
     var trend = growth === null ? '—' : dbl > 0 && dbl < 60 ? 'doubling ~' + dbl.toFixed(dbl < 10 ? 1 : 0) + 'd' : dbl < 0 && dbl > -60 ? 'halving ~' + (-dbl).toFixed(-dbl < 10 ? 1 : 0) + 'd' : 'flat';
-    var from = 0; for (var i = 0; i < cv.n; i++) if (cv.byOnset[i] || cv.byReport[i]) { from = Math.max(0, i - 3); break; }
-    var html = '<div class="tiles"><div class="stat"><b>' + UIfmt.n(all.length) + '</b><span>on the line list</span></div><div class="stat"><b style="color:var(--ember)">' + l7 + '</b><span>reported, last 7 days</span></div><div class="stat"><b>' + UIesc(trend) + '</b><span>last 7 vs previous 7</span></div></div>' +
+    var from = Math.max(0, cv.n - 21); for (var i = 0; i < cv.n; i++) if (cv.byOnset[i] || cv.byReport[i] || sus[i]) { from = Math.max(0, Math.min(i - 3, cv.n - 14)); break; }
+    var html = '<div class="tiles"><div class="stat"><b>' + UIfmt.n(all.length) + '</b><span>on the line list</span></div><div class="stat"><b style="color:var(--ember)">' + l7 + '</b><span>reported, last 7 days</span></div><div class="stat"><b' + (trend.length > 4 ? ' style="font:600 16px/1.2 var(--f-body);padding-top:6px"' : '') + '>' + UIesc(trend) + '</b><span>last 7 vs previous 7</span></div></div>' +
       '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Cases by date of onset</div><h3>Epidemic curve</h3></div></div><div class="card-b"><div class="ch-host" id="ch-epi"></div>' +
-      '<div class="legend"><span><i style="background:linear-gradient(#ff9a66,#e5562a)"></i>Onset</span><span><i class="hz"></i>Nowcast — likely not yet reported</span><button class="chip' + (UIS.cases.showReport ? ' on' : '') + '" data-rep style="min-height:30px"><i style="background:#8fcbff;height:2px;width:14px;border-radius:1px;display:inline-block"></i>By report date</button></div>' +
+      '<div class="legend"><span><i style="background:linear-gradient(#ffb088,#c9431b)"></i>Confirmed or probable</span>' + (UIsum(sus) ? '<span><i class="su"></i>Suspected</span>' : '') + '<span><i class="hz"></i>Nowcast — not yet reported</span>' + (UIsum(cv.byOnset) + UIsum(sus) >= 20 && cv.n - from >= 10 ? '<span><i class="av"></i>7-day average</span>' : '') + '<button class="chip' + (UIS.cases.showReport ? ' on' : '') + '" data-rep style="min-height:30px"><i style="background:#8fcbff;height:2px;width:14px;border-radius:1px;display:inline-block"></i>By report date</button></div>' +
       '<p class="note">Recent days always look lower than they will: people fall ill days before they are tested and reported. The hatched band is how many more are probably on their way.</p></div></div>' +
       '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Hospital</div><h3>Admissions</h3></div><div class="aside">' + UIsum(cv.admissions) + ' total</div></div><div class="card-b"><div class="ch-host" id="ch-adm"></div></div></div>' +
       '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Mortality</div><h3>Deaths</h3></div><div class="aside">' + UIsum(cv.deaths) + ' total</div></div><div class="card-b"><div class="ch-host" id="ch-dth"></div></div></div>' +
       (cv.ili ? '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Includes ordinary flu</div><h3>Flu-like illness at GPs</h3></div></div><div class="card-b"><div class="ch-host" id="ch-ili"></div><p class="note">The background every new disease hides in. A rise here that is not flu is worth a look.</p></div></div>' : '') +
       (cv.tests && cv.positive ? '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">' + UIsum(cv.positive) + ' of ' + UIsum(cv.tests) + ' resulted tests</div><h3>Positive tests</h3></div></div><div class="card-b"><div class="ch-host" id="ch-pos"></div></div></div>' : '');
     UI$('#cs-body').innerHTML = '<div class="stack">' + html + '</div>';
-    UIChart.epi(UI$('#ch-epi'), cv, { from: from, showReport: UIS.cases.showReport, today: day, h: window.innerWidth >= 900 ? 280 : 220 });
+    var marks = UIA.orders().map(function (o) { return { day: o.since, label: o.label, kind: 'order' }; });
+    (UIS.log || []).forEach(function (e) { if (e.id === 'declare_novel') marks.push({ day: e.day, label: 'Novel agent declared', kind: 'event' }); });
+    UIChart.epi(UI$('#ch-epi'), cv, { from: from, sus: sus, marks: marks, showReport: UIS.cases.showReport, today: day, h: window.innerWidth >= 900 ? 300 : 250 });
     UIChart.mini(UI$('#ch-adm'), cv.admissions.slice(from), cv.start + from, { color: '#f2b640', label: 'Admitted', h: 100 });
     UIChart.mini(UI$('#ch-dth'), cv.deaths.slice(from), cv.start + from, { color: '#d9d3c7', label: 'Died', h: 100 });
     if (cv.ili) UIChart.mini(UI$('#ch-ili'), cv.ili.slice(from), cv.start + from, { color: '#8fcbff', label: 'GP consultations', h: 100 });
@@ -9493,57 +9654,76 @@ var UITree = (function () {
     function size(n) { return n.kids.length ? n.kids.reduce(function (s, k) { return s + size(k); }, 0) : 1; }
     return { root: root, leaves: leaves, maxX: Math.max(1, maxX) };
   };
-  /** draw into ctx. o: {view:{x,y,k}, w, h, labels, sel} */
+  T.COL = ['#ff9d6e', '#8ce8cf', '#8fcbff', '#f2c25a', '#c5a3ff', '#ff8fa3', '#6fd6ff', '#b8e986', '#ffd9a0', '#5fe0b0', '#e6a8ff', '#a9c1ff', '#ffb35c', '#9ee7f5'];
+  /** draw into ctx. o: {view:{x,y,k}, w, h, labels, sel, grow (0..1 reveal from the root)} */
   T.draw = function (ctx, w, h, L, o) {
-    var v = o.view || { x: 0, y: 0, k: 1 }, padL = 18, padR = o.labels ? Math.min(170, w * .42) : 16, padT = 16;
+    var v = o.view || { x: 0, y: 0, k: 1 }, padL = 20, padR = o.labels ? Math.min(170, w * .42) : 18, padT = o.labels ? 22 : 14;
     var rowH = Math.max(o.labels ? 22 : 6, (h - padT * 2) / Math.max(1, L.leaves.length));
-    var sx = (w - padL - padR) / L.maxX;
+    var sx = (w - padL - padR) / L.maxX, grow = o.grow === undefined ? 1 : o.grow;
     function X(n) { return v.x + (padL + n.x * sx) * v.k; }
     function Y(n) { return v.y + (padT + n.y * rowH + rowH / 2) * v.k; }
     function X0(xx) { return v.x + (padL + xx * sx) * v.k; }
+    var fb = getComputedStyle(document.body).getPropertyValue('--f-body'), fm = getComputedStyle(document.body).getPropertyValue('--f-mono');
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     var cases = {}; UIA.cases().forEach(function (c) { cases[c.pid] = c; });
-    var dcol = {}; UIA.city().districts.forEach(function (d, i) { dcol[d.id] = 'hsl(' + (160 + i * 29) % 360 + ',55%,68%)'; });
-    (function edges(n, px, variant) {
+    var dcol = {}; UIA.city().districts.forEach(function (d, i) { dcol[d.id] = T.COL[i % T.COL.length]; });
+    var reveal = X0(0) + (X0(L.maxX) - X0(0) + 60) * grow;
+    ctx.save(); ctx.beginPath(); ctx.rect(-10, -10, reveal + 10, h + 20); ctx.clip();
+    // branches: a soft glow pass then a fine core, elbows rounded
+    var segs = [];
+    (function edges(n, variant) {
       var vv = variant || n.variant;
-      var col = vv ? 'rgba(255,122,69,.9)' : 'rgba(140,232,207,.72)';
-      if (n.id !== 'root') {
-        ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.2, 1.6 * Math.sqrt(v.k));
-        ctx.beginPath(); ctx.moveTo(X0(px), Y(n)); ctx.lineTo(X(n), Y(n)); ctx.stroke();
-      }
-      if (n.kids.length) {
-        ctx.strokeStyle = vv ? 'rgba(255,122,69,.7)' : 'rgba(140,232,207,.5)'; ctx.lineWidth = Math.max(1, 1.3 * Math.sqrt(v.k));
-        ctx.beginPath(); ctx.moveTo(X(n), Y(n.kids[0])); ctx.lineTo(X(n), Y(n.kids[n.kids.length - 1])); ctx.stroke();
-        n.kids.forEach(function (k) { edges(k, n.x, vv); });
-        if (n.id !== 'root' && n.kids.length > 1) { ctx.fillStyle = vv ? '#ff7a45' : '#ff9a66'; ctx.beginPath(); ctx.arc(X(n), Y(n), 3.2, 0, Math.PI * 2); ctx.fill(); }
-      }
-    })(L.root, 0, false);
-    // root
-    ctx.fillStyle = '#e9eff4'; ctx.beginPath(); ctx.arc(X(L.root), Y(L.root), 3, 0, Math.PI * 2); ctx.fill();
-    // leaves
+      n.kids.forEach(function (k) { segs.push([X(n), Y(n), X(k), Y(k), vv || k.variant]); edges(k, vv || k.variant); });
+    })(L.root, false);
+    var rr = Math.max(2, Math.min(6, rowH * v.k * .3));
+    function path(sg) { var x0 = sg[0], y0 = sg[1], x1 = sg[2], y1 = sg[3], r = Math.min(rr, Math.abs(y1 - y0), Math.abs(x1 - x0)); ctx.moveTo(x0, y0); if (r > .5 && y1 !== y0) { ctx.lineTo(x0, y1 - Math.sign(y1 - y0) * r); ctx.quadraticCurveTo(x0, y1, x0 + r, y1); } else ctx.lineTo(x0, y1); ctx.lineTo(x1, y1); }
+    [[false, 'rgba(120,220,200,'], [true, 'rgba(255,122,69,']].forEach(function (pass) {
+      var list = segs.filter(function (sg) { return !!sg[4] === pass[0]; }); if (!list.length) return;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = pass[1] + '.1)'; ctx.lineWidth = Math.max(3, 4.5 * Math.sqrt(v.k)); ctx.beginPath(); list.forEach(path); ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = pass[1] + '.8)'; ctx.lineWidth = Math.max(1, 1.25 * Math.sqrt(v.k)); ctx.beginPath(); list.forEach(path); ctx.stroke();
+    });
+    // branch points
+    (function nodes(n) { if (n.kids.length > 1 && n.id !== 'root') { ctx.fillStyle = n.variant ? '#ffb48d' : 'rgba(220,245,238,.85)'; ctx.beginPath(); ctx.arc(X(n), Y(n), 2.2, 0, Math.PI * 2); ctx.fill(); } n.kids.forEach(nodes); })(L.root);
+    // root: the index sequence
+    var rx = X(L.root), ry = Y(L.root), rg = ctx.createRadialGradient(rx, ry, 0, rx, ry, 14); rg.addColorStop(0, 'rgba(255,255,255,.5)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = rg; ctx.fillRect(rx - 14, ry - 14, 28, 28); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(rx, ry, 3, 0, Math.PI * 2); ctx.fill();
+    // tips: glowing, coloured by district
     ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    var tipR = o.labels ? 4 : UIclamp(rowH * .42, 2.2, 4);
     L.leaves.forEach(function (n) {
       var c = cases[n.pid], x = X(n), y = Y(n);
-      if (y < -20 || y > h + 20) return;
-      var col = c ? dcol[c.district] || '#8ce8cf' : '#8ce8cf';
-      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(x, y, 6.5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, o.sel === n.pid ? 6 : 4.2, 0, Math.PI * 2); ctx.fill();
-      if (o.sel === n.pid) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.stroke(); }
-      if (o.labels && rowH * v.k >= 13) {
-        var d = c ? UIA.district(c.district) : null;
-        ctx.font = '600 12.5px ' + getComputedStyle(document.body).getPropertyValue('--f-body'); ctx.fillStyle = '#e9eff4';
-        var nm = c ? c.name : (n.pid || '');
-        ctx.fillText(nm, x + 10, y - (rowH * v.k > 30 ? 6 : 0));
-        if (rowH * v.k > 30) { ctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--f-mono'); ctx.fillStyle = 'rgba(164,179,192,.85)'; ctx.fillText((d ? d.name : '') + (c && c.onset !== null ? ' · onset ' + UIA.dateShort(c.onset) : ''), x + 10, y + 8); }
-      }
       n.sx = x; n.sy = y;
+      if (y < -20 || y > h + 20 || x > reveal) return;
+      var col = c ? dcol[c.district] || '#8ce8cf' : '#8ce8cf';
+      var g = ctx.createRadialGradient(x, y, 0, x, y, tipR * 3.2); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = .45; ctx.fillStyle = g; ctx.fillRect(x - tipR * 3.2, y - tipR * 3.2, tipR * 6.4, tipR * 6.4); ctx.globalAlpha = 1;
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, o.sel === n.pid ? tipR + 1.8 : tipR, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(x - tipR * .3, y - tipR * .3, tipR * .35, 0, Math.PI * 2); ctx.fill();
+      if (c && c.status === 'died') { ctx.strokeStyle = 'rgba(217,211,199,.9)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, tipR + 3, 0, Math.PI * 2); ctx.stroke(); }
+      if (o.sel === n.pid) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, tipR + 6, 0, Math.PI * 2); ctx.stroke(); }
+      if (o.labels && rowH * v.k >= 13) {
+        var d = c ? UIA.district(c.district) : null, two = rowH * v.k > 30;
+        ctx.font = '600 13px ' + fb; ctx.fillStyle = '#eef4f9';
+        ctx.fillText(c ? c.name : (n.pid || ''), x + 11, y - (two ? 7 : 0));
+        if (two) { ctx.font = '500 10px ' + fm; ctx.fillStyle = col; ctx.globalAlpha = .9; ctx.fillText((d ? d.name.toUpperCase() : '') + (c && c.onset !== null ? '  ·  ' + UIA.dateShort(c.onset) : ''), x + 11, y + 8); ctx.globalAlpha = 1; }
+      }
     });
+    ctx.restore();
     // scale bar
     if (o.labels) {
-      var one = sx * v.k; var units = one < 12 ? 5 : 1;
-      ctx.strokeStyle = 'rgba(233,239,244,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(16, h - 14); ctx.lineTo(16 + one * units, h - 14); ctx.stroke();
-      ctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--f-mono'); ctx.fillStyle = 'rgba(164,179,192,.9)'; ctx.fillText(units + ' mutation' + (units > 1 ? 's' : ''), 22 + one * units, h - 14);
+      var one = sx * v.k, units = one < 12 ? 5 : 1, bx = 16, by = h - 16;
+      ctx.fillStyle = 'rgba(5,9,14,.85)'; ctx.fillRect(bx - 8, by - 12, one * units + 110, 24);
+      ctx.strokeStyle = 'rgba(233,239,244,.7)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(bx, by - 3); ctx.lineTo(bx, by); ctx.lineTo(bx + one * units, by); ctx.lineTo(bx + one * units, by - 3); ctx.stroke();
+      ctx.font = '500 10px ' + fm; ctx.fillStyle = 'rgba(164,179,192,.95)'; ctx.textBaseline = 'middle'; ctx.fillText(units + ' mutation' + (units > 1 ? 's' : ''), bx + 8 + one * units, by - 1);
     }
+  };
+  /** run a growth animation: draw(grow) is called each frame until 1 */
+  T.grow = function (draw, ms) {
+    if (!UImotion()) { draw(1); return; }
+    var t0 = performance.now(); ms = ms || 1000;
+    (function step() { var f = Math.min(1, (performance.now() - t0) / ms); draw(1 - Math.pow(1 - f, 3)); if (f < 1) requestAnimationFrame(step); })();
   };
   return T;
 })();
@@ -9623,7 +9803,9 @@ var UILab = UI.views.lab = {
     if (L) {
       var cv = UI$('#tree-prev'), host = cv.parentNode, w = host.clientWidth || 320, h = Math.min(220, Math.max(120, L.leaves.length * 9)), dpr = Math.min(2, window.devicePixelRatio || 1);
       cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px';
-      var ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); UITree.draw(ctx, w, h, L, { labels: false });
+      var ctx = cv.getContext('2d'), n0 = UILab._treeN || 0; UILab._treeN = L.leaves.length;
+      var pd = function (g) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h); var bg = ctx.createRadialGradient(w * .1, h * .5, 0, w * .1, h * .5, w * .9); bg.addColorStop(0, '#0d1a22'); bg.addColorStop(1, '#05090e'); ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); UITree.draw(ctx, w, h, L, { labels: false, grow: g }); };
+      if (L.leaves.length !== n0) UITree.grow(pd, 1100); else pd(1);
     }
   },
   /** full-screen tree viewer */
@@ -9634,7 +9816,9 @@ var UILab = UI.views.lab = {
     document.body.appendChild(el);
     requestAnimationFrame(function () { el.classList.add('on'); });
     var view = { x: 0, y: 0, k: 1 }, sel = focusPid || null;
-    var cv = UIcanvas(UI$('#tv-cv', el), function (ctx, w, h) { ctx.fillStyle = '#060a0f'; ctx.fillRect(0, 0, w, h); UITree.draw(ctx, w, h, L, { view: view, labels: true, sel: sel }); });
+    var grow = 0;
+    var cv = UIcanvas(UI$('#tv-cv', el), function (ctx, w, h) { var bg = ctx.createRadialGradient(w * .15, h * .55, 0, w * .15, h * .55, Math.max(w, h)); bg.addColorStop(0, '#0c1820'); bg.addColorStop(1, '#04070b'); ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); UITree.draw(ctx, w, h, L, { view: view, labels: true, sel: sel, grow: grow }); });
+    setTimeout(function () { UITree.grow(function (g) { grow = g; cv.frame(); }, 1200); }, 120);
     function fit() {
       view.x = 0; view.y = 0; view.k = 1;
       var rowH = Math.max(22, (cv.h - 32) / L.leaves.length);
@@ -9903,6 +10087,7 @@ var UIBrief = UI.views.brief = {
         return '<article class="d-minutes"><div class="mn-h"><span class="eyebrow">' + UIesc(m.from || (city + ' City Council')) + '</span><h1>' + UIesc(m.title) + '</h1><span class="mn-d">' + UIesc(d) + '</span></div>' + b + '</article>';
       case 'lab':
         var pos = /posit|confirm|novel|new agent/i.test(m.title), neg = /negat/i.test(m.title), flu = /influenza|flu /i.test(m.title);
+        if (pos && /novel|new agent/i.test(m.title)) return '<article class="d-lab novel"><div class="nv-hero">' + UIvirion(m.id) + '<div class="nv-stamp"><span>Novel agent</span><b>Confirmed</b></div></div><div class="lb-h"><span class="eyebrow">' + UIesc(m.from || 'Public Health Laboratory') + '</span><span class="lb-d">' + UIesc(d) + '</span></div><h1>' + UIesc(m.title) + '</h1>' + b + '</article>';
         return '<article class="d-lab"><div class="lb-h"><span class="eyebrow">' + UIesc(m.from || 'Public Health Laboratory') + '</span><span class="lb-d">' + UIesc(d) + '</span></div><h1>' + UIesc(m.title) + '</h1>' + (pos || neg || flu ? '<div class="lb-stamp ' + (pos ? 'pos' : flu ? 'flu' : 'neg') + '">' + (pos ? (/novel|agent/i.test(m.title) ? 'Novel agent' : 'Positive') : flu ? 'Known virus' : 'Negative') + '</div>' : '') + b + '</article>';
       case 'alert':
         return '<article class="d-memo d-alert"><div class="al-band">' + UIICON.warn + '<span>Alert</span></div><div class="mm-h"><div><span class="eyebrow">From</span><b>' + UIesc(m.from || 'Surveillance') + '</b></div><div><span class="eyebrow">Date</span><b>' + UIesc(d) + '</b></div></div><h1>' + UIesc(m.title) + '</h1>' + b + '</article>';
@@ -10063,6 +10248,21 @@ var UIMentor = {
     };
   }
 };
+
+/** a stylised electron micrograph of the new agent: envelope, spikes, genome, drawn from a seed */
+function UIvirion(seed) {
+  var r = UIrand('virion:' + seed), sp = '', n = 26, R = 62, g = '';
+  for (var i = 0; i < n; i++) {
+    var a = i / n * Math.PI * 2 + r() * .08, l = 12 + r() * 5, x0 = 100 + Math.cos(a) * R, y0 = 100 + Math.sin(a) * R, x1 = 100 + Math.cos(a) * (R + l), y1 = 100 + Math.sin(a) * (R + l);
+    sp += '<line x1="' + x0.toFixed(1) + '" y1="' + y0.toFixed(1) + '" x2="' + x1.toFixed(1) + '" y2="' + y1.toFixed(1) + '"/><circle cx="' + x1.toFixed(1) + '" cy="' + y1.toFixed(1) + '" r="' + (3.4 + r() * 1.6).toFixed(1) + '"/>';
+  }
+  var d = 'M100,100'; for (var k = 0; k < 40; k++) { var aa = k * .9 + r(), rr = 8 + k * 1.05; d += 'Q' + (100 + Math.cos(aa - .4) * rr * 1.1).toFixed(1) + ',' + (100 + Math.sin(aa - .4) * rr * 1.1).toFixed(1) + ' ' + (100 + Math.cos(aa) * rr).toFixed(1) + ',' + (100 + Math.sin(aa) * rr).toFixed(1); }
+  for (var j = 0; j < 18; j++) { var ab = r() * Math.PI * 2, rb = Math.sqrt(r()) * 44; g += '<circle cx="' + (100 + Math.cos(ab) * rb).toFixed(1) + '" cy="' + (100 + Math.sin(ab) * rb).toFixed(1) + '" r="' + (1.5 + r() * 2.5).toFixed(1) + '"/>'; }
+  return '<svg class="nv-virion" viewBox="0 0 200 200" aria-hidden="true"><defs><radialGradient id="nvg" cx=".38" cy=".34" r=".75"><stop offset="0" stop-color="#ffd9c2"/><stop offset=".45" stop-color="#ff8a57"/><stop offset="1" stop-color="#6a1d08"/></radialGradient><radialGradient id="nvh" cx=".5" cy=".5" r=".5"><stop offset=".55" stop-color="#ff7a45" stop-opacity=".35"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></radialGradient></defs>' +
+    '<circle cx="100" cy="100" r="98" fill="url(#nvh)"/><g class="nv-rot"><g stroke="#ffb48d" stroke-width="2.2" fill="#ffc9a8">' + sp + '</g><circle cx="100" cy="100" r="' + R + '" fill="url(#nvg)"/><circle cx="100" cy="100" r="' + (R - 5) + '" fill="none" stroke="#ffe6d6" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 5"/>' +
+    '<g fill="#3a0f04" opacity=".35">' + g + '</g><path d="' + d + '" fill="none" stroke="#fff3ea" stroke-opacity=".55" stroke-width="1.4" stroke-linecap="round"/></g>' +
+    '<circle class="nv-scan" cx="100" cy="100" r="92" fill="none" stroke="#c5e4ff" stroke-opacity=".5" stroke-width="1" stroke-dasharray="2 6"/></svg>';
+}
 /* INDEX CASE UI — 21-coach.js: coach marks for the guided first outbreak.
  * A spotlight on the thing to touch, a short card, and it waits for you to do
  * it (or Next). Never blocks the rest of the screen. */
@@ -10182,7 +10382,7 @@ var UIDebrief = {
       (D.totals.ghostDeaths > D.totals.deaths ? '<p class="db-saved">' + UIfmt.n(D.totals.ghostDeaths - D.totals.deaths) + ' fewer deaths than if nobody had acted.</p>' : '') +
       (D.score && D.score.lines && D.score.lines.length ? '<div class="db-score">' + D.score.lines.map(function (l) { return '<div><span>' + UIesc(l.label) + '</span><b>' + UIesc(l.pts !== undefined ? l.pts : l.value) + '</b></div>'; }).join('') + '</div>' : '') + '</header>';
     // pathogen card
-    html += '<section class="db-sec"><div class="eyebrow">The truth</div><h2>' + UIesc(D.agentName) + '</h2><div class="pc" id="pc"><div class="pc-head"><span>The truth</span><span>You published</span><span></span></div>' + D.traits.map(function (t, i) {
+    html += '<section class="db-sec"><div class="eyebrow">The truth</div><h2>' + UIesc(D.agentName) + '</h2><div class="pc" id="pc"><div class="pc-hero">' + UIvirion(D.agentName) + '<div class="pc-id"><span>Specimen · revealed</span><b>' + UIesc(D.agentName) + '</b><em>' + UIesc(city.name) + ' · day ' + (day + 1) + '</em></div></div><div class="pc-head"><span>The truth</span><span>You published</span><span></span></div>' + D.traits.map(function (t, i) {
       var v = t.verdict;
       return '<div class="pc-r" style="--i:' + i + '"><span class="pc-l">' + UIesc(t.label) + '</span><span class="pc-t">' + UIesc(t.truth) + '</span><span class="pc-y ' + v + '">' + (t.yours !== null ? UIesc(t.yours) + (t.day !== null ? '<small>' + UIesc(UIA.dateShort(t.day)) + '</small>' : '') : '<em>not published</em>') + '</span><span class="pc-m ' + v + '">' + (v === 'good' ? UIICON.check : v === 'near' ? '~' : v === 'off' ? UIICON.close : '—') + '</span></div>';
     }).join('') + '</div>' + (D.symptoms.length ? '<div class="pc-sym"><span class="eyebrow">Symptoms' + (D.tell ? ' · the tell: ' + UIesc(String(D.tell).replace(/_/g, ' ')) : '') + '</span>' + D.symptoms.map(function (s) { return '<span>' + UIesc(String(s[0]).replace(/_/g, ' ')) + (s[1] !== undefined && s[1] !== null ? ' <b>' + UIfmt.pct(s[1] > 1 ? s[1] / 100 : s[1]) + '</b>' : '') + '</span>'; }).join('') + '</div>' : '') + '</section>';
@@ -10201,7 +10401,8 @@ var UIDebrief = {
     // the dead
     html += '<section class="db-sec db-mem"><div class="mem-h"><span></span><div class="eyebrow">In memory</div><span></span></div>' + (D.deaths.length ? '<p class="mem-d">' + UIfmt.plural(D.deaths.length, 'person', 'people') + ' in ' + UIesc(city.name) + ' died of the disease.</p><div class="mem">' + D.deaths.map(function (p) {
       var dd = UIA.district(p.district);
-      return '<div class="mem-p"><b>' + UIesc(p.name) + '</b><span>' + (p.age !== null && p.age !== undefined ? UIesc(p.age) : '') + (p.note ? ', ' + UIesc(p.note) : '') + (dd ? ' · ' + UIesc(dd.name) : '') + (p.day !== null && p.day !== undefined ? ' · ' + UIesc(UIA.dateShort(p.day)) : '') + '</span></div>';
+      var who = (p.pid && UIA.caseOf(p.pid)) || { pid: p.pid || p.name, age: p.age };
+      return '<div class="mem-p"><span class="mem-f">' + UIPortrait.svg(who) + '</span><div><b>' + UIesc(p.name) + '</b><span>' + (p.age !== null && p.age !== undefined ? UIesc(p.age) : '') + (p.note ? ', ' + UIesc(p.note) : '') + (dd ? ' · ' + UIesc(dd.name) : '') + (p.day !== null && p.day !== undefined ? ' · ' + UIesc(UIA.dateShort(p.day)) : '') + '</span></div></div>';
     }).join('') + '</div>' : '<p class="mem-d">No one in ' + UIesc(city.name) + ' died of the disease.</p>') + '</section>';
     html += '<footer class="db-foot"><button class="btn pri" id="db-new">A new outbreak</button><button class="btn" id="db-again">Replay this city</button><p class="note">Seed ' + UIesc(UIA.seed) + '</p></footer></div></div>';
     root.innerHTML = html;
@@ -10211,9 +10412,9 @@ var UIDebrief = {
     UI$('#db-again').addEventListener('click', function () { var s = UIA.seed, g = UIA.grade; UIA.clearSave(); UIBoot.start(s, g, false); });
     // charts
     var cs = D.curves;
-    if (cs.actual.length) UIChart.lines(UI$('#db-c1'), [{ vals: cs.ghost, color: '#7d93aa', dash: true, label: 'Ghost city' }, { vals: cs.actual, color: '#ff7a45', fill: true, label: 'Your city' }], cs.start, { h: 220, label: 'Infections, you vs ghost city' });
+    if (cs.actual.length) UIChart.lines(UI$('#db-c1'), [{ vals: cs.ghost, color: '#b9cadc', dash: true, label: 'Ghost city' }, { vals: cs.actual, color: '#ff7a45', fill: true, label: 'Your city' }], cs.start, { h: 240, endLabels: true, label: 'Infections, you vs ghost city' });
     function cum(a) { var s = 0; return a.map(function (v) { s += v || 0; return s; }); }
-    if (cs.deaths.length) UIChart.lines(UI$('#db-c2'), [{ vals: cum(cs.ghostDeaths), color: '#7d93aa', dash: true, label: 'Ghost city' }, { vals: cum(cs.deaths), color: '#d9d3c7', fill: true, label: 'Your city' }], cs.start, { h: 180, label: 'Deaths, you vs ghost city' });
+    if (cs.deaths.length) UIChart.lines(UI$('#db-c2'), [{ vals: cum(cs.ghostDeaths), color: '#b9cadc', dash: true, label: 'Ghost city' }, { vals: cum(cs.deaths), color: '#d9d3c7', fill: true, label: 'Your city' }], cs.start, { h: 200, endLabels: true, label: 'Deaths, you vs ghost city' });
     this.replay(D); this.tree(D);
     // reveal card rows on scroll
     try {

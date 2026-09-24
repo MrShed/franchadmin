@@ -484,11 +484,13 @@ var UIMap = UI.views.map = {
     var st = UIS.map, city = UIA.city(), day = UIA.day();
     if (!anim) UIMapR.base(ctx, w, h, { city: city, view: st.view, T: T, sel: this.sel, ww: st.layers.ww ? this.wv : null, noVignette: true, T: T });
     var t = (performance.now() / 1000), fb = UIMapR.FONT('--f-body'), fm = UIMapR.FONT('--f-mono');
+    var maxLbl = Math.round(UIclamp(w * h / 80000, 3, 12) * Math.min(3, Math.sqrt(st.view.k)));
+    var cls = st.layers.clusters && this.clusters ? this.shownClusters().sort(function (a, b) { var ra = a.lastOnset !== null && day - a.lastOnset < 14 ? 1 : 0, rb = b.lastOnset !== null && day - b.lastOnset < 14 ? 1 : 0; return rb - ra || b.size - a.size; }) : [];
     // venues: pinpoints at city scale, labelled diamonds when zoomed in; cluster venues always stand out
     if (st.layers.venues && !anim) {
       ctx.save();
       var near = T.s > 900, vs = UIclamp(T.s / 85, 6, 12), hot = {};
-      if (st.layers.clusters) this.shownClusters().forEach(function (c) { if (c.place) hot[c.place] = 1; });
+      cls.forEach(function (c, i) { if (c.place && i < maxLbl) hot[c.place] = 1; });
       city.places.forEach(function (p) {
         if (!p.pos) return; var q = UIMapR.toScreen(T, p.pos);
         if (q[0] < -20 || q[1] < -20 || q[0] > w + 20 || q[1] > h + 20) return;
@@ -515,8 +517,7 @@ var UIMap = UI.views.map = {
     }
     // clusters: dashed rings with pulses, labels kept on screen and apart
     if (st.layers.clusters && this.clusters) {
-      var boxes = [], maxLbl = Math.round(UIclamp(w * h / 60000, 4, 14) * Math.min(3, Math.sqrt(st.view.k)));
-      var cls = this.shownClusters().sort(function (a, b) { var ra = a.lastOnset !== null && day - a.lastOnset < 14 ? 1 : 0, rb = b.lastOnset !== null && day - b.lastOnset < 14 ? 1 : 0; return rb - ra || b.size - a.size; });
+      var boxes = [];
       cls.forEach(function (c, i) {
         var stale = c.lastOnset !== null && day - c.lastOnset >= 21;
         if (!c.pos) return; var q = UIMapR.toScreen(T, c.pos), rad = UIclamp(T.s / 60, 10, 30) * (0.8 + Math.sqrt(c.size) * .25), ph = (t * .5 + i * .37) % 1;
@@ -525,9 +526,11 @@ var UIMap = UI.views.map = {
           return;
         }
         ctx.save();
-        if (stale) ctx.globalAlpha = 0.4;
+        var minor = i >= maxLbl && c.size < 4 && st.view.k < 2;
+        if (stale || minor) ctx.globalAlpha = minor ? 0.35 : 0.4;
         ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(255,224,194,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(q[0], q[1], rad, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
         ctx.strokeStyle = 'rgba(255,224,194,.25)'; ctx.beginPath(); ctx.arc(q[0], q[1], rad + 4, 0, Math.PI * 2); ctx.stroke();
+        if (minor) { ctx.restore(); return; }
         if (i >= maxLbl || stale) { ctx.fillStyle = 'rgba(20,12,8,.92)'; ctx.beginPath(); ctx.arc(q[0] + rad * .7, q[1] - rad * .7, 8.5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,164,119,.55)'; ctx.stroke(); ctx.fillStyle = '#ffe0c2'; ctx.font = '600 10px ' + fm; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(c.size), q[0] + rad * .7, q[1] - rad * .7 + .5); ctx.restore(); return; }
         var nm = c.name.length > 26 ? c.name.slice(0, 25) + '…' : c.name, ns = String(c.size);
         ctx.font = '600 11.5px ' + fb; var tw = ctx.measureText(nm).width; ctx.font = '600 11px ' + fm; var cw = ctx.measureText(ns).width;

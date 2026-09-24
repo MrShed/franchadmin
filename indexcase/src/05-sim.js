@@ -641,6 +641,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     this.extraSpill(sd, wd, pol);
     // 3. vaccination (policy layer fills pol.vaccinate with agent ids)
     if (pol.vaccinate) for (i = 0; i < pol.vaccinate.length; i++) { j = pol.vaccinate[i]; if (this.vac[j] < -30000) this.vac[j] = sd; }
+    // a new variant often dies out by chance; if its lineage vanishes early, let it arise again (up to three times)
+    if (this.variantBorn >= 0 && (this.variantBirths || 1) < 3 && sd < (this.variantSd || 0) + 40) {
+      var vAct = 0; for (i = 0; i < this.active.length; i++) if (this.xvr[this.active[i]]) { vAct = 1; break; }
+      if (!vAct && this.xday[this.variantBorn] < sd - 3) { this.variantBirths = (this.variantBirths || 1) + 1; this.variantBorn = -1; this.variantSd = sd + 3; }
+    }
     var newInf = 0; for (i = this.n - 1; i >= 0 && this.xday[i] === sd; i--) newInf++;
     this.daily.push({ sd: sd, newInf: newInf, infectious: nInfectious, hosp: this.hospNow, icu: this.icuNow, adm: adm, deaths: deaths, overflow: this.hospNow > beds ? 1 : 0 });
     this.sd = sd + 1;
@@ -783,7 +788,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
 
   // ---------------------------------------------------------------- snapshot
   SP.snapshot = function () {
-    var o = { sd: this.sd, n: this.n, mutN: this.mutN, variantBorn: this.variantBorn, variantSd: this.variantSd, spills: this.spills, primary: this.primary, sourcePlace: this.sourcePlace,
+    var o = { sd: this.sd, n: this.n, mutN: this.mutN, variantBorn: this.variantBorn, variantSd: this.variantSd, variantBirths: this.variantBirths, spills: this.spills, primary: this.primary, sourcePlace: this.sourcePlace,
       spillSite: this.spillSite, spillRate: this.spillRate, extra: this.extra || null, active: this.active, deadList: this.deadList, bgList: this.bgList || [], admLog: this.admLog, daily: this.daily,
       hospNow: this.hospNow, icuNow: this.icuNow, fear: this.fear, baseBeds: this.baseBeds, baseIcu: this.baseIcu, VE_inf: this.VE_inf,
       funerals: (this.funerals || []).map(function (f) { return { sd: f.sd, place: f.place, att: f.att, dead: f.dead }; }), funeralDays: this.funeralDays || {} };

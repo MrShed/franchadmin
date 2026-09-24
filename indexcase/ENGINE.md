@@ -1,8 +1,9 @@
 # INDEX CASE engine API (src/01-09)
 
 All engine code lives on the global `IX` (every top-level identifier is `var IX`). The engine files run in
-node (no DOM at load) — `tests/load.js` vm-loads `src/0*.js` in filename order, exactly as the built page does.
-Everything is deterministic from the seed (counter-based hashing, no `Math.random`).
+node (no DOM at load) — `tests/load.js` concatenates `src/0*.js` in filename order (as the built page does) and
+evaluates them in one function scope. Everything is deterministic from the seed (counter-based hashing; the only
+`Math.random` is choosing a seed when none is given).
 
 | file | contents |
 |---|---|
@@ -27,11 +28,14 @@ residents. **Every count the engine returns is in simulated residents** (a case 
 
 ```js
 var g = IX.newGame(seed, {grade: 'probationer'|'consultant'|'director', tutorial?: bool})
-     // default grade 'consultant'. tutorial: a fixed, gentle scripted first outbreak (seed ignored).
-     // Generation retries seed, seed#1, ... until the solver accepts the game (g.attempt).
-var json = g.save()            // snapshot string (dynamic state only; city+pathogen rebuilt from seed)
-var g2 = IX.load(json)         // identical game, continues deterministically
-IX.GRADES                      // [{id, label, blurb}]
+     // default grade 'consultant'; seed null/undefined = random. tutorial: a fixed, gentle airborne outbreak
+     // with a tell (loss of taste and smell), probationer grade (seed ignored).
+     // Generation tries pathogen draws until the acceptance check passes (g.attempt); 0.5-1.2 s in node.
+IX.newGameAsync(seed, opts, onProgress) -> Promise<g>   // same game; yields to the browser between attempts
+                                                        // onProgress({tries, fraction})
+var s = g.save()               // compressed string ('IXZ1:...', UTF-16 safe for localStorage), ~0.1-0.2 s
+var g2 = IX.load(s)            // identical game, continues deterministically (also accepts plain JSON saves)
+IX.GRADES                      // [{id, label, blurb, ...}]
 ```
 
 ## Game state (read-only props)
@@ -134,7 +138,8 @@ g.epiCurve() -> {
   nowcast: [null | {lo, hi}],    // aligned to byOnset: 80% band for cases with that onset once all reported
   admissions: [n], deaths: [n],  // hospital admissions / deaths of known cases, by day reported
   ili: [n],                      // GP consultations for influenza-like illness (includes ordinary flu)
-  tests: [n], positive: [n],     // tests resulted per day and positives
+  tests: [n], positive: [n],     // tests processed per day, and positive results by result day
+  allDeaths: [n],                // all-cause deaths (excess mortality shows here before anyone counts it)
   byAge: {bands:['0-4','5-17','18-34','35-49','50-64','65-79','80+'], cases:[n], admitted:[n], died:[n]}
 }
 g.wastewater() -> {from, sampling: bool, unit:'copies/L (norm.)', byDistrict: {d0:[value|null]}, flag:{d0:'rising'|'high'|null}}
@@ -183,20 +188,20 @@ One-off action ids:
 
 | id | target | what it does |
 |---|---|---|
-| `interview` | case | exposures in the 14 days before onset, symptoms, onset date, named contacts (tracers 2h) |
-| `trace` | case | finds contacts (household always, others with probability); they are followed up for 14 days (tracers 3h) |
+| `interview` | case | exposures in the 14 days before onset (places with days, people, travel, animals, funerals), symptoms, onset, people they knew who were ill first (tracers 1.5h). Some refuse; some omit or lie about venues that were meant to be shut. |
+| `trace` | case (params daysBefore 2\|5) | finds contacts from N days before onset: household, friends seen, small teams/classes, venue attendees only if a site visit got the list; followed up 14 days, ill ones reported and tested (tracers 3h). With a `quarantine` order they quarantine, and tracers also do routine tracing of new cases with their spare hours each evening. |
 | `timing_study` | case (traced) | diaries, daily tests and sequencing of the case's contacts: infected before or after the case's onset (field 3h, tracers 2h, seq 1; 15 days) |
-| `household` | case | tests every household member now and at day 7/14 and records who stays well (field 3h + tests) |
+| `household` | case | PCR for every household member at day 0/7/14, antibodies at day 14, symptom diary: report on day 15 of who was infected and who never felt ill (field 3h + tests) |
 | `test` | person | a PCR (after the agent is confirmed) or the extended panel (before); result after 1-2 days |
 | `site_visit` | place | attendance lists (last 14 days), ventilation (CO2), layout, observations (field 4h) |
-| `questionnaire` | place | attack rates by exposure/activity among attendees of the place's cluster (analysts 4h, field 2h) |
-| `record_review` | none | hospital admissions by age & symptoms, and a retrospective search for missed cases (analysts 4h) |
+| `questionnaire` | place | the cluster event (a one-off party/wedding/wake there if any, else the day most known cases were there): attack rates by closeness, food, indoors/outdoors, singing; onset days after the event (analysts 3h, field 2h; 2 days) |
+| `record_review` | none | hospital admissions by age/ICU/death & symptoms, earliest admission, ward-acquired cases; adds missed cases (analysts 4h) |
 | `animal_sampling` | place (market, farm, meat_plant) | swabs animals/surfaces (field 4h + tests) |
 | `sequence` | case | sequences a stored positive sample; result in 3-5 days (seq 1, analysts 1h) |
-| `declare_novel` | none | asks the lab to confirm a novel agent; needs panel-negative samples from ≥3 linked cases |
+| `declare_novel` | none | asks the lab to run metagenomics; needs ≥3 people with panel-negative results. Confirms (act 2) in 2 days if ≥2 are real; otherwise a false alarm (-8 credibility) |
 | `serosurvey` | none (params n) | antibody survey of a random sample; prevalence with CI after 4 days |
-| `trial` | none (params n) | randomised treatment trial among admitted patients; result with CI after 21 days |
-| `publish_sequence` | none | share the genome internationally (starts the cure clock with a characterisation) |
+| `trial` | none (params n) | randomised treatment trial among admitted patients (enrolment up to 28 days); risk ratio with CI 21 days after enrolment closes |
+| `publish_sequence` | none | share the genome; the cure clock starts once it is published and ≥2 key traits are published (better estimates = earlier vaccine) |
 | `briefing` | none | press briefing (analysts 2h) — trust, rumours |
 | `counter_rumour` | none (params rumour) | targeted rebuttal of a rumour |
 | `request_funding` | none (params) | a request to the next council meeting (money, staff) |
@@ -266,27 +271,45 @@ g.advance(n) -> same, for n days (stops early on urgent messages, act changes or
 ## Mentor
 
 ```js
-IX.MENTOR -> {name, title, bio, costs:{nudge:0, pointer:{analysts:3}, answer:{credibility:10}}}
-g.mentorStatus() -> {nudge:{ok, why}, pointer:{ok, why}, answer:{ok, why}, used:{nudge, pointer, answer}}
-g.mentor('nudge'|'pointer'|'answer') -> {ok, tier, text, action?: {id, target, params}, trait?, charged}
+IX.MENTOR -> {name, title, bio}
+g.mentorStatus() -> {nudge:{ok, why}, pointer:{ok, why}, answer:{ok, why}, used:{nudge, pointer, answer},
+                    costs:{nudge:0, pointer:{analysts:n}, answer:{credibility:n}}}   // n by grade
+g.mentor('nudge'|'pointer'|'answer') -> {ok, tier, text, action?: {id, target, params}, trait?, charged, msg}
+   // nudge: free, once a day, general direction; pointer: a specific action + target; answer: a true value
+   // (act 1: which cases are real). Each call also adds a 'mentor' message to the inbox.
 ```
 
 ## Debrief
 
 ```js
 g.debrief() -> {             // available any time (spoilers!), intended once g.over
-  truth: {card},             // the real pathogen card (same fields as estimates' traits + extras)
+  truth: {card, archetype, pathogen},   // card: realised trait values in this outbreak (what the data could show)
   estimates: [{trait, label, truth, published, day, error, grade:'good'|'close'|'wrong'|'none'}],
   curves: {from, actual:{infections, deaths, hospital}, ghost:{infections, deaths, hospital}},
-  deaths: {actual, ghost, named:[{pid, name, age, district, day, note}]},
+  deaths: {actual, ghost, named:[{pid, name, age, district, day, known, note}]},   // note: a short humane line
+  infections: {actual, ghost},
   costs: {spent, economy, closureDays, orders:[...]},
   trust: {start, end, byDistrict},
-  origin: {primary: pid, primaryName, source, place?, day, found: bool, indexCase: pid},
-  frames: [{day, infections:[[pid, x, y, placeKind]], byDistrict:{}}],   // replay map
-  tree: {nodes:[{pid, infector, day, setting, place}]},                  // the true transmission tree
-  score: {total, lines:[{label, pts}]}, grade
+  origin: {primary, primaryName, source, place?: ref, infectedDay, indexCase, found, sourceFound, spillovers, knownToYou},
+  frames: [{day, infections:[[pid, x, y, settingName]], byDistrict:{d0: n}}],   // replay map, one per day from curves.from
+  tree: {nodes:[{pid, infector, day, setting, place, variant, known}]},            // the true transmission tree
+  score: {total, lines:[{label, pts}], grade},   // grade: 'Exemplary'|'Commended'|'Sound'|'Lessons to be learned'|'Public inquiry'
+  outcome, grade, mentor: {nudge, pointer, answer}
 }
 ```
 
 ## Test hooks (never use in the UI)
-`g._sim` (truth), `g._path` (pathogen), `IX.solve(g)`, `IX.makePathogen`, `IX.makeCity`.
+`g.sim` (truth), `g.P` (pathogen), `g.C` (full city), `g.S` (state), `g.truthCard()`, `g.ghost()`, `IX.estimate(g)`
+(the ideal epidemiologist's reading of the player's data), `IX.solve(g)`, `IX.accept(g)`, `IX.acceptFull(g)`,
+`IX.playPolicy(g, 'none'|'naive'|'competent')`, `IX.makePathogen`, `IX.makeCity`.
+
+## Tests
+```
+node tests/gen.js <seed> [--grade=x] [--play=N] [--out=file]   # dump: pathogen card, city, alert, ghost curve, playthrough inbox
+node tests/solve.js 1..100 [--full] [--raw] [--grade=x]           # acceptance %, archetypes, full-solver agreement
+node tests/bias.js 1..20 [--k=14]                                 # estimator accuracy vs truth at community spread + k
+node tests/play.js 1..10 [--policy=competent|none|naive] [--grade=all|x]   # balance: outcomes per grade
+node tests/perf.js [seed] [days]                                  # timing: generation, endDay, save/load, ghost
+node tests/api.js [seed]                                          # API walk-through + invariants (ghost identity, save/load)
+node tests/debug.js <seed>                                        # the solver's estimates against the truth over time
+```

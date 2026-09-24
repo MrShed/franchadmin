@@ -17,7 +17,7 @@ var UIDebrief = {
       (D.totals.ghostDeaths > D.totals.deaths ? '<p class="db-saved">' + UIfmt.n(D.totals.ghostDeaths - D.totals.deaths) + ' fewer deaths than if nobody had acted.</p>' : '') +
       (D.score && D.score.lines && D.score.lines.length ? '<div class="db-score">' + D.score.lines.map(function (l) { return '<div><span>' + UIesc(l.label) + '</span><b>' + UIesc(l.pts !== undefined ? l.pts : l.value) + '</b></div>'; }).join('') + '</div>' : '') + '</header>';
     // pathogen card
-    html += '<section class="db-sec"><div class="eyebrow">The truth</div><h2>' + UIesc(D.agentName) + '</h2><div class="pc" id="pc"><div class="pc-head"><span>The truth</span><span>You published</span><span></span></div>' + D.traits.map(function (t, i) {
+    html += '<section class="db-sec"><div class="eyebrow">The truth</div><h2>' + UIesc(D.agentName) + '</h2><div class="pc" id="pc"><div class="pc-hero">' + UIvirion(D.agentName) + '<div class="pc-id"><span>Specimen · revealed</span><b>' + UIesc(D.agentName) + '</b><em>' + UIesc(city.name) + ' · day ' + (day + 1) + '</em></div></div><div class="pc-head"><span>The truth</span><span>You published</span><span></span></div>' + D.traits.map(function (t, i) {
       var v = t.verdict;
       return '<div class="pc-r" style="--i:' + i + '"><span class="pc-l">' + UIesc(t.label) + '</span><span class="pc-t">' + UIesc(t.truth) + '</span><span class="pc-y ' + v + '">' + (t.yours !== null ? UIesc(t.yours) + (t.day !== null ? '<small>' + UIesc(UIA.dateShort(t.day)) + '</small>' : '') : '<em>not published</em>') + '</span><span class="pc-m ' + v + '">' + (v === 'good' ? UIICON.check : v === 'near' ? '~' : v === 'off' ? UIICON.close : '—') + '</span></div>';
     }).join('') + '</div>' + (D.symptoms.length ? '<div class="pc-sym"><span class="eyebrow">Symptoms' + (D.tell ? ' · the tell: ' + UIesc(String(D.tell).replace(/_/g, ' ')) : '') + '</span>' + D.symptoms.map(function (s) { return '<span>' + UIesc(String(s[0]).replace(/_/g, ' ')) + (s[1] !== undefined && s[1] !== null ? ' <b>' + UIfmt.pct(s[1] > 1 ? s[1] / 100 : s[1]) + '</b>' : '') + '</span>'; }).join('') + '</div>' : '') + '</section>';
@@ -36,7 +36,8 @@ var UIDebrief = {
     // the dead
     html += '<section class="db-sec db-mem"><div class="mem-h"><span></span><div class="eyebrow">In memory</div><span></span></div>' + (D.deaths.length ? '<p class="mem-d">' + UIfmt.plural(D.deaths.length, 'person', 'people') + ' in ' + UIesc(city.name) + ' died of the disease.</p><div class="mem">' + D.deaths.map(function (p) {
       var dd = UIA.district(p.district);
-      return '<div class="mem-p"><b>' + UIesc(p.name) + '</b><span>' + (p.age !== null && p.age !== undefined ? UIesc(p.age) : '') + (p.note ? ', ' + UIesc(p.note) : '') + (dd ? ' · ' + UIesc(dd.name) : '') + (p.day !== null && p.day !== undefined ? ' · ' + UIesc(UIA.dateShort(p.day)) : '') + '</span></div>';
+      var who = (p.pid && UIA.caseOf(p.pid)) || { pid: p.pid || p.name, age: p.age };
+      return '<div class="mem-p"><span class="mem-f">' + UIPortrait.svg(who) + '</span><div><b>' + UIesc(p.name) + '</b><span>' + (p.age !== null && p.age !== undefined ? UIesc(p.age) : '') + (p.note ? ', ' + UIesc(p.note) : '') + (dd ? ' · ' + UIesc(dd.name) : '') + (p.day !== null && p.day !== undefined ? ' · ' + UIesc(UIA.dateShort(p.day)) : '') + '</span></div></div>';
     }).join('') + '</div>' : '<p class="mem-d">No one in ' + UIesc(city.name) + ' died of the disease.</p>') + '</section>';
     html += '<footer class="db-foot"><button class="btn pri" id="db-new">A new outbreak</button><button class="btn" id="db-again">Replay this city</button><p class="note">Seed ' + UIesc(UIA.seed) + '</p></footer></div></div>';
     root.innerHTML = html;
@@ -46,9 +47,9 @@ var UIDebrief = {
     UI$('#db-again').addEventListener('click', function () { var s = UIA.seed, g = UIA.grade; UIA.clearSave(); UIBoot.start(s, g, false); });
     // charts
     var cs = D.curves;
-    if (cs.actual.length) UIChart.lines(UI$('#db-c1'), [{ vals: cs.ghost, color: '#7d93aa', dash: true, label: 'Ghost city' }, { vals: cs.actual, color: '#ff7a45', fill: true, label: 'Your city' }], cs.start, { h: 220, label: 'Infections, you vs ghost city' });
+    if (cs.actual.length) UIChart.lines(UI$('#db-c1'), [{ vals: cs.ghost, color: '#b9cadc', dash: true, label: 'Ghost city' }, { vals: cs.actual, color: '#ff7a45', fill: true, label: 'Your city' }], cs.start, { h: 240, endLabels: true, label: 'Infections, you vs ghost city' });
     function cum(a) { var s = 0; return a.map(function (v) { s += v || 0; return s; }); }
-    if (cs.deaths.length) UIChart.lines(UI$('#db-c2'), [{ vals: cum(cs.ghostDeaths), color: '#7d93aa', dash: true, label: 'Ghost city' }, { vals: cum(cs.deaths), color: '#d9d3c7', fill: true, label: 'Your city' }], cs.start, { h: 180, label: 'Deaths, you vs ghost city' });
+    if (cs.deaths.length) UIChart.lines(UI$('#db-c2'), [{ vals: cum(cs.ghostDeaths), color: '#b9cadc', dash: true, label: 'Ghost city' }, { vals: cum(cs.deaths), color: '#d9d3c7', fill: true, label: 'Your city' }], cs.start, { h: 200, endLabels: true, label: 'Deaths, you vs ghost city' });
     this.replay(D); this.tree(D);
     // reveal card rows on scroll
     try {

@@ -31,7 +31,7 @@ var UIChart = (function () {
   function yGrid(sc, y, L, R, lbl) {
     return sc.ticks.map(function (t) { var yy = y(t).toFixed(1); return '<line x1="' + L + '" x2="' + R + '" y1="' + yy + '" y2="' + yy + '" class="' + (t === 0 ? 'base' : 'grid') + '"/>' + (lbl !== false ? '<text x="' + (L - 6) + '" y="' + (+yy + 4) + '" text-anchor="end" class="tk">' + fmtTick(t) + '</text>' : ''); }).join('');
   }
-  function hatch(id, col) { return '<pattern id="' + id + '" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="' + col + '" fill-opacity=".10"/><line x1="0" y1="0" x2="0" y2="6" stroke="' + col + '" stroke-width="2" stroke-opacity=".55"/></pattern>'; }
+  function hatch(id, col) { return '<pattern id="' + id + '" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="' + col + '" fill-opacity=".07"/><line x1="0" y1="0" x2="0" y2="4" stroke="' + col + '" stroke-width="1" stroke-opacity=".7"/></pattern>'; }
   function barPath(x, y, w, h, r) { r = Math.min(r, w / 2, h); if (h <= 0) return ''; return 'M' + x + ',' + (y + h) + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + w - r) + 'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + h) + 'Z'; }
 
   /** attach scrub tooltip: cols = number of columns, geom(i)->{x}, text(i)->html */
@@ -81,9 +81,6 @@ var UIChart = (function () {
       if (mx0 - lastX > 11) { s += '<text transform="translate(' + (mx0 + 3.5).toFixed(1) + ' ' + (T + 2) + ') rotate(90)" class="tk mk" fill="' + col + '">' + UIesc(String(m.label).toUpperCase().slice(0, 24)) + '</text>'; lastX = mx0; }
     });
     s += '<rect class="cursor" x="0" y="' + T + '" width="0" height="' + (B - T) + '"/>';
-    // a soft glow of the curve's area
-    var ad = 'M' + L + ',' + B; for (i = 0; i < n; i++) ad += 'L' + (x(i) + bw / 2).toFixed(1) + ',' + y(tot[i]).toFixed(1); ad += 'L' + R + ',' + B + 'Z';
-    s += '<path d="' + ad + '" fill="url(#gw)"/>';
     s += '<g class="bars">';
     for (i = 0; i < n; i++) {
       var bx = x(i) + gap / 2, w = Math.max(1, bw - gap), dl = 'animation-delay:' + Math.min(600, i * 8) + 'ms';
@@ -97,7 +94,7 @@ var UIChart = (function () {
     }
     s += '</g>';
     // 7-day average of all cases by onset
-    if (n >= 10) {
+    if (n >= 10 && UIsum(tot) >= 20) {
       var avg = '', started = false;
       for (i = 0; i < n; i++) { var a0 = Math.max(0, i - 6), sm = 0; for (var j = a0; j <= i; j++) sm += tot[j]; var v = sm / (i - a0 + 1); if (!started && !sm) continue; avg += (started ? 'L' : 'M') + (x(i) + bw / 2).toFixed(1) + ',' + y(v).toFixed(1); started = true; }
       if (avg) s += '<path d="' + avg + '" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" class="draw"/>';

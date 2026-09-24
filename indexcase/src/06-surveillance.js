@@ -214,6 +214,17 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   OCC_LABEL[OCC.STUDENT] = 'university student'; OCC_LABEL[OCC.PUPIL] = 'pupil'; OCC_LABEL[OCC.NURSERY_CHILD] = 'goes to nursery'; OCC_LABEL[OCC.CARE_RES] = 'care home resident';
   OCC_LABEL[OCC.HOME] = 'looks after the home'; OCC_LABEL[OCC.RETIRED] = 'retired'; OCC_LABEL[OCC.GP_STAFF] = 'GP surgery staff'; OCC_LABEL[OCC.UNEMPLOYED] = 'between jobs';
   OCC_LABEL[OCC.OUT] = 'works out of town / from home'; OCC_LABEL[OCC.UNI_STAFF] = 'university lecturer'; OCC_LABEL[OCC.HOTEL] = 'hotel staff'; OCC_LABEL[OCC.CHILD_HOME] = 'at home with family';
+  /** what pid would call q, who lives with them */
+  GP.kinWord = function (pid, q) {
+    var C = this.C, kind = C.hKind[C.hh[pid]], d = C.age[q] - C.age[pid], m = C.sex[q] === 1;
+    if (kind === 'sharers' || kind === 'students') return 'housemate';
+    if (Math.abs(d) <= 12 && C.age[q] >= 20 && C.age[pid] >= 20) return C.last[q] === C.last[pid] || kind === 'couple' || kind === 'oldcouple' ? (m ? 'husband' : 'wife') : 'partner';
+    if (Math.abs(d) <= 12) return m ? 'brother' : 'sister';
+    if (d >= 45) return m ? 'grandad' : 'gran';
+    if (d <= -45) return m ? 'grandson' : 'granddaughter';
+    if (d > 0) return m ? 'dad' : 'mum';
+    return m ? 'son' : 'daughter';
+  };
   GP.occLabel = function (pid) {
     var C = this.C, o = C.occ[pid], w = C.work[pid];
     var base = OCC_LABEL[o] || '';
@@ -975,7 +986,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (!self.wasAtFuneral(pid, f)) return;
       var ent = { kind: 'place', place: f.place >= 0 ? self.plref(f.place) : null, days: [self.gd(f.sd)], setting: 'funeral', note: 'funeral of ' + self.name(f.dead), persons: [f.dead] };
       exps.push(ent);
-      rows.push(['Funeral', ['of ', self.pref(f.dead)].concat(f.place >= 0 ? [', ', self.plref(f.place)] : []), self.shortDate(self.gd(f.sd))]);
+      rows.push(['Funeral', self.pref(f.dead), self.shortDate(self.gd(f.sd)) + (f.place >= 0 ? ', ' + C.places[f.place].name : '')]);
     });
     // friends visited
     var vis = this.visitsIn(pid, win.from, win.to);
@@ -1025,7 +1036,10 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     });
     cs.illContacts = ill;
     if (ill.length) {
-      lines.push({ k: 'q', who: this.pref(pid), x: [ill.length === 1 ? IX.pickText(this, 'illcontact', pid, { who: ill[0].person.d, rel: ill[0].relation, date: this.dateLabel(ill[0].onset) }) : 'A few people I know were poorly before me, now you mention it.'] });
+      if (proxy) {
+        var pr2 = C.sex[pid] ? 'him' : 'her', pos2 = C.sex[pid] ? 'his' : 'her';
+        lines.push({ k: 'q', x: [ill.length === 1 ? ill[0].person.d + ' was poorly before ' + pr2 + ', from about ' + this.dateLabel(ill[0].onset) + ' (' + pos2 + ' ' + (ill[0].relation === 'household' ? this.kinWord(pid, ill[0].person.id) : ill[0].relation) + ').' : 'A few people around ' + pr2 + ' were poorly first.'] });
+      } else lines.push({ k: 'q', who: this.pref(pid), x: [ill.length === 1 ? IX.pickText(this, 'illcontact', pid, { who: ill[0].person.d, rel: ill[0].relation === 'care home' ? 'neighbour at the home' : ill[0].relation === 'household' ? this.kinWord(pid, ill[0].person.id) : ill[0].relation, date: this.dateLabel(ill[0].onset) }) : 'A few people I know were poorly before me, now you mention it.'] });
       rows.push(['Knew someone ill', ill.map(function (i) { return i.person.d + ' (' + i.relation + ', ill from ' + self.shortDate(i.onset) + ')'; }).join('; '), '']);
     }
     cs.exposures = exps;
