@@ -446,7 +446,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var rc = pc.ill / pc.n, rf = pf.ill / pf.n, rn = pn.n ? pn.ill / pn.n : rf;
       var ratio = ((rn + rf) / 2) / Math.max(0.001, rc);
       if (ratio >= 0.58 && rc >= 0.06) ev.airborne += 2.2;
-      else if (ratio <= 0.52 && rc >= 0.04) { ev.droplet += 1.4; ev.contact += 0.8; }
+      else if (ratio <= 0.52 && rc >= 0.04) { ev.droplet += 1.4; ev.contact += 0.4; }
     }
     // health and care workers catching it far more than anyone else: nursing the sick spreads it (body fluids)
     var hcw = 0, occN = 0;

@@ -177,6 +177,13 @@ var UIA = (function () {
     var p = null; try { p = call('person', String(pid)); } catch (e) { /* ignore */ }
     return (A._names[pid] = p && p.name ? p.name : String(pid));
   };
+  /** age, sex and heritage of anyone in the city (for portraits); cached */
+  A.basicsOf = function (pid) {
+    if (pid === null || pid === undefined || !/^\d+$/.test(String(pid))) return null;
+    A._bas = A._bas || {}; if (A._bas[pid] !== undefined) return A._bas[pid];
+    var p = null; try { p = call('person', String(pid)); } catch (e) { /* ignore */ }
+    return (A._bas[pid] = p ? { age: num(p.age, null), sex: p.sex || null, heritage: p.heritage ? String(p.heritage) : null } : null);
+  };
   A.heritageOf = function (pid) {
     if (pid === null || pid === undefined || !/^\d+$/.test(String(pid))) return null;
     A._her = A._her || {}; if (A._her[pid] !== undefined) return A._her[pid];
