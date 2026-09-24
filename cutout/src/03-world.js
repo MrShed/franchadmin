@@ -282,6 +282,9 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var coPhone = mkNumber(coCity);
     addPhone(coPhone, { kind: 'office', subscriber: coName, address: coAddr, city: coCity, company: coName, pid: (fin || C1).id });
     W.coverPhone = coPhone;
+    // whoever runs the cover company is registered as working for it
+    if (fin) { fin.employer = coName; fin.occupation = R.pick(['Fiduciary (Treuhänder)', 'Managing director', 'Accountant']); }
+    else if (coDirector === C1.idents[0]) { C1.employer = coName; C1.occupation = 'Managing director'; }
 
     // aliases for the rest of the network
     var O1 = addAlias(O, R.pick(['AT', 'DE', 'CH', 'NL', 'IT', 'FR', 'GB', 'YU', 'TR', 'PT']));
@@ -305,7 +308,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         var opts2 = [];
         if (i > 0) opts2.push(['L1', 3]);
         opts2.push(['L2', 3]);
-        opts2.push(['L3', p.role === 'principal' ? 10 : 2]);
+        if (!a.fresh) opts2.push(['L3', p.role === 'principal' ? 10 : 2]);
         if (p.car) opts2.push(['L4', 3]);
         if (p.account) opts2.push(['L5', 2]);
         var n = p.role === 'principal' ? 1 : R.weighted([[1, 5], [2, 4]]);
@@ -347,7 +350,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         driver: 'Convicted 198' + R.int(0, 6) + ' of smuggling cigarettes (fine). Excellent driver, according to the arresting officer.'
       }[p.role] || 'Known to the service.';
       var assoc = [];
-      if (p.role !== 'principal' && R.chance(0.3)) assoc.push(handlerOf(p).real);
+      if (p.role !== 'principal' && handlerOf(p) !== p && R.chance(0.3)) assoc.push(handlerOf(p).real);
       p.card = { summary: summ, aliases: cardAliases, associates: assoc, photo: R.chance(0.6) };
     });
 
@@ -358,12 +361,14 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       if (nat === 'US') name = uniq('name', function () { return R.pick(DATA.US_NAMES.male) + ' ' + R.pick(DATA.US_NAMES.sur); });
       else name = mkName(nat, R.chance(0.15) ? 'f' : 'm');
       var pre = R.chance(0.5) ? 'Dr ' : '';
-      return { kind: 'dignitary', name: pre + name, plain: name, title: t[1], nat: nat };
+      var fem = nat !== 'US' && (DATA.NAT[nat].female.indexOf(name.split(' ')[0]) >= 0);
+      return { kind: 'dignitary', name: pre + name, plain: name, title: t[1], nat: nat, sex: fem ? 'f' : 'm' };
     }
     function mkScientist() {
       var nat = R.pick(['AT', 'DE', 'CS', 'HU', 'DD', 'FR', 'IT', 'CH', 'SU', 'PL']);
-      var name = mkName(nat, R.chance(0.25) ? 'f' : 'm');
-      return { kind: 'scientist', name: 'Prof. ' + name, plain: name, title: DATA.NAT[nat].adj + ' ' + R.pick(DATA.SCIENTIST_FIELDS), nat: nat };
+      var sx = R.chance(0.25) ? 'f' : 'm';
+      var name = mkName(nat, sx);
+      return { kind: 'scientist', name: 'Prof. ' + name, plain: name, title: DATA.NAT[nat].adj + ' ' + R.pick(DATA.SCIENTIST_FIELDS), nat: nat, sex: sx };
     }
     function mkObject(cat) {
       var O_ = cat ? DATA.OBJECTS.filter(function (o) { return o.cat === cat; })[0] : R.pick(DATA.OBJECTS);
@@ -382,7 +387,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         usedSubjects[s.name] = 1;
         return s;
       }
-      throw new Error('subject');
+      return null;
     }
     function eventWhat(venue, subj) {
       var ek = R.pick(DATA.EVENT_KINDS[venue.kind]);
@@ -394,6 +399,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     }
     var evN = 0;
     function mkEvent(subj, venueKey, day, real) {
+      if (!subj) return null;
       var v = W.venues[venueKey];
       var ew = eventWhat(v, subj);
       var ev = { id: 'e' + (++evN), subject: subj, venue: venueKey, city: v.city, day: day, time: ew.time, type: ew.type, what: ew.what, real: !!real };
@@ -411,16 +417,17 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     // clue identifies the event but the conjunction does.
     var recon = R.sample(T.recon, R.int(2, Math.min(3, T.recon.length)));
     if (recon.indexOf('view-room') < 0 && recon.indexOf('photographs') < 0) recon[recon.length - 1] = T.recon.indexOf('photographs') >= 0 ? 'photographs' : 'view-room';
+    if (net.lookout && recon.indexOf('photographs') < 0) recon.push('photographs');
     W.recon = recon;
     var codeName = R.chance(0.75);
     var codeDay = R.chance(0.85) || !codeName;
     W.codePlan = { name: codeName, day: codeDay };
     var planned = [];
-    if (recon.indexOf('view-room') >= 0 || recon.indexOf('photographs') >= 0) planned.push({ k: 'venue', venue: actVenue.key });
+    if (recon.indexOf('view-room') >= 0 || recon.indexOf('photographs') >= 0 || net.driver) planned.push({ k: 'venue', venue: actVenue.key });
     planned.push({ k: 'window', city: actCity, from: D - 1, to: D + 1 });
     if (codeDay) planned.push({ k: 'weekday', wd: W.cal.weekday(D) });
     if (codeName) planned.push({ k: 'code', cat: targetSubj.trait.cat });
-    if (recon.indexOf('buys-schedule') >= 0 || recon.indexOf('asks-porter') >= 0) planned.push({ k: 'subject', subject: targetSubj.name });
+    if (recon.indexOf('buys-schedule') >= 0 || recon.indexOf('asks-porter') >= 0 || net.backup) planned.push({ k: 'subject', subject: targetSubj.name });
     W.plannedClues = planned;
 
     function venuesIn(cid, kinds, except) {
@@ -456,6 +463,15 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     if (has.window && W.events.filter(function (e) { return !e.real && e.city === actCity && e.day >= D - 1 && e.day <= D + 1; }).length === 0) {
       var vW = venuesIn(actCity, kindsFor(subjKind), actVenue.key);
       if (vW.length) mkEvent(mkSubject(subjKind, otherCat(targetSubj.trait.cat)), R.pick(vW), R.pick([D - 1, D, D + 1]), false);
+      else {
+        // no venue of the same kind: any other public event in the act city
+        var vAny = venuesIn(actCity, null, actVenue.key);
+        var vk2 = R.pick(vAny), kind2 = W.venues[vk2].kind;
+        var sk2 = /fair|museum/.test(kind2) ? 'object' : /university/.test(kind2) ? 'scientist' : 'dignitary';
+        var sub2 = mkSubject(sk2);
+        if (sub2 && sub2.trait.cat === targetSubj.trait.cat) sub2 = mkSubject(sk2, sk2 === 'object' ? null : otherCat(targetSubj.trait.cat));
+        mkEvent(sub2, vk2, R.pick([D - 1, D, D + 1]), false);
+      }
     }
     while (W.events.length < 3) {
       var cx = R.pick(W.cities); var vx = venuesIn(cx, kindsFor(subjKind), actVenue.key);
@@ -512,8 +528,24 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     function roomNo(h) { return String(R.int(1, W.hotels[h].stars >= 4 ? 6 : 4)) + CX.pad(R.int(1, 24)); }
 
     /** a journey: travel step (+ optional stay). Returns {travel, stay}. */
+    function busyAt(p, a, b, dest) {
+      return W.steps.some(function (s) {
+        if (s.kind === 'stay') return s.parts[0].pid === p.id && s.from < b && a < s.to;
+        // appointments elsewhere (hand-overs, meetings) also pin a person down
+        if (dest && s.city && s.city !== dest && /acquire|forge|meet|drop/.test(s.kind) && s.day >= a && s.day < b) return s.parts.some(function (x) { return x.pid === p.id; });
+        return false;
+      });
+    }
     function trip(p, ident, from, to, day, o) {
       o = o || {};
+      if (o.nights !== 0 && !o.noStay) {
+        // nobody sleeps in two hotels at once: move the journey to the first free slot
+        var n0 = o.nights || R.int(1, 3); o.nights = n0;
+        if (busyAt(p, day, day + n0, to)) {
+          var cand = [1, 2, 3, 4, 5, 6, -1, -2, -3, -4].map(function (k) { return day + k; }).filter(function (d) { return !busyAt(p, d, d + n0, to); })[0];
+          if (cand !== undefined) { if (o.bookedDay !== undefined && o.bookedDay >= cand) o.bookedDay = cand - 1; day = cand; }
+        }
+      }
       var rt = route(from, to, o.pref, o.plate);
       if (rt.mode !== 'car') o.plate = null;
       var time = rt.mode === 'air' ? rt.arr : T_(8 * 60, 21 * 60);
@@ -525,11 +557,11 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       if (o.nights !== 0 && !o.noStay) {
         var nights = o.nights || R.int(1, 3);
         var hk = o.hotel || pickHotel(to, { noView: true });
-        st = step('stay', day, time + T_(20, 90), o.phase || 'logistics', { hotel: hk, from: day, to: day + nights, room: o.room || roomNo(hk), note: o.note || null, paidBy: o.hotelPaidBy || null });
+        st = step('stay', day, Math.min(23 * 60 + 50, time + T_(20, 90)), o.phase || 'logistics', { hotel: hk, from: day, to: day + nights, room: o.room || roomNo(hk), note: o.note || null, viewOf: o.viewOf || null, paidBy: o.hotelPaidBy || null });
         st.parts = [part(p, ident, o.role)];
         (o.companions || []).forEach(function (c) {
           if (c.sameRoom) return;
-          var s2 = step('stay', day, time + T_(20, 90), o.phase || 'logistics', { hotel: hk, from: day, to: day + nights, room: roomNo(hk), note: null });
+          var s2 = step('stay', day, Math.min(23 * 60 + 50, time + T_(20, 90)), o.phase || 'logistics', { hotel: hk, from: day, to: day + nights, room: roomNo(hk), note: null });
           s2.parts = [part(c.p, c.ident, c.role)];
         });
       }
@@ -538,7 +570,17 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     /** telephone call. from/to: {num, pid, stay?} */
     function call(day, from, to, o) {
       o = o || {};
-      var s = step('call', day, o.time || T_(8 * 60, 22 * 60), o.phase || 'logistics', { fromNum: from.num, toNum: to.num, fromStay: from.stay ? from.stay.id : null, toStay: to.stay ? to.stay.id : null, dur: o.dur || R.int(40, 600), intercept: o.intercept || null, reservation: o.reservation || null });
+      var tm = o.time || T_(8 * 60, 22 * 60);
+      if (from.stay) {
+        // a call from a hotel room happens while the guest is there
+        if (day < from.stay.from) day = from.stay.from;
+        if (day === from.stay.from && tm <= from.stay.time + 15) {
+          tm = from.stay.time + R.int(20, 150);
+          if (tm > 23 * 60 + 40) { if (from.stay.to > day + 1) { day++; tm = R.int(7 * 60 + 30, 10 * 60); } else tm = Math.min(23 * 60 + 58, from.stay.time + 5); }
+        }
+        if (day >= from.stay.to) { day = from.stay.to; tm = R.int(7 * 60, 9 * 60); }
+      }
+      var s = step('call', day, tm, o.phase || 'logistics', { fromNum: from.num, toNum: to.num, fromStay: from.stay ? from.stay.id : null, toStay: to.stay ? to.stay.id : null, dur: o.dur || R.int(40, 600), intercept: o.intercept || null, reservation: o.reservation || null });
       if (from.p) s.parts.push(part(from.p, from.ident));
       if (to.p) s.parts.push(part(to.p, to.ident));
       return s;
@@ -550,9 +592,9 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       s.parts = parts;
       return s;
     }
-    function curOf(acc) { return DATA.COUNTRY[cc(W.accounts[acc].city)].cur; }
+    function curOf(acc) { var A = W.accounts[acc]; var k = cc(A.city); if ((k === 'DD' || k === 'CS' || k === 'HU') && A.holderKind === 'company') { if (!A.cur) A.cur = R.chance(0.5) ? 'US$' : 'DM'; return A.cur; } return DATA.COUNTRY[k].cur; }
     function amt(base) { return Math.round(base * (0.8 + R.next() * 0.5) / 100) * 100; }
-    var fx = { 'öS': 7, 'DM': 1, 'M': 1, 'Ft': 40, 'Kčs': 10, 'sFr.': 0.85, 'Lit.': 730, 'FF': 3.4, 'Esc.': 85, 'TL': 1100 };
+    var fx = { 'US$': 0.55, 'öS': 7, 'DM': 1, 'M': 1, 'Ft': 40, 'Kčs': 10, 'sFr.': 0.85, 'Lit.': 730, 'FF': 3.4, 'Esc.': 85, 'TL': 1100 };
     function money(acc, dm) { var c = curOf(acc); return { amount: amt(dm * (fx[c] || 1)), cur: c }; }
 
     var coPayer = fin || C1;
@@ -578,8 +620,8 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       var d0 = -R.int(8, 11);
       if (c.homeCity !== principalCity) {
         var t1 = trip(c, cAl, c.homeCity, principalCity, d0, { nights: R.int(1, 2), phase: 'planning', role: 'cutout', plate: (c.car && cAl.links.indexOf('L4') >= 0) && landLink(c.homeCity, principalCity) && cc(c.homeCity) !== cc(principalCity) ? c.car : null, paidBy: cAl.links.indexOf('L5') >= 0 && c.account ? c.account : null });
-        if (t1.stay) call(d0, { num: hotelLine(t1.stay), p: c, ident: cAl, stay: t1.stay }, { num: P.officePhone, p: P, ident: P.idents[0] }, { phase: 'planning' });
-        step('meet', d0 + 1, T_(10 * 60, 20 * 60), 'planning', { place: R.pick(city(principalCity).cafes) + ', ' + city(principalCity).name, city: principalCity }).parts = [part(P, P.idents[0]), part(c, cAl)];
+        if (t1.stay) call(t1.stay.from, { num: hotelLine(t1.stay), p: c, ident: cAl, stay: t1.stay }, { num: P.officePhone, p: P, ident: P.idents[0] }, { phase: 'planning' });
+        step('meet', t1.stay ? Math.max(t1.stay.from, t1.stay.to - 1) : d0 + 1, T_(10 * 60, 20 * 60), 'planning', { place: R.pick(city(principalCity).cafes) + ', ' + city(principalCity).name, city: principalCity }).parts = [part(P, P.idents[0]), part(c, cAl)];
         if (R.chance(0.6) && t1.stay) trip(c, cAl, principalCity, c.homeCity, t1.stay.to, { noStay: true, phase: 'planning', role: 'cutout', plate: t1.travel.plate, bookedDay: t1.stay.to - 1 });
       }
       call(R.int(1, 3), { num: c.phone, p: c, ident: c.idents[0] }, { num: P.officePhone, p: P, ident: P.idents[0] }, { phase: 'logistics', dur: R.int(60, 300) });
@@ -626,13 +668,16 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       var F = net.forger;
       var tf = { stay: null };
       if (F.homeCity !== opHome) tf = remember(O, trip(O, O1, opHome, F.homeCity, forgeDay - 1, { nights: 2, phase: 'logistics', role: 'operative', paidBy: opTripPaid(O1) }));
+      if (tf.stay) forgeDay = tf.stay.from + 1;
       if (tf.stay) call(forgeDay - 1, { num: hotelLine(tf.stay), p: O, ident: O1, stay: tf.stay }, { num: F.shopPhone, p: F, ident: F.idents[0] }, { dur: R.int(40, 120) });
-      step('forge', forgeDay, T_(10 * 60, 18 * 60), 'logistics', { newName: O2 ? O2.name : O1.name, place: F.shop }).parts = [part(F, F.idents[0]), part(O, O1)];
+      step('forge', forgeDay, T_(10 * 60, 18 * 60), 'logistics', { newName: O2 ? O2.name : O1.name, place: F.shop, city: F.homeCity }).parts = [part(F, F.idents[0]), part(O, O1)];
       coPay(forgeDay + 1, F.account, R.int(5, 12) * 1000, R.pick(['Satzarbeiten lt. Auftrag', 'Druckkosten Prospekte', 'Lithographie Rg. ' + R.num(4)]), F, { purpose: 'forge' });
       // a second job for the backup or driver
       if (net.backup && R.chance(0.5)) step('forge', forgeDay + 1, T_(10 * 60, 18 * 60), 'logistics', { newName: Ob.name, place: F.shop }).parts = [part(F, F.idents[0]), part(net.backup, Ob)];
     }
     var OA = O2 || O1; // the identity used for recon and the act
+    if (O2) O2.fresh = true;
+    if (Ob) Ob.fresh = true;
 
     // ---- operative calls home (innocent partner)
     var lover = null;
@@ -679,10 +724,17 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         var t;
         if (buyer.homeCity !== S.homeCity && buyer === O) {
           t = remember(O, trip(O, OA, opHome, S.homeCity, d - 1, { nights: R.int(1, 2), phase: 'logistics', role: 'operative', paidBy: opTripPaid(OA) }));
-          if (t.stay) call(d - 1, { num: hotelLine(t.stay), p: O, ident: OA, stay: t.stay }, { num: S.shopPhone || S.phone, p: S, ident: S.idents[0] });
+          if (t.stay) { d = t.stay.to - 1; it.day = d; call(t.stay.from, { num: hotelLine(t.stay), p: O, ident: OA, stay: t.stay }, { num: S.shopPhone || S.phone, p: S, ident: S.idents[0] }); }
         }
+        else if (busyAt(buyer, d, d + 1)) {
+          // the buyer is away: the hand-over happens on the first day he is back home
+          for (var dd = d + 1; dd < D - 3 && busyAt(buyer, dd, dd + 1); dd++);
+          d = dd; it.day = d;
+        }
+        var acqTime = T_(10 * 60, 19 * 60);
+        if (t && t.stay && d === t.stay.from) acqTime = Math.min(22 * 60, t.stay.time + R.int(60, 180));
         it.buyer = buyer; it.buyerName = bIdent.name;
-        it.step = step('acquire', d, T_(10 * 60, 19 * 60), 'logistics', { item: it.key, itemName: it.name, mode: 'supplier', city: S.homeCity, informant: R.chance(0.8), namesBuyer: R.chance(0.5) });
+        it.step = step('acquire', d, acqTime, 'logistics', { item: it.key, itemName: it.name, mode: 'supplier', city: S.homeCity, informant: R.chance(0.8), namesBuyer: R.chance(0.5) });
         it.step.parts = [part(buyer, bIdent, buyer.role), part(S, S.idents[0], S.role)];
         coPay(d + R.int(0, 1), S.account, { weapon: 12, optics: 4, chemical: 8, device: 5, explosive: 15, tools: 3, 'vehicle-work': 6 }[it.cat] * 1000, R.pick(DATA.ITEMS[it.key].ref).replace('{n}', R.num(4)), S, { item: it.key, purpose: 'supply' });
       } else if (it.mode === 'theft') {
@@ -710,7 +762,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var Dv = net.driver;
     if (Dv) {
       var hireDay = R.int(D - 8, D - 5);
-      var hireCity = R.chance(0.7) ? Dv.homeCity : actCity;
+      var hireCity = Dv.homeCity;
       var plate = mkPlate(hireCity);
       var agency = R.pick(city(hireCity).rental);
       var clerk = mkPerson('innocent', natOfCity(hireCity), hireCity, { occupation: 'Rental clerk, ' + agency });
@@ -718,7 +770,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       var agencyOwner = agency + ' (fleet)';
       W.vehicles[plate] = { plate: plate, make: needVan ? R.pick(['Ford Transit', 'Mercedes 207 D', 'VW LT 28', 'Fiat Ducato']) : R.pick(['Opel Kadett', 'VW Golf', 'Ford Escort', 'Peugeot 309', 'Audi 80']), colour: R.pick(['white', 'dark blue', 'grey', 'red']), ownerKind: 'rental', owner: agencyOwner, ownerAddr: city(hireCity).station + ' branch, ' + city(hireCity).name, rentals: [] };
       W.rentalPlate = plate;
-      var dep = Dr.links.indexOf('L5') >= 0 && Dv.account ? Dv.account : (R.chance(0.8) ? W.coverAccount : 'cash');
+      var dep = Dr.links.indexOf('L5') >= 0 && Dv.account ? Dv.account : W.coverAccount;
       var hs = step('hire', hireDay, T_(8 * 60, 17 * 60), 'logistics', { plate: plate, agency: agency, city: hireCity, clerk: clerk.real, clerkPid: clerk.id, from: hireDay, to: D + 1, deposit: amt(1500), depositCur: DATA.COUNTRY[cc(hireCity)].cur, depositFrom: dep, licence: CX.pat('###### / ##', R) });
       hs.parts = [part(Dv, Dr, 'driver')];
       if (dep !== 'cash') {
@@ -726,7 +778,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         addAccount(agAcc, { holder: agency, holderKind: 'merchant', address: city(hireCity).station + ' branch, ' + city(hireCity).name, hub: true });
         var dparts = dep === W.coverAccount ? [part(coPayer, coPayer.idents[0], coPayer.role), part(Dv, Dr, 'driver')] : [part(Dv, Dr, 'driver')];
         var ds = pay(hireDay, dep, agAcc.no, hs.deposit, 'Kaution ' + plate + ' / Vertrag ' + R.num(5), dparts, { purpose: 'deposit' });
-        ds.cur = curOf(dep);
+        ds.cur = hs.depositCur;
       }
       if (theftVehicle && !theftVehicle.plate) {
         // theft happens after the hire when the driver is the thief: use the rental
@@ -743,19 +795,20 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var useView = recon.indexOf('view-room') >= 0;
     var reconHotel = useView ? viewHotel : pickHotel(actCity, { noView: true });
     var tr = null;
-    if (opHome !== actCity) tr = remember(O, trip(O, OA, opHome, actCity, reconDay, { nights: R.int(2, 3), hotel: reconHotel, phase: 'recon', role: 'operative', paidBy: opTripPaid(OA), hotelPaidBy: OA.links.indexOf('L5') >= 0 && O.account ? O.account : null, note: useView ? 'Insisted on a room facing the ' + actVenue.name + '; refused two rooms on the courtyard side.' : null }));
+    if (opHome !== actCity) tr = remember(O, trip(O, OA, opHome, actCity, reconDay, { nights: R.int(2, 3), hotel: reconHotel, phase: 'recon', role: 'operative', paidBy: opTripPaid(OA), hotelPaidBy: OA.links.indexOf('L5') >= 0 && O.account ? O.account : null, viewOf: useView ? actVenue.key : null }));
     else {
-      var sOnly = step('stay', reconDay, T_(14 * 60, 20 * 60), 'recon', { hotel: reconHotel, from: reconDay, to: reconDay + 2, room: roomNo(reconHotel), note: useView ? 'Local address given, yet wanted a room facing the ' + actVenue.name + ' for two nights.' : null });
+      var sOnly = step('stay', reconDay, T_(14 * 60, 20 * 60), 'recon', { hotel: reconHotel, from: reconDay, to: reconDay + 2, room: roomNo(reconHotel), note: 'Local address given.', viewOf: useView ? actVenue.key : null });
       sOnly.parts = [part(O, OA, 'operative')];
       tr = { stay: sOnly };
     }
     var reconStay = tr.stay;
+    if (reconStay) reconDay = reconStay.from;
     W.reconStay = reconStay;
     if (lover && reconStay) call(reconDay, { num: hotelLine(reconStay), p: O, ident: OA, stay: reconStay }, { num: lover.phone, p: lover, ident: lover.idents[0] }, { phase: 'recon', dur: R.int(200, 900), time: T_(21 * 60, 23 * 60) });
     // hotel neighbour (innocent)
     if (R.chance(0.6) && reconStay) {
       var nbHomes = Object.keys(DATA.CITIES).filter(function (c) { return natOfCity(c) === OA.nat; });
-      var nb = mkPerson('innocent', OA.nat, nbHomes.length ? R.pick(nbHomes) : anyCase());
+      var nb = mkPerson('innocent', OA.nat, nbHomes.length ? R.pick(nbHomes) : anyCase(), { surname: R.pick(DATA.NAT[OA.nat].sur.filter(function (x) { return OA.name.indexOf(x) < 0; })) });
       nb.innocentKind = 'neighbour'; W.innocents.push(nb);
       var nr = String(parseInt(reconStay.room, 10) + (R.chance(0.5) ? 1 : -1));
       step('stay', reconDay, reconStay.time + R.int(-40, 40), 'recon', { hotel: reconStay.hotel, from: reconDay, to: reconDay + R.int(1, 3), room: nr, note: R.pick(DATA.FLAVOUR.innocentHotelNotes) }).parts = [part(nb, nb.idents[0], 'innocent')];
@@ -763,10 +816,11 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     }
     var reconSteps = [];
     recon.forEach(function (k, i) {
-      var d = reconDay + (i % 2);
+      var d = k === 'view-room' ? reconDay : reconDay + 1 + (i % 2);
+      if (reconStay && d >= reconStay.to) d = reconStay.to - 1;
       var s;
       if (k === 'view-room') {
-        s = step('recon', d, T_(9 * 60, 11 * 60), 'recon', { rk: 'view-room', venue: actVenue.key, stay: reconStay ? reconStay.id : null });
+        s = step('recon', d, reconStay ? reconStay.time + 5 : T_(9 * 60, 11 * 60), 'recon', { rk: 'view-room', venue: actVenue.key, stay: reconStay ? reconStay.id : null });
         s.parts = [part(O, OA, 'operative')];
       } else if (k === 'photographs') {
         var who = net.lookout || O;
@@ -793,13 +847,6 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       reconSteps.push(s);
     });
     W.reconSteps = reconSteps;
-    // lookout with no photographs job still does something traceable
-    if (net.lookout && recon.indexOf('photographs') < 0) {
-      var ls = step('recon', R.int(D - 6, D - 3), T_(9 * 60, 17 * 60), 'recon', { rk: 'photographs', venue: actVenue.key, plate: net.lookout.car || null, showedName: net.lookout.car ? null : Lk.name, showedPassport: net.lookout.car ? null : Lk.passport });
-      ls.parts = [part(net.lookout, Lk, 'lookout')];
-      W.recon = W.recon.concat(['photographs']);
-      if (!has.venue) planned.push({ k: 'venue', venue: actVenue.key });
-    }
     // backup operative accompanies the recon
     if (net.backup && !reconSteps.some(function (s) { return s.parts[0].pid === net.backup.id; })) {
       var bh = net.backup.homeCity === actCity ? null : trip(net.backup, Ob, net.backup.homeCity, actCity, reconDay + 1, { nights: 1, phase: 'recon', role: 'operative' });
@@ -821,7 +868,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var actHotel = useView ? viewHotel : (reconStay ? reconStay.hotel : pickHotel(actCity, {}));
     var resvDay = reconStay ? reconStay.from + 1 : R.int(D - 6, D - 4);
     var resvByNum = R.chance(0.5) ? C1.phone : (reconStay ? hotelLine(reconStay) : C1.phone);
-    var resv = step('resv', resvDay, T_(9 * 60, 19 * 60), 'recon', { hotel: actHotel, from: D - 1, to: D + 1, byNum: resvByNum, inPerson: !!(reconStay && reconStay.hotel === actHotel && resvByNum !== C1.phone), note: useView ? 'Same room as on last visit requested (facing the ' + actVenue.name + ').' : R.pick(['Quiet room requested.', 'Late arrival expected.', 'Garage space requested.']) });
+    var resv = step('resv', resvDay, T_(9 * 60, 19 * 60), 'recon', { hotel: actHotel, from: D - 1, to: D + 1, byNum: resvByNum, inPerson: !!(reconStay && reconStay.hotel === actHotel && resvByNum !== C1.phone), viewOf: useView ? actVenue.key : null, note: useView ? null : R.pick(['Quiet room requested.', 'Late arrival expected.', 'Garage space requested.']) });
     resv.parts = [part(O, OA, 'operative')];
     if (resvByNum === C1.phone) { resv.inPerson = false; resv.parts.push(part(C1, C1.idents[0])); call(resvDay, { num: C1.phone, p: C1, ident: C1.idents[0] }, { num: W.hotels[actHotel].phone }, { phase: 'recon', dur: R.int(60, 180), reservation: resv.id }); }
     W.actHotel = actHotel;
@@ -837,6 +884,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         var cur = DATA.COUNTRY[cc(dest)].cur;
         var ct = remember(Cu, trip(Cu, Cr, Cu.homeCity, dest, rd, { nights: 1, phase: 'logistics', role: 'courier', customs: { amount: amt(40000 * (fx[cur] || 1)), cur: cur }, pref: R.chance(0.5) ? 'air' : null, plate: Cu.car && Cr.links.indexOf('L4') >= 0 && landLink(Cu.homeCity, dest) && cc(Cu.homeCity) !== cc(dest) ? Cu.car : null }));
         if (ct.stay) call(rd, { num: hotelLine(ct.stay), p: Cu, ident: Cr, stay: ct.stay }, { num: C1.phone, p: C1, ident: C1.idents[0] }, { dur: R.int(30, 120) });
+        if (ct.stay) rd = ct.stay.from;
         step('drop', rd + 1, T_(8 * 60, 20 * 60), 'logistics', { place: R.pick(city(dest).landmarks) + ', ' + city(dest).name, city: dest, content: 'cash' }).parts = [part(Cu, Cr, 'courier'), part(C1, c1Alias)];
         if (!ct.travel.route.domestic && !ct.travel.customs) ct.travel.customs = { amount: amt(40000), cur: cur };
       }
@@ -858,7 +906,12 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     W.codeCall = codeCall;
     // an early intercept on the principal's line, often less informative
     var pc = W.steps.filter(function (s) { return s.kind === 'call' && s.fromNum === P.officePhone && s.day >= 0; })[0] || W.steps.filter(function (s) { return s.kind === 'call' && s.toNum === P.officePhone && s.day >= 0; })[0];
-    if (pc && R.chance(0.6)) pc.intercept = { service: R.pick(['BND', 'BfV', 'SIS liaison']), lines: [{ spk: 'A', text: R.pick(['the bank has confirmed', 'the second instalment is on its way', 'our friends in the south are ready']) }, { spk: 'B', text: R.pick(DATA.FLAVOUR.codePhrases.noise) }, { spk: 'A', text: R.pick(['do not use this number again', 'next time through the usual channel', 'I will call from the office']) }], lag: 2 };
+    if (pc && R.chance(0.6)) {
+      var fromP = pc.fromNum === P.officePhone;
+      pc.intercept = { service: R.pick(['BND', 'BfV', 'SIS liaison']), lag: 2, lines: fromP
+        ? [{ spk: 'A', text: R.pick(['the bank has confirmed', 'the second instalment is on its way', 'our friends in the south are ready']) }, { spk: 'B', text: R.pick(['understood', 'then we can begin', 'good, the people here are asking']) }, { spk: 'A', text: R.pick(['do not use this number again', 'next time through the usual channel', 'I will call from the office']) }]
+        : [{ spk: 'A', text: R.pick(['has the second instalment gone off', 'the people here want to know about the money', 'I need an answer about the bank']) }, { spk: 'B', text: R.pick(['it is on its way', 'you worry too much', 'not on this line']) }, { spk: 'A', text: R.pick(['then I will call from the usual place', 'I will tell them', 'my regards to your wife']) }] };
+    }
 
     // ---- final approach
     var appDay = D - R.int(1, 2);
@@ -901,21 +954,54 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     W.finalStay = finalStay;
     call(D - 1, { num: W.hotels[actHotel].phone, p: O, ident: OA, stay: finalStay }, { num: C1.phone, p: C1, ident: C1.idents[0] }, { phase: 'rehearsal', dur: R.int(20, 60) });
 
+    // ---- the vehicle is ticketed near the venue during the rehearsal
+    if (Dv && W.rentalPlate) {
+      var pk = step('parking', R.int(D - 5, D - 3), T_(8 * 60, 18 * 60), 'rehearsal', { plate: W.rentalPlate, venue: actVenue.key, street: R.pick(city(actCity).streets) });
+      pk.parts = [part(Dv, Dr, 'driver')];
+    }
+    // the cover company's office line is used by the people who run it
+    call(R.int(-6, 2), { num: (fin || C1).phone, p: fin || C1, ident: (fin || C1).idents[0] }, { num: W.coverPhone }, { phase: 'logistics', dur: R.int(60, 300) });
+    if (fin) call(R.int(0, D - 5), { num: W.coverPhone, p: fin, ident: fin.idents[0] }, { num: C1.phone, p: C1, ident: C1.idents[0] }, { phase: 'logistics', dur: R.int(60, 300) });
+    // some of the cutout's hotel bills go to the company
+    W.steps.forEach(function (s) { if (s.kind === 'stay' && s.parts[0].pid === C1.id && !s.paidBy && R.chance(0.5)) s.paidBy = W.coverCompany; });
+
     // ---- the act
     var actors = [O].concat(Dv ? [Dv] : []).concat(net.lookout ? [net.lookout] : []).concat(net['inside-man'] ? [net['inside-man']] : []);
     var act = step('act', D, realEvent.time + R.int(-30, 30), 'act', { method: T.method, event: realEvent.id, venue: actVenue.key, target: targetSubj.name });
     act.parts = actors.map(function (p) { return part(p, p === O ? OA : p === Dv ? Dr : p === net.lookout ? Lk : p.idents[0]); });
     W.actStep = act;
 
+    // ---- meetings happen where everybody actually is
+    function locAt(pid, day) {
+      var st = W.steps.filter(function (s) { return s.kind === 'stay' && s.parts[0].pid === pid && s.from <= day && day < s.to; })[0];
+      return st ? W.hotels[st.hotel].city : W.P[pid].homeCity;
+    }
+    W.steps = W.steps.filter(function (s) {
+      if (s.kind !== 'meet' || s.phase === 'rehearsal') return true;
+      var ok = function (d) { return s.parts.every(function (x) { return locAt(x.pid, d) === s.city; }); };
+      if (ok(s.day)) return true;
+      var alt = [1, -1, 2, -2].map(function (k) { return s.day + k; }).filter(ok)[0];
+      if (alt === undefined) return false;
+      s.day = alt; return true;
+    });
+
     // ---- identity-link realisation guarantees
     // L4 (own car under alias): ensure a car crossing exists
     W.network.forEach(function (p) {
       p.idents.forEach(function (a) {
         if (a.real || a.links.indexOf('L4') < 0 || !p.car) return;
+        var usedA = W.steps.some(function (s) { return s.parts.some(function (x) { return x.name === a.name; }); });
+        if (!usedA) { a.links = a.links.filter(function (l) { return l !== 'L4'; }); return; }
         var has4 = W.steps.some(function (s) { return s.kind === 'travel' && s.plate === p.car && s.parts[0].name === a.name && !s.route.domestic; });
         if (!has4) {
           var dest = W.cities.filter(function (c) { return c !== p.homeCity && landLink(c, p.homeCity) && cc(c) !== cc(p.homeCity); })[0];
-          if (dest) { var d4 = R.int(-6, D - 5); trip(p, a, p.homeCity, dest, d4, { plate: p.car, nights: 1, role: p.role, phase: 'logistics' }); trip(p, a, dest, p.homeCity, d4 + 1, { plate: p.car, noStay: true, role: p.role, bookedDay: d4 }); }
+          if (dest) {
+            var d4 = R.int(-6, D - 5);
+            var t4 = trip(p, a, p.homeCity, dest, d4, { plate: p.car, nights: 1, role: p.role, phase: 'logistics' });
+            trip(p, a, dest, p.homeCity, d4 + 1, { plate: p.car, noStay: true, role: p.role, bookedDay: d4 });
+            var hnd = p.role === 'cutout' ? P : handlerOf(p);
+            if (t4.stay) call(d4, { num: hotelLine(t4.stay), p: p, ident: a, stay: t4.stay }, { num: hnd === P ? P.officePhone : hnd.phone, p: hnd, ident: hnd.idents[0] }, { phase: 'logistics' });
+          }
           else a.links = a.links.filter(function (l) { return l !== 'L4'; });
         }
       });
@@ -933,6 +1019,41 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
             if (st2) st2.paidBy = p.account; else a.links = a.links.filter(function (l) { return l !== 'L5'; });
           }
         }
+      });
+    });
+
+    // ---- final realisation check: every alias used must be connected to the
+    // real identity through leaks that actually appear in records
+    W.network.forEach(function (p) {
+      var als = p.idents.filter(function (x) { return !x.real; });
+      if (!als.length) return;
+      function usedIn(name, kinds) { return W.steps.some(function (s) { return kinds.indexOf(s.kind) >= 0 && s.parts.some(function (x) { return x.name === name && (s.kind !== 'travel' || !s.route.domestic || x === s.parts[0]); }); }); }
+      function passportUse(name) { return W.steps.some(function (s) { return (s.kind === 'stay' || s.kind === 'hire' || (s.kind === 'travel' && !s.route.domestic)) && s.parts.some(function (x) { return x.name === name; }); }); }
+      var real = {};
+      als.forEach(function (a) {
+        a.links = a.links.filter(function (l) {
+          if (l === 'L2') return usedIn(a.name, ['stay', 'hire']);
+          if (l === 'L1') { var prev = als.filter(function (b) { return b !== a && b.passport === a.passport; })[0]; return !!prev && passportUse(a.name) && passportUse(prev.name); }
+          return true;
+        });
+        if (a.links.some(function (l) { return l !== 'L1'; })) real[a.name] = true;
+      });
+      // propagate through L1 pairs
+      for (var it = 0; it < 3; it++) als.forEach(function (a) { if (a.links.indexOf('L1') >= 0) als.forEach(function (b) { if (b !== a && b.passport === a.passport && (real[b.name] || real[a.name])) { real[a.name] = real[b.name] = true; } }); });
+      als.forEach(function (a) {
+        if (real[a.name]) return;
+        var used = W.steps.some(function (s) { return s.parts.some(function (x) { return x.name === a.name; }); });
+        if (!used) return;
+        // a freshly forged identity: the forger recycled the number of an earlier passport
+        var prevA = als.filter(function (b) { return b !== a && real[b.name] && passportUse(b.name); })[0];
+        if (a.fresh && prevA && passportUse(a.name)) { a.passport = prevA.passport; a.links.push('L1'); real[a.name] = true; return; }
+        // a slip on a registration form: real home address and date of birth
+        if ((a.fresh || R.chance(0.5)) && usedIn(a.name, ['stay', 'hire'])) { a.home = p.address; a.dob = p.dob; a.links.push('L2'); real[a.name] = true; return; }
+        // fall back to an archive card that lists this alias
+        if (!p.card) p.card = { summary: { operative: 'Believed to have used several identities in the Middle East and Central Europe.', cutout: 'Commercial traveller; cross-referenced from a 1986 enquiry into travel documents.', driver: 'Cross-referenced from a customs enquiry into rental cars taken abroad.', courier: 'Cash courier; cross-referenced from customs declarations.' }[p.role] || 'Cross-referenced from an earlier enquiry.', aliases: [], associates: [], photo: R.chance(0.5) };
+        if (p.card.aliases.indexOf(a.name) < 0) p.card.aliases.push(a.name);
+        a.links.push('L3');
+        real[a.name] = true;
       });
     });
 
@@ -976,9 +1097,10 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       giveFlatPhone(twin);
       twin.card = { summary: 'Courier for ' + hs0.real + ' (' + goods.d + '). ' + R.pick(['Lives on commission and nerves.', 'One conviction, suspended.']), aliases: [], associates: [hs0.real], photo: false };
       W.herrings.push(twin);
-      var tw = step('stay', baitStay.from, baitStay.time + R.int(60, 300), 'herring', { hotel: baitStay.hotel, from: baitStay.from, to: baitStay.from + 1, room: roomNo(baitStay.hotel), note: R.pick(DATA.FLAVOUR.hotelNotes) });
+      var tw = step('stay', baitStay.from, Math.min(23 * 60 + 50, baitStay.time + R.int(60, 300)), 'herring', { hotel: baitStay.hotel, from: baitStay.from, to: baitStay.from + 1, room: roomNo(baitStay.hotel), note: R.pick(DATA.FLAVOUR.hotelNotes) });
       tw.parts = [part(twin, twin.idents[0], 'herring')];
       call(baitStay.from, { num: W.hotels[baitStay.hotel].phone, p: twin, ident: twin.idents[0], stay: tw }, { num: hs0.phone, p: hs0, ident: hs0.idents[0] }, { phase: 'herring' });
+      while (twin.dob === bait.dob || twin.idents[0].dob === bait.dob) { twin.dob = mkDob(1935, 1965); twin.idents[0].dob = twin.dob; }
       W.herringLinks.push({ type: 'surname', herring: twin.real, herringPid: twin.id, bait: bait.name, baitPid: bait.pid, hotel: baitStay.hotel, night: baitStay.from, stayId: tw.id });
     }
     // tempting false link 2: similar company name at the same bank / or wrong informant
@@ -997,6 +1119,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       }
     } else {
       var wrongTarget = ring[R.int(0, ring.length - 1)];
+      while (wrongTarget.dob === c1Alias.dob) { wrongTarget.dob = mkDob(1935, 1965); wrongTarget.idents[0].dob = wrongTarget.dob; }
       W.herringLinks.push({ type: 'informant', herring: wrongTarget.real, herringPid: wrongTarget.id, bait: c1Alias.name, day: R.int(2, D - 4) });
     }
 
@@ -1005,7 +1128,6 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     tipKinds.push(['cutout-alias', 3]);
     tipKinds.push(['cutout-phone', 2]);
     if (net.courier) tipKinds.push(['courier', 2]);
-    if (Dv && W.rentalPlate) tipKinds.push(['plate', 1]);
     if (net.forger) tipKinds.push(['forger', 1]);
     W.tipKind = R.weighted(tipKinds);
     W.aliases = { c1: c1Alias, c2: c2Alias, O1: O1, O2: O2, OA: OA, Ob: Ob, Dr: Dr, Cr: Cr, Lk: Lk, Ch: Ch, principal: principalAlias };
