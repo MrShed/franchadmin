@@ -132,718 +132,835 @@ function furnish(B, opts) {
 }
 
 // ===================================================================
-// BREAK-IN ART (biX_): hand-built EGA sprites for rooms, furniture,
-// people, the Max portrait, the kit and the armory. Everything static is
-// rendered once into cached canvases (sprite()) and blitted per frame.
+// BREAK-IN ART (biX_): VGA-era top-down rooms on the fine grid.
+// One key light from the north-west, a warm fill pool in each room,
+// hue-shifted ramps (shadows lean blue-violet, highlights lean warm),
+// crisp pixel clusters from a small mask painter (no dither, no speckle).
+// Every static picture is cached (art()/sprite()); per frame we only blit
+// and draw the few moving bits on the fine grid.
 // ===================================================================
-// colour ramps: [shadow, base, light] for every EGA colour
-const biX_RAMP = {
-  [EGA.black]: [P.K, P.K, P.G1], [EGA.blue]: [P.K, P.BL, P.BL2], [EGA.green]: [P.K, P.GR, P.GR2], [EGA.cyan]: [P.K, P.TL, P.CY],
-  [EGA.red]: [P.K, P.RD, P.RD2], [EGA.magenta]: [P.K, P.MG, P.PK], [EGA.brown]: [P.K, P.BR, P.YE], [EGA.lgray]: [P.G1, P.G3, P.W],
-  [EGA.dgray]: [P.K, P.G1, P.G3], [EGA.lblue]: [P.BL, P.BL2, P.CY], [EGA.lgreen]: [P.GR, P.GR2, P.W], [EGA.lcyan]: [P.TL, P.CY, P.W],
-  [EGA.lred]: [P.RD, P.RD2, P.W], [EGA.lmagenta]: [P.MG, P.PK, P.W], [EGA.yellow]: [P.BR, P.YE, P.W], [EGA.white]: [P.G3, P.W, P.W],
-};
-const biX_ramp = c => biX_RAMP[c] || [P.K, c, P.W];
 const biX_hash = (i, j, s = 0) => { let n = Math.imul(i + 7919 * s, 374761393) + Math.imul(j, 668265263); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
-const biX_bay = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
-// filled ellipse inscribed in a pixel box
-function biX_ell(x, y, w, h, c) {
-  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h); if (w <= 0 || h <= 0) return; g.fillStyle = c;
-  for (let j = 0; j < h; j++) { const yy = (j + 0.5) / h * 2 - 1, hw = w / 2 * Math.sqrt(Math.max(0, 1 - yy * yy)); const a = Math.round(w / 2 - hw), b = Math.round(w / 2 + hw); if (b > a) g.fillRect(x + a, y + j, b - a, 1); }
-}
-// outlined, lit-from-top-left ellipse and box
-function biX_ball(x, y, w, h, base, lt, dk, ol = P.K) {
-  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h); if (w < 3 || h < 3) { biX_ell(x, y, w, h, ol || base); return; }
-  if (ol) biX_ell(x, y, w, h, ol); biX_ell(x + 1, y + 1, w - 2, h - 2, dk); biX_ell(x + 1, y + 1, w - 3, h - 3, lt); if (w > 4 && h > 4) biX_ell(x + 2, y + 2, w - 4, h - 4, base);
-}
-function biX_box(x, y, w, h, base, lt, dk, ol = P.K) {
-  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h); if (w <= 0 || h <= 0) return;
-  if (w < 3 || h < 3) { rect(x, y, w, h, ol || base); return; }
-  if (ol) rect(x, y, w, h, ol); rect(x + 1, y + 1, w - 2, h - 2, dk); rect(x + 1, y + 1, w - 3, h - 3, lt); if (w > 3 && h > 3) rect(x + 2, y + 2, w - 4, h - 4, base);
-}
-// per-pixel painter: fn(i, j) -> colour | null, optional 1-px outline around the shape
-function biX_raster(x, y, w, h, fn, ol) {
-  const G = new Array(w * h);
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) G[j * w + i] = fn(i, j) || null;
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const c = G[j * w + i]; if (c) { g.fillStyle = c; g.fillRect(x + i, y + j, 1, 1); } }
-  if (ol) { g.fillStyle = ol; for (let j = -1; j <= h; j++) for (let i = -1; i <= w; i++) { const at = (a, b) => a >= 0 && b >= 0 && a < w && b < h && G[b * w + a]; if (at(i, j)) continue; if (at(i - 1, j) || at(i + 1, j) || at(i, j - 1) || at(i, j + 1)) g.fillRect(x + i, y + j, 1, 1); } }
-}
-// string-row sprites: rows of characters mapped through a colour map ('.' or missing = clear)
-function biX_rows(rows, x, y, map) { for (let j = 0; j < rows.length; j++) { const r = rows[j]; for (let i = 0; i < r.length; i++) { const c = map[r[i]]; if (c) { g.fillStyle = c; g.fillRect(x + i, y + j, 1, 1); } } } }
-function biX_spr(key, rows, map) { return sprite('biX_r_' + key, Math.max(...rows.map(r => r.length)), rows.length, () => biX_rows(rows, 0, 0, map)); }
-function biX_put(key, rows, map, x, y, flip) {
-  const c = biX_spr(key, rows, map);
-  if (!flip) { g.drawImage(c, x | 0, y | 0); return; }
-  g.save(); g.translate((x | 0) + c.width, y | 0); g.scale(-1, 1); g.drawImage(c, 0, 0); g.restore();
-}
+// hue-shifted shading: k<0 sinks toward a cool violet, k>0 rises toward a warm cream
+function biX_sh(c, k) { k = Math.round(k * 100) / 100; return k < 0 ? mix(c, '#140c28', Math.min(1, -k)) : k > 0 ? mix(c, '#fff0c4', Math.min(1, k)) : c; }
+// 5-step ramp: [outline, shadow, base, light, highlight]
+function biX_ramp(c, s = 1) { return [biX_sh(c, -0.66 * s), biX_sh(c, -0.3 * s), c, biX_sh(c, 0.2 * s), biX_sh(c, 0.42 * s)]; }
+// the 16 EGA names the model hands us, as tasteful VGA colours
+const biX_TONE = {
+  [EGA.black]: '#26262e', [EGA.blue]: '#2e4c8e', [EGA.green]: '#3f6b3c', [EGA.cyan]: '#2d7a82', [EGA.red]: '#9a302c', [EGA.magenta]: '#76386f', [EGA.brown]: '#8a5a30', [EGA.lgray]: '#a9a79d',
+  [EGA.dgray]: '#56585f', [EGA.lblue]: '#5878c4', [EGA.lgreen]: '#6ca24a', [EGA.lcyan]: '#6cbcc2', [EGA.lred]: '#d06a58', [EGA.lmagenta]: '#b86aae', [EGA.yellow]: '#d4b044', [EGA.white]: '#d8d4c8',
+};
+const biX_tone = c => biX_TONE[c] || biX_TONE[String(c).toUpperCase()] || c || '#808080';
+// scene palette
+const biX_C = {
+  ink: '#120e1c', void: '#0c1018', skinL: '#e2a47c', skinD: '#8c5838', metal: '#6a7078', gun: '#34363e', brass: '#c49a48', paper: '#ece6d4',
+  glass: '#1c2a3c', glassHi: '#7c9cbc', leaf: '#3f7a3c', pot: '#a4553a', wood: '#7c4c2c', walnut: '#5a3322', steel: '#7c8a86', fab: '#34465e',
+};
 
-// ---------- top-down people: one shape function, rendered at 16 headings ----------
-// o: pose stand|crouch|out, dirI 0..15, step -1..1, k scale, uni colour, head cap|hood|hair, hair colour,
-//    arms gun|side|up, gun pistol|uzi, mask, stripes, strap
-// ---------- people: hand-drawn 3/4-view sprites, layered (legs, torso, arms, head) ----------
-// letters: k outline, C/c cap light/base, v visor, H/h hair light/base, s skin, z skin shade, e eye,
-// U/u/d uniform light/base/dark, b belt, Y buckle, P/p/q trousers light/base/dark, F/f shoes, g/G gun, m/M gas mask
-const biX_PL = { // large: 15 x 17 canvas, feet on row 16
-  head: {
-    D: {
-      cap: ['.....kkkkk.....', '....kCCccck....', '....kCcccck....', '...kvvvvvvvk...', '....ksesesk....', '....kzssszk....', '.....kzszk.....'],
-      hood: ['.....kkkkk.....', '....kHhhhhk....', '....kHhhhhk....', '....khhhhhk....', '....ksesesk....', '....khzzzhk....', '.....khhhk.....'],
-      hair: ['.....kkkkk.....', '....kHHhhhk....', '....kHhhhhk....', '....khssshk....', '....ksesesk....', '....kzssszk....', '.....kzszk.....'],
-      mask: ['...............', '...............', '...............', '...............', '....kMmmMmk....', '....kmmmmmk....', '.....kmgmk.....'],
-    },
-    U: {
-      cap: ['.....kkkkk.....', '....kCCccck....', '....kCcccck....', '....kcccccc....', '....khhhhhk....', '....zkhhhkz....', '.....kzzzk.....'],
-      hood: ['.....kkkkk.....', '....kHhhhhk....', '....kHhhhhk....', '....khhhhhk....', '....khhhhhk....', '....khhhhhk....', '.....khhhk.....'],
-      hair: ['.....kkkkk.....', '....kHHhhhk....', '....kHhhhhk....', '....khhhhhk....', '....khhhhhk....', '....zkhhhkz....', '.....kzzzk.....'],
-      mask: ['...............', '...............', '...............', '...............', '...............', '....mk...km....', '...............'],
-    },
-    R: {
-      cap: ['....kkkkk......', '...kCCccck.....', '...kCcccck.....', '...kcccvvvvk...', '...khssssek....', '...khzssssk....', '....kzzsk......'],
-      hood: ['....kkkkk......', '...kHhhhhk.....', '...kHhhhhhk....', '...khhhhhhk....', '...khhsssek....', '...khhhhhhk....', '....khhhk......'],
-      hair: ['....kkkkk......', '...kHHhhhk.....', '...kHhhhhhk....', '...khhhsssk....', '...khhssesk....', '...khzsssssk...', '....kzzssk.....'],
-      mask: ['...............', '...............', '...............', '...............', '.......mmMk....', '.......mmmmk...', '.......kgk.....'],
-    },
-  },
-  torso: {
-    D: ['..kUUuuuuuudk..', '..kUuuuuuuudk..', '..kUuuuuuuudk..', '..kUuuuuuuudk..', '..kbbbbYbbbbk..'],
-    U: ['..kUUuuuuuudk..', '..kUuuuuuuudk..', '..kUuuuuuuudk..', '..kUuuuuuuudk..', '..kbbbbbbbbbk..'],
-    R: ['...kUUuuudk....', '...kUuuuudk....', '...kUuuuudk....', '...kUuuuudk....', '...kbbbbbbk....'],
-  },
-  arms: {
-    D: {
-      side: ['..kUk.....kdk..', '.kUuk.....kudk.', '.kUuk.....kudk.', '.kUdk.....kudk.', '.kssk.....kssk.', '..kk.......kk..'],
-      up: ['.kk.........kk.', 'kssk.......kssk', 'kUdk.......kUdk', 'kUdk.......kUdk', '.kUk.......kdk.', '..kUk.....kdk..'],
-      gun: ['..kUk.....kdk..', '.kUuUk...kudk..', '.kUuuUksskudk..', '..kkkkssskkk...', '......kgGk.....', '......kggk.....'],
-      gunDR: ['..kUk.....kdk..', '..kUuk....kudk.', '..kUuuk...kuukk', '...kkUuuuussGGk', '......kkkkkzggk', '............kk.'],
-    },
-    U: {
-      side: ['..kUk.....kdk..', '.kUuk.....kudk.', '.kUuk.....kudk.', '.kUdk.....kudk.', '.kssk.....kssk.', '..kk.......kk..'],
-      up: ['.kk.........kk.', 'kssk.......kssk', 'kUdk.......kUdk', 'kUdk.......kUdk', '.kUk.......kdk.', '..kUk.....kdk..'],
-      gun: ['.kUUk.....kddk.', '.kUuk.....kudk.', '..kUk.....kdk..', '...kk.....kk...', '...............', '...............'],
-      gunUR: ['..kUk....kkdk..', '.kUuk...kssdk..', '.kUuk..kGgkk...', '..kk..kGgk.....', '......kgk......', '...............'],
-    },
-    R: {
-      side: ['....kUk........', '....kUuk.......', '....kUuk.......', '....kUdk.......', '....kssk.......', '.....kk........'],
-      up: ['...kssk........', '...kUuk........', '...kUuk........', '....kUk........', '...............', '...............'],
-      gun: ['....kUk........', '....kUuk..kkkk.', '....kUuuusGGGGk', '.....kkkkszgkk.', '..........kgk..', '...........k...'],
-      gunDR: ['....kUk........', '....kUuk.......', '....kUuuk......', '.....kUuusk....', '......kkkszGk..', '.........kkGgk.', '...........kgk.', '............k..'],
-      gunUR: ['....kUk....kk..', '....kUuk..kGgk.', '....kUuuskGgk..', '.....kUuszkk...', '......kkkk.....', '...............'],
-    },
-  },
-  legs: {
-    D: [['...kPppkPppk...', '...kPppkPppk...', '...kPpqkPpqk...', '...kFffkFffk...', '...kkkkkkkkk...'],
-      ['...kPppkPppk...', '...kPppkPppk...', '...kPpqkkkkk...', '...kFffkFffk...', '...kkkkkkkkk...'],
-      ['...kPppkPppk...', '...kPppkPppk...', '...kkkkkPpqk...', '...kFffkFffk...', '...kkkkkkkkk...']],
-    R: [['...kPppqk......', '...kPppqk......', '...kPpqk.......', '...kFfffk......', '...kkkkkk......'],
-      ['..kPpqkPpk.....', '.kPpqk.kPpk....', '.kPqk...kPpk...', 'kFffk...kFffk..', 'kkkk.....kkkk..'],
-      ['...kPpPpk......', '...kPpkPpk.....', '..kPqk.kPpk....', '..kFfk.kFffk...', '..kkk...kkkk...']],
-  },
-  crouch: { D: ['...kPppppppk...', '..kFfkkkkkFfk..'], R: ['...kPpppppk....', '...kFfkkkFfk...'] },
-  y: { head: 0, torso: 7, arms: 7, legs: 12 }, w: 15, h: 17,
-};
-const biX_PS = { // small: 11 x 13 canvas
-  head: {
-    D: {
-      cap: ['...kkkkk...', '..kCcccck..', '..kvvvvvk..', '...kesek...', '....kzk....'],
-      hood: ['...kkkkk...', '..kHhhhhk..', '..khsesk...', '..khhhhhk..', '....khk....'],
-      hair: ['...kkkkk...', '..kHhhhhk..', '..khsssk...', '...kesek...', '....kzk....'],
-      mask: ['...........', '...........', '...........', '...kMmMk...', '....kgk....'],
-    },
-    U: {
-      cap: ['...kkkkk...', '..kCcccck..', '..kcccccc..', '...khhhk...', '....kzk....'],
-      hood: ['...kkkkk...', '..kHhhhhk..', '..khhhhhk..', '...khhhk...', '....khk....'],
-      hair: ['...kkkkk...', '..kHhhhhk..', '..khhhhhk..', '...khhhk...', '....kzk....'],
-      mask: ['...........', '...........', '...........', '...........', '...........'],
-    },
-    R: {
-      cap: ['...kkkk....', '..kCccck...', '..kccvvvk..', '..khsesk...', '...kzzk....'],
-      hood: ['...kkkk....', '..kHhhhk...', '..khhhhk...', '..khhsek...', '...khhk....'],
-      hair: ['...kkkk....', '..kHhhhk...', '..khhssk...', '..khssek...', '...kzzsk...'],
-      mask: ['...........', '...........', '...........', '.....mMk...', '.....kgk...'],
-    },
-  },
-  torso: {
-    D: ['..kUuuudk..', '..kUuuudk..', '..kbbYbbk..'],
-    U: ['..kUuuudk..', '..kUuuudk..', '..kbbbbbk..'],
-    R: ['...kUudk...', '...kUudk...', '...kbbbk...'],
-  },
-  arms: {
-    D: {
-      side: ['.kUk...kdk.', '.kUk...kdk.', '.ksk...ksk.', '..k.....k..'],
-      up: ['ksk.....ksk', 'kUk.....kdk', '.kUk...kdk.', '...........'],
-      gun: ['.kUk...kdk.', '..kUksskd..', '...kkgGk...', '....kgk....'],
-      gunDR: ['.kUk...kdk.', '..kUkkkudk.', '...kkUussGk', '......kkzgk'],
-    },
-    U: {
-      side: ['.kUk...kdk.', '.kUk...kdk.', '.ksk...ksk.', '..k.....k..'],
-      up: ['ksk.....ksk', 'kUk.....kdk', '.kUk...kdk.', '...........'],
-      gun: ['.kUk...kdk.', '.kUk...kdk.', '..k.....k..', '...........'],
-      gunUR: ['.kUk..kskk.', '.kUk.kGgk..', '..k.kgk....', '...........'],
-    },
-    R: {
-      side: ['...kUk.....', '...kUk.....', '...ksk.....', '....k......'],
-      up: ['..ksk......', '..kUk......', '...kUk.....', '...........'],
-      gun: ['...kUk..kk.', '...kUuusGGk', '....kkkzgk.', '........k..'],
-      gunDR: ['...kUk.....', '...kUuk....', '....kUusk..', '.....kkzGk.', '.......kgk.', '........k..'],
-      gunUR: ['...kUk..kk.', '...kUk.kGk.', '....kUusk..', '.....kkk...'],
-    },
-  },
-  legs: {
-    D: [['...kPkPk...', '...kpkpk...', '...kFkFk...', '...kkkkk...'],
-      ['...kPkPk...', '...kpkkk...', '...kFkFk...', '...kkkkk...'],
-      ['...kPkPk...', '...kkkpk...', '...kFkFk...', '...kkkkk...']],
-    R: [['...kPpk....', '...kPpk....', '...kFfk....', '...kkkk....'],
-      ['..kPkPk....', '.kPk.kPk...', '.kFk..kFk..', '.kk....kk..'],
-      ['...kPPk....', '..kPkPk....', '..kFkkFk...', '..kk..kk...']],
-  },
-  crouch: { D: ['..kPpppPk..', '..kFkkkFk..'], R: ['..kPppppk..', '..kFkkkFk..'] },
-  y: { head: 0, torso: 5, arms: 5, legs: 8 }, w: 11, h: 12,
-};
-// knocked-out: lying on the floor, head to the right
-const biX_OUT_L = [
-  '..........kk.......',
-  '.........kssk......',
-  '..........kUuk.kkk.',
-  '.kk.kkkkkkkUuukkssk',
-  'kFfkPpppkUuuuukzsek',
-  'kFfkPpppbUuuuukhsHk',
-  'kFfkPpppkUuuuukkhhk',
-  '.kk.kqqqkkddddk.kk.',
-  '.....kkk.kssk......',
-  '..........kk.......',
-];
-const biX_OUT_S = [
-  '......kk.....',
-  '.kk.kkkUk.kk.',
-  'kFkPpkUuukssk',
-  'kFkPpbUuukhHk',
-  '.kkqqkddkkkk.',
-  '......ksk....',
-  '.......k.....',
-];
-const biX_HAIR = { [EGA.black]: [P.K, P.G1], [EGA.brown]: [P.BR, P.BR], [EGA.yellow]: [P.YE, P.W], [EGA.lgray]: [P.G3, P.W], [EGA.dgray]: [P.G1, P.G3] };
-function biX_pmap(o) {
-  const u = o.uni === P.W ? [P.G3, P.W, P.W] : biX_ramp(o.uni), max_ = o.uni === P.K;
-  const hr = biX_HAIR[o.hair] || [o.hair || P.BR, o.hair || P.BR], cap = max_ ? [P.K, P.K, P.G1] : u, dark = o.skin === EGA.brown;
-  const pants = o.pants ? biX_ramp(o.pants) : max_ ? [P.K, P.K, P.G1] : [u[0] === P.K ? P.K : u[0], u[0] === P.K ? u[1] : u[0], u[1]];
-  return {
-    k: P.K, C: cap[2], c: cap[1], v: P.K, H: max_ ? P.G1 : hr[1], h: max_ ? P.K : hr[0], s: dark ? P.BR : P.SK, z: dark ? P.RD : P.BR, e: P.K,
-    U: max_ ? P.G1 : u[2], u: u[1], d: max_ ? P.K : u[0] === P.K ? u[1] : u[0], b: max_ ? P.G1 : P.K, Y: max_ ? P.G1 : P.YE,
-    P: pants[2], p: pants[1], q: pants[0], F: P.G1, f: P.K, g: P.K, G: P.G1, m: P.G3, M: P.CY,
-  };
+// ---------- the mask painter ----------
+// shapes are rasterised crisply into a mask, then shaded as one cluster: a selective outline,
+// a lit rim on the edges that face the light (L = step toward the light), a shade rim on the far edges.
+function biX_M(w, h) { return { w: Math.ceil(w), h: Math.ceil(h), a: new Uint8Array(Math.ceil(w) * Math.ceil(h)) }; }
+function biX_mRect(m, x, y, w, h) { x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h); for (let j = Math.max(0, y); j < Math.min(m.h, y + h); j++) for (let i = Math.max(0, x); i < Math.min(m.w, x + w); i++) m.a[j * m.w + i] = 1; return m; }
+function biX_mEll(m, cx, cy, rx, ry) {
+  if (rx <= 0 || ry <= 0) return m;
+  for (let j = Math.max(0, Math.floor(cy - ry)); j <= Math.min(m.h - 1, Math.ceil(cy + ry)); j++) { const dy = (j + 0.5 - cy) / ry; if (Math.abs(dy) >= 1) continue; const hw = rx * Math.sqrt(1 - dy * dy); for (let i = Math.max(0, Math.round(cx - hw)); i < Math.min(m.w, Math.round(cx + hw)); i++) m.a[j * m.w + i] = 1; }
+  return m;
 }
-// o: { big, face 0..7 (0 = right, clockwise), frame 0..2, uni, head, hair, arms, mask, stripes, pants }
+function biX_mPoly(m, pts) {
+  let y0 = 1e9, y1 = -1e9; for (const p of pts) { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+  for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(m.h - 1, Math.ceil(y1)); y++) {
+    const cy = y + 0.5, xs = [];
+    for (let i = 0; i < pts.length; i++) { const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length]; if ((ay <= cy && by > cy) || (by <= cy && ay > cy)) xs.push(ax + (cy - ay) / (by - ay) * (bx - ax)); }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.max(0, Math.round(xs[k])); x < Math.min(m.w, Math.round(xs[k + 1])); x++) m.a[y * m.w + x] = 1;
+  }
+  return m;
+}
+function biX_mCap(m, ax, ay, bx, by, r) {
+  const x0 = Math.max(0, Math.floor(Math.min(ax, bx) - r)), x1 = Math.min(m.w - 1, Math.ceil(Math.max(ax, bx) + r)), y0 = Math.max(0, Math.floor(Math.min(ay, by) - r)), y1 = Math.min(m.h - 1, Math.ceil(Math.max(ay, by) + r));
+  const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1e-6;
+  for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) { const px_ = i + 0.5 - ax, py_ = j + 0.5 - ay, t = Math.max(0, Math.min(1, (px_ * dx + py_ * dy) / L2)); if ((px_ - t * dx) ** 2 + (py_ - t * dy) ** 2 < r * r) m.a[j * m.w + i] = 1; }
+  return m;
+}
+function biX_mFn(m, fn) { for (let j = 0; j < m.h; j++) for (let i = 0; i < m.w; i++) if (fn(i + 0.5, j + 0.5)) m.a[j * m.w + i] = 1; return m; }
+function biX_mCut(m, cut) { for (let i = 0; i < m.a.length; i++) if (cut.a[i]) m.a[i] = 0; return m; }
+// o: L [lx,ly] toward the light, ol false = no outline, fn(i,j,edge) interior colour, rim width
+function biX_paint(m, ox, oy, r, o = {}) {
+  const { w, h, a } = m, L = o.L || [-1, -1], lx = L[0], ly = L[1], ol = o.ol !== false, rw = o.rim || 1;
+  const inn = (x, y) => x >= 0 && y >= 0 && x < w && y < h && a[y * w + x] === 1;
+  const d0 = ol ? 1 : 0;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    if (a[j * w + i] !== 1) continue; let c;
+    if (ol && (!inn(i - 1, j) || !inn(i + 1, j) || !inn(i, j - 1) || !inn(i, j + 1))) c = !inn(i + lx, j + ly) && o.soft !== false ? r[1] : r[0];
+    else {
+      let lit = false, dk = false;
+      for (let k = 1; k <= rw; k++) { if (!inn(i + lx * (k + d0), j + ly * (k + d0)) || (lx && !inn(i + lx * (k + d0), j)) || (ly && !inn(i, j + ly * (k + d0)))) { lit = true; break; } }
+      if (!lit) for (let k = 1; k <= rw; k++) { if (!inn(i - lx * (k + d0), j - ly * (k + d0)) || (lx && !inn(i - lx * (k + d0), j)) || (ly && !inn(i, j - ly * (k + d0)))) { dk = true; break; } }
+      c = o.fn ? o.fn(i, j, lit ? 1 : dk ? -1 : 0) : null;
+      if (!c) c = lit ? r[3] : dk ? r[1] : r[2];
+    }
+    g.fillStyle = c; g.fillRect(ox + i, oy + j, 1, 1);
+  }
+}
+// quick shape+paint helpers (fine coordinates, current context)
+function biX_pRect(x, y, w, h, r, o) { x = Math.round(x); y = Math.round(y); const m = biX_mRect(biX_M(Math.round(w), Math.round(h)), 0, 0, w, h); biX_paint(m, x, y, r, o); }
+function biX_pEll(cx, cy, rx, ry, r, o) { const x = Math.floor(cx - rx) - 1, y = Math.floor(cy - ry) - 1; const m = biX_mEll(biX_M(rx * 2 + 3, ry * 2 + 3), cx - x, cy - y, rx, ry); biX_paint(m, x, y, r, o); }
+function biX_pCap(ax, ay, bx, by, rr, r, o) { const x = Math.floor(Math.min(ax, bx) - rr) - 1, y = Math.floor(Math.min(ay, by) - rr) - 1; const m = biX_mCap(biX_M(Math.abs(bx - ax) + rr * 2 + 3, Math.abs(by - ay) + rr * 2 + 3), ax - x, ay - y, bx - x, by - y, rr); biX_paint(m, x, y, r, o); }
+function biX_pPoly(pts, r, o) { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } x0 = Math.floor(x0) - 1; y0 = Math.floor(y0) - 1; const m = biX_mPoly(biX_M(x1 - x0 + 3, y1 - y0 + 3), pts.map(([x, y]) => [x - x0, y - y0])); biX_paint(m, x0, y0, r, o); }
+// plain crisp fills (no shading)
+function biX_ell(cx, cy, rx, ry, c) { const m = biX_mEll(biX_M(rx * 2 + 3, ry * 2 + 3), rx + 1, ry + 1, rx, ry); const x = Math.round(cx - rx - 1), y = Math.round(cy - ry - 1); g.fillStyle = c; for (let j = 0; j < m.h; j++) { let i = 0; while (i < m.w) { if (m.a[j * m.w + i]) { let k = i; while (k < m.w && m.a[j * m.w + k]) k++; g.fillRect(x + i, y + j, k - i, 1); i = k; } else i++; } } }
+function biX_poly(pts, c) { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } x0 = Math.floor(x0); y0 = Math.floor(y0); const m = biX_mPoly(biX_M(x1 - x0 + 2, y1 - y0 + 2), pts.map(([x, y]) => [x - x0, y - y0])); g.fillStyle = c; for (let j = 0; j < m.h; j++) for (let i = 0; i < m.w; i++) if (m.a[j * m.w + i]) g.fillRect(x0 + i, y0 + j, 1, 1); }
+function biX_cap(ax, ay, bx, by, rr, c) { const x = Math.floor(Math.min(ax, bx) - rr) - 1, y = Math.floor(Math.min(ay, by) - rr) - 1; const m = biX_mCap(biX_M(Math.abs(bx - ax) + rr * 2 + 3, Math.abs(by - ay) + rr * 2 + 3), ax - x, ay - y, bx - x, by - y, rr); g.fillStyle = c; for (let j = 0; j < m.h; j++) for (let i = 0; i < m.w; i++) if (m.a[j * m.w + i]) g.fillRect(x + i, y + j, 1, 1); }
+// soft radial light / shadow (smooth gradients are allowed for light)
+function biX_glow(cx, cy, r, col, a0, add) { const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, col.replace(')', ',' + a0 + ')').replace('rgb(', 'rgba(')); gr.addColorStop(1, col.replace(')', ',0)').replace('rgb(', 'rgba(')); const op = g.globalCompositeOperation; if (add) g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(cx - r, cy - r, r * 2, r * 2); g.globalCompositeOperation = op; }
+
+// ---------- people, top-down: rendered per heading so the light stays in the north-west ----------
+// o: { sz, face 0..7, frame 0..4, pose stand|crouch, arms gun|side|up, gun pistol|uzi, uni, head cap|hood|hair, hair, skin, mask, stripes, strap, pants }
+const biX_WALK = [0, 0.3, 0, -0.3, 0]; // stride per frame (frame 0 = standing)
+function biX_look(o) {
+  const skin = o.skin === EGA.brown ? biX_C.skinD : biX_C.skinL;
+  const hairC = { [EGA.black]: '#2a2226', [EGA.brown]: '#6a3e24', [EGA.yellow]: '#c8a458', [EGA.lgray]: '#a8a49c', [EGA.dgray]: '#4a4644' }[o.hair] || '#3a2c26';
+  const uni = o.uni === 'max' ? '#3a4054' : biX_tone(o.uni);
+  return { skin: biX_ramp(skin, 0.8), hair: biX_ramp(hairC), uni: biX_ramp(uni), dark: biX_ramp(biX_sh(uni, -0.35)), pants: biX_ramp(o.pants ? biX_tone(o.pants) : biX_sh(uni, -0.3)), shoe: biX_ramp('#2a2628'), gun: biX_ramp(biX_C.gun), mask: biX_ramp('#6c7478'), lens: biX_ramp('#5aa8b8') };
+}
 function biX_person(o) {
-  const T = o.big ? biX_PL : biX_PS, f = o.face, flip = f > 2 && f < 6 ? 1 : 0;
-  const fx = flip ? (12 - f) % 8 : f; // left-facing frames are mirrored right-facing ones
-  const body = { 0: 'R', 1: 'R', 2: 'D', 6: 'U', 7: 'R' }[fx] || 'R';
-  let arms = o.arms;
-  if (arms === 'gun') arms = fx === 1 ? 'gunDR' : fx === 7 ? 'gunUR' : 'gun';
-  if (body === 'D' && arms === 'gunUR') arms = 'gun';
-  const key = 'biX_p_' + [o.big ? 1 : 0, body, flip, arms, o.frame, o.uni, o.head, o.hair, o.mask ? 1 : 0, o.stripes ? 1 : 0, o.pants || '', o.crouch ? 1 : 0, o.skin || ''].join('_');
-  return sprite(key, T.w, T.h, () => {
-    const map = biX_pmap(o);
-    const lay = (rows, y0) => { for (let j = 0; j < rows.length; j++) { const r = rows[j]; for (let i = 0; i < r.length; i++) { let ch = r[i]; if (ch === '.') continue; if (o.stripes && 'Uud'.includes(ch) && (y0 + j) % 2) ch = 'G'; const c = map[ch]; if (c) px(flip ? T.w - 1 - i : i, y0 + j, c); } } };
-    const lb = body === 'R' ? 'R' : 'D', off = o.crouch ? (o.big ? 3 : 2) : 0;
-    if (o.crouch) lay(T.crouch[lb], T.h - 2); else lay(T.legs[lb][o.frame || 0], T.y.legs);
-    lay(T.torso[body], T.y.torso + off);
-    const A = T.arms[body][arms] || T.arms[body].side;
-    const armsBehind = body === 'U';
-    if (!armsBehind) lay(T.head[body][o.head] || T.head[body].hair, T.y.head + off);
-    lay(A, T.y.arms + off);
-    if (armsBehind) lay(T.head[body][o.head] || T.head[body].hair, T.y.head + off);
-    if (o.mask) lay(T.head[body].mask, T.y.head + off);
+  const sz = o.sz, D = 2 * Math.ceil(sz * 1.15) + 6, c0 = D / 2;
+  const key = 'biX_pp_' + [sz, o.face, o.frame, o.pose, o.arms, o.gun, o.uni, o.head, o.hair, o.skin, o.mask ? 1 : 0, o.stripes ? 1 : 0, o.strap ? 1 : 0, o.pants || ''].join('_');
+  return sprite(key, D, D, () => {
+    const a = o.face * Math.PI / 4, ca = Math.cos(a), sa = Math.sin(a), C = biX_look(o);
+    // local frame: X forward, Y to the right, in units of sz
+    const loc = (i, j) => { const dx = i - c0, dy = j - c0; return [(dx * ca + dy * sa) / sz, (-dx * sa + dy * ca) / sz]; };
+    const ell = (cx, cy, rx, ry) => (i, j) => { const [X, Y] = loc(i, j); return ((X - cx) / rx) ** 2 + ((Y - cy) / ry) ** 2 < 1; };
+    const cap = (ax, ay, bx, by, r) => (i, j) => { const [X, Y] = loc(i, j), dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1e-6, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / L2)); return (X - ax - t * dx) ** 2 + (Y - ay - t * dy) ** 2 < r * r; };
+    const any = (...fs) => (i, j) => fs.some(f => f(i, j));
+    // dome shading: a per-pixel normal over an ellipse in the local frame, lit from the north-west and above
+    const dome = (cx, cy, rx, ry, ramp, fn2) => (i, j, e) => { const f2 = fn2 && fn2(i, j, e); if (f2) return f2; const [X, Y] = loc(i, j), ex = (X - cx) / rx, ey = (Y - cy) / ry, q = Math.min(0.98, ex * ex + ey * ey), wx = ex * ca - ey * sa, wy = ex * sa + ey * ca, nz = Math.sqrt(1 - q), I = (-0.6 * wx - 0.65 * wy) * 0.8 + nz * 0.62; return I > 0.86 ? ramp[4] : I > 0.6 ? ramp[3] : I > 0.18 ? ramp[2] : ramp[1]; };
+    const part = (test, ramp, o2) => biX_paint(biX_mFn(biX_M(D, D), test), 0, 0, ramp, o2);
+    const st = biX_WALK[o.frame || 0], crouch = o.pose === 'crouch';
+    // drop shadow toward the south-east
+    const body = any(ell(-0.02, 0, 0.24, 0.5), ell(0.04, 0, 0.23, 0.23));
+    g.fillStyle = 'rgba(14,8,30,0.34)'; const sx = Math.max(1, Math.round(sz * 0.1)), sy = Math.max(2, Math.round(sz * 0.14));
+    for (let j = 0; j < D; j++) for (let i = 0; i < D; i++) if (body(i - sx, j - sy)) g.fillRect(i, j, 1, 1);
+    // legs and shoes
+    if (crouch) {
+      for (const s of [-1, 1]) { part(cap(0, s * 0.16, 0.36, s * 0.17, 0.12), C.pants); part(ell(0.46, s * 0.17, 0.1, 0.085), C.shoe); }
+    } else {
+      for (const s of [-1, 1]) { const f = (s < 0 ? st : -st) + 0.14; if (Math.abs(f - 0.14) > 0.05) part(cap(0, s * 0.16, f, s * 0.16, 0.1), C.pants); part(ell(f + 0.1, s * 0.16, 0.13, 0.085), C.shoe); }
+    }
+    // torso (shoulders)
+    const stripeFn = o.stripes ? (i, j, e) => { if (e) return null; const [X] = loc(i, j); return Math.floor((X + 1) * sz / 3) % 2 ? C.dark[2] : null; } : null;
+    part(ell(-0.02, 0, 0.22, 0.47), C.uni, { fn: dome(-0.06, 0, 0.3, 0.52, C.uni, stripeFn) });
+    if (o.strap) part(cap(0.14, -0.3, -0.16, 0.34, 0.055), biX_ramp('#4a3a30'), { ol: false });
+    // arms and hands
+    const armR = 0.09;
+    if (o.arms === 'gun') {
+      const uzi = o.gun === 'uzi';
+      part(cap(0.02, 0.38, 0.42, 0.07, armR), C.uni); part(cap(0.02, -0.38, 0.38, -0.03, armR), C.uni);
+      part(any(cap(0.42, 0.02, uzi ? 0.86 : 0.76, 0.02, uzi ? 0.06 : 0.045), uzi ? cap(0.56, 0.02, 0.56, 0.16, 0.05) : () => false), C.gun);
+      part(any(ell(0.45, 0.07, 0.085, 0.085), ell(0.41, -0.04, 0.08, 0.08)), C.skin);
+    } else if (o.arms === 'up') {
+      for (const s of [-1, 1]) { part(cap(-0.02, s * 0.42, 0.1, s * 0.4, armR), C.uni); part(ell(0.14, s * 0.38, 0.09, 0.09), C.skin); }
+    } else {
+      for (const s of [-1, 1]) { const sw = crouch ? 0.2 : (s < 0 ? -st : st) * 0.7; part(cap(0.02, s * 0.39, sw + 0.06, s * 0.42, armR), C.uni); part(ell(sw + 0.13, s * 0.42, 0.075, 0.075), C.skin); }
+    }
+    // head: a lit dome, with the face showing at the front
+    const hx = 0.04, HR = 0.215, face = (i, j) => { const [X, Y] = loc(i, j); return X > hx + 0.1 && Math.abs(Y) < 0.13 ? (X > hx + 0.165 ? C.skin[1] : C.skin[3]) : null; };
+    if (o.head === 'cap') {
+      const CAP = biX_ramp(biX_sh(C.uni[2], -0.22));
+      part(ell(hx + 0.2, 0, 0.12, 0.17), biX_ramp(biX_sh(C.uni[2], -0.5)));                                   // visor
+      part(ell(hx, 0, HR, HR), CAP, { fn: dome(hx, 0, HR, HR, CAP, (i, j) => { const [X, Y] = loc(i, j); return Math.abs(Y) < 0.03 && X < hx + 0.12 && X > hx - 0.16 ? CAP[1] : null; }) });
+    } else if (o.head === 'hood') {
+      const HD = biX_ramp('#22222c'); part(ell(hx, 0, HR, HR), HD, { fn: dome(hx, 0, HR, HR, HD, face) });
+    } else {
+      part(ell(hx, 0, HR, HR), C.hair, { fn: dome(hx, 0, HR, HR, C.hair, face) });
+    }
+    if (o.mask) { part(ell(hx + 0.2, 0, 0.09, 0.11), C.mask); for (const s of [-1, 1]) part(ell(hx + 0.14, s * 0.11, 0.05, 0.05), C.lens, { ol: false }); }
   });
 }
+// knocked out: flat on the back, arms flung wide
 function biX_body(o) {
-  const rows = o.big ? biX_OUT_L : biX_OUT_S, w = rows[0].length, flip = o.flip ? 1 : 0;
-  return sprite('biX_out_' + [o.big ? 1 : 0, flip, o.uni, o.head, o.hair, o.stripes ? 1 : 0, o.skin || ''].join('_'), w, rows.length, () => {
-    const m = biX_pmap(o); if (o.head !== 'cap') { m.C = m.H; m.c = m.h; }
-    for (let j = 0; j < rows.length; j++) for (let i = 0; i < w; i++) { let ch = rows[j][i]; if (ch === '.') continue; if (o.stripes && 'Uud'.includes(ch) && i % 2) ch = 'G'; if (m[ch]) px(flip ? w - 1 - i : i, j, m[ch]); }
+  const sz = o.sz, D = 2 * Math.ceil(sz * 1.25) + 6, c0 = D / 2;
+  const key = 'biX_pb_' + [sz, o.face, o.uni, o.head, o.hair, o.skin, o.stripes ? 1 : 0, o.pants || ''].join('_');
+  return sprite(key, D, D, () => {
+    const a = o.face * Math.PI / 4, ca = Math.cos(a), sa = Math.sin(a), C = biX_look(o);
+    const loc = (i, j) => { const dx = i - c0, dy = j - c0; return [(dx * ca + dy * sa) / sz, (-dx * sa + dy * ca) / sz]; };
+    const ell = (cx, cy, rx, ry) => (i, j) => { const [X, Y] = loc(i, j); return ((X - cx) / rx) ** 2 + ((Y - cy) / ry) ** 2 < 1; };
+    const cap = (ax, ay, bx, by, r) => (i, j) => { const [X, Y] = loc(i, j), dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1e-6, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / L2)); return (X - ax - t * dx) ** 2 + (Y - ay - t * dy) ** 2 < r * r; };
+    const part = (test, ramp, o2) => biX_paint(biX_mFn(biX_M(D, D), test), 0, 0, ramp, o2);
+    const all = (i, j) => ell(0.05, 0, 0.36, 0.26)(i, j) || ell(0.5, 0, 0.18, 0.18)(i, j) || cap(-0.3, 0, -0.9, 0, 0.2)(i, j);
+    g.fillStyle = 'rgba(14,8,30,0.28)'; for (let j = 0; j < D; j++) for (let i = 0; i < D; i++) if (all(i - 1, j - 2)) g.fillRect(i, j, 1, 1);
+    for (const s of [-1, 1]) { part(cap(-0.25, s * 0.1, -0.78, s * 0.2, 0.1), C.pants); part(ell(-0.86, s * 0.22, 0.09, 0.07), C.shoe); }
+    for (const s of [-1, 1]) { part(cap(0.22, s * 0.24, 0.3, s * 0.62, 0.085), C.uni); part(ell(0.33, s * 0.68, 0.075, 0.075), C.skin); }
+    const stripeFn = o.stripes ? (i, j, e) => { if (e) return null; const [, Y] = loc(i, j); return Math.floor((Y + 1) * sz / 3) % 2 ? C.dark[2] : null; } : null;
+    part(ell(0.02, 0, 0.34, 0.25), C.uni, { fn: stripeFn });
+    // the face, turned up to the ceiling
+    const hr = o.head === 'hood' ? biX_ramp('#262834') : o.head === 'cap' ? biX_ramp('#3a3438') : C.hair;
+    if (o.head === 'cap') part(ell(0.7, 0.08, 0.1, 0.16), biX_ramp(biX_sh(C.uni[2], -0.22)));
+    part(ell(0.52, 0, 0.17, 0.17), C.skin, { fn: (i, j, e) => { const [X, Y] = loc(i, j); if (X > 0.6) return hr[2]; if (Math.abs(Y) > 0.055 && Math.abs(Y) < 0.09 && Math.abs(X - 0.52) < 0.02) return biX_C.ink; return null; } });
   });
 }
 
-// ---------- furniture, drawn in a canonical orientation (its back to the north wall) ----------
-function biX_furn(type, S, st) {
-  const f = FURN[type], w = f.w * S, h = f.h * S;
-  return sprite('biX_f_' + type + '_' + S + '_' + st, w, h, () => biX_furnDraw(type, w, h, S, st));
+// ---------- furniture: drawn in its own frame (back to the north wall), lit from L ----------
+// how tall things are, for the shadows they throw onto the floor (in tiles)
+const biX_TALL = { desk: 0.2, chair: 0.12, file: 0.34, wallsafe: 0.1, floorsafe: 0, plant: 0.24, typewriter: 0.16, couch: 0.18, picture: 0, computer: 0.36, terminal: 0.2, table: 0.16, toilet: 0.14, sink: 0.12, evidence: 0.16, car: 0.26, bin: 0.2, lamp: 0.1 };
+function biX_furn(type, F, st, L) {
+  const f = FURN[type], w = f.w * F, h = f.h * F;
+  return sprite('biX_f_' + type + '_' + F + '_' + st + '_' + L.join(','), w, h, () => biX_furnDraw(type, w, h, F, st, L));
 }
-function biX_furnDraw(type, w, h, S, st) {
-  const q = S / 8, R = Math.round, opened = st.indexOf('o') >= 0;
-  const wood = (x, y, ww, hh) => {
-    x = R(x); y = R(y); ww = R(ww); hh = R(hh); rect(x, y, ww, hh, P.K); rect(x + 1, y + 1, ww - 2, hh - 2, P.BR);
-    for (let yy = y + 2; yy < y + hh - 2; yy++) for (let xx = x + 2; xx < x + ww - 2; xx++) if (biX_hash(xx >> 2, yy, 3) < 0.12 && (xx + yy) % 3) px(xx, yy, P.RD);
-    for (let xx = x + 1; xx < x + ww - 1; xx++) if (xx % 2 === 0) px(xx, y + 1, P.YE); rect(x + 1, y + hh - 2, ww - 2, 1, P.RD); rect(x + ww - 2, y + 1, 1, hh - 2, P.RD);
-  };
-  const rbox = (x, y, ww, hh, c) => { x = R(x); y = R(y); ww = R(ww); hh = R(hh); biX_raster(x, y, ww, hh, (i, j) => { const e = Math.min(i, ww - 1 - i) + Math.min(j, hh - 1 - j); if ((i === 0 || i === ww - 1) && (j === 0 || j === hh - 1)) return null; if (i === 0 || j === 0) return c[2]; if (i === ww - 1 || j === hh - 1) return c[0]; return c[1]; }, P.K); };
+function biX_furnDraw(type, w, h, F, st, L) {
+  const R = Math.round, opened = st.indexOf('o') >= 0, u = F / 16;
+  const O = o => Object.assign({ L }, o || {});
+  const box = (x, y, ww, hh, r, o) => biX_pRect(x, y, ww, hh, r, O(o));
+  const ell = (cx, cy, rx, ry, r, o) => biX_pEll(cx, cy, rx, ry, r, O(o));
+  const cap = (ax, ay, bx, by, rr, r, o) => biX_pCap(ax, ay, bx, by, rr, r, O(o));
+  const poly = (pts, r, o) => biX_pPoly(pts, r, O(o));
+  const grain = (x0, y0, ww, hh, r, seed) => (i, j, e) => { if (e) return null; const row = Math.floor((j - y0) / Math.max(3, R(3 * u))); const hsh = biX_hash(row, seed, 21); if ((j - y0) % Math.max(3, R(3 * u)) === 0 && biX_hash(Math.floor((i - x0) / Math.max(4, R(9 * u))), row, seed) < 0.5) return r[1]; return hsh < 0.3 ? biX_sh(r[2], -0.06) : null; };
+  const WOOD = biX_ramp(biX_C.wood), WAL = biX_ramp(biX_C.walnut), STEEL = biX_ramp(biX_C.steel), PORC = biX_ramp('#e4e6e0', 0.6), BRASS = biX_ramp(biX_C.brass), PAPER = biX_ramp(biX_C.paper, 0.5), BLACK = biX_ramp('#2c2a30');
+  const lines = (x, y, ww, hh, n, c) => { const sp = Math.max(2, R(hh / (n + 1))); for (let k = 1; k <= n; k++) if (y + k * sp < y + hh - 1) rect(R(x + 1), R(y + k * sp), Math.max(1, R(ww * (0.55 + 0.35 * biX_hash(k, R(x), 5)) - 2)), 1, c); };
   switch (type) {
     case 'desk': {
-      const top = R(q);
-      wood(0, top, w, h - top - 1);
-      const iy = top + 2, ih = h - top - 5;
-      // green leather blotter with a sheet of paper on it
-      const bx = R(w * 0.3), bw = R(w * 0.34), by = iy + R(ih * 0.12), bh = Math.max(2, R(ih * 0.76));
-      rect(bx, by, bw, bh, P.GR); rect(bx, by, bw, 1, P.GR2); rect(bx, by + bh - 1, bw, 1, P.K);
-      const px0 = bx + R(bw * 0.2), pw = Math.max(2, R(bw * 0.45)); rect(px0, by, pw, Math.max(2, bh - 1), P.W); if (S >= 10) for (let yy = by + 1; yy < by + bh - 2; yy += 2) rect(px0 + 1, yy, Math.max(1, pw - 2 - (yy % 3)), 1, P.G3);
-      if (S >= 10) { px(px0 + pw + 1, by + 1, P.K); px(px0 + pw + 2, by + 2, P.K); px(px0 + pw + 3, by + 3, P.YE); } // a pen
-      // banker's lamp: green shade, brass stem
-      const lx = w - R(w * 0.24), lw = Math.max(3, R(5 * q)), lh = Math.max(3, R(3 * q)); biX_ball(lx, iy - 1, lw, lh, P.GR, P.GR2, P.K); if (S >= 10) { px(lx + (lw >> 1), iy - 1 + lh, P.YE); px(lx + (lw >> 1) - 1, iy + lh, P.YE); px(lx + (lw >> 1) + 1, iy + lh, P.BR); }
-      // telephone
-      if (S >= 9) { const tx = R(w * 0.07) + 1, tw = Math.max(3, R(3 * q)); rect(tx, iy + 1, tw, 2, P.K); px(tx + 1, iy + 1, P.G1); rect(tx - 1, iy, tw + 2, 1, P.K); px(tx - 1, iy, P.G1); }
-      if (opened) { const dx = R(w * 0.38), dw = R(w * 0.28), dh = Math.max(3, R(4 * q)), dy = h - dh; rect(dx, dy, dw, dh, P.K); rect(dx + 1, dy, dw - 2, dh - 1, P.RD); rect(dx + 2, dy, dw - 4, dh - 2, P.W); for (let xx = dx + 2; xx < dx + dw - 2; xx += 2) px(xx, dy + 1, P.G3); }
-      else { const hy = h - 3; rect(R(w * 0.5) - 1, hy, 3, 1, P.YE); }
+      const x0 = R(1.5 * u), y0 = R(2 * u), ww = w - 2 * x0, hh = h - y0 - R(2.5 * u);
+      if (opened) { const dx = R(w * 0.38), dw = R(w * 0.26); box(dx, h - R(6 * u), dw, R(6 * u), WAL); rect(dx + 2, h - R(5 * u), dw - 4, R(4 * u) - 1, '#2a1a14'); rect(dx + 3, h - R(5 * u), dw - 8, R(3 * u), biX_C.paper); rect(dx + 3 + R(dw * 0.4), h - R(5 * u) + 1, R(dw * 0.3), R(2 * u), '#d8b868'); }
+      const exec = st.indexOf('x') >= 0, TOP = exec ? biX_ramp('#9a6236') : biX_ramp('#7a8480', 0.8);
+      box(x0, y0, ww, hh, TOP, { rim: Math.max(1, R(u)), fn: exec ? grain(x0, y0, ww, hh, TOP, 3) : (i, j, e) => !e && (j === y0 + R(2 * u) || j === y0 + hh - R(2 * u) - 1) && i > x0 + 1 && i < x0 + ww - 2 ? TOP[1] : null });
+      // leather blotter, a letter on it
+      const bx = R(w * 0.3), bw = R(w * 0.36), by = y0 + R(hh * 0.16), bh = R(hh * 0.68); box(bx, by, bw, bh, biX_ramp('#6a2e26'), { ol: false });
+      rect(bx, by, bw, 1, '#2a2020'); rect(bx, by + bh - 1, bw, 1, '#2a2020');
+      const pw = R(bw * 0.42), pX = bx + R(bw * 0.2), pY = by + R(bh * 0.1), pH = R(bh * 0.84); rect(pX + 1, pY + 1, pw, pH, 'rgba(10,6,20,0.35)'); rect(pX, pY, pw, pH, biX_C.paper); rect(pX, pY, pw, 1, '#fffaf0'); lines(pX + 1, pY, pw - 2, pH, Math.max(2, R(pH / 3)), '#a8a498');
+      // banker's lamp: brass foot, green glass shade, warm light pooling on the top
+      const lx = x0 + ww - R(5.5 * u), ly = y0 + R(hh * 0.34);
+      biX_glow(lx, ly + R(3 * u), R(10 * u), 'rgb(255,214,140)', 0.28, true);
+      ell(lx, ly + R(2.5 * u), 1.8 * u, 1.8 * u, BRASS);
+      cap(lx - 2.6 * u, ly, lx + 2.6 * u, ly, Math.max(1.2, 1.7 * u), biX_ramp('#2e7a52'));
+      // telephone and a coffee mug
+      const tx = x0 + R(2.5 * u), ty = y0 + R(hh * 0.2); box(tx, ty, R(6 * u), R(5.5 * u), BLACK); cap(tx + R(0.8 * u), ty + R(1.4 * u), tx + R(5.2 * u), ty + R(1.4 * u), Math.max(0.8, 1.1 * u), biX_ramp('#44424a'), { ol: false }); biX_ell(tx + R(3 * u), ty + R(3.8 * u), Math.max(1, R(u)), Math.max(1, R(u)), '#8a8890');
+      const mx = x0 + R(4.5 * u), my = y0 + R(hh * 0.74); ell(mx, my, 2 * u, 2 * u, PORC); biX_ell(mx, my, Math.max(1, R(1.1 * u)), Math.max(1, R(1.1 * u)), '#4a2a1a');
       break;
     }
     case 'chair': {
-      // an office chair from above: castor star, padded seat, armrests, a curved backrest to the south
-      const exec = st.indexOf('x') >= 0, c = exec ? [P.K, P.G1, P.G3] : [P.BL, P.BL2, P.CY], bk = exec ? [P.K, P.K, P.G1] : [P.K, P.BL, P.BL2];
-      const m = Math.max(1, R(S * 0.2)), sw = S - 2 * m, sy = Math.max(1, R(S * 0.1)), sh = Math.max(3, R(S * 0.55)), by = sy + sh - 1, bh = Math.max(2, S - by - 1);
-      if (S >= 9) { const cx = R(S / 2); rect(cx, 0, 1, sy + 1, P.K); rect(0, R(S * 0.45), m + 1, 1, P.K); rect(S - m - 1, R(S * 0.45), m + 1, 1, P.K); px(cx, 0, P.G1); px(0, R(S * 0.45), P.G1); px(S - 1, R(S * 0.45), P.G1); }
-      rbox(m, sy, sw, sh, c);
-      if (S >= 10) { rect(m + 2, sy + 2, sw - 4, 1, c[2]); rect(R(S / 2), sy + 2, 1, sh - 4, c[0]); }
-      if (S >= 9) { rect(m - 1, sy + 1, 2, sh - 2, P.K); rect(S - m - 1, sy + 1, 2, sh - 2, P.K); px(m - 1, sy + 1, P.G1); px(S - m, sy + 1, P.G1); }
-      rbox(m - 1, by, sw + 2, bh, bk);
+      const exec = st.indexOf('x') >= 0, fab = biX_ramp(exec ? '#3a2428' : biX_C.fab), cx = w / 2, cy = h * 0.46;
+      for (const [dx, dy] of [[-5.5, -3.5], [5.5, -3.5], [0, -6]]) biX_ell(cx + dx * u, cy + dy * u, Math.max(1, R(1.1 * u)), Math.max(1, R(1.1 * u)), '#1c1a22');
+      for (const s of [-1, 1]) cap(cx + s * 5.6 * u, cy - 2.5 * u, cx + s * 5.6 * u, cy + 2 * u, Math.max(1, 1.2 * u), BLACK);
+      ell(cx, cy, 5 * u, 4.6 * u, fab, { fn: exec && u > 1 ? (i, j, e) => !e && (i + j) % R(3 * u) === 0 && (i - j) % R(3 * u) === 0 ? fab[1] : null : null });
+      cap(cx - 4.4 * u, h * 0.83, cx + 4.4 * u, h * 0.83, Math.max(1.4, 2 * u), exec ? biX_ramp('#2e1c20') : biX_ramp(biX_sh(biX_C.fab, -0.2)));
       break;
     }
     case 'file': {
-      biX_box(R(q * 0.5), 0, S - R(q), S - 1, P.G3, P.W, P.G1);
-      const fy = S - Math.max(3, R(3 * q)) - 1; rect(R(q * 0.5) + 1, fy, S - R(q) - 2, 1, P.G1);
-      if (opened) { rect(R(q * 0.5) + 2, 2, S - R(q) - 4, fy - 3, P.K); for (let x = R(q * 0.5) + 2, n = 0; x < S - R(q * 0.5) - 2; x += 2, n++) rect(x, 2 + (n % 2), 1, Math.max(1, fy - 4), [P.YE, P.W, P.CY, P.W][n % 4]); }
-      else { px(R(S / 2) - 1, fy + 2, P.TL); px(R(S / 2), fy + 2, P.CY); if (S >= 10) { rect(R(q * 0.5) + 2, R(S * 0.35), S - R(q) - 4, 1, P.G1); px(R(S / 2), R(S * 0.35) + 2, P.TL); } }
+      const x0 = R(1.5 * u), fw = w - 2 * x0, fh = h - R(1.5 * u), face = R(4 * u);
+      box(x0, 0, fw, fh, STEEL);
+      box(x0 + 1, fh - face, fw - 2, face, biX_ramp(biX_sh(biX_C.steel, -0.18)), { ol: false });
+      rect(x0 + R(fw * 0.35), fh - R(face * 0.55), R(fw * 0.3), Math.max(1, R(u)), '#d8dcd4');
+      if (opened) {
+        const ix = x0 + R(2 * u), iy = R(2 * u), iw = fw - R(4 * u), ih = fh - face - R(3 * u); rect(ix, iy, iw, ih, '#26242a');
+        const step = Math.max(2, R(2 * u)); for (let x = ix + 1, n = 0; x < ix + iw - 1; x += step, n++) { rect(x, iy + 1 + (n % 3 === 1 ? 1 : 0), Math.max(1, step - 1), ih - 2, n % 5 === 2 ? '#c8d0dc' : '#d6b86a'); rect(x, iy + 1 + (n % 3 === 1 ? 1 : 0), Math.max(1, step - 1), 1, n % 4 === 1 ? '#c0443a' : n % 4 === 3 ? '#3a64a8' : '#f0dca0'); }
+      } else rect(x0 + R(2 * u), R(fh * 0.42), fw - R(4 * u), 1, STEEL[1]);
       break;
     }
     case 'wallsafe': {
-      const sh = Math.max(4, R(S * 0.72)), x0 = R(q), sw = S - 2 * R(q);
-      biX_box(x0, 0, sw, sh, P.G1, P.G3, P.K);
+      const x0 = R(2.5 * u), sw = w - 2 * x0, sh = R(h * 0.62), GUN = biX_ramp('#4a5058');
+      box(x0, 0, sw, sh, GUN);
       if (opened) {
-        rect(x0 + 2, 1, sw - 4, sh - 3, P.K); rect(x0 + 2, R(sh / 2), sw - 4, 1, P.G1); if (sw > 6) { rect(x0 + 3, R(sh / 2) - 2, 3, 2, P.GR); px(x0 + 3, R(sh / 2) - 2, P.GR2); }
-        rect(x0 + sw - 2, sh - 1, 3, Math.max(3, R(S * 0.28)), P.K); rect(x0 + sw - 1, sh - 1, 1, Math.max(2, R(S * 0.28) - 1), P.G3);   // the door, swung open
-      } else { const cx = R(S / 2) - 1, cy = R(sh / 2) - 1; if (S >= 9) { biX_ball(cx - 1, cy - 1, 4, 4, P.G3, P.W, P.G1); px(cx + 1, cy - 1, P.RD2); } else px(cx, cy, P.W); px(S - R(q) - 3, cy + 1, P.YE); px(S - R(q) - 3, cy + 2, P.YE); }
+        rect(x0 + R(1.5 * u), R(u), sw - R(3 * u), sh - R(2.5 * u), '#141218');
+        rect(x0 + R(2.5 * u), sh - R(5 * u), R(sw * 0.35), R(3 * u), '#4c7a4a'); rect(x0 + R(2.5 * u), sh - R(5 * u), R(sw * 0.35), 1, '#7aa870');
+        rect(x0 + R(sw * 0.55), sh - R(6 * u), R(sw * 0.28), R(4 * u), biX_C.paper);
+        box(x0 + sw - R(1.5 * u), sh - R(u), R(2.5 * u), R(h * 0.36), GUN);
+      } else {
+        const cx = x0 + sw / 2, cy = sh * 0.5; ell(cx, cy, 3.4 * u, 3.4 * u, biX_ramp('#b8bcc0', 0.7)); biX_ell(cx, cy, Math.max(1, R(1.2 * u)), Math.max(1, R(1.2 * u)), '#3a3c44'); rect(R(cx), R(cy - 3.4 * u), 1, R(1.4 * u), '#c83c30');
+        cap(x0 + sw - R(3 * u), cy - 3 * u, x0 + sw - R(3 * u), cy + 3 * u, Math.max(0.8, 0.9 * u), biX_ramp('#c8ccd0', 0.6));
+      }
       break;
     }
     case 'floorsafe': {
-      biX_box(1, 1, S - 2, S - 2, P.G1, P.G3, P.K);
-      if (opened) { rect(3, 3, S - 6, S - 6, P.K); rect(3, 3, S - 6, 1, P.G1); rect(S - 2, 2, 1, S - 4, P.W); }
-      else {
-        for (const [x, y] of [[2, 2], [S - 4, 2], [2, S - 4], [S - 4, S - 4]]) px(x + 0.5, y + 0.5, P.G3);
-        const c = R(S / 2) - 1; if (S >= 9) { biX_ball(c - 1, c - 1, 4, 4, P.YE, P.W, P.BR); px(c + 1, c - 1, P.K); } else { px(c, c, P.YE); }
-        if (S >= 11) { rect(3, R(S * 0.72), S - 6, 1, P.K); }
+      const m = R(1.5 * u), GUN = biX_ramp('#555a60');
+      if (opened) {
+        box(m, m, w - 2 * m, h - 2 * m, GUN); rect(m + R(2.5 * u), m + R(2.5 * u), w - 2 * m - R(5 * u), h - 2 * m - R(5 * u), '#0e0c12');
+        rect(m + R(3.5 * u), h - m - R(5 * u), R(w * 0.3), R(2 * u), biX_C.paper);
+        box(w - m - R(3 * u), m - R(u), R(4 * u), h - 2 * m + R(u), biX_ramp('#6a7076'));
+      } else {
+        box(m, m, w - 2 * m, h - 2 * m, GUN, { rim: Math.max(1, R(u)) });
+        for (const [x, y] of [[m + 2.5 * u, m + 2.5 * u], [w - m - 3.5 * u, m + 2.5 * u], [m + 2.5 * u, h - m - 3.5 * u], [w - m - 3.5 * u, h - m - 3.5 * u]]) { rect(R(x), R(y), Math.max(1, R(u)), Math.max(1, R(u)), GUN[4]); rect(R(x) + Math.max(1, R(u)), R(y) + Math.max(1, R(u)), 1, 1, GUN[0]); }
+        ell(w / 2, h / 2, 3 * u, 3 * u, BRASS); biX_ell(w / 2, h / 2, Math.max(1, R(u)), Math.max(1, R(u)), '#4a3a1c');
       }
       break;
     }
     case 'plant': {
-      const cx = S / 2, cy = S / 2, rr = S * 0.5, nL = S >= 11 ? 9 : 7;
-      biX_raster(0, 0, S, S, (i, j) => {
-        const dx = i + 0.5 - cx, dy = j + 0.5 - cy, d = Math.hypot(dx, dy);
-        if (d < S * 0.2) return d < S * 0.12 ? P.K : (dx + dy < 0 ? P.RD2 : P.BR);
-        let a = Math.atan2(dy, dx) / (Math.PI * 2) * nL + 0.25; const fr = a - Math.floor(a), lob = Math.abs(fr - 0.5) * 2;
-        const len = rr * (0.78 + 0.22 * biX_hash(Math.floor(a) & 15, 5));
-        if (d < len * (1 - lob * lob * 0.9) && d < rr - 0.2) return fr < 0.42 ? P.GR2 : (d > len * 0.75 ? P.GR : P.GR);
-        return null;
-      }, P.K);
+      const cx = w / 2, cy = h / 2;
+      ell(cx, cy, 5.4 * u, 5.4 * u, biX_ramp(biX_C.pot)); biX_ell(cx, cy, 4.2 * u, 4.2 * u, '#3a2820');
+      const n = 9, LEAF = biX_ramp(biX_C.leaf), LEAF2 = biX_ramp('#4f8a3a');
+      for (let k = 0; k < n; k++) {
+        const an = k / n * Math.PI * 2 + 0.35 + biX_hash(k, F, 2) * 0.3, len = (5.4 + 2.2 * biX_hash(k, 1, 3)) * u, wd = 1.9 * u;
+        const ex = cx + Math.cos(an) * len, ey = cy + Math.sin(an) * len, mx = cx + Math.cos(an) * len * 0.55, my = cy + Math.sin(an) * len * 0.55, nx = -Math.sin(an) * wd, ny = Math.cos(an) * wd;
+        poly([[cx + Math.cos(an) * 1.2 * u, cy + Math.sin(an) * 1.2 * u], [mx + nx, my + ny], [ex, ey], [mx - nx, my - ny]], k % 2 ? LEAF : LEAF2);
+      }
+      ell(cx, cy, 1.6 * u, 1.6 * u, LEAF2);
       break;
     }
     case 'typewriter': {
-      wood(0, R(q), S, S - R(q) - 1);
-      const bx = R(S * 0.14), bw = S - 2 * bx, by = R(S * 0.3), bh = Math.max(3, R(S * 0.52));
-      rect(R(S * 0.3), 0, S - 2 * R(S * 0.3), by + 1, P.W); if (S >= 10) rect(R(S * 0.3) + 1, 1, S - 2 * R(S * 0.3) - 2, 1, P.G3);
-      biX_box(bx, by, bw, bh, P.G1, P.G3, P.K); rect(bx, by, bw, 1, P.K); rect(bx + 1, by + 1, bw - 2, 1, P.G3);
-      for (let r = 0; r < (S >= 10 ? 2 : 1); r++) for (let x = bx + 2 + r; x < bx + bw - 2; x += 2) px(x, by + 3 + r * 2, P.W);
+      box(R(u), R(2 * u), w - R(2 * u), h - R(3.5 * u), WOOD, { fn: grain(0, 0, w, h, WOOD, 7) });
+      const bx = R(3 * u), bw = w - R(6 * u), by = R(5.5 * u), bh = h - R(8.5 * u);
+      rect(R(5 * u), R(1 * u), w - R(10 * u), R(6 * u), biX_C.paper); lines(R(5 * u), R(u), w - R(10 * u), R(6 * u), 2, '#9a968c');
+      box(bx, by, bw, bh, biX_ramp('#3a3e3a'));
+      cap(bx - R(u), by + R(u), bx + bw + R(u), by + R(u), Math.max(1, 1.4 * u), BLACK);
+      const kr = Math.max(2, R(2 * u)); for (let y = by + R(4 * u); y < by + bh - 2; y += kr) for (let x = bx + R(2 * u) + ((y / kr) % 2 ? 1 : 0); x < bx + bw - R(2 * u); x += kr) rect(x, y, Math.max(1, kr - 1), Math.max(1, kr - 1), '#b8b4a8');
       break;
     }
     case 'couch': {
-      const lth = st.indexOf('x') >= 0, c = lth ? [P.K, P.BR, P.YE] : [P.RD, P.RD2, P.PK], back = Math.max(2, R(S * 0.34)), arm = Math.max(2, R(S * 0.22));
-      const d = lth ? [P.K, P.RD, P.BR] : [P.K, P.RD, P.RD2];
-      rbox(0, 0, w, h - 1, d);                                   // frame and backrest
-      rbox(0, back - 1, arm + 1, h - back, d); rbox(w - arm - 1, back - 1, arm + 1, h - back, d); // arms
-      const cw = (w - 2 * arm - 2) / 2;
-      for (let n = 0; n < 2; n++) { const x0 = R(arm + 1 + n * cw), x1 = R(arm + 1 + (n + 1) * cw); rbox(x0, back, x1 - x0, h - back - 1, lth ? [P.RD, P.BR, P.YE] : c); if (S >= 10) { px(R((x0 + x1) / 2), R(back + (h - back) / 2), lth ? P.RD : P.RD); } }
-      if (S >= 10) for (let x = arm + 3; x < w - arm - 3; x += 3) px(x, R(back / 2), d[0]);
+      const lth = st.indexOf('x') >= 0, base = lth ? '#6a3a24' : '#a04a36', FAB = biX_ramp(base), DK = biX_ramp(biX_sh(base, -0.18)), back = R(5 * u), arm = R(3.6 * u);
+      box(0, R(u), w, h - R(2 * u), DK);
+      box(R(u), R(u), w - R(2 * u), back, FAB, { fn: lth ? (i, j, e) => !e && (i % R(4 * u) === 0) && j === R(u + back / 2) ? FAB[0] : null : null });
+      box(0, R(2 * u), arm, h - R(3 * u), FAB); box(w - arm, R(2 * u), arm, h - R(3 * u), FAB);
+      const n = 2, cw = (w - 2 * arm) / n; for (let k = 0; k < n; k++) box(R(arm + k * cw), back, R(cw), h - back - R(2 * u), FAB, { rim: Math.max(1, R(u)) });
+      if (!lth) { const px0 = R(arm + 2 * u), py0 = back + R(u); poly([[px0, py0 + 2.5 * u], [px0 + 2.5 * u, py0], [px0 + 5 * u, py0 + 2.5 * u], [px0 + 2.5 * u, py0 + 5 * u]], biX_ramp('#d8b448')); }
       break;
     }
     case 'picture': {
-      const x0 = R(S * 0.12), fw = S - 2 * x0, fh = Math.max(3, R(S * 0.28));
-      rect(x0, 0, fw, fh, P.K); rect(x0 + 1, 0, fw - 2, fh - 1, P.YE); rect(x0 + 1, fh - 2, fw - 2, 1, P.BR);
-      if (fh >= 4) { rect(x0 + 2, 0, fw - 4, fh - 3, P.BL2); for (let x = x0 + 2; x < x0 + fw - 2; x++) if ((x * 7) % 5 < 2) px(x, fh - 4, P.GR); }
+      const x0 = R(2 * u), fw = w - 2 * x0, fh = R(5 * u);
+      box(x0, 0, fw, fh, BRASS);
+      const ix = x0 + Math.max(1, R(u)) + 1, iw = fw - 2 * (Math.max(1, R(u)) + 1), ih = fh - Math.max(1, R(u)) * 2 - 1;
+      if (ih > 0) { rect(ix, 1, iw, ih, '#5a84b4'); rect(ix, 1 + R(ih / 2), iw, ih - R(ih / 2), '#4e7a3c'); rect(ix + R(iw * 0.6), 1, Math.max(1, R(u)), Math.max(1, R(u)), '#f0d890'); }
       break;
     }
     case 'computer': {
-      biX_box(0, 0, w, h - 1, P.G3, P.W, P.G1);
-      rect(1, h - Math.max(3, R(3 * q)) - 1, w - 2, 1, P.G1);
-      const L = biX_mfLayout(w, h);
-      for (const r of L.reels) { biX_ball(r.x - r.r, r.y - r.r, r.r * 2 + 1, r.r * 2 + 1, P.K, P.G1, P.K, P.G1); px(r.x, r.y, P.G3); }
-      rect(L.px, L.py, L.pw, L.ph, P.K);
-      if (S >= 10) { rect(w - 4, 2, 2, 1, P.RD); for (let x = 2; x < w - 2; x += 3) px(x, h - 3, P.G1); }
+      const CAB = biX_ramp('#aeb0a8'), Lm = biX_mfLayout(w, h);
+      box(R(u), 0, w - R(2 * u), h - R(u), CAB);
+      box(R(2 * u), h - R(5 * u), w - R(4 * u), R(3.5 * u), biX_ramp('#8a8c86'), { ol: false });
+      for (let x = R(4 * u); x < w - R(4 * u); x += Math.max(2, R(2 * u))) rect(x, h - R(4 * u), 1, R(2 * u), '#5a5c58');
+      for (const r of Lm.reels) { rect(r.x - r.r - 1, r.y - r.r - 1, r.r * 2 + 3, r.r * 2 + 3, '#1a1e28'); ell(r.x + 0.5, r.y + 0.5, r.r, r.r, biX_ramp('#3a3e48'), { ol: false }); biX_ell(r.x + 0.5, r.y + 0.5, Math.max(1, R(r.r * 0.35)), Math.max(1, R(r.r * 0.35)), '#9aa0a8'); }
+      rect(Lm.px - 1, Lm.py - 1, Lm.pw + 2, Lm.ph + 2, '#3a3c38'); rect(Lm.px, Lm.py, Lm.pw, Lm.ph, '#141418');
       break;
     }
     case 'terminal': {
-      wood(0, R(q), S, S - R(q) - 1);
-      const cx = R(S * 0.14), cw = S - 2 * cx, ch = Math.max(4, R(S * 0.56));
-      biX_box(cx, 0, cw, ch, P.G3, P.W, P.G1); rect(cx + 2, 2, cw - 4, ch - 4, P.K); rect(cx + 2, 2, cw - 4, ch - 4, P.GR);
-      rect(cx + 2, 2, cw - 4, ch - 4, P.K); for (let y = 3; y < ch - 3; y += 2) rect(cx + 3, y, Math.max(1, R((cw - 6) * (0.4 + 0.5 * biX_hash(y, S)))), 1, P.GR);
-      const ky = ch + 1; if (ky + 2 < S) { rect(cx, ky, cw, Math.max(2, R(S * 0.2)), P.K); rect(cx + 1, ky, cw - 2, Math.max(1, R(S * 0.2) - 1), P.G3); for (let x = cx + 2; x < cx + cw - 2; x += 2) px(x, ky + 1, P.W); }
+      box(R(u), R(2 * u), w - R(2 * u), h - R(3.5 * u), WOOD, { fn: grain(0, 0, w, h, WOOD, 9) });
+      const T = biX_termLayout(F); box(T.x - R(1.5 * u), T.y - R(1.5 * u), T.w + R(3 * u), T.h + R(3 * u), biX_ramp('#c4bca4', 0.7));
+      rect(T.x, T.y, T.w, T.h, '#0c1a12');
+      box(R(3 * u), T.y + T.h + R(3 * u), w - R(6 * u), R(3.5 * u), biX_ramp('#bcb49c', 0.7));
+      for (let x = R(4 * u); x < w - R(4 * u); x += Math.max(2, R(1.5 * u))) rect(x, T.y + T.h + R(4 * u), 1, Math.max(1, R(1.5 * u)), '#8a826c');
       break;
     }
     case 'table': {
-      const tw = [P.RD, P.BR, P.YE];
-      biX_ball(1, 1, w - 2, h - 2, P.BR, P.BR, P.RD); biX_ell(3, 3, w - 7, h - 7, P.BR);
-      for (let a = 0; a < 40; a++) { const an = a / 40 * Math.PI * 2; if (Math.cos(an) + Math.sin(an) < -0.7) px(R(w / 2 + Math.cos(an) * (w / 2 - 3)), R(h / 2 + Math.sin(an) * (h / 2 - 3)), a % 2 ? P.YE : P.BR); }
-      for (let j = 4; j < h - 4; j += 3) for (let i = 4; i < w - 4; i++) if (biX_hash(i >> 2, j, 17) < 0.1 && Math.hypot(i - w / 2, j - h / 2) < w / 2 - 4) px(i, j, P.RD);
-      // magazines, an ashtray, coffee cups
-      const mx = R(w * 0.24), my = R(h * 0.34), mw = Math.max(3, R(5 * q)), mh = Math.max(3, R(6 * q));
-      rect(mx + 1, my + 1, mw, mh, P.K); rect(mx, my, mw, mh, P.W); rect(mx, my, mw, Math.max(1, R(2 * q)), P.RD2); if (S >= 10) { rect(mx + 1, my + R(3 * q), mw - 2, 1, P.G3); rect(mx + 1, my + R(4 * q), mw - 3, 1, P.G3); }
-      const ax = R(w * 0.58), ay = R(h * 0.52), aw = Math.max(3, R(4 * q)); biX_ball(ax, ay, aw, aw, P.G3, P.W, P.G1); px(ax + (aw >> 1), ay + (aw >> 1), P.K); if (S >= 10) px(ax + aw, ay + 1, P.W);
-      const cxp = R(w * 0.62), cyp = R(h * 0.26); biX_ball(cxp, cyp, Math.max(3, R(3 * q)), Math.max(3, R(3 * q)), P.W, P.W, P.G3); px(cxp + 1, cyp + 1, P.BR);
+      const cx = w / 2, cy = h / 2, rx = w / 2 - 2 * u, ry = h / 2 - 2 * u, TW = biX_ramp('#8a5634');
+      ell(cx, cy, rx, ry, TW, { rim: Math.max(1, R(u)), fn: (i, j, e) => { if (e) return null; const d = Math.hypot((i - cx) / rx, (j - cy) / ry); return Math.abs(d - 0.72) < 0.03 ? TW[1] : null; } });
+      const mX = R(w * 0.24), mY = R(h * 0.3), mw = R(7 * u), mh = R(9 * u);
+      rect(mX + 1, mY + 1, mw, mh, 'rgba(20,10,20,0.35)'); rect(mX, mY, mw, mh, '#e8e2d0'); rect(mX, mY, mw, R(3 * u), '#c0443a'); rect(mX + R(u), mY + R(4 * u), mw - R(2 * u), 1, '#9a9488'); rect(mX + R(u), mY + R(6 * u), mw - R(3 * u), 1, '#9a9488');
+      ell(w * 0.6, h * 0.56, 3 * u, 3 * u, biX_ramp('#a8c0c8', 0.6)); biX_ell(w * 0.6, h * 0.56, Math.max(1, R(1.4 * u)), Math.max(1, R(1.4 * u)), '#6a7c84');
+      for (const [x, y] of [[0.64, 0.3], [0.36, 0.7]]) { ell(w * x, h * y, 2.6 * u, 2.6 * u, PORC); biX_ell(w * x, h * y, Math.max(1, R(1.3 * u)), Math.max(1, R(1.3 * u)), '#4a2a1a'); }
       break;
     }
     case 'toilet': {
-      const tx = R(S * 0.18); biX_box(tx, 0, S - 2 * tx, Math.max(3, R(S * 0.32)), P.W, P.W, P.G3);
-      if (S >= 10) px(R(S / 2), 1, P.G3);
-      const bx = R(S * 0.22), by = R(S * 0.26); biX_ball(bx, by, S - 2 * bx, S - by - 1, P.W, P.W, P.G3);
-      biX_ell(bx + 2, by + 2, S - 2 * bx - 4, S - by - 5, P.TL); if (S >= 9) biX_ell(bx + 3, by + 3, S - 2 * bx - 6, S - by - 7, P.CY);
+      box(R(3.5 * u), R(0.5 * u), w - R(7 * u), R(4.5 * u), PORC);
+      ell(w / 2, h * 0.62, 5.2 * u, 5.6 * u, PORC);
+      biX_ell(w / 2, h * 0.64, R(3.4 * u), R(3.8 * u), '#c8d0d0'); biX_ell(w / 2, h * 0.66, R(2.6 * u), R(3 * u), '#7aaec0'); rect(R(w / 2 - 1.5 * u), R(h * 0.58), Math.max(1, R(u)), Math.max(1, R(u)), '#b8dce8');
+      rect(R(w - 5 * u), R(1.5 * u), R(1.8 * u), Math.max(1, R(u)), '#9aa2a8');
       break;
     }
     case 'sink': {
-      const bx = R(S * 0.1); biX_ball(bx, R(S * 0.08), S - 2 * bx, R(S * 0.75), P.W, P.W, P.G3);
-      biX_ell(bx + 2, R(S * 0.08) + 2, S - 2 * bx - 4, R(S * 0.75) - 4, P.G3); biX_ell(bx + 2, R(S * 0.08) + 3, S - 2 * bx - 4, R(S * 0.75) - 5, P.CY);
-      px(R(S / 2), R(S * 0.45), P.K); rect(R(S / 2) - 1, 0, 3, Math.max(2, R(S * 0.2)), P.G1); px(R(S / 2), 0, P.W);
+      box(R(u), 0, w - R(2 * u), R(h * 0.8), biX_ramp('#cfc8b8', 0.6));
+      ell(w / 2, h * 0.44, 5.4 * u, 4.4 * u, PORC); biX_ell(w / 2, h * 0.46, R(4 * u), R(3.1 * u), '#bcc8cc'); biX_ell(w / 2, h * 0.5, R(1 * u) || 1, R(1 * u) || 1, '#4a5458');
+      cap(w / 2, R(0.5 * u), w / 2, R(3 * u), Math.max(1, 1.1 * u), biX_ramp('#c8d0d8', 0.6));
+      for (const s of [-1, 1]) ell(w / 2 + s * 3.2 * u, R(1.5 * u), 1.3 * u, 1.3 * u, biX_ramp('#c8d0d8', 0.6));
       break;
     }
     case 'evidence': {
       if (st.indexOf('c') < 0) break;
-      biX_box(1, 1, S - 2, S - 2, P.BR, P.YE, P.RD);
-      for (let y = 1 + Math.max(2, R(S / 3)); y < S - 2; y += Math.max(2, R(S / 3))) rect(2, y, S - 4, 1, P.RD);
-      rect(2, 2, 1, S - 4, P.YE); line(2, 2, S - 3, S - 3, P.RD); if (S >= 10) { px(R(S / 2) - 1, R(S / 2) + 2, P.K); px(R(S / 2), R(S / 2) + 2, P.K); }
+      const CR = biX_ramp('#b08a52'), m = R(1.5 * u); box(m, m, w - 2 * m, h - 2 * m, CR, { fn: (i, j, e) => !e && (j - m) % Math.max(3, R(4 * u)) === 0 ? CR[1] : null });
+      biX_cap(m + 2 * u, m + 2 * u, w - m - 2 * u, h - m - 2 * u, Math.max(0.7, 0.8 * u), CR[3]);
+      rect(R(w * 0.38), R(h * 0.38), R(w * 0.24), R(h * 0.2), 'rgba(40,20,20,0.55)');
       break;
     }
     case 'car': {
-      const c = biX_ramp(st.split('_')[1] || P.RD), glass = c[1] === P.BL || c[1] === P.BL2 ? [P.K, P.TL] : [P.BL, P.CY];
-      const map = { k: P.K, t: P.K, T: P.G1, B: c[2], b: c[1], d: c[0] === P.K ? c[1] : c[0], g: glass[0], G: glass[1], w: P.G3, y: P.YE, r: P.RD2 };
-      biX_rows(biX_CAR, R((w - 18) / 2), R((h - 12) / 2), map);
+      const col = biX_tone(st.split('_')[1] || P.RD), B = biX_ramp(col), cx = w / 2, cy = h / 2, bl = w * 0.46, bw = h * 0.36;
+      // wheels just showing at the arches
+      for (const sx of [-1, 1]) for (const sy of [-1, 1]) box(cx + sx * bl * 0.62 - 3 * u, cy + sy * bw - (sy > 0 ? 1.5 * u : 1.5 * u), 6 * u, 3 * u, biX_ramp('#1e1c22'));
+      const body = [[cx - bl, cy - bw + 2 * u], [cx - bl + 2 * u, cy - bw], [cx + bl - 3 * u, cy - bw], [cx + bl, cy - bw + 3 * u], [cx + bl, cy + bw - 3 * u], [cx + bl - 3 * u, cy + bw], [cx - bl + 2 * u, cy + bw], [cx - bl, cy + bw - 2 * u]];
+      poly(body, B, { rim: Math.max(1, R(u)) });
+      // glass: windscreen toward +x, rear window, side glass; the roof between catches the light
+      const wx = cx + bl * 0.18, rx0 = cx - bl * 0.5;
+      poly([[wx, cy - bw + 2 * u], [wx + bl * 0.24, cy - bw + 3.5 * u], [wx + bl * 0.24, cy + bw - 3.5 * u], [wx, cy + bw - 2 * u]], biX_ramp(biX_C.glass), { ol: false, fn: (i, j, e) => (i + j) % R(10 * u) < R(2 * u) ? biX_C.glassHi : null });
+      poly([[rx0, cy - bw + 2.5 * u], [rx0 - bl * 0.16, cy - bw + 3.5 * u], [rx0 - bl * 0.16, cy + bw - 3.5 * u], [rx0, cy + bw - 2.5 * u]], biX_ramp(biX_C.glass), { ol: false });
+      for (const sy of [-1, 1]) rect(R(rx0), R(cy + sy * (bw - 1.4 * u) - 0.6 * u), R(wx - rx0), Math.max(1, R(1.2 * u)), biX_C.glass);
+      box(rx0, cy - bw + 2.6 * u, wx - rx0, 2 * bw - 5.2 * u, [B[1], B[2], B[3], B[4], B[4]], { ol: false });
+      // hood crease, lights, mirrors
+      rect(R(wx + bl * 0.34), R(cy), R(bl * 0.38), 1, B[1]);
+      for (const sy of [-1, 1]) { rect(R(cx + bl - 1.5 * u), R(cy + sy * (bw - 3.6 * u) - 1.2 * u), R(1.5 * u), R(2.4 * u), '#fff0b8'); rect(R(cx - bl), R(cy + sy * (bw - 3.2 * u) - 1.2 * u), R(1.2 * u), R(2.4 * u), '#c8302c'); box(wx - u, cy + sy * (bw + 0.8 * u) - u, 2 * u, 2 * u, B); }
       break;
     }
     case 'bin': {
-      biX_ball(R(S * 0.12), R(S * 0.12), S - 2 * R(S * 0.12), S - 2 * R(S * 0.12), P.G3, P.W, P.G1);
-      biX_ell(R(S * 0.3), R(S * 0.3), S - 2 * R(S * 0.3), S - 2 * R(S * 0.3), P.G1); px(R(S / 2), R(S / 2), P.G3);
+      const cx = w / 2, cy = h / 2, M = biX_ramp('#7a8288'); ell(cx, cy, 5.4 * u, 5.4 * u, M, { rim: Math.max(1, R(u)), fn: (i, j, e) => !e && Math.abs(Math.hypot(i - cx, j - cy) - 3.4 * u) < 0.6 ? M[1] : null });
+      cap(cx - 1.8 * u, cy, cx + 1.8 * u, cy, Math.max(1, u), M);
       break;
     }
     case 'lamp': {
-      const cx = R(S / 2);
-      biX_ball(cx - 2, R(S * 0.15), 4, 4, P.G1, P.G3, P.K);          // the post, from above
-      rect(cx - 1, R(S * 0.15) + 3, 2, Math.max(1, R(S * 0.3)), P.K);  // arm out over the road
-      biX_ball(cx - 2, S - 5, 5, 4, P.YE, P.W, P.BR);                 // lamp head
+      const cx = w / 2; ell(cx, h * 0.18, 2.6 * u, 2.6 * u, biX_ramp('#3c4048')); cap(cx, h * 0.24, cx, h * 0.7, Math.max(1, u), biX_ramp('#3c4048'));
+      ell(cx, h * 0.78, 3.2 * u, 2.4 * u, biX_ramp('#4a4e56')); biX_ell(cx, h * 0.8, Math.max(1, R(2 * u)), Math.max(1, R(1.3 * u)), '#fff0b0');
       break;
     }
   }
 }
-// where the mainframe's tape reels and lamp panel sit (shared by the static sprite and the animation)
+// where the mainframe's tape reels and lamp panel sit (fine px), shared by the sprite and the animation
 function biX_mfLayout(w, h) {
-  const r = Math.max(2, Math.round(h * 0.26)), y = Math.round(h * 0.42);
-  return { reels: [{ x: Math.round(w * 0.2), y, r }, { x: Math.round(w * 0.2) + r * 2 + 2, y, r }], px: Math.round(w * 0.2) + r * 3 + 4, py: 2, pw: Math.max(3, w - (Math.round(w * 0.2) + r * 3 + 4) - 3), ph: Math.max(3, Math.round(h * 0.55)) };
+  const r = Math.max(2, Math.round(h * 0.2)), y = Math.round(h * 0.34), x0 = Math.round(w * 0.14);
+  const px0 = x0 + r * 4 + 6;
+  return { reels: [{ x: x0 + r, y, r }, { x: x0 + r * 3 + 3, y, r }], px: px0, py: Math.round(h * 0.12), pw: Math.max(4, w - px0 - Math.round(w * 0.08)), ph: Math.max(4, Math.round(h * 0.46)) };
 }
+function biX_termLayout(F) { const u = F / 16; return { x: Math.round(4 * u), y: Math.round(1.5 * u), w: F - Math.round(8 * u), h: Math.round(7 * u) }; }
 
-// ---------- floors per room kind (drawn once into the room layer) ----------
-function biX_floor(kind, X, Y, w, h, S) {
-  const pat = {
-    hall: (i, j) => { const t = (Math.floor(i / S) + Math.floor(j / S)) & 1; return t ? (biX_bay(i, j) < 5 ? P.G1 : P.G3) : (biX_hash(i, j, 1) < 0.04 ? P.W : P.G3); },
-    office: (i, j) => {
-      const ph = Math.max(3, Math.round(S / 2)), r = Math.floor(j / ph), pl = S * 2, off = (r % 3) * Math.round(S * 0.66), n = Math.floor((i + off) / pl);
-      if (j % ph === ph - 1) return P.RD; if ((i + off) % pl === 0) return biX_bay(i, j) < 8 ? P.K : P.RD;
-      const tone = biX_hash(n, r, 2), jj = j % ph;
-      if (jj === 0 && tone > 0.5 && biX_hash(i >> 1, r, 4) < 0.5) return P.RD;           // grain streaks
-      if (tone < 0.3 && jj === ph - 2 && biX_hash(i >> 2, r, 5) < 0.6) return P.RD;
-      return biX_hash(i, j, 6) < 0.025 ? P.RD : P.BR;
-    },
-    exec: (i, j) => {
-      const b = Math.max(2, Math.round(S * 0.5)), e = Math.min(i, j, w - 1 - i, h - 1 - j);
-      if (e === b) return P.YE; if (e === b + 1) return P.BR; if (e === b - 1) return P.K;
-      if (e > b + 1) { const u = (i - b) % 6, v = (j - b) % 6; if ((Math.abs(u - 3) + Math.abs(v - 3)) === 2 && S >= 9) return P.MG; }
-      return biX_bay(i, j) < 1 ? P.K : P.RD;
-    },
-    file: (i, j) => { const fi = i % S, fj = j % S; if (fi === 0 || fj === 0) return P.G1; if (fi === 1 || fj === 1) return P.W; const hsh = biX_hash(i, j, 5); return hsh < 0.03 ? P.G1 : P.G3; },
-    computer: (i, j) => { const fi = i % S, fj = j % S; if (fi === 0 || fj === 0) return P.W; if (fi === S - 1 || fj === S - 1) return P.G1; if (S >= 10 && fi % 3 === 1 && fj % 3 === 1 && fi > 1 && fj > 1 && fi < S - 2 && fj < S - 2) return P.G1; return P.G3; },
-    cipher: (i, j) => biX_bay(i, j) < 2 ? P.BL2 : P.BL,
-    lounge: (i, j) => biX_hash(i, j, 7) < 0.03 ? P.GR2 : biX_bay(i, j) < 2 ? P.K : P.GR,
-    bath: (i, j) => { const ts = Math.max(3, Math.floor(S / 2)); const a = i % ts === 0, b = j % ts === 0; if (a && b) return P.TL; if (a || b) return P.G3; return P.W; },
-  }[kind] || ((i, j) => P.G3);
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(X + i, Y + j, pat(i, j));
-  // shadow cast by the north and west walls
-  const sh = S >= 10 ? 2 : 1;
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const e = Math.min(i, j); if (e < sh && biX_bay(X + i, Y + j) < (e === 0 ? 10 : 5)) px(X + i, Y + j, P.K); }
-}
-// walls: 4px bevelled band with a cyan outline and mitred corners (after the original)
-function biX_walls(X0, Y0, w, h) {
-  rect(X0 - 4, Y0 - 4, w + 8, h + 8, P.CY); rect(X0 - 3, Y0 - 3, w + 6, h + 6, P.G3);
-  rect(X0 - 3, Y0 - 3, w + 6, 1, P.W); rect(X0 - 3, Y0 - 3, 1, h + 6, P.W); rect(X0 - 3, Y0 + h + 2, w + 6, 1, P.G1); rect(X0 + w + 2, Y0 - 3, 1, h + 6, P.G1);
-  rect(X0 - 1, Y0 - 1, w + 2, 1, P.G1); rect(X0 - 1, Y0 - 1, 1, h + 2, P.G1); rect(X0 - 1, Y0 + h, w + 2, 1, P.W); rect(X0 + w, Y0 - 1, 1, h + 2, P.W);
-  for (const [cx, cy, dx, dy] of [[X0 - 3, Y0 - 3, 1, 1], [X0 + w + 2, Y0 - 3, -1, 1], [X0 - 3, Y0 + h + 2, 1, -1], [X0 + w + 2, Y0 + h + 2, -1, -1]]) for (let k = 0; k < 3; k++) px(cx + dx * k, cy + dy * k, P.G1);
-}
-// a door in canonical frame: opening along +x (width dw), wall depth 0..3 along +y, room beyond y=4
-function biX_door(dw, open, outside, S) {
-  rect(0, 0, 1, 4, P.K); rect(dw - 1, 0, 1, 4, P.K); rect(1, 0, 1, 4, P.G1); rect(dw - 2, 0, 1, 4, P.W);
-  if (open) {
-    if (outside) { for (let y = 0; y < 4; y++) for (let x = 2; x < dw - 2; x++) px(x, y, biX_bay(x, y) < 6 ? P.BL : P.K); }
-    else { rect(2, 0, dw - 4, 4, P.G1); for (let x = 2; x < dw - 2; x++) if (x & 1) px(x, 1, P.G3); }
-    // both leaves swung into the room, with their swing arcs dotted on the floor
-    const L = Math.max(3, (dw >> 1) - 2), lc = outside ? P.GR2 : P.YE, lb = outside ? P.GR : P.BR;
-    for (let a = 1; a < 10; a += 2) { const an = a / 10 * Math.PI / 2, xx = Math.round(Math.cos(an) * L), yy = Math.round(4 + Math.sin(an) * L); px(2 + xx, yy, P.G1); px(dw - 3 - xx, yy, P.G1); }
-    for (const x0 of [2, dw - 5]) { rect(x0, 4, 3, L, P.K); rect(x0 + 1, 4, 1, L - 1, lb); px(x0 + 1, 4, lc); px(x0 + 1, 4 + L - 2, P.YE); }
-  } else if (outside) { // steel street door: green panels, push bar, centre seam
-    rect(2, 0, dw - 4, 4, P.GR); rect(2, 0, dw - 4, 1, P.K); rect(2, 1, dw - 4, 1, P.GR2); rect(2, 3, dw - 4, 1, P.K);
-    const m = dw >> 1; rect(m, 0, 1, 4, P.K); rect(4, 2, m - 6, 1, P.G3); rect(m + 2, 2, dw - m - 6, 1, P.G3); px(m - 2, 2, P.W); px(m + 2, 2, P.W);
-  } else { // wooden double door: panels, centre seam, brass handles
-    rect(2, 0, dw - 4, 4, P.BR); rect(2, 0, dw - 4, 1, P.RD); rect(2, 3, dw - 4, 1, P.K);
-    const m = dw >> 1; rect(m, 0, 1, 4, P.K);
-    for (let x = 3; x < dw - 3; x++) if (x !== m && x !== m - 1 && x !== m + 1 && (x - 3) % 4 === 1) px(x, 1, P.YE);
-    px(m - 2, 2, P.YE); px(m + 2, 2, P.YE); px(m - 2, 1, P.W); px(m + 2, 1, P.W);
-  }
-}
-
-// ---------- the city street for ambushes ----------
-function biX_street(X0, Y0, w, h, S, oy, MH, night) {
-  // building fronts in the margin: brick with doorways and lit windows
-  for (let j = -4; j < h + 4; j++) for (let i = -4; i < w + 4; i++) {
-    if (j >= 0 && j < h && i >= 0 && i < w) continue;
-    const bi = i + 64, bj = j + 64; let c = (bj % 3 === 0 || (bi + (Math.floor(bj / 3) % 2) * 3) % 6 === 0) ? P.K : (biX_hash(bi >> 1, bj, 9) < 0.2 ? P.BR : P.RD);
-    px(X0 + i, Y0 + j, c);
-  }
-  for (const yy of [Y0 - 4, Y0 + h]) for (let x = X0 + 6; x < X0 + w - 8; x += 26) { rect(x, yy, 8, 4, P.K); rect(x + 1, yy === Y0 - 4 ? yy : yy + 1, 6, 3, P.BR); rect(x + 14, yy + 1, 6, 2, night ? P.YE : P.TL); }
-  // sidewalks: paving slabs, curb, gutter
-  const sw = 2 * S;
-  for (const sy of [Y0, Y0 + h - sw]) { for (let j = 0; j < sw; j++) for (let i = 0; i < w; i++) { const hs = biX_hash(i, j + sy, 11); px(X0 + i, sy + j, (i % S === 0 || j % S === 0) ? P.G1 : hs < 0.05 ? P.W : hs > 0.95 ? P.G1 : P.G3); } }
-  rect(X0, Y0 + sw - 1, w, 1, P.W); rect(X0, Y0 + sw, w, 1, P.K); rect(X0, Y0 + h - sw, w, 1, P.W); rect(X0, Y0 + h - sw - 1, w, 1, P.K);
-  // asphalt
-  const ry = Y0 + sw + 1, rh = h - 2 * sw - 2;
-  for (let j = 0; j < rh; j++) for (let i = 0; i < w; i++) { const hs = biX_hash(i, j, 12), patch = vnoise(i / 9, j / 7) > 0.68; px(X0 + i, ry + j, night ? (hs < 0.04 ? P.G3 : biX_bay(i, j) < 8 ? P.K : P.G1) : (hs < 0.05 ? P.K : hs > 0.985 ? P.G3 : patch && biX_bay(i, j) < 5 ? P.K : P.G1)); }
-  // lane markings, a manhole, an oil stain
-  const cy = oy + Math.floor(MH / 2) * S; for (let x = X0 + 2; x < X0 + w; x += 10) rect(x, cy, 5, 1, P.YE);
-  for (let x = X0 + 2; x < X0 + w; x += 3 * S) { rect(x, ry + 2 * S - 1, 1, 2, P.W); rect(x, ry + rh - 2 * S - 1, 1, 2, P.W); }
-  biX_ball(X0 + Math.round(w * 0.62), cy + 4, 7, 5, P.G1, P.G3, P.K); rect(X0 + Math.round(w * 0.62) + 2, cy + 6, 3, 1, P.K);
-  for (let k = 0; k < 14; k++) { const a = biX_hash(k, 3, 13) * 6.28, d = biX_hash(k, 4, 13) * 5; px(X0 + Math.round(w * 0.3 + Math.cos(a) * d * 1.4), cy - 8 + Math.round(Math.sin(a) * d), P.K); }
-  // the road runs off both ends
-  for (const ex of [X0 - 4, X0 + w]) { const y0 = oy + 5 * S, hh = (MH - 10) * S; for (let j = 0; j < hh; j++) for (let i = 0; i < 4; i++) px(ex + i, y0 + j, biX_bay(ex + i, y0 + j) < 6 ? P.K : P.G1); }
-}
-
-// ---------- explosions and gas (cached frames) ----------
-function biX_boom(type, fi, rad) {
-  return sprite('biX_boom_' + type + fi + '_' + rad, rad * 2 + 1, rad * 2 + 1, () => {
-    const p = fi / 7, fr = rad * (0.35 + 0.65 * Math.sqrt(p));
-    for (let j = 0; j <= rad * 2; j++) for (let i = 0; i <= rad * 2; i++) {
-      const dx = i - rad, dy = j - rad, d = Math.hypot(dx, dy) / fr; if (d > 1.15 || Math.hypot(dx, dy) > rad) continue;
-      const n = vnoise(i * 0.3 + fi * 3.1, j * 0.3) - 0.5, b = biX_bay(i, j) / 16;
-      if (type === 'frag') {
-        const z = d + n * 0.5 + p * 0.75;
-        if (d + n * 0.4 > 1 + (b - 0.5) * 0.2) continue;
-        if (p > 0.55 && z > 1.2 && b < (p - 0.5) * 1.6) continue; // the smoke thins out
-        px(i, j, z < 0.3 ? P.W : z < 0.55 ? P.YE : z < 0.8 ? P.RD2 : z < 1.0 ? P.RD : z < 1.3 || b < 0.5 ? P.G1 : P.K);
-      } else {
-        const ring = Math.abs(d - 0.9 - n * 0.2);
-        if (ring < 0.12) px(i, j, p < 0.5 ? P.W : P.CY);
-        else if (d < 0.8 && b < (1 - p) * 0.9 - d * 0.4) px(i, j, d < 0.4 ? P.W : P.YE);
+// ---------- floors per room kind (fine px; F = fine px per tile) ----------
+function biX_floorArt(kind, X, Y, w, h, F, sd) {
+  const R = Math.round, u = F / 16;
+  const planks = (tones, seam, lite, gr) => {
+    const ph = Math.max(4, R(F / 3));
+    for (let r = 0, y = 0; y < h; r++, y += ph) {
+      const hh = Math.min(ph, h - y); let x = -R(biX_hash(r, sd, 1) * F * 2);
+      for (let k = 0; x < w; k++) {
+        const len = R(F * (2 + biX_hash(r, k + sd, 2) * 2.5)), x0 = Math.max(0, x), x1 = Math.min(w, x + len), tone = tones[Math.floor(biX_hash(r, k, 3 + sd) * tones.length)];
+        rect(X + x0, Y + y, x1 - x0, hh, tone);
+        rect(X + x0, Y + y, x1 - x0, 1, lite);
+        if (hh === ph) rect(X + x0, Y + y + ph - 1, x1 - x0, 1, seam);
+        if (x >= 0) rect(X + x, Y + y, 1, hh, seam);
+        if (biX_hash(r, k, 5 + sd) < 0.65 && ph >= 5) { const gx = x0 + R((x1 - x0) * 0.15), gl = R((x1 - x0) * (0.3 + 0.4 * biX_hash(k, r, 6))), gy = Y + y + 2 + R(biX_hash(k, r, 7) * (ph - 4)); rect(X + gx, gy, Math.min(gl, x1 - gx - 1), 1, gr); }
+        x += len;
       }
     }
-  });
-}
-function biX_gas(rad, ph) {
-  return sprite('biX_gas_' + rad + '_' + ph, rad * 2 + 1, rad * 2 + 1, () => {
-    for (let j = 0; j <= rad * 2; j++) for (let i = 0; i <= rad * 2; i++) {
-      const d = Math.hypot(i - rad, j - rad) / rad; if (d > 1) continue;
-      const n = vnoise(i * 0.16 + ph * 1.3, j * 0.16 - ph * 0.7), dens = (1 - d) * 1.5 + (n - 0.5) * 1.1, b = biX_bay(i, j);
-      if (b < dens * 7) px(i, j, b < dens * 2.2 ? P.GR : P.GR2);
+  };
+  const tiles = (ts, fill, lite, dark, seam, pick) => {
+    for (let ty = 0; ty < h; ty += ts) for (let tx = 0; tx < w; tx += ts) {
+      const tw = Math.min(ts, w - tx), th = Math.min(ts, h - ty), f = pick ? pick(tx / ts | 0, ty / ts | 0) : fill;
+      rect(X + tx, Y + ty, tw, th, f); rect(X + tx, Y + ty, tw, 1, lite); rect(X + tx, Y + ty, 1, th, lite);
+      if (dark) { rect(X + tx, Y + ty + th - 1, tw, 1, dark); rect(X + tx + tw - 1, Y + ty, 1, th, dark); }
+      if (seam) { rect(X + tx, Y + ty, tw, 1, seam); rect(X + tx, Y + ty, 1, th, seam); if (ts > 6) { rect(X + tx + 1, Y + ty + 1, tw - 1, 1, lite); rect(X + tx + 1, Y + ty + 1, 1, th - 1, lite); } }
     }
-  });
+  };
+  const rug = (m, field, border, gold, fringe) => {
+    const rw = Math.min(w - 2 * m, F * 7), rh = Math.min(h - 2 * m, F * 5), rx = X + Math.round((w - rw) / 2), ry = Y + Math.round((h - rh) / 2); if (rw < F * 1.5 || rh < F * 1.2) return;
+    rect(rx + 2, ry + 3, rw, rh, 'rgba(14,8,30,0.28)');
+    rect(rx, ry, rw, rh, border); const b = Math.max(3, R(F * 0.28));
+    rect(rx + 1, ry + 1, rw - 2, 1, gold); rect(rx + 1, ry + rh - 2, rw - 2, 1, gold); rect(rx + 1, ry + 1, 1, rh - 2, gold); rect(rx + rw - 2, ry + 1, 1, rh - 2, gold);
+    rect(rx + b, ry + b, rw - 2 * b, rh - 2 * b, field); const f2 = biX_sh(field, 0.12);
+    rect(rx + b, ry + b, rw - 2 * b, 1, gold); rect(rx + b, ry + rh - b - 1, rw - 2 * b, 1, gold); rect(rx + b, ry + b, 1, rh - 2 * b, gold); rect(rx + rw - b - 1, ry + b, 1, rh - 2 * b, gold);
+    // a central medallion and quarter-lozenges in the corners
+    const cx = rx + rw / 2, cy = ry + rh / 2, mw = Math.min(rw, rh) * 0.34;
+    biX_poly([[cx - mw * 1.3, cy], [cx, cy - mw], [cx + mw * 1.3, cy], [cx, cy + mw]], border); biX_poly([[cx - mw * 1.05, cy], [cx, cy - mw * 0.78], [cx + mw * 1.05, cy], [cx, cy + mw * 0.78]], f2);
+    biX_poly([[cx - mw * 0.55, cy], [cx, cy - mw * 0.4], [cx + mw * 0.55, cy], [cx, cy + mw * 0.4]], gold); biX_poly([[cx - mw * 0.3, cy], [cx, cy - mw * 0.2], [cx + mw * 0.3, cy], [cx, cy + mw * 0.2]], border);
+    const q = mw * 0.55; for (const [sx, sy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { const ox = sx ? rx + rw - b - 1 : rx + b + 1, oy = sy ? ry + rh - b - 1 : ry + b + 1, dx = sx ? -1 : 1, dy = sy ? -1 : 1; biX_poly([[ox, oy], [ox + dx * q * 1.2, oy], [ox, oy + dy * q]], border); }
+    if (fringe) for (let yy = ry + 1; yy < ry + rh - 1; yy += 2) { rect(rx - 2, yy, 2, 1, fringe); rect(rx + rw, yy, 2, 1, fringe); }
+  };
+  switch (kind) {
+    case 'office': planks(['#7c4c2e', '#845432', '#744629'], '#4a2a1c', '#946038', '#6a3e24'); break;
+    case 'exec': planks(['#5a3322', '#613826', '#532f1f'], '#301a14', '#6e4430', '#4a2a1c'); rug(R(F * 0.75), '#7a2430', '#22304e', '#c49a48', '#d8ceb0'); break;
+    case 'file': tiles(F, null, '#78867c', null, '#4a554e', (a, b) => (a + b) % 2 ? '#66736a' : '#5d6a61'); break;
+    case 'computer': tiles(F, '#98a4b2', '#bcc6d2', '#6c7888', null);
+      for (let ty = 0; ty < h; ty += F) for (let tx = 0; tx < w; tx += F) if (biX_hash(tx / F, ty / F, sd + 9) < 0.28) { const s = Math.max(2, R(3 * u)); for (let yy = ty + R(3 * u); yy < Math.min(h, ty + F) - R(3 * u); yy += s) for (let xx = tx + R(3 * u); xx < Math.min(w, tx + F) - R(3 * u); xx += s) rect(X + xx, Y + yy, Math.max(1, R(u)), Math.max(1, R(u)), '#6a7686'); }
+      break;
+    case 'cipher': tiles(F, null, '#2e395a', null, '#222a44', (a, b) => (a + b) % 2 ? '#29334f' : '#2c3754'); break;
+    case 'lounge': rect(X, Y, w, h, '#86704e'); for (let yy = 0; yy < h; yy += Math.max(3, R(4 * u))) rect(X, Y + yy, w, 1, '#806a4a'); rug(R(F * 1.1), '#2f6466', '#1e3a44', '#c49a48', null); break;
+    case 'bath': tiles(Math.max(5, R(F / 2)), '#dfe6e4', '#f0f4f2', null, '#a8b6b6', (a, b) => (a === 0 || b === 0 || (a + 1) * Math.max(5, R(F / 2)) >= w || (b + 1) * Math.max(5, R(F / 2)) >= h) ? '#78aab4' : '#dfe6e4'); break;
+    case 'hall': tiles(F, null, null, null, '#9a907e', (a, b) => (a + b) % 2 ? '#d0c6ae' : '#7c7468'); break;
+    default: rect(X, Y, w, h, '#8a8478');
+  }
 }
-
-// ---------- Max, side view, for the portrait box ----------
-const biX_MAX_TOP = [
-  '......kkkkk..........',
-  '.....kbbdDdk.........',
-  '....kbbbbbddk........',
-  '....kbdbbbbbk........',
-  '....kkkkkkkkkk.......',
-  '....kbbhsskkk........',
-  '....kbhsssewk........',
-  '....kbhsssssk........',
-  '....kbhssssssk.......',
-  '.....khsshsk.........',
-  '......kbbhhbk........',
-  '....kkbbdbbbbkk......',
-  '...kbbbddbbbbbbkkkkkk',
-  '...kbbddbbbbddssmmnnn',
-  '...kbddbbbbbbkhhgkkkk',
-  '...kbdbbbbbbbk..gg...',
-  '...kbdbbbbbbk........',
-  '...kbdbbbbbbk........',
-  '...kGGGGGGGGk........',
-];
-const biX_MAX_LEGS = [[
-  '...kbbbbbbbbk........',
-  '...kbbdbkbbbk........',
-  '...kbbdbkbbdk........',
-  '...kbbdbkbbdk........',
-  '...kbdbk.kbdk........',
-  '...kbdbk.kbdk........',
-  '...kbdbk.kbdk........',
-  '...klllk.klllk.......',
-  '...kllllkkLlllk......',
-], [
-  '...kbbbbbbbbk........',
-  '..kbbdbbbbbbbk.......',
-  '..kbdbk.kbbdbk.......',
-  '.kbdbk...kbbdbk......',
-  '.kbdbk....kbdbk......',
-  'kbdbk......kbdbk.....',
-  'kbdk........kbdbk....',
-  'kllk........klllk....',
-  'kLllk.......kLlllk...',
-], [
-  '...kbbbbbbbbk........',
-  '...kbdbbbbbbk........',
-  '...kbdbkkbdbk........',
-  '...kbdbkkbdk.........',
-  '....kbdbkbdk.........',
-  '....kbdbkbdk.........',
-  '....kbdkkbdk.........',
-  '....klllklllk........',
-  '....kLlllkLlllk......',
-]];
-const biX_MAX_CROUCH = [
-  '...kbbbbbbbbbbbbk....',
-  '...kbdbbbbbbbbdbbk...',
-  '...kbdbkkkkkkkbdbk...',
-  '..kbdbk......kbdk....',
-  '.kLlllk.....kLllk....',
-];
-function biX_maxMap(disg, uni) {
-  const r = disg ? biX_ramp(uni) : [P.K, P.K, P.G1];
-  return { k: P.K, b: r[1], d: disg ? r[2] : P.G1, D: disg ? P.W : P.G3, s: P.SK, h: P.BR, e: P.K, w: P.W, l: P.K, L: P.G1, G: disg ? P.K : P.G1, g: P.K, m: P.G1, n: P.G3 };
+// the inside face of the north wall, seen at a slight angle, with its skirting board
+function biX_wallFace(X, Y, w, F, kind) {
+  const fh = Math.max(4, Math.round(F * 0.3)), face = { bath: '#b8c4c2', computer: '#8a929c', exec: '#7a5a48', lounge: '#8a7a60', cipher: '#4a5068', file: '#7a8278', hall: '#8a8272' }[kind] || '#8c8272';
+  vgrad(X, Y, w, fh, [biX_sh(face, -0.25), face, biX_sh(face, 0.06)]);
+  rect(X, Y + fh - 2, w, 2, biX_sh(face, -0.45)); rect(X, Y + fh - 3, w, 1, biX_sh(face, 0.18)); rect(X, Y + fh, w, 1, 'rgba(16,10,40,0.35)');
 }
+// the north-west light: wall shadows across the floor, a warm pool in the middle, darker corners
+function biX_roomLight(X, Y, w, h, F) {
+  const bw = Math.max(3, Math.round(F * 0.32));
+  for (let k = 0; k < bw; k++) { const a = [0.36, 0.26, 0.16, 0.08][Math.floor(k / bw * 4)]; g.fillStyle = 'rgba(16,10,40,' + a + ')'; g.fillRect(X + k, Y + k, w - k, 1); g.fillRect(X + k, Y + k + 1, 1, h - k - 1); }
+  g.fillStyle = 'rgba(16,10,40,0.16)'; g.fillRect(X, Y + h - 1, w, 1); g.fillRect(X + w - 1, Y, 1, h);
+  const cx = X + w * 0.46, cy = Y + h * 0.44, r = Math.hypot(w, h) * 0.62;
+  let gr = g.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, 'rgba(255,224,168,0.16)'); gr.addColorStop(0.5, 'rgba(255,224,168,0.04)'); gr.addColorStop(0.55, 'rgba(18,10,40,0)'); gr.addColorStop(1, 'rgba(18,10,40,0.34)');
+  g.fillStyle = gr; g.fillRect(X, Y, w, h);
+}
+// walls: a plaster cap 8 fine px thick all round, lit on the edges that face the north-west
+const biX_WALL = ['#1c1824', '#6a6360', '#958c80', '#b6ac9c', '#d4cab6'];
+function biX_wallsArt(X, Y, w, h) {
+  const m = biX_M(w + 16, h + 16); biX_mRect(m, 0, 0, w + 16, h + 16); const hole = biX_mRect(biX_M(w + 16, h + 16), 8, 8, w, h); biX_mCut(m, hole);
+  biX_paint(m, X - 8, Y - 8, biX_WALL, { rim: 1, fn: (i, j, e) => { if (e) return null; const ii = Math.min(i, w + 15 - i), jj = Math.min(j, h + 15 - j), d = Math.min(ii, jj); return d === 4 ? biX_WALL[3] : null; } });
+}
+// a door in its canonical frame: the opening runs along +x (dw fine px), the wall depth is y 0..8, the room lies beyond y = 8
+function biX_doorArt(dw, open, outside, F, L) {
+  const post = biX_ramp(outside ? '#50585e' : '#5a3a26'), leafC = biX_ramp(outside ? '#4e6e5c' : '#8a5a34'), u = F / 16, O = { L };
+  rect(2, 0, dw - 4, 8, open ? (outside ? '#1a2234' : '#7a7266') : '#3a3434');
+  if (open) {
+    if (outside) { rect(2, 0, dw - 4, 3, '#101626'); }
+    else { rect(2, 3, dw - 4, 2, '#8c8476'); }
+    const Lf = Math.max(4, Math.round((dw - 4) / 2) - 1);
+    biX_pRect(2, 8, 3, Lf, leafC, O); biX_pRect(dw - 5, 8, 3, Lf, leafC, O);
+    if (outside) { g.fillStyle = 'rgba(190,210,240,0.10)'; biX_poly([[3, 8], [dw - 3, 8], [dw + Lf * 0.4, 8 + Lf * 1.6], [-Lf * 0.4, 8 + Lf * 1.6]], 'rgba(190,210,240,0.09)'); }
+  } else {
+    const half = Math.floor((dw - 4) / 2);
+    biX_pRect(2, 2, half, 5, leafC, O); biX_pRect(2 + half, 2, dw - 4 - half, 5, leafC, O);
+    if (outside) { rect(4, 4, dw - 8, 1, '#9aa8a0'); }
+    rect(1 + half, 4, 1, 1, '#e8c870'); rect(3 + half, 4, 1, 1, '#e8c870');
+  }
+  biX_pRect(0, 0, 3, 9, post, O); biX_pRect(dw - 3, 0, 3, 9, post, O);
+}
+// ---------- the city street for ambushes (fine px, interior at X,Y) ----------
+function biX_streetArt(X, Y, w, h, F, night, lamps) {
+  const R = Math.round, u = F / 16;
+  const A = night ? { road: '#262a38', road2: '#2c3040', walk: '#565866', walk2: '#4e505e', seam: '#3e404c', lite: '#6a6c7a', curb: '#8a8a94', brick: '#3a2c30', win: '#e8c878' }
+    : { road: '#4c4c54', road2: '#55545c', walk: '#a09a8e', walk2: '#9a9488', seam: '#7c776e', lite: '#b8b2a4', curb: '#d0c8b6', brick: '#7a4c3a', win: '#5a7890' };
+  // building fronts in the margin: brick plinths with doorways and a window's glow
+  rect(X - 8, Y - 8, w + 16, h + 16, A.brick);
+  for (const yy of [Y - 8, Y + h]) { rect(X - 8, yy + (yy < Y ? 7 : 0), w + 16, 1, biX_sh(A.brick, -0.4)); for (let x = X + 6; x < X + w - 16; x += R(F * 3.4)) { rect(x, yy + 1, R(F * 0.9), 6, biX_sh(A.brick, -0.5)); rect(x + R(F * 1.5), yy + 2, R(F * 1.1), 4, A.win); } }
+  // road (runs off both ends)
+  const sw = 2 * F, ry = Y + sw, rh = h - 2 * sw;
+  rect(X - 8, ry, w + 16, rh, A.road);
+  for (let k = 0; k < 4; k++) { const px0 = X + R(biX_hash(k, 1, 40) * (w - F * 3)) + F, py0 = ry + R(F * 0.6 + biX_hash(k, 2, 40) * (rh - F * 2)), pw = R(F * (1.2 + biX_hash(k, 3, 40) * 1.5)), ph = R(F * (0.5 + biX_hash(k, 4, 40) * 0.6)); biX_ell(px0, py0, pw / 2, ph / 2, A.road2); }
+  const cy = Y + R(h / 2); for (let x = X; x < X + w; x += R(F * 1.25)) rect(x, cy - 1, R(F * 0.7), Math.max(2, R(1.5 * u)), night ? '#b09038' : '#d8b440');
+  for (const ly of [ry + R(F * 2.2), ry + rh - R(F * 2.2)]) for (let x = X + R(F); x < X + w; x += 3 * F) rect(x, ly, 1, R(F * 0.6), night ? '#8a8a90' : '#d8d4c8');
+  // a zebra crossing near the west end
+  const zx = X + R(F * 2.5), zw = R(F * 1.4); for (let yy = ry + R(F * 0.4); yy < ry + rh - R(F * 0.4); yy += R(F * 0.5)) rect(zx, yy, zw, Math.max(2, R(F * 0.25)), night ? '#6a6a74' : '#c8c4b8');
+  // manhole and an oil stain
+  const mx = X + R(w * 0.64), my = cy + R(F * 1.4); biX_pEll(mx, my, 3.4 * u + 2, 3.4 * u + 2, biX_ramp(night ? '#3a3e4a' : '#5e5e66'), { rim: 1, fn: (i, j, e) => !e && (i % 3 === 0 || j % 3 === 0) ? (night ? '#30343e' : '#4e4e56') : null });
+  g.fillStyle = 'rgba(10,6,20,0.3)'; biX_ell(X + w * 0.3, cy - F * 0.9, R(F * 0.7), R(F * 0.4), 'rgba(10,6,20,0.28)');
+  // sidewalks: slabs, curbs, a drain in the gutter
+  for (const [sy, top] of [[Y, 1], [Y + h - sw, 0]]) {
+    for (let ty = 0; ty < sw; ty += F) for (let tx = 0; tx < w; tx += F) { const f = biX_hash(tx / F, (sy + ty) / F, 41) < 0.25 ? A.walk2 : A.walk, tw = Math.min(F, w - tx); rect(X + tx, sy + ty, tw, F, f); rect(X + tx, sy + ty, tw, 1, A.seam); rect(X + tx, sy + ty, 1, F, A.seam); rect(X + tx + 1, sy + ty + 1, tw - 1, 1, A.lite); }
+    const cyb = top ? sy + sw - R(2 * u) : sy; rect(X, cyb, w, R(2 * u), A.curb); rect(X, top ? cyb + R(2 * u) : cyb - 1, w, 1, biX_sh(A.road, -0.35)); rect(X, top ? cyb : cyb + R(2 * u) - 1, w, 1, top ? biX_sh(A.curb, 0.3) : biX_sh(A.curb, -0.3));
+    for (let x = X + R(F * 2.5); x < X + w; x += 6 * F) { const gy = top ? sy + sw : sy - R(2 * u) - 1; rect(x, gy, R(F * 0.8), R(2 * u), '#1a1a22'); for (let k = 1; k < R(F * 0.8); k += 2) rect(x + k, gy, 1, R(2 * u), '#4a4a52'); }
+  }
+  // shadow of the building line on the northern walk
+  g.fillStyle = 'rgba(16,10,40,0.22)'; g.fillRect(X, Y, w, R(F * 0.35)); g.fillRect(X, Y + h - sw, w, R(F * 0.12));
+}
+// night street lamps: warm pools (after the furniture so the cars catch the light too)
+function biX_streetGlow(lamps) { for (const [x, y, r] of lamps) { biX_glow(x, y, r, 'rgb(255,200,120)', 0.34, true); biX_glow(x, y, r * 0.4, 'rgb(255,230,170)', 0.22, true); } }
 
-// ---------- equipment display pieces ----------
-function biX_gunSide(uzi) {
-  return sprite('biX_gun_' + (uzi ? 'uzi' : 'pistol'), 60, 20, () => {
-    if (!uzi) {
-      biX_box(0, 3, 19, 5, P.G1, P.G3, P.K); for (let x = 3; x < 17; x += 3) px(x, 6, P.K); rect(0, 4, 1, 3, P.K); px(1, 5, P.K);
-      rect(18, 1, 26, 6, P.K); rect(19, 2, 24, 4, P.G1); rect(19, 2, 24, 1, P.G3); rect(24, 3, 6, 1, P.K); for (let x = 36; x < 42; x += 2) rect(x, 3, 1, 2, P.K);
-      px(20, 0, P.K); rect(41, 0, 2, 1, P.K);
-      rect(18, 7, 24, 2, P.K); rect(19, 7, 22, 1, P.G1);
-      frame(23, 8, 8, 5, P.K); px(27, 9, P.G3); px(27, 10, P.G1);
-      for (let r = 0; r < 9; r++) { const x0 = 31 + Math.round(r * 0.6); rect(x0, 8 + r, 10, 1, P.K); if (r < 8) { rect(x0 + 1, 8 + r, 8, 1, P.BR); if (r % 2) px(x0 + 3, 8 + r, P.RD); px(x0 + 1, 8 + r, P.YE); } }
+// ---------- explosions, stun flashes and gas (cached frames, fine px) ----------
+function biX_boomArt(type, fi, rad) {
+  return sprite('biX_bm_' + type + fi + '_' + rad, rad * 2 + 2, rad * 2 + 2, () => {
+    const c = rad + 1, p = fi / 7, D2 = rad * 2 + 2;
+    const puffs = (n, spread, size, seed, lift) => { const o = []; for (let k = 0; k < n; k++) { const an = k / n * Math.PI * 2 + biX_hash(k, seed, 50) * 0.7, d = rad * spread * (0.35 + 0.65 * biX_hash(k, seed + 1, 50)); o.push([c + Math.cos(an) * d, c + Math.sin(an) * d * 0.85 - lift, rad * size * (0.7 + 0.5 * biX_hash(k, seed + 2, 50))]); } return o; };
+    // shade a union of puffs: each pixel takes the brightest dome over it, then a heat/brightness band
+    const field = (ps, fn) => { for (let j = 0; j < D2; j++) for (let i = 0; i < D2; i++) { let best = -1; for (const [x, y, r] of ps) { const dx = (i + 0.5 - x) / r, dy = (j + 0.5 - y) / r, q = dx * dx + dy * dy; if (q < 1) { const lit = Math.sqrt(1 - q) * 0.7 + (-dx - dy) * 0.25; if (lit > best) best = lit; } } if (best >= 0) { const col = fn(i, j, best); if (col) { g.fillStyle = col; g.fillRect(i, j, 1, 1); } } } };
+    if (type === 'frag') {
+      if (fi <= 2) { g.fillStyle = 'rgba(255,236,200,' + (0.55 - fi * 0.2) + ')'; const rr = rad * (0.55 + fi * 0.22); for (let a = 0; a < 140; a++) { const an = a / 140 * Math.PI * 2; g.fillRect(Math.round(c + Math.cos(an) * rr), Math.round(c + Math.sin(an) * rr), 2, 2); } }
+      // smoke, growing and thinning as the fire dies
+      if (fi >= 1) { const a = [0, 0.75, 0.8, 0.75, 0.62, 0.48, 0.34, 0.2][fi]; field(puffs(9, 0.55 + p * 0.25, 0.22 + p * 0.2, 7, p * rad * 0.25), (i, j, l) => l > 0.72 ? 'rgba(128,112,124,' + a + ')' : l > 0.4 ? 'rgba(92,78,96,' + a + ')' : 'rgba(58,46,66,' + a + ')'); }
+      // the fireball: hottest at the centre, banded white-yellow-orange-red
+      if (fi <= 5) { const fr = rad * [0.5, 0.62, 0.6, 0.52, 0.4, 0.28][fi], cool = fi * 0.1; field(puffs(8, [0.3, 0.38, 0.38, 0.34, 0.28, 0.2][fi], [0.3, 0.36, 0.34, 0.28, 0.2, 0.13][fi], 3, 0).concat([[c, c, fr * 0.7]]), (i, j, l) => { const d = Math.hypot(i + 0.5 - c, j + 0.5 - c) / (fr || 1), h = 1.15 - d * 0.7 + l * 0.35 - cool; return h > 1.0 ? '#fffbe0' : h > 0.82 ? '#ffe070' : h > 0.62 ? '#ffa838' : h > 0.4 ? '#e8602a' : '#a8302a'; }); }
     } else {
-      rect(0, 5, 8, 3, P.K); rect(1, 5, 6, 1, P.G1); rect(6, 3, 3, 7, P.K); px(7, 4, P.G3);
-      biX_box(8, 2, 32, 9, P.G1, P.G3, P.K); for (let x = 12; x < 22; x += 2) rect(x, 4, 1, 4, P.K); rect(23, 3, 10, 1, P.W); rect(28, 2, 3, 1, P.K);
-      rect(9, 0, 2, 2, P.K); rect(35, 0, 3, 2, P.K);
-      frame(16, 10, 9, 5, P.K); px(20, 11, P.G3);
-      rect(25, 11, 8, 9, P.K); rect(26, 11, 6, 8, P.G1); rect(26, 11, 1, 8, P.G3); for (let y = 13; y < 19; y += 2) rect(27, y, 4, 1, P.K);
-      rect(40, 4, 18, 1, P.K); rect(40, 8, 18, 1, P.K); rect(40, 5, 17, 1, P.G1); rect(56, 3, 3, 7, P.K); rect(57, 4, 1, 5, P.G1);
+      const k = 1 - p;
+      g.fillStyle = 'rgba(220,244,255,' + (0.85 * k) + ')'; const rr = rad * (0.35 + p * 0.65); for (let a = 0; a < 140; a++) { const an = a / 140 * Math.PI * 2; g.fillRect(Math.round(c + Math.cos(an) * rr), Math.round(c + Math.sin(an) * rr), 2, 2); }
+      if (fi < 5) { biX_pEll(c, c, rad * 0.34 * k, rad * 0.34 * k, biX_ramp('#e8f8ff', 0.3), { ol: false }); for (let a = 0; a < 8; a++) { const an = a / 8 * Math.PI * 2 + 0.2, l = rad * (0.4 + 0.5 * k) * (a % 2 ? 0.6 : 1); biX_cap(c, c, c + Math.cos(an) * l, c + Math.sin(an) * l, Math.max(1, rad * 0.04 * k), '#ffffff'); } }
     }
   });
 }
-const biX_CAR = [
-  '...tTt......tTt...', '.kkkkkkkkkkkkkkkk.', 'krBBBBBBBBBBBBBByk', 'kwbbkgGBBBgGkbbbwk', 'kwbbkgbbbbggkbbbwk', 'kwbbkgbbbbggkBBBwk',
-  'kwbbkgbbbbggkbbbwk', 'kwbbkGbbbbgGkbbbwk', 'kwbbkgddddggkbbbwk', 'krddddddddddddddyk', '.kkkkkkkkkkkkkkkk.', '...tTt......tTt...',
-];
-const biX_GREN = ['.kgk.', 'kcwck', 'kcccd', '.kdk.'];
-function biX_grenMap(col) { const r = biX_ramp(col); return { k: P.K, g: P.G3, c: r[1], w: r[2], d: r[0] === P.K ? P.G1 : r[0] }; }
-const biX_BUG = ['...k...', '.kkRkk.', 'kRRWRRk', 'kRRRRRk', '.kkkkk.', '.k...k.'];
-const biX_BUGMAP = { k: P.K, R: P.RD, W: P.RD2 };
-const biX_ROUND = ['.Y.', 'YYW', 'YYB', 'BBB', 'BBB', 'BBB', 'KKK'];
-const biX_ROUNDMAP = { Y: P.BR, W: P.YE, B: P.YE, K: P.BR };
-const biX_CLIP = ['kkkkkkk', 'kYYWYYk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kGgggGk', 'kkkkkkk'];
-const biX_CLIPMAP = { k: P.K, Y: P.BR, W: P.YE, G: P.G3, g: P.G1 };
-function biX_camera() {
-  return sprite('biX_cam', 22, 14, () => {
-    rect(4, 0, 6, 2, P.K); rect(5, 1, 4, 1, P.G3); rect(14, 1, 4, 2, P.K); px(15, 1, P.RD2);
-    biX_box(0, 2, 22, 11, P.K, P.K, P.K); rect(1, 3, 20, 2, P.G3); rect(1, 3, 20, 1, P.W); rect(1, 5, 20, 7, P.K); for (let x = 2; x < 20; x += 2) for (let y = 6; y < 12; y += 2) px(x + (y & 2 ? 1 : 0), y, P.G1);
-    biX_ball(6, 4, 10, 10, P.G1, P.G3, P.K); biX_ell(8, 6, 6, 6, P.BL); biX_ell(9, 7, 4, 4, P.TL); px(9, 7, P.W); px(10, 7, P.CY);
-    rect(17, 6, 3, 2, P.TL); px(17, 6, P.CY);
-  });
-}
-function biX_safekit() {
-  return sprite('biX_safekit', 46, 25, () => {
-    // an open leather tool roll: stethoscope, hand drill, lock picks
-    rect(0, 3, 46, 22, P.K); rect(1, 4, 44, 20, P.BR); rect(2, 5, 42, 18, P.K); for (let x = 2; x < 44; x += 2) { px(x, 4, P.YE); px(x + 1, 23, P.RD); }
-    for (const x of [16, 31]) rect(x, 6, 1, 16, P.RD);
-    rect(17, 0, 12, 4, P.K); rect(18, 1, 10, 2, P.BR); px(18, 1, P.YE);
-    // stethoscope: ear tubes, a loop of tubing, the chest piece
-    for (let a = 0; a < 30; a++) { const an = a / 30 * Math.PI * 1.75 + 0.3; px(9 + Math.round(Math.cos(an) * 5), 12 + Math.round(Math.sin(an) * 5), a % 5 ? P.G3 : P.W); }
-    rect(4, 6, 1, 4, P.G3); rect(12, 6, 1, 4, P.G3); px(4, 6, P.W); px(12, 6, P.W);
-    biX_ball(9, 15, 6, 6, P.G3, P.W, P.G1); px(11, 17, P.K);
-    // drill
-    biX_box(19, 8, 10, 6, P.YE, P.W, P.BR); rect(24, 14, 4, 7, P.K); rect(25, 14, 2, 6, P.RD); px(25, 15, P.RD2); rect(18, 10, 1, 2, P.K); rect(17, 10, 1, 2, P.G3); rect(18, 10, 1, 1, P.W);
-    // picks and tension wrenches
-    for (let n = 0; n < 5; n++) { rect(33 + n * 2, 7, 1, 14, P.G3); px(33 + n * 2, 7, P.W); rect(33 + n * 2, 17, 1, 4, P.BR); if (n % 2) px(34 + n * 2, 8, P.G3); }
-  });
-}
-function biX_silhouette() {
-  return sprite('biX_sil', 145, 99, () => {
-    rect(0, 0, 145, 99, P.BL);
-    const cx = 276 - 173;
-    const inside = (x, y) => {
-      if (((x - cx) / 11) ** 2 + ((y - 17) / 14) ** 2 < 1) return true;
-      if (Math.abs(x - cx) < 7 && y >= 28 && y < 40) return true;
-      if (y >= 34) { const s = Math.min(1, (y - 33) / 12), hw = 7 + 24 * Math.sqrt(s) + Math.max(0, (y - 46) * 0.06); if (Math.abs(x - cx) < hw) return true; }
-      if (y >= 42 && y < 54 && x > 232 - 173 && x < cx) return y - 42 > (cx - x) * 0.05 - 1;
-      return false;
-    };
-    for (let y = 0; y < 99; y++) for (let x = 0; x < 145; x++) {
-      if (!inside(x, y)) continue;
-      if (!inside(x - 1, y)) { px(x, y, P.BR); continue; }
-      if (!inside(x + 1, y)) { px(x, y, P.K); continue; }
-      if (y % 2 === 0) px(x, y, (x - cx) > 12 && biX_bay(x, y) < 10 ? P.K : P.G1);
+function biX_gasArt(rad, ph) {
+  return sprite('biX_gs_' + rad + '_' + ph, rad * 2 + 2, rad * 2 + 2, () => {
+    const c = rad + 1, D2 = rad * 2 + 2, N = 12, ps = [];
+    for (let k = 0; k < N; k++) { const an = k / N * Math.PI * 2 + ph * 0.22 * (k % 2 ? 1 : -1), d = rad * (k < 4 ? 0.16 : 0.5) * (0.85 + 0.3 * biX_hash(k, 1, 60)), r = rad * (k < 4 ? 0.36 : 0.32) * (0.85 + 0.2 * Math.sin(ph * 0.9 + k)); ps.push([c + Math.cos(an) * d, c + Math.sin(an) * d, Math.min(r, rad - d - 1)]); }
+    for (let j = 0; j < D2; j++) for (let i = 0; i < D2; i++) {
+      let best = -1, cnt = 0; for (const [x, y, r] of ps) { if (r <= 1) continue; const dx = (i + 0.5 - x) / r, dy = (j + 0.5 - y) / r, q = dx * dx + dy * dy; if (q < 1) { cnt++; const lit = Math.sqrt(1 - q) * 0.6 + (-dx - dy) * 0.3; if (lit > best) best = lit; } }
+      if (best < 0) continue; const a = Math.min(0.7, 0.3 + cnt * 0.1);
+      g.fillStyle = best > 0.72 ? 'rgba(214,232,150,' + a + ')' : best > 0.38 ? 'rgba(160,198,92,' + a + ')' : 'rgba(104,146,64,' + a + ')'; g.fillRect(i, j, 1, 1);
     }
   });
 }
-function biX_mask(x, y) { // gas mask on the silhouette's face
-  biX_ball(x, y, 22, 17, P.G1, P.G3, P.K); biX_ball(x + 3, y + 3, 7, 6, P.TL, P.CY, P.BL); biX_ball(x + 12, y + 3, 7, 6, P.TL, P.CY, P.BL); px(x + 5, y + 4, P.W); px(x + 14, y + 4, P.W);
-  biX_ball(x + 7, y + 10, 8, 8, P.G3, P.W, P.G1); for (let i = 0; i < 3; i++) px(x + 9 + i * 2, y + 13, P.K); rect(x, y + 6, 2, 3, P.K); rect(x + 20, y + 6, 2, 3, P.K);
+function biX_grenArt(type) {
+  return sprite('biX_gn_' + type, 12, 10, () => {
+    const col = { frag: '#5e6e3a', stun: '#c8ccd0', gas: '#5a9a3a' }[type], G = biX_ramp(col, type === 'stun' ? 0.7 : 1), O = { L: [-1, -1] };
+    if (type === 'frag') { biX_pEll(6, 6.2, 4, 3.8, G, O); rect(3, 6, 6, 1, G[1]); }
+    else { biX_pRect(2, 3, 8, 7, G, O); rect(3, 6, 6, 2, type === 'gas' ? '#e8e070' : '#e8b030'); }
+    biX_pRect(4, 0, 4, 3, biX_ramp('#8a9098', 0.7), O); rect(8, 1, 2, 1, '#c8ccd0');
+  });
 }
 
-// ---------- the Equipment Display: kit on Max's silhouette (also used by the armory) ----------
-function biX_vestPx(i, j) { // design space 50 x 65
-  const c = 24.5, dx = Math.abs(i - c);
-  if (j < 14) { if (dx > 8 && dx < 17) return (dx < 10 ? P.G3 : dx > 15 ? P.K : (j % 3 ? P.G1 : P.K)); return null; }   // shoulder straps
-  if (j < 22 && dx < 8 + (j - 14) * 0.2 && j < 14 + (8 - dx) * 0.9) return null;                                       // neck scoop
-  const half = j < 22 ? 17 + (j - 14) * 0.9 : 24; if (dx > half) return null;
-  if (j > 60 && dx > 24 - (64 - j)) return null;
-  if (dx < 1) return j % 3 === 0 ? P.G3 : P.K;                                                                      // velcro seam
-  const pouch = j >= 30 && j < 43 && (dx > 3 && dx < 11 || dx > 12 && dx < 20);
-  if (pouch) { if (j < 33) return j === 30 ? P.G3 : P.G1; if ((dx < 5 || (dx > 9.5 && dx < 13.5) || dx > 18.5) || j === 42) return P.K; return biX_bay(i, j) < 3 ? P.G3 : P.G1; }
-  if (j === 29 || j === 48) return P.K; if (j === 49) return P.G3;
-  if (j >= 52 && j < 56 && dx > 14) return j === 52 ? P.G3 : P.K;                                                  // side straps
-  if (dx > half - 1.5) return i < c ? P.G3 : P.K;
-  return biX_bay(i, j) < 2 ? P.K : P.G1;
-}
-function biX_vest(w, h) { return sprite('biX_vest' + w + 'x' + h, w + 2, h + 1, () => biX_raster(1, 0, w, h, (i, j) => biX_vestPx(Math.floor((i + 0.5) * 50 / w), Math.floor((j + 0.5) * 65 / h)), P.K)); }
-// kit: the chosen equipment; m: { gun, hits, gren, gtype, bugs, clip, clips, film }; drawn for a panel whose left edge is x=173
-function biX_equip(kit, m, t) {
-  g.drawImage(biX_silhouette(), 173, 0);
-  if (kit.kevlar) { g.drawImage(biX_vest(50, 65), 250, 31); for (let i = 0; i < m.hits; i++) { const hx = 262 + (i * 17) % 30, hy = 50 + (i * 11) % 30; biX_ball(hx - 2, hy - 2, 5, 5, P.G1, P.W, P.K, P.G3); px(hx, hy, P.K); } }
-  else for (let i = 0; i < m.hits; i++) { const hx = 266 + i * 8, hy = 56; biX_ell(hx - 1, hy, 6, 5, P.RD); px(hx, hy + 1, P.RD2); px(hx + 1, hy + 5, P.RD); px(hx + 2, hy + 6, P.RD); }
-  if (kit.gasmask) biX_mask(265, 12);
-  if (kit.detector) {
-    for (let a = 0; a <= 24; a++) { const an = Math.PI + a / 24 * Math.PI, xx = 276 + Math.round(Math.cos(an) * 13), yy = 17 + Math.round(Math.sin(an) * 15); px(xx, yy, P.G3); px(xx, yy - 1, P.W); px(xx, yy + 1, P.K); }
-    for (const ex of [260, 288]) { biX_box(ex, 11, 5, 10, P.G1, P.G3, P.K); rect(ex + 2, 0, 1, 11, P.G3); px(ex + 2, 0, (t * 3 | 0) % 2 ? P.RD2 : P.YE); }
-  }
-  const uzi = m.gun === 'uzi'; g.drawImage(biX_gunSide(uzi), uzi ? 188 : 183, uzi ? 37 : 38);
-  biX_ball(214, 43, 10, 9, P.G1, P.G3, P.K); rect(216, 51, 5, 2, P.K);
-  // grenade bandolier
-  rect(177, 1, 58, 17, P.K);
-  ['frag', 'stun', 'gas'].forEach((k2, row) => {
-    const y = 3 + row * 5, on = m.gtype === k2; rect(178, y - 1, 56, 5, on ? P.TL : P.G1); rect(178, y - 1, 56, 1, on ? P.CY : P.G3);
-    for (let n = 0; n < 8; n++) px(184 + n * 7, y + 1, P.K);
-    for (let n = 0; n < Math.min(8, m.gren[k2]); n++) biX_put('gr_' + k2, biX_GREN, biX_grenMap(GREN[k2].col), 179 + n * 7, y);
+// ---------- Max, side view, for the portrait box (46 x 76 fine px) ----------
+// backlit by a doorway on the right: the figure reads as a dark shape with a warm rim on its front edges
+const biX_MAXPOSE = {
+  // hip, front knee/ankle, back knee/ankle, shoulder, head centre
+  0: { hip: [19, 42], fk: [21, 57], fa: [20, 71], bk: [17, 57], ba: [16, 71], sh: [20, 21], hd: [22, 11] },
+  1: { hip: [19, 42], fk: [24, 56], fa: [27, 70], bk: [15, 57], ba: [10, 68], sh: [20, 21], hd: [22, 11] },
+  2: { hip: [19, 42], fk: [19, 57], fa: [15, 69], bk: [22, 56], ba: [23, 71], sh: [20, 21], hd: [22, 11] },
+  c: { hip: [16, 55], fk: [27, 58], fa: [26, 71], bk: [11, 69], ba: [4, 71], sh: [19, 35], hd: [22, 25] },
+};
+function biX_maxSide(fr, disg, uniC, uzi, mask) {
+  return sprite('biX_mx_' + [fr, disg ? uniC : 'n', uzi ? 1 : 0, mask ? 1 : 0].join('_'), 46, 76, () => {
+    const P0 = biX_MAXPOSE[fr], rimR = (c, k = 1) => { const r = biX_ramp(c); return [r[0], r[1], r[2], mix(r[2], '#ffc880', 0.45 * k), mix(r[2], '#ffe0b0', 0.7 * k)]; };
+    const base = disg ? biX_tone(uniC) : '#2c3042', SU = rimR(base), SD = rimR(biX_sh(base, -0.3), 0.6), BOOT = rimR('#1c1a20', 0.6), SK = rimR(biX_C.skinL), GUNR = rimR('#2c2c34', 0.8), HOOD = rimR('#1e1e28');
+    const O = { L: [1, -1] }, sh = P0.sh, hd = P0.hd, hip = P0.hip, aimY = sh[1] + 4, hand = [36, aimY];
+    const leg = (k, a, r) => { const m = biX_M(46, 76); biX_mCap(m, hip[0], hip[1], k[0], k[1], 3.8); biX_mCap(m, k[0], k[1], a[0], a[1] - 2, 3.1); biX_paint(m, 0, 0, r, O); biX_pPoly([[a[0] - 3, a[1] - 3], [a[0] + 2, a[1] - 3], [a[0] + 6, a[1] + 1], [a[0] + 6, a[1] + 3], [a[0] - 3, a[1] + 3]], BOOT, O); };
+    // far leg, far arm
+    leg(P0.bk, P0.ba, SD);
+    biX_pCap(sh[0] + 1, sh[1] + 2, hand[0] - 3, hand[1] - 1, 2.4, SD, O);
+    // neck and torso: a deep chest, the back curving down to the belt
+    biX_pRect(hd[0] - 3, hd[1] + 3, 6, 7, disg ? SK : HOOD, O);
+    biX_pPoly([[sh[0] - 6, sh[1] - 1], [sh[0] + 4, sh[1] - 2], [sh[0] + 7, sh[1] + 3], [sh[0] + 7, sh[1] + 10], [hip[0] + 5, hip[1] - 1], [hip[0] + 5, hip[1] + 2], [hip[0] - 5, hip[1] + 2], [hip[0] - 5, hip[1] - 6], [sh[0] - 8, sh[1] + 8]], SU, O);
+    biX_pRect(hip[0] - 5, hip[1] - 2, 11, 3, rimR(disg ? '#2a2226' : '#3a3028', 0.7), { L: [1, -1], ol: false });
+    if (!disg) { biX_pRect(hip[0] - 8, hip[1] - 4, 5, 6, rimR('#34342a', 0.7), O); biX_pCap(sh[0] + 5, sh[1] + 1, hip[0] - 4, hip[1] - 3, 1, rimR('#3a3028', 0.5), { L: [1, -1], ol: false }); }
+    // head: balaclava with an eye slit, or a guard's cap over a face in profile
+    if (disg) {
+      biX_pEll(hd[0], hd[1], 4.8, 5.2, SK, O); biX_pPoly([[hd[0] + 4, hd[1] - 1], [hd[0] + 6.5, hd[1] + 2], [hd[0] + 4, hd[1] + 3]], SK, { L: [1, -1], ol: false });
+      biX_pPoly([[hd[0] - 5.5, hd[1] - 2], [hd[0] - 4.5, hd[1] - 6.5], [hd[0] + 4, hd[1] - 6.5], [hd[0] + 5, hd[1] - 2]], SU, O); biX_pRect(hd[0] + 2, hd[1] - 3, 7, 2, SD, O);
+      rect(hd[0] + 3, hd[1], 1, 1, biX_C.ink); rect(hd[0] + 4, hd[1] + 4, 2, 1, SK[1]); rect(hd[0] - 3, hd[1] + 1, 2, 3, SK[1]);
+    } else {
+      biX_pEll(hd[0], hd[1], 5, 5.4, HOOD, O);
+      rect(hd[0] + 1, hd[1] - 2, 5, 3, SK[2]); rect(hd[0] + 1, hd[1] - 2, 5, 1, SK[3]); rect(hd[0] + 3, hd[1] - 1, 2, 1, '#f4f0e8'); rect(hd[0] + 4, hd[1] - 1, 1, 1, biX_C.ink);
+    }
+    if (mask) { biX_pPoly([[hd[0] + 1, hd[1] - 3], [hd[0] + 6, hd[1] - 2], [hd[0] + 8, hd[1] + 3], [hd[0] + 3, hd[1] + 5]], rimR('#4c5458'), O); biX_pEll(hd[0] + 7, hd[1] + 4, 2.4, 2.4, rimR('#4a5436'), O); biX_pEll(hd[0] + 3.5, hd[1] - 1, 1.4, 1.4, biX_ramp('#6ab4c4'), { ol: false }); }
+    // near leg, the aiming arm, the gun and a gloved hand
+    leg(P0.fk, P0.fa, SU);
+    biX_pCap(sh[0] - 1, sh[1] + 2, hand[0] - 2, hand[1], 2.7, SU, O);
+    if (uzi) { biX_pPoly([[hand[0] - 6, aimY - 3], [hand[0] + 9, aimY - 3], [hand[0] + 9, aimY + 1], [hand[0] - 6, aimY + 1]], GUNR, O); biX_pRect(hand[0] - 1, aimY + 1, 3, 6, GUNR, O); rect(hand[0] + 9, aimY - 2, 1, 2, biX_C.ink); }
+    else { biX_pPoly([[hand[0] - 2, aimY - 3], [hand[0] + 6, aimY - 3], [hand[0] + 6, aimY], [hand[0] - 2, aimY]], GUNR, O); biX_pRect(hand[0] + 6, aimY - 2, 4, 2, GUNR, { L: [1, -1], ol: false }); }
+    biX_pEll(hand[0] - 1, hand[1] + 1, 2.4, 2.2, disg ? SK : rimR('#24222a'), O);
   });
-  for (let n = 0; n < m.bugs; n++) biX_put('bug', biX_BUG, biX_BUGMAP, 236 + (n % 2) * 9, 8 + Math.floor(n / 2) * 8);
-  for (let n = 0; n < m.clip; n++) biX_put('round', biX_ROUND, biX_ROUNDMAP, 178 + n * 5, 70);
-  for (let n = 0; n < Math.min(4, m.clips); n++) biX_put('clip', biX_CLIP, biX_CLIPMAP, 178 + n * 10, 80);
-  if (kit.camera) {
-    g.drawImage(biX_camera(), 224, 71);
-    rect(223, 86, 15, 9, P.K); frame(223, 86, 15, 9, P.G1); text(String(m.film).padStart(2, '0'), 225, 87, P.GR2);
-    rect(239, 86, 7, 8, P.K); rect(240, 87, 5, 6, P.YE); rect(240, 89, 5, 2, P.K); px(242, 86, P.G3);
-  }
-  if (kit.safekit) g.drawImage(biX_safekit(), 248, 73);
 }
+function biX_portraitBg() {
+  return art('biX_pbg', 23, 38, () => {
+    vgrad(0, 0, 46, 64, ['#343a52', '#2c3248', '#242a3e']);
+    // a lit doorway behind him on the right
+    vgrad(30, 4, 16, 58, ['#f0d49a', '#d8b074', '#a87c50']); rect(29, 4, 1, 58, '#5a4a3c'); rect(30, 4, 16, 1, '#ffecc0');
+    biX_glow(40, 36, 30, 'rgb(255,200,130)', 0.22, true);
+    rect(0, 62, 46, 14, '#2e2824'); vgrad(0, 62, 46, 14, ['#4a3e34', '#2a2420']); rect(0, 62, 46, 1, '#6a5644');
+    biX_glow(38, 64, 20, 'rgb(255,190,120)', 0.25, true);
+  });
+}
+// ---------- the Equipment Display (layout: the panel's left edge is x = 173) ----------
+function biX_panelBg() {
+  return art('biX_eqbg', 145, 99, () => { vgrad(0, 0, 290, 198, ['#1c2638', '#18202e', '#141b28']); biX_glow(206, 80, 130, 'rgb(120,160,220)', 0.16, true); rect(0, 196, 290, 2, '#0a0e16'); });
+}
+// Max's silhouette: head, neck, shoulders and the arm stretched out toward the gun, rim-lit from the north-west
+function biX_silArt() {
+  return art('biX_sil', 145, 99, () => {
+    const cx = 206, m = biX_M(290, 198);
+    biX_mEll(m, cx, 34, 21, 27); biX_mRect(m, cx - 11, 54, 22, 20);
+    biX_mPoly(m, [[cx - 12, 66], [cx + 12, 66], [cx + 58, 88], [cx + 64, 110], [cx + 66, 198], [cx - 66, 198], [cx - 64, 110], [cx - 50, 86]]);
+    biX_mCap(m, cx - 44, 96, 90, 92, 11);
+    const SIL = ['#0c101a', '#1e2638', '#28324a', '#3c4a68', '#5a6e96'];
+    biX_paint(m, 0, 0, SIL, { rim: 2, fn: (i, j, e) => e ? null : (j > 120 && i > cx + 20 ? SIL[1] : null) });
+  });
+}
+function biX_gunArt(uzi) {
+  return art('biX_gun' + (uzi ? 'u' : 'p'), 60, 20, () => {
+    const M = biX_ramp('#3c3e46'), D = biX_ramp('#2a2a30'), GRIP = biX_ramp('#5a3a28'), O = { L: [-1, -1] };
+    if (!uzi) {
+      biX_pRect(0, 7, 40, 8, D, O);                                                  // silencer
+      for (let x = 6; x < 36; x += 6) rect(x, 8, 1, 6, D[1]);
+      biX_pPoly([[36, 3], [88, 3], [90, 5], [90, 15], [36, 15]], M, O);                // slide
+      for (let x = 72; x < 86; x += 3) rect(x, 5, 1, 6, M[1]); rect(40, 4, 30, 1, M[4]);
+      biX_pRect(84, 1, 4, 3, M, O); biX_pRect(40, 1, 3, 3, M, O);
+      biX_pPoly([[46, 15], [84, 15], [84, 19], [46, 19]], M, O);                        // frame
+      biX_pPoly([[50, 18], [62, 18], [62, 26], [50, 26]], D, { L: [-1, -1] }); rect(52, 20, 8, 5, '#12101a'); rect(55, 20, 2, 4, M[3]);
+      biX_pPoly([[62, 18], [82, 18], [88, 38], [70, 38]], GRIP, O);                    // grip
+      for (let k = 0; k < 5; k++) rect(70 + k * 3, 24 + k * 2, 8, 1, GRIP[1]);
+    } else {
+      biX_pRect(0, 9, 18, 6, D, O); biX_pRect(12, 6, 6, 14, D, O);                      // folded stock
+      biX_pPoly([[18, 4], [82, 4], [84, 6], [84, 22], [18, 22]], M, O);
+      for (let x = 24; x < 44; x += 4) rect(x, 8, 2, 8, M[1]); rect(46, 6, 22, 2, M[4]); biX_pRect(56, 2, 6, 3, M, O);
+      biX_pRect(82, 9, 34, 5, D, O); biX_pRect(112, 7, 5, 9, D, O);                    // barrel
+      biX_pPoly([[32, 22], [48, 22], [48, 30], [32, 30]], D, O); rect(35, 24, 10, 4, '#12101a');
+      biX_pPoly([[50, 22], [66, 22], [68, 40], [52, 40]], M, O);                      // magazine in the grip
+      for (let y = 26; y < 38; y += 3) rect(53, y, 12, 1, M[1]);
+    }
+  });
+}
+function biX_cameraArt() {
+  return art('biX_cam', 22, 14, () => {
+    const B = biX_ramp('#2c2a30'), CH = biX_ramp('#b8bcc4', 0.6), O = { L: [-1, -1] };
+    biX_pRect(8, 0, 12, 5, CH, O); biX_pRect(28, 2, 8, 4, CH, O); rect(30, 3, 3, 2, '#c83c30');
+    biX_pRect(0, 4, 44, 8, CH, O); biX_pRect(0, 11, 44, 16, B, O);
+    for (let x = 3; x < 41; x += 3) rect(x, 14, 1, 11, B[1]);
+    biX_pEll(22, 16, 10, 10, B, O); biX_pEll(22, 16, 7.5, 7.5, biX_ramp('#3a4050'), O);
+    biX_pEll(22, 16, 5, 5, biX_ramp('#2a4a72'), { ol: false }); rect(19, 12, 3, 2, '#b8d8f0'); rect(24, 18, 2, 1, '#5aa0c8');
+    rect(35, 6, 5, 3, '#1a1a20'); rect(36, 6, 3, 1, '#5a7898');
+  });
+}
+function biX_safekitArt() {
+  return art('biX_sk', 46, 25, () => {
+    const LTH = biX_ramp('#7a4a2a'), IN = '#2a1a18', O = { L: [-1, -1] };
+    biX_pRect(34, 0, 24, 8, LTH, O); rect(38, 2, 16, 3, LTH[1]);
+    biX_pRect(0, 6, 92, 44, LTH, O); rect(4, 10, 84, 36, IN);
+    for (let x = 6; x < 88; x += 4) { rect(x, 8, 2, 1, LTH[3]); rect(x, 47, 2, 1, LTH[1]); }
+    rect(32, 10, 2, 36, LTH[1]); rect(62, 10, 2, 36, LTH[1]);
+    // stethoscope
+    g.fillStyle = '#9aa0a8'; for (let a = 0; a < 60; a++) { const an = a / 60 * Math.PI * 1.7 + 0.4; g.fillRect(Math.round(17 + Math.cos(an) * 9), Math.round(26 + Math.sin(an) * 9), 2, 2); }
+    biX_pCap(9, 13, 9, 20, 1.2, biX_ramp('#c8ccd0', 0.6), O); biX_pCap(25, 13, 25, 20, 1.2, biX_ramp('#c8ccd0', 0.6), O);
+    biX_pEll(19, 38, 5, 5, biX_ramp('#c8ccd0', 0.6), O); biX_ell(19, 38, 2, 2, '#4a4e56');
+    // hand drill
+    biX_pRect(38, 16, 20, 10, biX_ramp('#d4a830'), O); biX_pRect(48, 26, 8, 16, biX_ramp('#3a3a40'), O); biX_pRect(32, 19, 7, 4, biX_ramp('#a8acb4', 0.6), O);
+    // picks and tension wrenches
+    for (let n = 0; n < 6; n++) { const x = 67 + n * 3.5; biX_pRect(x, 14 + (n % 2) * 2, 2, 22, biX_ramp('#b8bcc4', 0.6), { L: [-1, -1], ol: false }); biX_pRect(x - 0.5, 34, 3, 8, biX_ramp('#6a3a24'), { L: [-1, -1], ol: false }); }
+  });
+}
+function biX_vestArt(w, h) {
+  return art('biX_vest' + w + 'x' + h, w, h, () => {
+    const W2 = w * 2, H2 = h * 2, cx = W2 / 2, s = W2 / 100, t = H2 / 130, VE = biX_ramp('#46503e'), ST = biX_ramp('#343a30'), O = { L: [-1, -1] };
+    const m = biX_M(W2, H2);
+    biX_mPoly(m, [[cx - 34 * s, 0], [cx - 18 * s, 0], [cx - 12 * s, 24 * t], [cx + 12 * s, 24 * t], [cx + 18 * s, 0], [cx + 34 * s, 0], [cx + 38 * s, 36 * t], [cx + 48 * s, 44 * t], [cx + 48 * s, 124 * t], [cx + 40 * s, 130 * t], [cx - 40 * s, 130 * t], [cx - 48 * s, 124 * t], [cx - 48 * s, 44 * t], [cx - 38 * s, 36 * t]]);
+    biX_paint(m, 0, 0, VE, { rim: 2, fn: (i, j, e) => !e && Math.abs(i - cx) < 1 && j > 24 * t ? VE[0] : null });
+    for (const sx of [-1, 1]) {
+      for (let k = 0; k < 2; k++) { const px0 = cx + sx * (8 + k * 18) * s - (sx < 0 ? 16 * s : 0); biX_pRect(px0, 62 * t, 16 * s, 24 * t, VE, O); biX_pRect(px0, 62 * t, 16 * s, 7 * t, ST, O); }
+      biX_pRect(cx + sx * 34 * s - (sx < 0 ? 14 * s : 0), 104 * t, 14 * s, 7 * t, ST, O);
+    }
+    biX_pRect(cx - 44 * s, 96 * t, 88 * s, 3 * t, ST, { L: [-1, -1], ol: false });
+  });
+}
+function biX_maskArt() {
+  return art('biX_gm', 22, 17, () => {
+    const RB = biX_ramp('#3a3e44'), O = { L: [-1, -1] };
+    biX_pPoly([[4, 4], [12, 0], [32, 0], [40, 4], [42, 16], [34, 28], [22, 33], [10, 28], [2, 16]], RB, { L: [-1, -1], rim: 2 });
+    for (const x of [13, 31]) { biX_pEll(x, 12, 6, 5.4, biX_ramp('#8a9098'), O); biX_pEll(x, 12, 4.2, 3.8, biX_ramp('#3a7a8e'), { ol: false }); rect(x - 2, 10, 2, 1, '#c8eef4'); }
+    biX_pEll(22, 25, 6, 6, biX_ramp('#5c6a44'), O); for (let k = -3; k <= 3; k += 2) rect(19, 25 + k, 7, 1, '#3e4a2e');
+  });
+}
+function biX_bugArt() { return art('biX_bug', 7, 6, () => { biX_pEll(7, 7.5, 5.6, 4.4, biX_ramp('#a8acb4', 0.7), { rim: 1 }); biX_ell(7, 7.5, 2, 1.6, '#3a3c44'); rect(6, 6, 2, 2, '#ff5a3a'); rect(6, 6, 1, 1, '#ffd0a0'); biX_cap(10, 5, 13, 0, 0.5, '#c8ccd0'); }); }
+function biX_roundArt() { return art('biX_rnd', 3, 7, () => { biX_pRect(0, 5, 6, 9, biX_ramp('#c89a40')); biX_pPoly([[1, 5], [1, 2], [3, 0], [5, 2], [5, 5]], biX_ramp('#b86a3c'), { L: [-1, -1], ol: false }); }); }
+function biX_clipArt() { return art('biX_clp', 7, 14, () => { biX_pRect(0, 2, 14, 26, biX_ramp('#5a5e66'), { rim: 1 }); biX_pRect(3, 0, 8, 4, biX_ramp('#c89a40'), { L: [-1, -1] }); for (let y = 8; y < 26; y += 4) rect(3, y, 8, 1, '#3c3e46'); }); }
+function biX_equip(kit, m, t, bare) {
+  if (!bare) blit(biX_panelBg(), 173, 0); blit(biX_silArt(), 173, 0);
+  if (kit.kevlar) { blit(biX_vestArt(50, 65), 250, 31); for (let i = 0; i < m.hits; i++) { const hx = 262 + (i * 17) % 30, hy = 50 + (i * 11) % 30; fine(() => { biX_pEll(hx * 2, hy * 2, 3, 3, biX_ramp('#9a9ea4')); biX_ell(hx * 2, hy * 2, 1, 1, '#1a1a20'); }); } }
+  else for (let i = 0; i < m.hits; i++) { const hx = 266 + i * 8, hy = 56; fine(() => { biX_pEll(hx * 2 + 2, hy * 2 + 2, 5, 4, biX_ramp('#a0242a'), { ol: false }); biX_ell(hx * 2 + 4, hy * 2 + 9, 1, 2, '#8a1c22'); }); }
+  if (kit.gasmask) blit(biX_maskArt(), 265, 12);
+  if (kit.detector) { blit(biX_headsetArt(), 257, 0); fine(() => { for (const ex of [525, 581]) { g.fillStyle = (t * 3 | 0) % 2 ? '#ff4a3a' : '#ffd060'; g.fillRect(ex - 1, 0, 3, 3); } }); }
+  const uzi = m.gun === 'uzi'; blit(biX_gunArt(uzi), uzi ? 188 : 183, uzi ? 37 : 38);
+  // a gloved hand round the grip
+  blit(biX_fistArt(), uzi ? 213 : 211, uzi ? 41 : 42);
+  // grenade bandolier: three leather belts, the selected one lit
+  blit(biX_bandolier(), 177, 1);
+  ['frag', 'stun', 'gas'].forEach((k2, row) => {
+    const y = 3 + row * 5, on = m.gtype === k2;
+    if (on) fine(() => { g.fillStyle = 'rgba(255,196,90,0.28)'; g.fillRect(356, y * 2 - 2, 112, 10); g.fillStyle = '#ffc860'; g.fillRect(356, y * 2 - 2, 112, 1); g.fillRect(356, y * 2 + 7, 112, 1); g.fillRect(356, y * 2 - 2, 1, 10); g.fillRect(467, y * 2 - 2, 1, 10); });
+    for (let n = 0; n < Math.min(8, m.gren[k2]); n++) blit(biX_grenArt(k2), 178.5 + n * 7, y - 1);
+  });
+  for (let n = 0; n < m.bugs; n++) blit(biX_bugArt(), 236 + (n % 2) * 9, 8 + Math.floor(n / 2) * 8);
+  for (let n = 0; n < m.clip; n++) blit(biX_roundArt(), 178 + n * 5, 70);
+  for (let n = 0; n < Math.min(4, m.clips); n++) blit(biX_clipArt(), 178 + n * 10, 80);
+  if (kit.camera) {
+    blit(biX_cameraArt(), 224, 71);
+    rect(223, 86, 15, 9, '#0c140e'); frame(223, 86, 15, 9, '#3a4a3e'); text(String(m.film).padStart(2, '0'), 225, 87, '#7ce07a');
+    blit(biX_filmArt(), 239, 85);
+  }
+  if (kit.safekit) blit(biX_safekitArt(), 248, 73);
+}
+function biX_bandolier() {
+  return art('biX_band', 58, 17, () => {
+    rect(0, 0, 116, 34, '#141018'); const LT = biX_ramp('#5a3a26');
+    for (let row = 0; row < 3; row++) { const y = 2 + row * 10; biX_pRect(2, y + 3, 112, 6, LT, { L: [-1, -1] }); for (let n = 0; n < 8; n++) rect(14 + n * 14, y + 3, 1, 6, LT[0]); }
+  });
+}
+function biX_headsetArt() { return art('biX_hset', 38, 22, () => { g.fillStyle = '#8a929c'; for (let a = 0; a <= 48; a++) { const an = Math.PI + a / 48 * Math.PI; g.fillRect(Math.round(38 + Math.cos(an) * 27), Math.round(34 + Math.sin(an) * 30), 3, 2); } for (const ex of [6, 62]) { biX_pRect(ex, 22, 10, 20, biX_ramp('#3a3e46')); rect(ex + 4, 1, 2, 21, '#9aa0a8'); } }); }
+function biX_fistArt() { return art('biX_fist', 10, 9, () => { biX_pEll(10, 9, 8.5, 7.5, biX_ramp('#2e2c34')); for (const y of [5, 9, 13]) rect(12, y, 6, 1, '#1a1820'); }); }
+function biX_filmArt() { return art('biX_film', 8, 10, () => { biX_pRect(0, 2, 14, 16, biX_ramp('#d8b030')); rect(2, 8, 10, 5, '#2a2a30'); rect(4, 0, 6, 3, '#6a6e76'); }); }
+
+// ---------- static frames of the Break-In Display (layout sizes, painted on the fine grid) ----------
+let biX_roomSeq = 0;
+function biX_leftBg() {
+  return art('biX_lbg', 171, 200, () => {
+    vgrad(0, 0, 342, 400, ['#161c2a', '#10151f', '#0c1018']);
+    g.fillStyle = '#18202e'; for (let x = 16; x < 342; x += 16) g.fillRect(x, 40, 1, 360); for (let y = 48; y < 400; y += 16) g.fillRect(0, y, 342, 1);
+    g.fillStyle = '#1c2636'; for (let x = 64; x < 342; x += 64) g.fillRect(x, 40, 1, 360); for (let y = 96; y < 400; y += 64) g.fillRect(0, y, 342, 1);
+    const gr = g.createRadialGradient(171, 214, 40, 171, 214, 260); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,8,0.55)'); g.fillStyle = gr; g.fillRect(0, 0, 342, 400);
+  });
+}
+function biX_rightBg() {
+  return art('biX_rbg', 149, 200, () => {
+    rect(0, 0, 2, 400, '#56627e'); rect(2, 0, 2, 400, '#05070b');
+    vgrad(4, 0, 290, 400, ['#1c2638', '#141b28', '#10151f']);
+    rect(294, 0, 2, 400, '#05070b'); rect(296, 0, 2, 400, '#3a4660');
+    rect(4, 196, 290, 2, '#0a0e16'); rect(4, 198, 290, 1, '#2e3a52');
+  });
+}
+function biX_portraitFrame() {
+  return art('biX_pfr', 25, 40, () => { rect(0, 0, 50, 80, '#07090e'); rect(1, 1, 48, 78, '#6a7690'); rect(3, 3, 46, 76, '#1a2030'); rect(2, 78, 47, 1, '#1a2030'); rect(48, 2, 1, 77, '#1a2030'); });
+}
+function biX_infoBar() {
+  return art('biX_ibar', 145, 19, () => {
+    rect(0, 0, 290, 38, '#07090e'); rect(1, 1, 288, 36, '#5a6682'); rect(2, 2, 287, 35, '#222a3c'); rect(3, 3, 285, 33, '#3e4a64');
+    vgrad(4, 4, 282, 30, ['#1a2438', '#141c2c', '#101624']);
+    rect(4, 17, 282, 1, '#0a0e18'); rect(4, 18, 282, 1, '#26324a');
+  });
+}
+function biX_planFrame(w, h) {
+  return art('biX_plan' + w + 'x' + h, w + 2, h + 2, () => {
+    const W2 = 2 * w + 4, H2 = 2 * h + 4; rect(0, 0, W2, H2, '#07090e'); rect(1, 1, W2 - 2, H2 - 2, '#5a6682'); rect(2, 2, W2 - 3, H2 - 3, '#222a3c'); rect(3, 3, W2 - 6, H2 - 6, '#0b1424');
+    g.fillStyle = '#101c30'; for (let x = 11; x < W2 - 3; x += 8) g.fillRect(x, 3, 1, H2 - 6); for (let y = 11; y < H2 - 3; y += 8) g.fillRect(3, y, W2 - 6, 1);
+    const gr = g.createRadialGradient(W2 / 2, H2 / 2, 10, W2 / 2, H2 / 2, W2 * 0.7); gr.addColorStop(0, 'rgba(60,120,180,0.10)'); gr.addColorStop(1, 'rgba(0,0,10,0.35)'); g.fillStyle = gr; g.fillRect(3, 3, W2 - 6, H2 - 6);
+  });
+}
+// the enemy mainframe's console: a CRT on the desk and its keyboard (layout 8..163 x 22..186)
+function biX_terminalArt() {
+  return art('biX_term', 155, 164, () => {
+    vgrad(0, 0, 310, 328, ['#2a2024', '#1e181c']);
+    const BZ = biX_ramp('#c8c0a8', 0.7);
+    biX_pRect(0, 0, 310, 242, BZ, { rim: 2 }); biX_pRect(4, 4, 302, 226, biX_ramp('#aaa28a', 0.7), { L: [1, 1], ol: false });
+    rect(8, 8, 294, 220, '#040c08'); const gr = g.createRadialGradient(155, 118, 20, 155, 118, 190); gr.addColorStop(0, 'rgba(40,120,70,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0.4)'); g.fillStyle = gr; g.fillRect(8, 8, 294, 220);
+    for (const [x, y] of [[8, 8], [301, 8], [8, 227], [301, 227]]) rect(x, y, 1, 1, BZ[1]);
+    rect(20, 232, 40, 5, '#8a826c'); rect(21, 233, 38, 1, '#e8e0c8');
+    // keyboard
+    const KB = biX_ramp('#bcb49a', 0.7); biX_pRect(0, 246, 314, 80, KB, { rim: 2 });
+    for (let i = 0; i < 29; i++) {
+      const x = (i % 13) * 24 + 4, y = 252 + Math.floor(i / 13) * 24, sp = i >= 26, ok = i === 28, kw = ok ? 68 : 20;
+      rect(x + 1, y + 2, kw, 20, '#5a5444'); biX_pRect(x, y, kw, 19, biX_ramp(ok ? '#4a8a5a' : sp ? '#8a8474' : '#e6e0cc', 0.6), { rim: 1 });
+    }
+  });
+}
+
+// ---------- ARMORY art ----------
+function biX_armoryBg(slots) {
+  return art('biX_armory', 320, 172, () => {
+    vgrad(0, 0, 320, 344, ['#34444a', '#2a383e', '#222e34']);
+    g.fillStyle = '#2e3c42'; for (let x = 12; x < 320; x += 24) g.fillRect(x, 0, 1, 344);
+    for (const s of slots) {
+      const x = s.x * 2, y = (s.y + 8) * 2, w = s.w * 2, h = s.h * 2;
+      rect(x - 2, y - 2, w + 4, h + 4, '#141c20'); rect(x - 2, y + h, w + 4, 2, '#56686e'); rect(x + w, y - 2, 2, h + 4, '#46585e');
+      vgrad(x, y, w, h, ['#16261f', '#1e3229', '#223a30']);
+      for (let k = 0; k < 6; k++) { g.fillStyle = 'rgba(4,8,10,' + (0.42 - k * 0.07) + ')'; g.fillRect(x, y + k, w, 1); g.fillRect(x + k, y, 1, h); }
+      const gl = g.createRadialGradient(x + w / 2, y + h * 0.3, 2, x + w / 2, y + h * 0.3, w * 0.7); gl.addColorStop(0, 'rgba(255,230,180,0.10)'); gl.addColorStop(1, 'rgba(255,230,180,0)'); g.fillStyle = gl; g.fillRect(x, y, w, h);
+      // steel shelf and the shadow it throws on the wall
+      biX_pRect(x - 3, y + h, w + 6, 6, biX_ramp('#9aa4a8', 0.7), { rim: 1 });
+      g.fillStyle = 'rgba(6,10,14,0.45)'; g.fillRect(x - 1, y + h + 6, w + 4, 3); g.fillStyle = 'rgba(6,10,14,0.2)'; g.fillRect(x, y + h + 9, w + 4, 3);
+      for (const bx of [x + 6, x + w - 10]) biX_pRect(bx, y + h + 5, 4, 7, biX_ramp('#6a7478'), { rim: 1 });
+    }
+    for (const ux of [148, 316]) { biX_pRect(ux, 0, 6, 344, biX_ramp('#8a9498', 0.7), { rim: 1, ol: false }); g.fillStyle = '#3a4448'; for (let y = 6; y < 344; y += 12) g.fillRect(ux + 2, y, 2, 3); }
+  });
+}
+function biX_armoryPanel() {
+  return art('biX_armp', 160, 172, () => {
+    rect(0, 0, 2, 344, '#05070b'); vgrad(2, 0, 318, 344, ['#1c2638', '#141b28', '#10151f']);
+    biX_glow(160, 180, 180, 'rgb(120,160,220)', 0.1, true);
+    // brass-edged title plate
+    biX_pRect(4, 4, 312, 68, biX_ramp('#2a3244'), { rim: 2 }); rect(10, 10, 300, 56, '#161c28'); rect(10, 10, 300, 1, '#0a0e16'); rect(10, 65, 300, 1, '#34405a');
+    for (const [x, y] of [[10, 10], [304, 10], [10, 60], [304, 60]]) { biX_pEll(x + 3, y + 3, 2.5, 2.5, biX_ramp('#a8aeb8', 0.6)); }
+  });
+}
+const biX_BIGGREN = { frag: '#56663a', stun: '#c4c8cc', gas: '#6aa040' };
+function biX_bigGrenArt(k) {
+  return art('biX_bg_' + k, 7, 10, () => {
+    const R_ = biX_ramp(biX_BIGGREN[k]), O = { L: [-1, -1] };
+    if (k === 'frag') { biX_pEll(7, 12.5, 6.5, 7.5, R_, O); for (const y of [9, 13, 17]) rect(2, y, 10, 1, R_[1]); for (const x of [5, 9]) rect(x, 6, 1, 13, R_[1]); }
+    else if (k === 'stun') { biX_pRect(2, 5, 10, 15, R_, O); rect(3, 10, 8, 3, '#e8c040'); }
+    else { biX_pRect(1, 5, 12, 15, R_, O); rect(2, 11, 10, 1, R_[0]); rect(2, 14, 10, 2, '#d8e070'); }
+    biX_pRect(4, 1, 6, 5, biX_ramp('#8a9098', 0.7), O); biX_pCap(10, 3, 12, 9, 0.8, biX_ramp('#8a9098', 0.7), { L: [-1, -1], ol: false }); biX_pEll(3, 3, 2, 2, biX_ramp('#c8ccd0', 0.6), O);
+  });
+}
+// each shelf item is painted once into its own picture (80 x 64 layout, anchored at the middle of the shelf)
+function armoryItem(k, cx, base) { blit(art('biX_ai_' + k, 80, 64, () => { g.scale(RES, RES); biX_armoryItemDraw(k, 40, 64); }), Math.round(cx) - 40, Math.round(base) - 64); }
+function biX_armoryItemDraw(k, cx, base) {
+  const peg = (x, y) => fine(() => { biX_pRect(2 * x - 1, 2 * y, 3, 8, biX_ramp('#9aa4a8', 0.6), { rim: 1 }); });
+  switch (k) {
+    case 'uzi': peg(cx - 14, base - 27); peg(cx + 12, base - 27); blit(biX_gunArt(true), cx - 30, base - 21); break;
+    case 'camera': fine(() => { g.fillStyle = '#1a1a20'; for (let a = 0; a <= 24; a++) { const an = Math.PI + a / 24 * Math.PI; g.fillRect(Math.round(2 * cx - 4 + Math.cos(an) * 24), Math.round(2 * base - 24 + Math.sin(an) * 10), 2, 2); } }); blit(biX_cameraArt(), cx - 13, base - 14);
+      fine(() => { biX_pRect(2 * cx + 26, 2 * base - 16, 14, 16, biX_ramp('#d8b030')); rect(2 * cx + 28, 2 * base - 11, 10, 5, '#2a2a30'); rect(2 * cx + 30, 2 * base - 18, 6, 3, '#6a6e76'); }); break;
+    case 'bugs': fine(() => { biX_pRect(2 * cx - 64, 2 * base - 18, 128, 16, biX_ramp('#2a2a30'), { rim: 1 }); for (let n = 0; n < 6; n++) biX_ell(2 * cx - 53 + n * 20, 2 * base - 9, 7, 5, '#141418'); }); for (let n = 0; n < 6; n++) blit(biX_bugArt(), cx - 30 + n * 10, base - 8); break;
+    case 'frag': case 'stun': case 'gas': for (let n = 0; n < 7; n++) blit(biX_bigGrenArt(k), cx - 31 + n * 9, base - 10); break;
+    case 'gasmask': fine(() => { for (const s of [-1, 1]) biX_cap(2 * cx + s * 18, 2 * base - 22, 2 * cx + s * 10, 2 * base - 46, 1.2, '#26282e'); }); peg(cx, base - 25); blit(biX_maskArt(), cx - 11, base - 19); break;
+    case 'detector': fine(() => {
+      const X = 2 * cx, Y = 2 * base; g.fillStyle = '#8a929c'; for (let a = 0; a <= 40; a++) { const an = Math.PI + a / 40 * Math.PI; g.fillRect(Math.round(X + Math.cos(an) * 21), Math.round(Y - 20 + Math.sin(an) * 18), 3, 2); }
+      for (const ex of [X - 27, X + 17]) { biX_pRect(ex, Y - 24, 10, 20, biX_ramp('#3a3e46')); rect(ex + 4, Y - 50, 2, 26, '#9aa0a8'); biX_ell(ex + 5, Y - 50, 2, 2, '#ff5a3a'); }
+      biX_pRect(X - 10, Y - 18, 22, 18, biX_ramp('#4a4e56')); rect(X - 6, Y - 14, 14, 7, '#0c1a10'); rect(X - 5, Y - 12, 3, 1, '#7ae07a'); rect(X + 1, Y - 10, 4, 1, '#7ae07a'); rect(X + 5, Y - 6, 2, 2, '#ff5a3a');
+    }); break;
+    case 'kevlar': peg(cx, base - 56); fine(() => biX_cap(2 * cx - 18, 2 * base - 100, 2 * cx + 18, 2 * base - 100, 1.5, '#8a929c')); blit(biX_vestArt(40, 50), cx - 20, base - 51); break;
+    case 'safekit': fine(() => { biX_pRect(2 * cx - 48, 2 * base - 70, 96, 20, biX_ramp('#5a3a24'), { rim: 2 }); rect(2 * cx - 42, 2 * base - 64, 84, 10, '#2a1a14'); rect(2 * cx - 42, 2 * base - 64, 84, 2, '#8a2a2a'); }); blit(biX_safekitArt(), cx - 23, base - 25); break;
+  }
+}
+function biX_takenArt(tw) { return art('biX_tk' + tw, tw, 12, () => { biX_pRect(0, 0, 2 * tw, 24, biX_ramp('#3a4452'), { rim: 1 }); rect(3, 3, 2 * tw - 6, 18, '#161c26'); }); }
+function biX_ledArt(on) { return art('biX_led' + (on ? 1 : 0), 7, 7, () => { rect(0, 0, 14, 14, '#07090e'); biX_pRect(1, 1, 12, 12, biX_ramp(on ? '#e8a830' : '#3a4250', 0.8), { rim: 1 }); }); }
+function biX_armoryChrome() { return art('biX_achr', 320, 28, () => { vgrad(0, 0, 640, 56, ['#161c28', '#0e121a']); rect(0, 0, 640, 2, '#3a4660'); rect(0, 2, 640, 1, '#07090e'); rect(498, 18, 132, 32, '#07090e'); biX_pRect(500, 20, 128, 28, biX_ramp('#3c6a4a'), { rim: 2 }); }); }
+
 
 // ------------------------------------------------------------------
 function breakinScene(opts, done) {
@@ -1159,157 +1276,178 @@ function breakinScene(opts, done) {
   }
   const night = isNight();
   const roomF = B.rooms.map(r => F.filter(f => f.room === r.id));
-  const layers = new Map();
-  // the static part of a room (floor, walls, doors, furniture) is painted once per room, scale and state
+  const layers = new Map(), sd0 = (bld.seed || 7) % 997;
+  // the static part of a room (floor, light, shadows, furniture, walls, doors) is painted once per room, scale and state
   function drawRoom(v) {
     const { r, S, ox, oy } = v, X0 = ox + r.x * S, Y0 = oy + r.y * S, w = r.w * S, h = r.h * S;
     const key = r.id + '|' + S + '|' + r.doors.map(d => d.open ? 1 : 0).join('') + '|' + roomF[r.id].map(furnState).join(',');
     let c = layers.get(key);
     if (!c) {
       if (layers.size > 40) layers.clear();
-      c = document.createElement('canvas'); c.width = w + 8; c.height = h + 8;
-      drawTo(c.getContext('2d'), () => {
-        g.translate(4 - X0, 4 - Y0);
-        if (r.kind === 'street') {
-          biX_street(X0, Y0, w, h, S, oy, B.MH, night);
-          if (night) for (const f of roomF[r.id]) if (f.type === 'lamp') { const cx = ox + f.x * S + S / 2, cy = oy + f.y * S + S / 2, R = S * 2.6; for (let yy = -R; yy <= R; yy++) for (let xx = -R; xx <= R; xx++) { const d = Math.hypot(xx, yy) / R; const X = Math.round(cx + xx), Y = Math.round(cy + yy); if (d < 1 && X >= X0 && X < X0 + w && Y >= Y0 && Y < Y0 + h && biX_bay(X, Y) < (1 - d) * 7) px(X, Y, P.YE); } }
-        } else { biX_walls(X0, Y0, w, h); biX_floor(r.kind, X0, Y0, w, h, S); for (const d of r.doors) drawDoor(d, v, X0, Y0, w, h); }
-        for (const f of roomF[r.id]) drawFurn(f, v);
-      });
-      layers.set(key, c);
+      const ak = 'biX_room' + (++biX_roomSeq); c = art(ak, w + 8, h + 8, () => paintRoom(v, X0, Y0, w, h)); artCache.delete(ak); layers.set(key, c);
     }
-    g.drawImage(c, X0 - 4, Y0 - 4);
+    fine(() => { g.fillStyle = 'rgba(0,0,6,0.45)'; g.fillRect(2 * X0 - 2, 2 * Y0 + 2, 2 * w + 16, 2 * h + 16); g.fillStyle = 'rgba(0,0,6,0.3)'; g.fillRect(2 * X0, 2 * Y0 + 4, 2 * w + 18, 2 * h + 18); });
+    blit(c, X0 - 4, Y0 - 4);
+  }
+  function paintRoom(v, X0, Y0, w, h) {
+    const { r, S } = v, F = 2 * S, FX = 2 * X0, FY = 2 * Y0, W2 = 2 * w, H2 = 2 * h, fs = roomF[r.id], street = r.kind === 'street';
+    g.translate(8 - FX, 8 - FY);
+    if (street) biX_streetArt(FX, FY, W2, H2, F, night); else { biX_floorArt(r.kind, FX, FY, W2, H2, F, r.id * 7 + sd0); biX_wallFace(FX, FY, W2, F, r.kind); }
+    // one shadow mask for everything that stands on the floor, thrown to the south-east
+    const m = biX_M(W2, H2), u = F / 16;
+    for (const f of fs) {
+      const k = biX_TALL[f.type]; if (!k || (f.type === 'evidence' && !f.content)) continue;
+      const x = (f.x - r.x) * F + k * F * 0.55, y = (f.y - r.y) * F + k * F * 0.75, fw = f.w * F, fh = f.h * F;
+      if (f.type === 'plant' || f.type === 'table' || f.type === 'bin') biX_mEll(m, x + fw / 2, y + fh / 2, fw / 2 - 2 * u, fh / 2 - 2 * u);
+      else if (f.type === 'lamp') biX_mEll(m, x + fw / 2, y + fh * 0.2, 3 * u, 3 * u);
+      else if (f.type === 'car') biX_mRect(m, x + fw * 0.04, y + fh * 0.14, fw * 0.92, fh * 0.72);
+      else if (f.type === 'chair') biX_mEll(m, x + fw / 2, y + fh / 2, fw * 0.38, fh * 0.4);
+      else biX_mRect(m, x + 1.5 * u, y + 1.5 * u, fw - 3 * u, fh - 3 * u);
+    }
+    g.fillStyle = street && night ? 'rgba(4,2,14,0.4)' : 'rgba(16,8,36,0.3)'; for (let j = 0; j < m.h; j++) for (let i = 0; i < m.w; i++) if (m.a[j * m.w + i]) g.fillRect(FX + i, FY + j, 1, 1);
+    for (const f of fs) drawFurn(f, v);
+    if (street) {
+      if (night) { g.fillStyle = 'rgba(8,10,36,0.34)'; g.fillRect(FX - 8, FY - 8, W2 + 16, H2 + 16); }
+      if (night) biX_streetGlow(fs.filter(f => f.type === 'lamp').map(f => [2 * (v.ox + f.x * S) + F / 2, 2 * (v.oy + f.y * S) + (f.y > B.MH / 2 ? F * 0.2 : F * 0.8), F * 2.8]));
+      else { const gr = g.createLinearGradient(FX, FY, FX + W2, FY + H2); gr.addColorStop(0, 'rgba(255,230,180,0.08)'); gr.addColorStop(1, 'rgba(20,10,50,0.16)'); g.fillStyle = gr; g.fillRect(FX - 8, FY - 8, W2 + 16, H2 + 16); }
+    } else {
+      biX_roomLight(FX, FY, W2, H2, F);
+      biX_wallsArt(FX, FY, W2, H2); for (const d of r.doors) drawDoor(d, v, X0, Y0, w, h);
+    }
   }
   function drawDoor(d, v, X0, Y0, w, h) {
-    const S = v.S, dw = 2 * S, half = Math.floor(S / 2); g.save();
-    if (d.o === 'h') { const dx = v.ox + d.x * S - half; if (d.y < v.r.y) g.translate(dx, Y0 - 4); else { g.translate(dx + dw, Y0 + h + 4); g.rotate(Math.PI); } }
-    else { const dy = v.oy + d.y * S - half; if (d.x < v.r.x) { g.translate(X0 - 4, dy + dw); g.rotate(-Math.PI / 2); } else { g.translate(X0 + w + 4, dy); g.rotate(Math.PI / 2); } }
-    biX_door(dw, d.open, d.outside, S); g.restore();
+    const S = v.S, F = 2 * S, dw = 2 * F, half = 2 * Math.floor(S / 2); let L; g.save();
+    if (d.o === 'h') { const dx = 2 * (v.ox + d.x * S) - half; if (d.y < v.r.y) { g.translate(dx, 2 * Y0 - 8); L = [-1, -1]; } else { g.translate(dx + dw, 2 * (Y0 + h) + 8); g.rotate(Math.PI); L = [1, 1]; } }
+    else { const dy = 2 * (v.oy + d.y * S) - half; if (d.x < v.r.x) { g.translate(2 * X0 - 8, dy + dw); g.rotate(-Math.PI / 2); L = [1, -1]; } else { g.translate(2 * (X0 + w) + 8, dy); g.rotate(Math.PI / 2); L = [-1, 1]; } }
+    biX_doorArt(dw, d.open, d.outside, F, L); g.restore();
   }
   function furnState(f) {
     let s = f.opened ? 'o' : ''; if (f.type === 'evidence' && f.content) s += 'c';
-    if ((f.type === 'chair' || f.type === 'couch') && B.rooms[f.room] && B.rooms[f.room].kind === 'exec') s += 'x';
+    if ((f.type === 'chair' || f.type === 'couch' || f.type === 'desk') && B.rooms[f.room] && B.rooms[f.room].kind === 'exec') s += 'x';
     if (f.type === 'car') s += '_' + f.col; return s;
   }
   function wallSide(f) { const r = B.rooms[f.room]; if (!r || r.kind === 'street') return 'N'; if (f.y === r.y) return 'N'; if (f.y + f.h === r.y + r.h) return 'S'; if (f.x === r.x) return 'W'; if (f.x + f.w === r.x + r.w) return 'E'; return 'N'; }
   const WALLED = { file: 1, wallsafe: 1, picture: 1, typewriter: 1, terminal: 1, toilet: 1, sink: 1, computer: 1, couch: 1 };
-  // run fn in the furniture's own frame: canonical sprite coordinates, turned to face away from its wall
+  // run fn in the furniture's own frame (fine px): canonical sprite coordinates, turned to face away from its wall
   function inFurnFrame(f, v, fn) {
-    const S = v.S, X = v.ox + f.x * S, Y = v.oy + f.y * S, w = f.w * S, h = f.h * S;
+    const S = v.S, F = 2 * S, X = 2 * (v.ox + f.x * S), Y = 2 * (v.oy + f.y * S), w = f.w * F, h = f.h * F;
     let side = WALLED[f.type] ? wallSide(f) : f.type === 'lamp' && f.y > B.MH / 2 ? 'S' : 'N'; if (w !== h && (side === 'E' || side === 'W')) side = 'N';
-    g.save();
-    if (f.type === 'car' && f.x % 2) { g.translate(X + w, Y); g.scale(-1, 1); }
+    g.save(); let L = [-1, -1];
+    if (f.type === 'car' && f.x % 2) { g.translate(X + w, Y); g.scale(-1, 1); L = [1, -1]; }
     else if (side === 'N') g.translate(X, Y);
-    else { g.translate(X + w / 2, Y + h / 2); g.rotate({ E: Math.PI / 2, S: Math.PI, W: -Math.PI / 2 }[side]); g.translate(-w / 2, -h / 2); }
-    fn(w, h); g.restore();
+    else { g.translate(X + w / 2, Y + h / 2); g.rotate({ E: Math.PI / 2, S: Math.PI, W: -Math.PI / 2 }[side]); g.translate(-w / 2, -h / 2); L = { E: [-1, 1], S: [1, 1], W: [1, -1] }[side]; }
+    fn(w, h, L); g.restore();
   }
-  function drawFurn(f, v) { const spr = biX_furn(f.type, v.S, furnState(f)); inFurnFrame(f, v, () => g.drawImage(spr, 0, 0)); }
-  // the moving parts: tape reels, lamp panels, terminal cursors
+  function drawFurn(f, v) { inFurnFrame(f, v, (w, h, L) => g.drawImage(biX_furn(f.type, 2 * v.S, furnState(f), L), 0, 0)); }
+  // the moving parts: tape reels, lamp panels, terminal text
   function animFurn(f, v) {
-    const S = v.S;
-    if (f.type === 'computer') inFurnFrame(f, v, (w, h) => {
-      const L = biX_mfLayout(w, h);
-      L.reels.forEach((r, i) => { const a = t * (i ? 4.2 : -3.4); for (const s of [0, 2.1, 4.2]) px(r.x + Math.round(Math.cos(a + s) * (r.r - 1)), r.y + Math.round(Math.sin(a + s) * (r.r - 1)), P.G3); });
-      const ph = t * 4 | 0;
-      for (let yy = L.py + 1; yy < L.py + L.ph - 1; yy += 2) for (let xx = L.px + 1; xx < L.px + L.pw - 1; xx += 2) if (biX_hash(xx * 7 + yy, ph + ((xx * 3 + yy) >> 2), 8) < 0.45) px(xx, yy, [P.RD2, P.GR2, P.YE, P.W][(xx + yy * 3) % 4]);
-    });
-    if (f.type === 'terminal') inFurnFrame(f, v, () => {
-      const cx = Math.round(S * 0.14), cw = S - 2 * cx, ch = Math.max(4, Math.round(S * 0.56));
-      const lines = Math.max(1, Math.floor((ch - 6) / 2) + 1), ln = (t * 1.5 | 0) % lines, y = 3 + ln * 2;
-      if (y < ch - 2) { const n = Math.max(1, cw - 6); rect(cx + 3, y, Math.min(n, 1 + ((t * 8 | 0) % n)), 1, P.GR2); if ((t * 3 | 0) % 2) px(cx + 3 + Math.min(n - 1, (t * 8 | 0) % n), y, P.W); }
-    });
+    const F = 2 * v.S;
+    if (f.type === 'computer') fine(() => inFurnFrame(f, v, (w, h) => {
+      const Lm = biX_mfLayout(w, h);
+      Lm.reels.forEach((r, i) => { const a = t * (i ? 4.2 : -3.4); for (const s of [0, 2.1, 4.2]) { const rr = r.r * 0.66; g.fillStyle = '#c8ccd4'; g.fillRect(Math.round(r.x + Math.cos(a + s) * rr), Math.round(r.y + Math.sin(a + s) * rr), 2, 2); } });
+      const cs = Math.max(3, Math.round(F / 7)), ph = t * 3 | 0;
+      for (let yy = Lm.py + 1; yy + cs - 1 <= Lm.py + Lm.ph - 1; yy += cs) for (let xx = Lm.px + 1; xx + cs - 1 <= Lm.px + Lm.pw - 1; xx += cs) { const on = biX_hash(xx * 7 + yy, ph + ((xx * 3 + yy) >> 3), 8) < 0.5; g.fillStyle = on ? ['#ff6a4a', '#7ae07a', '#ffd060', '#e8f0ff'][(xx + yy * 3) % 4] : '#2a2a32'; g.fillRect(xx, yy, cs - 1, cs - 1); }
+    }));
+    if (f.type === 'terminal') fine(() => inFurnFrame(f, v, () => {
+      const T = biX_termLayout(F), n = Math.max(1, Math.floor((T.h - 2) / 2)), cur = (t * 1.2 | 0) % (n + 1);
+      g.fillStyle = 'rgba(70,200,110,0.16)'; g.fillRect(T.x, T.y, T.w, T.h);
+      for (let k = 0; k < Math.min(cur + 1, n); k++) { const full = Math.max(1, Math.round((T.w - 3) * (0.35 + 0.6 * biX_hash(k, f.x * 31 + f.y, 3)))), ww = k === cur ? Math.min(full, 1 + ((t * 12 | 0) % full)) : full; g.fillStyle = k === cur ? '#b8f8b0' : '#5ac878'; g.fillRect(T.x + 1, T.y + 1 + k * 2, ww, 1); }
+    }));
   }
   // ---------- people ----------
-  const bigOf = S => S >= 10;
+  const szOf = S => Math.round(clamp(S * 2.5, 20, 30));
   const faceOf = a => ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
   function look(p) {
-    if (p === max) { const d = max.disguised; return { uni: d ? uniC : P.K, head: d ? 'cap' : 'hood', hair: P.K, arms: 'gun', gun: max.gun, mask: kit.gasmask && clouds.length > 0, strap: !d }; }
+    if (p === max) { const d = max.disguised; return { uni: d ? uniC : 'max', head: d ? 'cap' : 'hood', hair: P.K, arms: 'gun', gun: max.gun, mask: kit.gasmask && clouds.length > 0, strap: !d }; }
     if (p.kind === 'guard') return { uni: p.col || uniC, head: 'cap', hair: P.K, arms: 'gun', gun: 'pistol', mask: !!p.gasmask && clouds.length > 0 };
-    if (p.kind === 'ward') return { uni: P.W, head: 'hair', hair: P.G1, arms: 'side', stripes: true };
+    if (p.kind === 'ward') return { uni: P.W, head: 'hair', hair: EGA.dgray, arms: 'side', stripes: true, pants: P.W };
     const fc = p === target && occupant && occupant.face || {};
-    return { uni: p.col || P.W, head: 'hair', hair: fc.hair || P.BR, skin: fc.skin, pants: P.K, arms: (p.state === 'cower' || p.state === 'captive') ? 'up' : 'side' };
+    return { uni: p.col || P.W, head: 'hair', hair: fc.hair || EGA.brown, skin: fc.skin, pants: P.K, arms: (p.state === 'cower' || p.state === 'captive') ? 'up' : 'side' };
   }
-  function muzzle(x, y) { const f = (t * 30 | 0) % 2; px(x, y, P.W); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) px(x + dx, y + dy, P.YE); if (f) for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) px(x + dx, y + dy, P.RD2); else for (const [dx, dy] of [[1, 1], [-1, -1], [1, -1], [-1, 1]]) px(x + dx, y + dy, P.RD2); }
-  function stars(x, y) { for (let i = 0; i < 3; i++) { const a = t * 5 + i * 2.1, sx = x + Math.round(Math.cos(a) * 5), sy = y + Math.round(Math.sin(a) * 2); px(sx, sy, P.W); if (((t * 8) | 0) % 2 === i % 2) { px(sx - 1, sy, P.YE); px(sx + 1, sy, P.YE); px(sx, sy - 1, P.YE); px(sx, sy + 1, P.YE); } } }
-  const MARK = ['kkkkkkk', 'kYYYYYk', '.kYYYk.', '..kYk..', '...k...'];
+  function muzzle(x, y, a, sz) { // fine px
+    biX_glow(x, y, sz * 1.6, 'rgb(255,190,100)', 0.5, true);
+    const f = (t * 30 | 0) % 2, l = sz * (f ? 0.62 : 0.46), c = Math.cos(a), s = Math.sin(a), wd = sz * 0.16;
+    biX_poly([[x - s * wd, y + c * wd], [x + c * l, y + s * l], [x + s * wd, y - c * wd]], '#ff9a30');
+    biX_poly([[x - s * wd * 0.5, y + c * wd * 0.5], [x + c * l * 0.65, y + s * l * 0.65], [x + s * wd * 0.5, y - c * wd * 0.5]], '#ffe070');
+    for (const k of [-1, 1]) biX_cap(x, y, x + (c * 0.35 - s * k * 0.45) * l, y + (s * 0.35 + c * k * 0.45) * l, 0.8, '#ffc050');
+    biX_ell(x, y, 2, 2, '#fffbe8');
+  }
+  function stars(x, y) { for (let i = 0; i < 3; i++) { const a = t * 5 + i * 2.1, sx = Math.round(x + Math.cos(a) * 10), sy = Math.round(y + Math.sin(a) * 4); const c = ((t * 8) | 0) % 2 === i % 2 ? '#fff4b0' : '#ffd040'; g.fillStyle = c; g.fillRect(sx - 1, sy, 3, 1); g.fillRect(sx, sy - 1, 1, 3); g.fillStyle = '#ffffff'; g.fillRect(sx, sy, 1, 1); } }
   function drawGuy(p, X, Y, S) {
-    const x = Math.round(X), y = Math.round(Y), big = bigOf(S), L = look(p);
-    if (p.out) { if (p.hidden) return; const spr = biX_body(Object.assign({ big, flip: Math.cos(p.dir) < 0 }, L)); g.drawImage(spr, x - (spr.width >> 1), y - (spr.height >> 1)); return; }
+    const sz = szOf(S), L = look(p), cx = Math.round(X * 2), cy = Math.round(Y * 2);
+    if (p.out) { if (p.hidden) return; const spr = biX_body(Object.assign({ sz, face: faceOf(p.dir) }, L)); fine(() => g.drawImage(spr, cx - spr.width / 2, cy - spr.height / 2)); return; }
     if (p._lw !== p.walk) { p._lw = p.walk; p._mt = t; }
-    const moving = t - (p._mt === undefined ? -9 : p._mt) < 0.12, frame = moving ? 1 + ((p.walk * 6 | 0) % 2) : 0;
+    const moving = t - (p._mt === undefined ? -9 : p._mt) < 0.12, frame = moving ? 1 + ((p.walk * 7 | 0) % 4) : 0;
     const crouch = (p === max && max.crouch) || (p.state === 'seated' && (p === target || p === ward)), face = faceOf(p.dir);
-    const spr = biX_person(Object.assign({ big, face, frame, crouch }, L)), top = y - (big ? 11 : 8);
-    // a soft shadow on the floor under the feet
-    const sw = big ? 9 : 7, fy = top + spr.height - 1; for (let i = 0; i < sw; i++) if ((i + fy) & 1) px(x - (sw >> 1) + i, fy, P.K);
-    g.drawImage(spr, x - (spr.width >> 1), top);
+    const spr = biX_person(Object.assign({ sz, face, frame: crouch ? 0 : frame, pose: crouch ? 'crouch' : 'stand' }, L));
     const fl = p === max ? max.fl : p.fl;
-    if (L.arms === 'gun' && fl !== undefined && t - fl < 0.07) { const c = Math.cos(p.dir), s = Math.sin(p.dir), r = big ? 8 : 6; muzzle(x + Math.round(c * r), y + Math.round(s * r) - (big ? 2 : 1) + (crouch ? 2 : 0)); }
-    if (p.stun > 0 || (p === max && max.stun > 0)) stars(x, top - 1);
-    if (p === target && p.state === 'seated') biX_put('mark', MARK, { k: P.K, Y: P.YE }, x - 3, top - 6 - ((t * 3 | 0) % 2));
+    fine(() => {
+      g.drawImage(spr, cx - spr.width / 2, cy - spr.height / 2);
+      if (L.arms === 'gun' && fl !== undefined && t - fl < 0.07) { const a = face * Math.PI / 4, r = sz * (L.gun === 'uzi' ? 0.92 : 0.82); muzzle(cx + Math.cos(a) * r, cy + Math.sin(a) * r, a, sz); }
+      if (p.stun > 0 || (p === max && max.stun > 0)) stars(cx, cy - sz * 0.55);
+      if (p === target && p.state === 'seated') { const by = cy - sz * 0.9 - ((t * 3 | 0) % 2) * 2; biX_poly([[cx - 6, by - 6], [cx + 6, by - 6], [cx, by + 1]], biX_C.ink); biX_poly([[cx - 4, by - 5], [cx + 4, by - 5], [cx, by - 1]], '#ffd040'); }
+    });
   }
   scene.draw = function () {
-    // left: black/blue scan-lines; right: blue panel; white divider
-    rect(0, 0, 171, H, P.K); for (let y = 1; y < H; y += 2) rect(0, y, 171, 1, P.BL);
-    rect(171, 0, 1, H, P.W); rect(172, 0, 1, H, P.K); rect(173, 0, 145, H, P.BL); rect(318, 0, 1, H, P.K); rect(319, 0, 1, H, P.W);
+    blit(biX_leftBg(), 0, 0); blit(biX_rightBg(), 171, 0);
     drawEquip();
     drawBuildingWindow(179, 99, 122, 98);
     if (!entryDoor) { drawDoorMenu(); postFlash(); return; }
     const v = roomView(), r = v.r, S = v.S, X0 = v.ox + r.x * S, Y0 = v.oy + r.y * S;
     drawRoom(v);
     for (const f of roomF[r.id]) if (f.type === 'computer' || f.type === 'terminal') animFurn(f, v);
-    for (const tr of traps) if (roomOf(tr.x, tr.y) === r.id) {
-      const X = Math.round(v.sx(tr.x)), Y = Math.round(v.sy(tr.y));
-      if (tr.kind === 'booby') for (let i = 3; i < 8; i += 2) px(X + i, Y + 1, P.G3);
-      biX_put('gr_' + tr.type, biX_GREN, biX_grenMap(GREN[tr.type].col), X - 2, Y - 2);
-      if ((t * 3 | 0) % 2) { px(X, Y - 3, tr.kind === 'booby' ? P.RD2 : P.CY); px(X + 1, Y - 3, P.K); }
-    }
-    if (clouds.some(c => c.room === r.id)) {
-      g.save(); g.beginPath(); g.rect(X0, Y0, r.w * S, r.h * S); g.clip();
-      for (const c of clouds) if (c.room === r.id) { const rad = Math.max(3, Math.round(c.r / TS * S / 3) * 3), spr = biX_gas(rad, (t * 2.5 | 0) % 6); g.drawImage(spr, Math.round(v.sx(c.x)) - rad, Math.round(v.sy(c.y)) - rad); }
-      g.restore();
-    }
+    g.save(); g.beginPath(); g.rect(X0 - 4, Y0 - 4, r.w * S + 8, r.h * S + 8); g.clip();
+    fine(() => {
+      for (const tr of traps) if (roomOf(tr.x, tr.y) === r.id) {
+        const X = Math.round(v.sx(tr.x) * 2), Y = Math.round(v.sy(tr.y) * 2), on = (t * 3 | 0) % 2;
+        if (tr.kind === 'booby') { g.fillStyle = 'rgba(220,220,230,0.7)'; g.fillRect(X + 4, Y + 3, Math.round(S * 1.2), 1); }
+        g.drawImage(biX_grenArt(tr.type), X - 6, Y - 5);
+        if (on) { biX_glow(X, Y - 6, 6, tr.kind === 'booby' ? 'rgb(255,70,50)' : 'rgb(90,220,255)', 0.8, true); g.fillStyle = tr.kind === 'booby' ? '#ff5a4a' : '#7ae8ff'; g.fillRect(X - 1, Y - 7, 2, 2); }
+      }
+    });
+    // people: the fallen first, then everyone else from north to south
     const here = people.filter(p => roomOf(p.x, p.y) === r.id || p === max.prisoner).concat([max]);
     for (const p of here) if (p.out) drawGuy(p, v.sx(p.x), v.sy(p.y), S);
-    const tall = roomF[r.id].filter(f => !FURN[f.type].flat && f.type !== 'chair');
-    for (const p of here.filter(p => !p.out).sort((a, b) => a.y - b.y)) {
-      const X = v.sx(p.x), Y = v.sy(p.y); drawGuy(p, X, Y, S);
-      // whoever stands just north of a desk or cabinet disappears behind it
-      const hw = bigOf(S) ? 8 : 6;
-      for (const f of tall) { const fx0 = v.ox + f.x * S, fy0 = v.oy + f.y * S; if (fy0 > Y && fy0 < Y + 9 && fx0 < X + hw && fx0 + f.w * S > X - hw) { drawFurn(f, v); animFurn(f, v); } }
-    }
-    for (const b of bullets) if (roomOf(b.x, b.y) === r.id) { const X = Math.round(v.sx(b.x)), Y = Math.round(v.sy(b.y)), l = Math.hypot(b.vx, b.vy) || 1, tl = Math.max(2, S * 0.3); line(X - b.vx / l * tl, Y - b.vy / l * tl, X, Y, b.mine ? P.YE : P.RD2); px(X, Y, P.W); }
-    for (const gr of grenades) if (roomOf(gr.x, gr.y) === r.id) {
-      const X = Math.round(v.sx(gr.x)), Y = Math.round(v.sy(gr.y)), z = Math.round(gr.z);
-      rect(X - 1, Y + 1, 3, 1, P.K);
-      if (gr.t < 1) for (const dk of [0.1, 0.2, 0.3]) { const kk = gr.t - dk; if (kk <= 0) continue; px(Math.round(v.sx(gr.sx + (gr.tx - gr.sx) * kk)), Math.round(v.sy(gr.sy + (gr.ty - gr.sy) * kk) - Math.sin(kk * Math.PI) * 10), dk < 0.15 ? P.G3 : P.G1); }
-      biX_put('gr_' + gr.type, biX_GREN, biX_grenMap(GREN[gr.type].col), X - 2, Y - z - 2);
-      if (gr.t >= 1 && (t * 12 | 0) % 2) px(X, Y - z - 3, P.YE);
-    }
-    g.save(); g.beginPath(); g.rect(X0 - 4, Y0 - 4, r.w * S + 8, r.h * S + 8); g.clip();
-    for (const e of fx) {
-      const X = Math.round(v.sx(e.x)), Y = Math.round(v.sy(e.y));
-      if (e.k === 'boom') {
-        const age = 0.5 - e.t, fi = Math.max(0, Math.min(7, Math.floor(age / 0.5 * 8))), rad = Math.max(8, Math.round(26 / TS * S * 0.8));
-        const spr = biX_boom(e.type === 'frag' ? 'frag' : 'stun', fi, rad); g.drawImage(spr, X - rad, Y - rad);
-        if (e.type === 'frag') for (let i = 0; i < 14; i++) { const a = i * 2.4 + biX_hash(i, X, 15) * 0.8, sp = (0.5 + biX_hash(i, Y, 14) * 0.9) * rad * 1.5, d = sp * Math.min(1, age * 3.2), lift = Math.sin(Math.min(1, age * 2.4) * Math.PI) * 4; px(X + Math.cos(a) * d, Y + Math.sin(a) * d - lift, [P.G3, P.BR, P.K, P.YE, P.W][i % 5]); if (i % 3 === 0) px(X + Math.cos(a) * d + 1, Y + Math.sin(a) * d - lift, P.K); }
-      } else if (e.k === 'hit') { px(X, Y, P.RD2); px(X + 1, Y - 1, P.RD); px(X - 1, Y + 1, P.RD); px(X + 1, Y + 1, P.RD2); px(X - 1, Y - 1, P.RD); }
-      else { px(X, Y, P.W); if (e.t > 0.05) { px(X - 1, Y - 1, P.YE); px(X + 1, Y - 1, P.YE); px(X, Y - 2, P.YE); } }
-    }
+    for (const p of here.filter(p => !p.out).sort((a, b) => a.y - b.y)) drawGuy(p, v.sx(p.x), v.sy(p.y), S);
+    if (clouds.some(c => c.room === r.id)) fine(() => {
+      for (const c of clouds) if (c.room === r.id) { const rad = Math.max(8, Math.round(c.r / TS * S * 2 / 4) * 4), spr = biX_gasArt(rad, (t * 2.5 | 0) % 8); g.drawImage(spr, Math.round(v.sx(c.x) * 2) - rad - 1, Math.round(v.sy(c.y) * 2) - rad - 1); }
+    });
+    fine(() => {
+      for (const b of bullets) if (roomOf(b.x, b.y) === r.id) { const X = v.sx(b.x) * 2, Y = v.sy(b.y) * 2, l = Math.hypot(b.vx, b.vy) || 1, tl = Math.max(5, S * 0.9), dx = b.vx / l, dy = b.vy / l; biX_cap(X - dx * tl, Y - dy * tl, X - dx * tl * 0.4, Y - dy * tl * 0.4, 0.6, b.mine ? '#c88a30' : '#b8402a'); biX_cap(X - dx * tl * 0.5, Y - dy * tl * 0.5, X, Y, 0.8, b.mine ? '#ffe070' : '#ff8a50'); g.fillStyle = '#fffbe8'; g.fillRect(Math.round(X) - 1, Math.round(Y) - 1, 2, 2); }
+      for (const gr of grenades) if (roomOf(gr.x, gr.y) === r.id) {
+        const X = Math.round(v.sx(gr.x) * 2), Y = Math.round(v.sy(gr.y) * 2), z = Math.round(gr.z * 2);
+        biX_ell(X, Y + 2, 4, 2, 'rgba(10,6,24,0.4)');
+        if (gr.t < 1) for (const dk of [0.08, 0.16, 0.24]) { const kk = gr.t - dk; if (kk <= 0) continue; g.fillStyle = 'rgba(230,230,240,' + (0.5 - dk * 1.5) + ')'; g.fillRect(Math.round(v.sx(gr.sx + (gr.tx - gr.sx) * kk) * 2) - 1, Math.round((v.sy(gr.sy + (gr.ty - gr.sy) * kk) - Math.sin(kk * Math.PI) * 10) * 2) - 1, 2, 2); }
+        g.drawImage(biX_grenArt(gr.type), X - 6, Y - z - 6);
+        if (gr.t >= 1 && (t * 12 | 0) % 2) { g.fillStyle = '#ffe070'; g.fillRect(X - 1, Y - z - 9, 2, 2); }
+      }
+      for (const e of fx) {
+        const X = Math.round(v.sx(e.x) * 2), Y = Math.round(v.sy(e.y) * 2);
+        if (e.k === 'boom') {
+          const age = 0.5 - e.t, fi = Math.max(0, Math.min(7, Math.floor(age / 0.5 * 8))), rad = Math.max(16, Math.round(26 / TS * S * 1.6));
+          if (fi < 3) biX_glow(X, Y, rad * 2.2, e.type === 'frag' ? 'rgb(255,170,80)' : 'rgb(190,230,255)', 0.55 - fi * 0.15, true);
+          const spr = biX_boomArt(e.type === 'frag' ? 'frag' : 'stun', fi, rad); g.drawImage(spr, X - rad - 1, Y - rad - 1);
+          if (e.type === 'frag') for (let i = 0; i < 14; i++) { const a = i * 2.4 + biX_hash(i, X, 15) * 0.8, sp = (0.5 + biX_hash(i, Y, 14) * 0.9) * rad * 1.5, d = sp * Math.min(1, age * 3.2), lift = Math.sin(Math.min(1, age * 2.4) * Math.PI) * 8; g.fillStyle = ['#c8c0b0', '#8a5a34', '#2a2228', '#ffd060', '#fff4d0'][i % 5]; g.fillRect(Math.round(X + Math.cos(a) * d), Math.round(Y + Math.sin(a) * d - lift), 2, 2); }
+        } else if (e.k === 'hit') { for (const [dx, dy, c] of [[0, 0, '#d82a2a'], [3, -2, '#a01c22'], [-2, 3, '#a01c22'], [2, 3, '#e84a3a'], [-3, -2, '#a01c22']]) { g.fillStyle = c; g.fillRect(X + dx - 1, Y + dy - 1, 2, 2); } }
+        else { g.fillStyle = '#fffbe0'; g.fillRect(X - 1, Y - 1, 2, 2); if (e.t > 0.05) { g.fillStyle = '#ffd060'; g.fillRect(X - 4, Y, 3, 1); g.fillRect(X + 2, Y, 3, 1); g.fillRect(X, Y - 4, 1, 3); g.fillRect(X, Y + 2, 1, 3); } }
+      }
+    });
+    if (alarm && mode === 'breakin') { const k = 0.5 + 0.5 * Math.sin(t * 8); g.fillStyle = 'rgba(220,30,20,' + (0.05 + k * 0.1).toFixed(3) + ')'; g.fillRect(X0 - 4, Y0 - 4, r.w * S + 8, r.h * S + 8); }
     g.restore();
-    if (max.busy) { const X = Math.round(v.sx(max.x)), Y = Math.round(v.sy(max.y)); rect(X - 9, Y - 13, 18, 4, P.K); rect(X - 8, Y - 12, 16, 2, P.G1); const n = Math.round(16 * Math.min(1, max.busy.t / max.busy.need)); rect(X - 8, Y - 12, n, 2, P.GR); rect(X - 8, Y - 12, n, 1, P.GR2); }
+    if (max.busy) { const X = Math.round(v.sx(max.x)), Y = Math.round(v.sy(max.y)); rect(X - 10, Y - 15, 20, 5, '#0a0a12'); rect(X - 9, Y - 14, 18, 3, '#2a3040'); const n = Math.round(18 * Math.min(1, max.busy.t / max.busy.need)); rect(X - 9, Y - 14, n, 3, '#4aa860'); fine(() => { g.fillStyle = '#9ae8a0'; g.fillRect(2 * X - 18, 2 * Y - 28, 2 * n, 1); }); }
     const tgt = people.find(p => p.kind === 'guard' && !p.out && roomOf(p.x, p.y) === r.id && Math.abs(Math.atan2(Math.sin(Math.atan2(p.y - max.y, p.x - max.x) - max.dir), Math.cos(Math.atan2(p.y - max.y, p.x - max.x) - max.dir))) < 0.3 && los(max.x, max.y, p.x, p.y));
     // Max portrait, x0..24 y0..39
-    rect(0, 0, 25, 40, P.G3); g.drawImage(sideBackdrop(), 1, 1); drawMaxSide(3, 10, tgt);
-    if (max.stun > 0 || max.gassed > 0.4) { const k = Math.min(1, Math.max(max.stun / 6, max.gassed / 2.5)), y0 = 1 + Math.round(38 * (1 - k)), c = max.gassed > 0.4 ? P.GR : P.G1; for (let y = y0; y < 39; y++) for (let x = 1; x < 24; x++) if (biX_bay(x, y) < 9) px(x, y, c); }
+    blit(biX_portraitFrame(), 0, 0); blit(biX_portraitBg(), 1, 1); drawMaxSide(1, 1, tgt);
+    if (max.stun > 0 || max.gassed > 0.4) { const k = Math.min(1, Math.max(max.stun / 6, max.gassed / 2.5)), y0 = 1 + Math.round(38 * (1 - k)); rect(1, y0, 23, 39 - y0, max.gassed > 0.4 ? 'rgba(110,170,60,0.5)' : 'rgba(40,40,70,0.55)'); }
     // information bar, x26..170 y0..18
-    rect(26, 0, 145, 19, P.G3); rect(26, 0, 145, 1, P.W); rect(26, 0, 1, 19, P.W); rect(27, 1, 142, 17, P.BL); rect(169, 1, 1, 17, P.K); rect(27, 18, 143, 1, P.G1);
-    text(fitText(ROOM_NAMES[r.kind], 78), 30, 2, P.W);
+    blit(biX_infoBar(), 26, 0);
+    text(fitText(ROOM_NAMES[r.kind], 78), 30, 2, '#f0e8d8');
     const hh = Math.floor(clock / 3600) % 24, mm = Math.floor(clock / 60) % 60, ss = Math.floor(clock) % 60;
-    if (max.disguised || max.gassed > 0.4) text(max.gassed > 0.4 ? 'GAS' : 'Disguise', 102, 2, P.RD2);
-    textR([hh, mm, ss].map(v2 => String(v2).padStart(2, '0')).join(':'), 167, 2, P.W);
-    textC(fitText(msg, 138), 98, 10, P.W);
+    if (max.disguised || max.gassed > 0.4) text(max.gassed > 0.4 ? 'GAS' : 'Disguise', 102, 2, '#ff6a50');
+    textR([hh, mm, ss].map(v2 => String(v2).padStart(2, '0')).join(':'), 167, 2, '#ffc860');
+    textC(fitText(msg, 138), 98, 10, '#e4e8f0');
     if (msgLong()) { const ls = wrap(msg, 146); msgBox(12, 20, 150, ls.length * 8 + 6); ls.forEach((l, i) => text(l, 16, 23 + i * 8, P.W)); }
-    if (alarm && mode === 'breakin' && (t * 4 | 0) % 2) { frame(X0 - 5, Y0 - 5, r.w * S + 10, r.h * S + 10, P.RD2); frame(X0 - 6, Y0 - 6, r.w * S + 12, r.h * S + 12, P.RD); }
+    if (alarm && mode === 'breakin') { const on = (t * 4 | 0) % 2; fine(() => { const x = 2 * X0 - 10, y = 2 * Y0 - 10, w = 2 * r.w * S + 20, h = 2 * r.h * S + 20; for (const [d, c] of [[0, on ? '#ff5a40' : '#8a1a18'], [1, on ? '#c02820' : '#5a1010'], [2, 'rgba(255,60,40,0.35)']]) { g.fillStyle = c; g.fillRect(x - d, y - d, w + 2 * d, 1); g.fillRect(x - d, y + h - 1 + d, w + 2 * d, 1); g.fillRect(x - d, y - d, 1, h + 2 * d); g.fillRect(x + w - 1 + d, y - d, 1, h + 2 * d); } }); }
     if (comp) drawComputer();
     if (over) drawOver();
     if (pauseMenu) { msgBox(30, 40, 136, 18 + pauseMenu.items.length * 8); text(pauseTitle, 36, 43, P.W); pauseMenu.draw(); }
@@ -1317,61 +1455,54 @@ function breakinScene(opts, done) {
   };
   let lastMsg = '', msgT0 = 0;
   function msgLong() { if (msg !== lastMsg) { lastMsg = msg; msgT0 = t; } return textW(msg) > 138 && t - msgT0 < 4; }
-  function postFlash() { // being hit turns every light gray pixel light red for a moment
-    if (hitFlash <= 0) return; hitFlash--;
-    const d = g.getImageData(0, 0, cv.width, cv.height), a = d.data; for (let i = 0; i < a.length; i += 4) if (a[i] === 0xAA && a[i + 1] === 0xAA && a[i + 2] === 0xAA) { a[i] = 0xFF; a[i + 1] = 0x55; a[i + 2] = 0x55; } g.putImageData(d, 0, 0);
+  function postFlash() { // being hit washes the screen red for a moment
+    if (hitFlash <= 0) return; g.fillStyle = 'rgba(220,40,30,' + (0.12 * hitFlash).toFixed(2) + ')'; g.fillRect(0, 0, W, H); hitFlash--;
   }
   // ---------- Max, side view (top-left box) ----------
-  const sideBackdrop = () => sprite('biX_sidebg', 23, 38, () => {
-    for (let y = 0; y < 31; y++) for (let x = 0; x < 23; x++) px(x, y, biX_bay(x, y) < y / 2 ? P.BL : P.BL2);
-    rect(0, 31, 23, 1, P.W); rect(0, 32, 23, 1, P.G3);
-    for (let y = 33; y < 38; y++) for (let x = 0; x < 23; x++) px(x, y, (x + y * 2) % 7 === 0 ? P.G1 : biX_bay(x, y) < 4 ? P.G1 : P.G3);
-  });
   function drawMaxSide(x, y, tgt) {
-    const mv = input.axis(); const moving = (mv.x || mv.y) && !max.busy && max.stun <= 0 && !comp; const fr = moving ? 1 + ((t * 6 | 0) % 2) : 0;
-    const map = biX_maxMap(max.disguised, uniC), key = max.disguised ? 'd' + uniC : 'n';
-    const top = max.crouch ? 5 : 0;
-    biX_put('mxT' + key, biX_MAX_TOP, map, x, y + top);
-    if (max.crouch) biX_put('mxC' + key, biX_MAX_CROUCH, map, x, y + top + 19);
-    else biX_put('mxL' + fr + key, biX_MAX_LEGS[fr], map, x, y + 19);
-    if (max.gun === 'uzi') { rect(x + 16, y + top + 15, 2, 3, P.K); px(x + 16, y + top + 15, P.G1); rect(x + 12, y + top + 11, 3, 1, P.K); }
-    if (max.fl !== undefined && t - max.fl < 0.07) { px(x + 21, y + top + 13, P.W); px(x + 22, y + top + 13, P.YE); px(x + 21, y + top + 12, P.YE); px(x + 21, y + top + 14, P.YE); }
-    if (kit.gasmask && clouds.length) { rect(x + 9, y + top + 6, 5, 3, P.G3); px(x + 11, y + top + 6, P.CY); rect(x + 10, y + top + 9, 3, 2, P.G1); }
+    const mv = input.axis(); const moving = (mv.x || mv.y) && !max.busy && max.stun <= 0 && !comp; const fr = max.crouch ? 'c' : moving ? 1 + ((t * 6 | 0) % 2) : 0;
+    const mask = kit.gasmask && clouds.length > 0;
+    blit(biX_maxSide(fr, max.disguised, uniC, max.gun === 'uzi', mask), x, y);
+    if (max.fl !== undefined && t - max.fl < 0.07) fine(() => { const fy = 2 * y + biX_MAXPOSE[fr].sh[1] + 2, fx = 2 * x + (max.gun === 'uzi' ? 46 : 46); biX_glow(fx - 2, fy, 10, 'rgb(255,190,100)', 0.6, true); biX_poly([[fx - 4, fy - 3], [fx + 2, fy], [fx - 4, fy + 3]], '#ffc050'); biX_ell(fx - 4, fy, 1, 1, '#fffbe8'); });
     if (tgt) {
-      const q = Math.min(1, (0.3 + sk * 0.2) * (max.gun === 'uzi' ? 1.4 : 1)); const col = q > 0.8 ? P.W : q > 0.5 ? P.G3 : q > 0.3 ? P.G1 : P.K;
-      const cx = 19, cy = 5; for (const [dx, dy] of [[-3, -1], [-3, 0], [-3, 1], [3, -1], [3, 0], [3, 1], [-1, -3], [0, -3], [1, -3], [-1, 3], [0, 3], [1, 3]]) px(cx + dx, cy + dy, col);
-      px(cx, cy, (t * 4 | 0) % 2 ? P.RD2 : col); px(cx - 2, cy - 2, col); px(cx + 2, cy - 2, col); px(cx - 2, cy + 2, col); px(cx + 2, cy + 2, col);
+      const q = Math.min(1, (0.3 + sk * 0.2) * (max.gun === 'uzi' ? 1.4 : 1)); const col = q > 0.8 ? '#ff5a40' : q > 0.5 ? '#ffb040' : q > 0.3 ? '#e8d890' : '#8a8a90';
+      fine(() => { const cx = 38, cy = 10; g.fillStyle = biX_C.ink; for (const [dx, dy, w, h] of [[-7, -1, 4, 3], [4, -1, 4, 3], [-1, -7, 3, 4], [-1, 4, 3, 4]]) g.fillRect(cx + dx, cy + dy, w, h); g.fillStyle = col; for (const [dx, dy, w, h] of [[-6, 0, 3, 1], [4, 0, 3, 1], [0, -6, 1, 3], [0, 4, 1, 3]]) g.fillRect(cx + dx, cy + dy, w, h); g.fillStyle = (t * 4 | 0) % 2 ? '#ff5a40' : col; g.fillRect(cx, cy, 1, 1); });
     }
   }
   // ---------- Equipment Display: the kit on Max's silhouette ----------
   const drawEquip = () => biX_equip(kit, max, t);
   function drawBuildingWindow(x, y, w, h) {
-    frame(x, y, w, h, P.G3); rect(x + 1, y + 1, w - 2, h - 2, P.K);
+    blit(biX_planFrame(w, h), x - 1, y - 1);
     const sc = Math.min((w - 6) / B.bw, (h - 6) / B.bh), ox = x + 3 - B.bx * sc + ((w - 6) - B.bw * sc) / 2, oy = y + 3 - B.by * sc;
-    if (opts.plan) rect(ox + B.bx * sc, oy + B.by * sc, B.bw * sc, B.bh * sc, P.YE);
-    for (const r of B.rooms) if (r.seen) { rect(ox + r.x * sc, oy + r.y * sc, r.w * sc, r.h * sc, P.TL); frame(ox + r.x * sc - 1, oy + r.y * sc - 1, r.w * sc + 2, r.h * sc + 2, P.CY); for (const f of F) if (f.room === r.id) rect(ox + f.x * sc, oy + f.y * sc, Math.max(1, f.w * sc - 1), Math.max(1, f.h * sc - 1), { desk: P.BR, file: P.G1, chair: P.BL, couch: P.RD, computer: P.W, terminal: P.W, floorsafe: P.RD2 }[f.type] || P.G1); }
-    for (const d of B.outer) rect(ox + d.x * sc - 1, oy + d.y * sc - 1, 2, 2, P.G1);
-    for (const p of people) { if (p.out || p.kind !== 'guard') continue; const near = kit.detector && dist(p.x, p.y, max.x, max.y) < 110; const rr = B.rooms[roomOf(p.x, p.y)]; if (near || (rr && rr.bugged)) rect(ox + p.x / TS * sc, oy + p.y / TS * sc, 2, 1, P.YE); }
-    if (entryDoor && (t * 3 | 0) % 2) rect(ox + max.x / TS * sc - 1, oy + max.y / TS * sc - 1, 2, 2, P.K);
+    fine(() => {
+      const X = v => Math.round(v * 2), box = (r, c) => { g.fillStyle = c; g.fillRect(X(ox + r.x * sc), X(oy + r.y * sc), X(ox + (r.x + r.w) * sc) - X(ox + r.x * sc), X(oy + (r.y + r.h) * sc) - X(oy + r.y * sc)); };
+      const edge = (r, c) => { const x0 = X(ox + r.x * sc) - 1, y0 = X(oy + r.y * sc) - 1, x1 = X(ox + (r.x + r.w) * sc), y1 = X(oy + (r.y + r.h) * sc); g.fillStyle = c; g.fillRect(x0, y0, x1 - x0 + 1, 1); g.fillRect(x0, y1, x1 - x0 + 1, 1); g.fillRect(x0, y0, 1, y1 - y0 + 1); g.fillRect(x1, y0, 1, y1 - y0 + 1); };
+      if (opts.plan) { box({ x: B.bx, y: B.by, w: B.bw, h: B.bh }, '#1a2c44'); for (const r of B.rooms) if (!r.seen) { box(r, '#13233a'); edge(r, '#3a5a7a'); } }
+      for (const r of B.rooms) if (r.seen) {
+        box(r, B.street ? '#2a303c' : r.id === roomOf(max.x, max.y) && entryDoor ? '#2a6484' : '#1e4c68'); edge(r, '#8cd0ec');
+        for (const f of roomF[r.id]) { const c = f.type === 'car' ? biX_tone(f.col) : { desk: '#c08a50', file: '#8a9a90', chair: '#6a86b0', couch: '#c05a44', computer: '#e8ecf0', terminal: '#9ae8a0', floorsafe: '#ffc860', wallsafe: '#ffc860', table: '#b07a50' }[f.type] || '#6a8aa0'; g.fillStyle = c; g.fillRect(X(ox + f.x * sc) + 1, X(oy + f.y * sc) + 1, Math.max(2, X(f.w * sc) - 2), Math.max(2, X(f.h * sc) - 2)); }
+      }
+      for (const d of B.doors) if (d.open && (B.rooms[d.a].seen || (d.b >= 0 && B.rooms[d.b].seen))) { g.fillStyle = '#1e4c68'; g.fillRect(X(ox + d.x * sc), X(oy + d.y * sc), Math.max(2, X(sc)), Math.max(2, X(sc))); }
+      for (const d of B.outer) { g.fillStyle = '#ffb040'; g.fillRect(X(ox + d.x * sc) - 1, X(oy + d.y * sc) - 1, 3, 3); }
+      for (const p of people) { if (p.out || p.kind !== 'guard') continue; const near = kit.detector && dist(p.x, p.y, max.x, max.y) < 110; const rr = B.rooms[roomOf(p.x, p.y)]; if (near || (rr && rr.bugged)) { const gx = X(ox + p.x / TS * sc), gy = X(oy + p.y / TS * sc); g.fillStyle = 'rgba(255,220,80,0.35)'; g.fillRect(gx - 2, gy - 2, 5, 5); g.fillStyle = '#ffe060'; g.fillRect(gx - 1, gy - 1, 3, 3); } }
+      if (entryDoor && (t * 3 | 0) % 2) { const mx = X(ox + max.x / TS * sc), my = X(oy + max.y / TS * sc); g.fillStyle = '#0a0a12'; g.fillRect(mx - 2, my - 2, 5, 5); g.fillStyle = '#ffffff'; g.fillRect(mx - 1, my - 1, 3, 3); }
+    });
   }
   const doorMenu = B.outer.length && Menu(B.outer.map((d, i) => ({ label: 'Door #' + (i + 1), go: () => enterAt(d) })), 46, 70, 80);
-  function drawDoorMenu() { msgBox(28, 58, 110, 16 + B.outer.length * 8); text('Which door?', 34, 61, P.W); doorMenu.draw(); const sc = Math.min(116 / B.bw, 92 / B.bh), ox = 182 - B.bx * sc + (116 - B.bw * sc) / 2, oy = 102 - B.by * sc; B.outer.forEach((d, i) => text(String(i + 1), ox + d.x * sc - 2, oy + d.y * sc - 4, P.YE, P.K)); }
+  function drawDoorMenu() { msgBox(28, 58, 110, 16 + B.outer.length * 8); text('Which door?', 34, 61, P.W); doorMenu.draw(); const sc = Math.min(116 / B.bw, 92 / B.bh), ox = 182 - B.bx * sc + (116 - B.bw * sc) / 2, oy = 102 - B.by * sc; B.outer.forEach((d, i) => text(String(i + 1), ox + d.x * sc - 2, oy + d.y * sc - 4, '#ffc860', P.K)); }
   function drawComputer() {
-    const x0 = VX0, y0 = VY0 - 20, w = VX1 - VX0, h = VY1 - VY0 + 26;
-    rect(x0, y0, w, h, P.K); frame(x0, y0, w, h, P.G3); frame(x0 + 1, y0 + 1, w - 2, h - 2, P.G1); rect(x0 + 1, y0 + 1, w - 2, 1, P.W);
-    px(x0 + 3, y0 + 3, P.G1); px(x0 + 4, y0 + 3, P.G1); px(x0 + 3, y0 + 4, P.G1);
-    let y = VY0 - 16; for (const l of comp.lines) { y = para(l, VX0 + 4, y, VX1 - VX0 - 8, P.GR2, 8) + 1; if (y > VY0 + 70) break; }
+    blit(biX_terminalArt(), 8, 22);
+    const on = (t * 3 | 0) % 2;
+    let y = VY0 - 14; for (const l of comp.lines) { y = para(l, VX0 + 8, y, VX1 - VX0 - 16, '#8cf09a', 8) + 1; if (y > VY0 + 70) break; }
     const prompt = comp.stage === 'pw' ? 'PASSWORD: ' : 'SEARCH: ';
-    if (comp.stage !== 'result') text(prompt + comp.input + ((t * 3 | 0) % 2 ? '_' : ''), VX0 + 4, VY0 + 76, P.YE);
-    else text(comp.last ? 'Enter: log off' : 'Type again, or Esc: log off', VX0 + 4, VY0 + 76, P.G3);
-    if ((t * 2 | 0) % 2) px(x0 + w - 6, y0 + h - 5, P.GR2); rect(x0 + w - 12, y0 + h - 5, 4, 1, P.G1);
+    if (comp.stage !== 'result') text(prompt + comp.input + (on ? '_' : ''), VX0 + 8, VY0 + 76, '#ffd070');
+    else text(comp.last ? 'Enter: log off' : 'Type again, or Esc: log off', VX0 + 8, VY0 + 76, '#6ab87a');
+    fine(() => { g.fillStyle = 'rgba(0,0,0,0.16)'; for (let yy = 2 * 28; yy < 2 * 132; yy += 2) g.fillRect(2 * 14, yy, 2 * 143, 1); g.fillStyle = on ? '#5aff7a' : '#1a5a2a'; g.fillRect(2 * 150, 2 * 136, 3, 3); });
     // the keyboard
-    rect(8, 145, 157, 40, P.K); rect(9, 146, 155, 38, P.G1); rect(9, 146, 155, 1, P.G3);
     const K = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     for (let i = 0; i < 29; i++) {
       const x = 10 + (i % 13) * 12, yy = 148 + Math.floor(i / 13) * 12, sp = i >= 26, ok = i === 28, kw = ok ? 34 : 10;
-      rect(x, yy, kw + 1, 11, P.K); bevel(x, yy, kw, 10, ok ? P.GR : sp ? P.G1 : P.G3, ok ? P.GR2 : sp ? P.G3 : P.W, ok ? P.K : sp ? P.K : P.G1);
-      textC(i < 26 ? K[i] : ['_', '<', 'ENTER'][i - 26], x + (kw >> 1), yy + 2, sp && !ok ? P.W : P.K);
+      textC(i < 26 ? K[i] : ['_', '<', 'ENTER'][i - 26], x + (kw >> 1), yy + 2, ok ? '#f4fff0' : sp ? '#e8e4d8' : '#3a3630');
     }
   }
   function drawOver() {
@@ -1444,70 +1575,31 @@ function armoryScene(start) {
     onTap(x, y) { const i = slots.findIndex(s => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h + 12); if (i >= 0) { sel = i; toggle(); return; } if (y > 178 && x > 240) go_(); },
     draw() {
       const t = this.t;
-      g.drawImage(biX_armoryBg(slots), 0, 0);
+      blit(biX_armoryBg(slots), 0, 0);
       slots.forEach((s, i) => {
         const on = i === sel, y0 = s.y + 8;
-        if (on) { for (let y = y0 + 1; y < y0 + s.h; y++) for (let x = s.x + 1; x < s.x + s.w - 1; x++) if (biX_bay(x, y) < 3) px(x, y, P.BL2); }
+        if (on) fine(() => { const gl = g.createRadialGradient(2 * s.x + s.w, 2 * y0 + s.h, 4, 2 * s.x + s.w, 2 * y0 + s.h, s.w * 1.2); gl.addColorStop(0, 'rgba(255,200,110,0.22)'); gl.addColorStop(1, 'rgba(255,200,110,0.04)'); g.fillStyle = gl; g.fillRect(2 * s.x, 2 * y0, 2 * s.w, 2 * s.h); });
         if (!taken[s.k]) armoryItem(s.k, s.x + s.w / 2, y0 + s.h);
-        else { const cx = Math.round(s.x + s.w / 2), cy = Math.round(y0 + s.h / 2) - 3; const tw = textW('TAKEN') + 6; rect(cx - (tw >> 1), cy, tw, 10, P.K); frame(cx - (tw >> 1), cy, tw, 10, P.G1); textC('TAKEN', cx, cy + 1, P.G3); }
-        if (on) { const c = (t * 4 | 0) % 2 ? P.YE : P.W; frame(s.x - 1, y0 - 1, s.w + 2, s.h + 2, c); frame(s.x, y0, s.w, s.h, P.K); }
-        const lc = on ? P.YE : P.W, lx = s.x + s.w / 2;
+        else { const cx = Math.round(s.x + s.w / 2), cy = Math.round(y0 + s.h / 2) - 3, tw = textW('TAKEN') + 8; blit(biX_takenArt(tw), cx - (tw >> 1), cy - 1); textC('TAKEN', cx, cy + 2, '#8a96a8'); }
+        if (on) { const c = (t * 4 | 0) % 2 ? '#ffd070' : '#ffb040', l = 5; fine(() => { const x0 = 2 * s.x - 3, y1 = 2 * y0 - 3, x1 = 2 * (s.x + s.w) + 2, y2 = 2 * (y0 + s.h) + 2; g.fillStyle = biX_C.ink; for (const [x, y, dx, dy] of [[x0, y1, 1, 1], [x1, y1, -1, 1], [x0, y2, 1, -1], [x1, y2, -1, -1]]) { g.fillRect(Math.min(x, x + dx * l * 2) - 1, y - 1, l * 2 + 3, 4); g.fillRect(x - 1, Math.min(y, y + dy * l * 2) - 1, 4, l * 2 + 3); } g.fillStyle = c; for (const [x, y, dx, dy] of [[x0, y1, 1, 1], [x1, y1, -1, 1], [x0, y2, 1, -1], [x1, y2, -1, -1]]) { g.fillRect(Math.min(x, x + dx * l * 2), y, l * 2 + 1, 2); g.fillRect(x, Math.min(y, y + dy * l * 2), 2, l * 2 + 1); } }); }
+        const lc = on ? '#ffd070' : '#e8e4d8', lx = s.x + s.w / 2;
         if (s.k === 'gasmask') { textC('GAS', lx, 4, lc, P.K); textC('MASK', lx, 12, lc, P.K); }
         else if (s.label) textC(s.k === 'safekit' ? 'SAFECRACKING' : s.label, lx, s.y, lc, P.K);
         if (s.k === 'detector') textC('SENSOR', lx, s.y + 8, lc, P.K);
       });
       // right: Max's silhouette carrying what has been picked so far
       const k = kit(), m = { gun: taken.uzi ? 'uzi' : 'pistol', hits: 0, gren: { frag: k.frag, stun: k.stun, gas: k.gas }, gtype: k.stun ? 'stun' : k.gas ? 'gas' : k.frag ? 'frag' : 'stun', bugs: k.bugs, clip: 6, clips: 3, film: 36 };
-      rect(160, 0, 160, 172, P.BL);
-      g.save(); g.translate(-9, 40); biX_equip(k, m, t); g.restore();
-      rect(162, 2, 156, 34, P.K); frame(162, 2, 156, 34, P.G1); rect(163, 3, 154, 1, P.G3);
-      textC('EQUIPMENT ROOM', 240, 7, P.YE, P.K); textC('Choose up to five items', 240, 17, P.G3); textC('for the break-in.', 240, 25, P.G3);
-      for (let n = 0; n < 5; n++) { const x = 170 + n * 9, on = n < used(); rect(x, 158, 7, 7, P.K); rect(x + 1, 159, 5, 5, on ? P.YE : P.G1); if (on) px(x + 1, 159, P.W); }
-      text(used() + ' of 5', 218, 158, P.W);
-      rect(0, 172, W, 28, P.K); rect(0, 172, W, 1, P.G1);
-      text('Items taken: ' + used() + ' of 5.  The silenced pistol is free.', 4, 176, P.W);
-      text('Enter takes or returns.  Esc when ready.', 4, 187, P.G3);
-      bevel(250, 182, 64, 14, P.BL, P.BL2, P.K); frame(249, 181, 66, 16, P.K); textC('Go in', 282, 185, P.YE);
+      blit(biX_armoryPanel(), 160, 0);
+      fine(() => biX_glow(394, 170, 150, 'rgb(120,160,220)', 0.14, true));
+      g.save(); g.translate(-9, 40); biX_equip(k, m, t, true); g.restore();
+      fine(() => { const gr = g.createLinearGradient(0, 250, 0, 280); gr.addColorStop(0, 'rgba(18,24,36,0)'); gr.addColorStop(1, 'rgba(18,24,36,1)'); g.fillStyle = gr; g.fillRect(330, 250, 290, 30); });
+      textC('EQUIPMENT ROOM', 240, 7, '#ffc860', P.K); textC('Choose up to five items', 240, 17, '#b8c0d0'); textC('for the break-in.', 240, 25, '#b8c0d0');
+      for (let n = 0; n < 5; n++) { const on = n < used(); blit(biX_ledArt(on), 170 + n * 9, 158); if (on) fine(() => biX_glow(2 * (170 + n * 9) + 7, 323, 12, 'rgb(255,190,80)', 0.35, true)); }
+      text(used() + ' of 5', 218, 158, '#f0e8d8');
+      blit(biX_armoryChrome(), 0, 172);
+      text('Items taken: ' + used() + ' of 5.  The silenced pistol is free.', 4, 176, '#f0e8d8');
+      text('Enter takes or returns.  Esc when ready.', 4, 187, '#8a96a8');
+      textC('Go in', 282, 185, '#fff0c0');
     },
   };
-}
-// the equipment room: pegboard wall, felt-lined cubbies, steel shelves and uprights
-function biX_armoryBg(slots) {
-  return sprite('biX_armory', 320, 172, () => {
-    for (let y = 0; y < 172; y++) for (let x = 0; x < 160; x++) px(x, y, (x % 4 === 2 && y % 4 === 2) ? P.K : biX_bay(x, y) < (y > 120 ? 4 : 2) ? P.RD : P.BR);
-    for (const s of slots) {
-      const y0 = s.y + 8;
-      rect(s.x, y0, s.w, s.h, P.BL); for (let y = y0; y < y0 + s.h; y++) for (let x = s.x; x < s.x + s.w; x++) if (biX_bay(x, y) < 2) px(x, y, P.K);
-      rect(s.x, y0, s.w, 1, P.K); rect(s.x, y0, 1, s.h, P.K); rect(s.x + 1, y0 + 1, s.w - 1, 1, P.NV); rect(s.x + s.w - 1, y0, 1, s.h, P.BL2);
-      // steel shelf and its shadow on the pegboard
-      rect(s.x - 1, y0 + s.h, s.w + 2, 3, P.G3); rect(s.x - 1, y0 + s.h, s.w + 2, 1, P.W); rect(s.x - 1, y0 + s.h + 2, s.w + 2, 1, P.G1); rect(s.x - 1, y0 + s.h + 3, s.w + 2, 1, P.K);
-      for (let x = s.x; x < s.x + s.w; x++) if (x % 2) px(x, y0 + s.h + 4, P.K);
-      for (const bx of [s.x + 3, s.x + s.w - 5]) { rect(bx, y0 + s.h + 3, 2, 3, P.G1); px(bx, y0 + s.h + 3, P.G3); }
-    }
-    for (const ux of [74, 158]) { rect(ux, 0, 3, 172, P.G3); rect(ux, 0, 1, 172, P.W); rect(ux + 2, 0, 1, 172, P.G1); for (let y = 3; y < 172; y += 6) px(ux + 1, y, P.K); }
-    rect(0, 0, 1, 172, P.K);
-  });
-}
-const biX_BIGGREN = {
-  frag: ['..kkk..', '.kGGGk.', '..kGkWk', '.kwcck.', 'kwcdcdk', 'kcdcdck', 'kdcdcdk', 'kcdcddk', '.kdddk.', '..kkk..'],
-  stun: ['..kkk..', '.kGGGk.', '..kGkWk', '.kkkkk.', '.kwcck.', '.kwcdk.', '.kyyyk.', '.kwcdk.', '.kccdk.', '.kkkkk.'],
-  gas: ['..kkk..', '.kGGGk.', '.kkGkk.', 'kwwccdk', 'kwcccdk', 'kkkkkkk', 'kwcccdk', 'kwcccdk', 'kcccddk', '.kkkkk.'],
-};
-function armoryItem(k, cx, base) {
-  cx = Math.round(cx); base = Math.round(base);
-  switch (k) {
-    case 'uzi': g.drawImage(biX_gunSide(true), cx - 30, base - 21); for (const hx of [cx - 14, cx + 12]) { rect(hx, base - 26, 1, 4, P.G3); px(hx, base - 26, P.W); } break;
-    case 'camera': g.drawImage(biX_camera(), cx - 13, base - 14); for (let a = 0; a <= 12; a++) { const an = Math.PI + a / 12 * Math.PI; px(cx - 2 + Math.round(Math.cos(an) * 12), base - 12 + Math.round(Math.sin(an) * 5), P.K); } rect(cx + 13, base - 8, 7, 8, P.K); rect(cx + 14, base - 7, 5, 7, P.YE); rect(cx + 14, base - 5, 5, 2, P.K); px(cx + 16, base - 8, P.G3); break;
-    case 'bugs': for (let n = 0; n < 6; n++) { const bx = cx - 30 + n * 10; biX_put('bug', biX_BUG, biX_BUGMAP, bx, base - 6); px(bx + 3, base - 8, P.G3); px(bx + 3, base - 9, n % 2 ? P.RD2 : P.G3); } break;
-    case 'frag': case 'stun': case 'gas': { const r = biX_ramp(GREN[k].col); for (let n = 0; n < 7; n++) biX_put('bg_' + k, biX_BIGGREN[k], { k: P.K, G: P.G3, W: P.W, w: r[2], c: r[1], d: r[0] === P.K ? P.G1 : r[0], y: P.YE }, cx - 31 + n * 9, base - 10); break; }
-    case 'gasmask': for (const sx of [-1, 1]) { line(cx + sx * 10, base - 12, cx + sx * 6, base - 24, P.K); line(cx + sx * 11, base - 12, cx + sx * 7, base - 24, P.G1); } biX_mask(cx - 11, base - 19); rect(cx - 2, base - 2, 5, 2, P.G1); break;
-    case 'detector': {
-      for (let a = 0; a <= 20; a++) { const an = Math.PI + a / 20 * Math.PI, xx = cx + Math.round(Math.cos(an) * 10), yy = base - 10 + Math.round(Math.sin(an) * 9); px(xx, yy, P.G3); px(xx, yy - 1, P.W); px(xx, yy + 1, P.K); }
-      for (const ex of [cx - 13, cx + 9]) { biX_box(ex, base - 12, 5, 10, P.G1, P.G3, P.K); rect(ex + 2, base - 24, 1, 12, P.G3); px(ex + 2, base - 25, P.YE); px(ex + 2, base - 24, P.RD2); }
-      biX_box(cx - 5, base - 9, 11, 9, P.G1, P.G3, P.K); rect(cx - 3, base - 7, 7, 3, P.GR); px(cx - 2, base - 6, P.GR2); px(cx + 1, base - 5, P.GR2); px(cx + 3, base - 3, P.RD2);
-      break;
-    }
-    case 'kevlar': g.drawImage(biX_vest(40, 50), cx - 21, base - 51); rect(cx - 1, base - 55, 2, 5, P.G3); px(cx - 1, base - 55, P.W); rect(cx - 9, base - 52, 18, 1, P.G3); break;
-    case 'safekit': biX_box(cx - 24, base - 35, 48, 11, P.G1, P.G3, P.K); rect(cx - 21, base - 32, 42, 6, P.K); rect(cx - 21, base - 32, 42, 1, P.RD); px(cx - 20, base - 27, P.G3); px(cx + 19, base - 27, P.G3); g.drawImage(biX_safekit(), cx - 23, base - 25); break;
-  }
 }
