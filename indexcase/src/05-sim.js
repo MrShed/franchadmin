@@ -797,7 +797,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     return res;
   }
 
-  IX.R_CLUSTER = 0.62;
+  // contacts cluster (households, friends and workmates share contacts), so the realised
+  // reproduction number is a fraction of the random-mixing next-generation value (measured, by route)
+  IX.R_CLUSTER = { airborne: 0.63, droplet: 0.51, gut: 0.46, contact: 0.4 };
   IX.calibrate = function (P, C, key) {
     IX.ageTables(P, C);
     var sim = new Sim(C, P, key + '/cal');
@@ -826,9 +828,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       Rm /= Math.max(1, r2.length);
       var Sm = pre / Math.max(1e-9, pre + sym);
       P.calib = { R: IX.round(Rm, 3), presym: IX.round(Sm, 3), beta: P.beta, preW: P.preW, it: it };
-      // contacts cluster (households, friends, workmates share contacts), so the realised
-      // reproduction number in the city is about 0.62 of the random-mixing next-generation value
-      var ratio = P.R / IX.R_CLUSTER / Math.max(0.01, Rm);
+      var ratio = P.R / IX.R_CLUSTER[P.humanRoute] / Math.max(0.01, Rm);
       P.beta *= Math.pow(ratio, it < 2 ? 1 : 0.9);
       if (P.preDays > 0 && targetS > 0.01 && Sm > 0.001) {
         var oddsT = targetS / (1 - targetS), oddsM = Sm / (1 - Sm);

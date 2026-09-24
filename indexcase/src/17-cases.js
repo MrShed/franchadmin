@@ -4,7 +4,7 @@ var UICases = UI.views.cases = {
   limit: 120,
   build: function (root) {
     var self = this;
-    root.innerHTML = '<div class="scroll" id="cs-scroll"><div class="pad"><div class="vhead"><div style="flex:1"><div class="eyebrow">Surveillance</div><h2>Cases</h2></div><div class="seg" id="cs-sub" style="flex:none;width:230px"><button data-s="list">Line list</button><button data-s="curve">Curve</button><button data-s="ages">Ages</button></div></div><div id="cs-body"></div></div></div>';
+    root.innerHTML = '<div class="scroll" id="cs-scroll"><div class="pad"><div class="vhead"><div style="flex:1"><div class="eyebrow">Surveillance</div><h2>Cases</h2></div></div><div class="seg" id="cs-sub" style="margin-bottom:14px"><button data-s="list">Line list</button><button data-s="contacts">Contacts</button><button data-s="curve">Curve</button><button data-s="ages">Ages</button></div><div id="cs-body"></div></div></div>';
     UI$('#cs-sub').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; UIAudio.cue('tap'); UIS.cases.sub = b.dataset.s; self.limit = 120; self.render(); UI.emit('cases-sub', b.dataset.s); UI.save(); });
     UI$('#cs-body').addEventListener('click', function (e) {
       var r = e.target.closest('[data-pid]'); if (r) { UIAudio.cue('tap'); self.personSheet(r.dataset.pid); return; }
@@ -20,9 +20,9 @@ var UICases = UI.views.cases = {
   render: function () {
     var sub = UIS.cases.sub;
     UI$$('#cs-sub button').forEach(function (b) { b.classList.toggle('on', b.dataset.s === sub); });
-    if (sub === 'curve') this.renderCurve(); else if (sub === 'ages') this.renderAges(); else this.renderList();
+    if (sub === 'curve') this.renderCurve(); else if (sub === 'ages') this.renderAges(); else if (sub === 'contacts') this.renderContacts(); else this.renderList();
   },
-  FILTERS: [['all', 'All'], ['new', 'New today'], ['nointerview', 'Not interviewed'], ['untested', 'Untested'], ['pos', 'Confirmed'], ['hosp', 'Hospital'], ['died', 'Died']],
+  FILTERS: [['all', 'All'], ['new', 'New today'], ['nointerview', 'Not interviewed'], ['untested', 'Untested'], ['panelneg', 'Negative'], ['pos', 'Positive'], ['hosp', 'Hospital'], ['died', 'Died']],
   filtered: function () {
     var st = UIS.cases, day = UIA.day(), q = (st.q || '').toLowerCase().trim();
     var cs = UIA.cases().filter(function (c) {
@@ -32,6 +32,7 @@ var UICases = UI.views.cases = {
         case 'nointerview': return !c.interviewed && c.status !== 'died';
         case 'untested': return UIA.testState(c) === 'none';
         case 'pos': return UIA.testState(c) === 'pos' || c.status === 'confirmed';
+        case 'panelneg': return UIA.testState(c) === 'neg';
         case 'hosp': return c.status === 'hospital' || c.status === 'icu';
         case 'died': return c.status === 'died';
       }
@@ -80,31 +81,53 @@ var UICases = UI.views.cases = {
       '<div class="legend"><span><i style="background:linear-gradient(#ff9a66,#e5562a)"></i>Onset</span><span><i class="hz"></i>Nowcast — likely not yet reported</span><button class="chip' + (UIS.cases.showReport ? ' on' : '') + '" data-rep style="min-height:30px"><i style="background:#8fcbff;height:2px;width:14px;border-radius:1px;display:inline-block"></i>By report date</button></div>' +
       '<p class="note">Recent days always look lower than they will: people fall ill days before they are tested and reported. The hatched band is how many more are probably on their way.</p></div></div>' +
       '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Hospital</div><h3>Admissions</h3></div><div class="aside">' + UIsum(cv.admissions) + ' total</div></div><div class="card-b"><div class="ch-host" id="ch-adm"></div></div></div>' +
-      '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Mortality</div><h3>Deaths</h3></div><div class="aside">' + UIsum(cv.deaths) + ' total</div></div><div class="card-b"><div class="ch-host" id="ch-dth"></div></div></div>';
+      '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Mortality</div><h3>Deaths</h3></div><div class="aside">' + UIsum(cv.deaths) + ' total</div></div><div class="card-b"><div class="ch-host" id="ch-dth"></div></div></div>' +
+      (cv.ili ? '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Includes ordinary flu</div><h3>Flu-like illness at GPs</h3></div></div><div class="card-b"><div class="ch-host" id="ch-ili"></div><p class="note">The background every new disease hides in. A rise here that is not flu is worth a look.</p></div></div>' : '') +
+      (cv.tests && cv.positive ? '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">' + UIsum(cv.positive) + ' of ' + UIsum(cv.tests) + ' resulted tests</div><h3>Positive tests</h3></div></div><div class="card-b"><div class="ch-host" id="ch-pos"></div></div></div>' : '');
     UI$('#cs-body').innerHTML = '<div class="stack">' + html + '</div>';
     UIChart.epi(UI$('#ch-epi'), cv, { from: from, showReport: UIS.cases.showReport, today: day, h: window.innerWidth >= 900 ? 280 : 220 });
     UIChart.mini(UI$('#ch-adm'), cv.admissions.slice(from), cv.start + from, { color: '#f2b640', label: 'Admitted', h: 100 });
     UIChart.mini(UI$('#ch-dth'), cv.deaths.slice(from), cv.start + from, { color: '#d9d3c7', label: 'Died', h: 100 });
+    if (cv.ili) UIChart.mini(UI$('#ch-ili'), cv.ili.slice(from), cv.start + from, { color: '#8fcbff', label: 'GP consultations', h: 100 });
+    if (cv.tests && cv.positive) UIChart.mini(UI$('#ch-pos'), cv.positive.slice(from), cv.start + from, { color: '#3fd0aa', label: 'Positive tests', h: 100 });
   },
-  BANDS: [[0, 9, '0–9'], [10, 19, '10–19'], [20, 29, '20–29'], [30, 39, '30–39'], [40, 49, '40–49'], [50, 59, '50–59'], [60, 69, '60–69'], [70, 79, '70–79'], [80, 200, '80+']],
   renderAges: function () {
-    var cs = UIA.cases().filter(function (c) { return c.status !== 'negative' && c.status !== 'contact' && c.age !== null; });
-    var rows = this.BANDS.map(function (b) {
-      var inB = cs.filter(function (c) { return c.age >= b[0] && c.age <= b[1]; });
-      var hosp = inB.filter(function (c) { return c.status === 'hospital' || c.status === 'icu' || c.status === 'died' || c.raw.admitted; }).length;
-      var died = inB.filter(function (c) { return c.status === 'died'; }).length;
-      return { label: b[2], n: inB.length, hosp: hosp, died: died };
-    });
-    var N = cs.length || 1, H = UIsum(rows.map(function (r) { return r.hosp; })) || 1;
-    var html = cs.length ? '' : '<div class="empty"><b>No ages yet</b>The breakdown fills in as cases are reported.</div>';
-    if (cs.length) html = '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Share of ' + cs.length + ' cases</div><h3>Cases by age</h3></div></div><div class="card-b"><div class="ch-host" id="ch-age1"></div></div></div>' +
-      '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Share of ' + UIsum(rows.map(function (r) { return r.hosp; })) + ' admitted or died</div><h3>Who ends up in hospital</h3></div></div><div class="card-b"><div class="ch-host" id="ch-age2"></div><p class="note">Compare the two shapes. If the hospital bars lean further toward one age than the case bars do, the disease is harder on that age.</p></div></div>' +
-      '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Admitted or died ÷ known cases</div><h3>Severity by age</h3></div></div><div class="card-b"><div class="ch-host" id="ch-age3"></div><p class="note">Known cases only — mild and silent infections are missed, so the true risk per infection is lower.</p></div></div>';
+    var cv = UIA.curve(), rows;
+    if (cv.byAge && cv.byAge.bands) {
+      var B = cv.byAge;
+      rows = B.bands.map(function (l, i) { return { label: l.replace('-', '–'), n: B.cases[i] || 0, hosp: (B.admitted || [])[i] || 0, died: (B.died || [])[i] || 0 }; });
+    } else {
+      var cs0 = UIA.cases().filter(function (c) { return c.status !== 'negative' && c.age !== null; });
+      rows = [[0, 17, '0–17'], [18, 34, '18–34'], [35, 49, '35–49'], [50, 64, '50–64'], [65, 79, '65–79'], [80, 200, '80+']].map(function (b) {
+        var inB = cs0.filter(function (c) { return c.age >= b[0] && c.age <= b[1]; });
+        return { label: b[2], n: inB.length, hosp: inB.filter(function (c) { return c.admitted !== null; }).length, died: inB.filter(function (c) { return c.status === 'died'; }).length };
+      });
+    }
+    var N = UIsum(rows.map(function (r) { return r.n; })), H = UIsum(rows.map(function (r) { return r.hosp; })), Dd = UIsum(rows.map(function (r) { return r.died; }));
+    var html = N ? '' : '<div class="empty"><b>No ages yet</b>The breakdown fills in as cases are reported.</div>';
+    if (N) html = '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">' + N + ' known cases</div><h3>Cases by age</h3></div></div><div class="card-b"><div class="ch-host" id="ch-age1"></div></div></div>' +
+      '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">' + H + ' admitted · ' + Dd + ' died</div><h3>Who ends up in hospital</h3></div></div><div class="card-b"><div class="ch-host" id="ch-age2"></div><p class="note">Compare the two shapes. If the hospital bars lean further toward one age than the case bars do, the disease is harder on that age.</p></div></div>' +
+      '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">Admitted ÷ known cases, by age</div><h3>Severity by age</h3></div></div><div class="card-b"><div class="ch-host" id="ch-age3"></div><p class="note">Known cases only. Mild and silent infections are missed, so the true risk per infection is lower than this.</p></div></div>';
     UI$('#cs-body').innerHTML = '<div class="stack">' + html + '</div>';
-    if (!cs.length) return;
+    if (!N) return;
     UIChart.ageBars(UI$('#ch-age1'), rows.map(function (r) { return { label: r.label, a: r.n / N, n: r.n }; }), { color: '#ff7a45', label: 'Cases by age', fmt: function (r) { return r.n; } });
-    UIChart.ageBars(UI$('#ch-age2'), rows.map(function (r) { return { label: r.label, a: r.hosp / H, n: r.hosp }; }), { color: '#f2b640', label: 'Admissions by age', fmt: function (r) { return r.n; } });
+    UIChart.ageBars(UI$('#ch-age2'), rows.map(function (r) { return { label: r.label, a: H ? r.hosp / H : 0, n: r.hosp }; }), { color: '#f2b640', label: 'Admissions by age', fmt: function (r) { return r.n; } });
     UIChart.ageBars(UI$('#ch-age3'), rows.map(function (r) { return { label: r.label, a: r.n ? r.hosp / r.n : 0, n: r.n }; }), { color: '#d9d3c7', label: 'Severity by age', fmt: function (r) { return r.n ? UIfmt.pct(r.a) : '—'; } });
+  },
+  renderContacts: function () {
+    var cs = UIA.contacts(), day = UIA.day();
+    var by = { ill: [], monitoring: [], well: [], lost: [] };
+    cs.forEach(function (c) { (by[c.status] || (by[c.status] = [])).push(c); });
+    var html = '<div class="tiles"><div class="stat"><b>' + cs.length + '</b><span>contacts followed</span></div><div class="stat"><b style="color:var(--ember)">' + (by.ill || []).length + '</b><span>fell ill</span></div><div class="stat"><b>' + (by.monitoring || []).length + '</b><span>still being watched</span></div></div>';
+    if (!cs.length) html += '<div class="empty"><b>No contacts yet</b>Trace a case\'s contacts from their card. Contacts are followed up for 14 days; those who fall ill join the line list.</div>';
+    [['ill', 'Fell ill'], ['monitoring', 'Monitoring'], ['well', 'Stayed well'], ['lost', 'Lost to follow-up']].forEach(function (g) {
+      var L = by[g[0]] || []; if (!L.length) return;
+      html += '<div class="eyebrow" style="margin:18px 2px 8px">' + g[1] + ' · ' + L.length + '</div><div class="list">' + L.slice(0, 200).map(function (c) {
+        var of = c.of.map(function (x) { var k = UIA.caseOf(x); return k ? k.name : x; }).join(', ');
+        return UIli({ attrs: 'data-pid="' + UIesc(c.pid) + '"', ic: '<span class="mini-face">' + UIPortrait.svg({ pid: c.pid }) + '</span>', icStyle: 'background:none;padding:0;overflow:hidden', label: UIesc(c.name), small: 'Contact of ' + UIesc(of) + (c.setting ? ' · ' + UIesc(UIplaceKind(c.setting)[0].toLowerCase()) : '') + (c.followUntil !== null && c.status === 'monitoring' ? ' · ' + Math.max(0, c.followUntil - day) + 'd left' : '') });
+      }).join('') + '</div>';
+    });
+    UI$('#cs-body').innerHTML = html;
   },
 
   // ------------------------------------------------------------ person sheet
