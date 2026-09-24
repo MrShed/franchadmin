@@ -1319,7 +1319,7 @@ function breakinScene(opts, done) {
   function msgLong() { if (msg !== lastMsg) { lastMsg = msg; msgT0 = t; } return textW(msg) > 138 && t - msgT0 < 4; }
   function postFlash() { // being hit turns every light gray pixel light red for a moment
     if (hitFlash <= 0) return; hitFlash--;
-    const d = g.getImageData(0, 0, W, H), a = d.data; for (let i = 0; i < a.length; i += 4) if (a[i] === 0xAA && a[i + 1] === 0xAA && a[i + 2] === 0xAA) { a[i] = 0xFF; a[i + 1] = 0x55; a[i + 2] = 0x55; } g.putImageData(d, 0, 0);
+    const d = g.getImageData(0, 0, cv.width, cv.height), a = d.data; for (let i = 0; i < a.length; i += 4) if (a[i] === 0xAA && a[i + 1] === 0xAA && a[i + 2] === 0xAA) { a[i] = 0xFF; a[i + 1] = 0x55; a[i + 2] = 0x55; } g.putImageData(d, 0, 0);
   }
   // ---------- Max, side view (top-left box) ----------
   const sideBackdrop = () => sprite('biX_sidebg', 23, 38, () => {

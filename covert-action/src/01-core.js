@@ -3,9 +3,11 @@
 // ===================================================================
 const W = 320, H = 200;
 const cv = document.getElementById('screen');
+// the layout is 320x200 as in 1990, but the screen is rendered at RES x that, so art can use finer pixels
+const RES = 2; cv.width = W * RES; cv.height = H * RES;
 let g = cv.getContext('2d', { alpha: false });
 const SCREEN = g;
-g.imageSmoothingEnabled = false;
+g.setTransform(RES, 0, 0, RES, 0, 0); g.imageSmoothingEnabled = false;
 
 // MCGA-era palette, picked by hand to sit in the 6-bit-per-channel VGA DAC range
 // The 16-colour EGA palette the original ran in, under descriptive names.
@@ -50,21 +52,26 @@ function line(x0, y0, x1, y1, c) {
   for (let n = 0; n < 2000; n++) { g.fillRect(x0, y0, 1, 1); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } }
 }
 function disc(cx, cy, r, c) { g.fillStyle = c; for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y + r * 0.8)); g.fillRect(cx - w | 0, cy + y | 0, w * 2 + 1, 1); } }
-// 4x4 ordered (Bayer) dither: the signature look of 1990 gradients
+// colour mixing: the old ordered dither is now a clean blend of its two colours (no checkerboard noise)
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-function dither(x, y, w, h, c1, c2, level) { // level 0..16 = amount of c2
-  rect(x, y, w, h, c1); if (level <= 0) return; g.fillStyle = c2;
-  if (level >= 16) { g.fillRect(x, y, w, h); return; }
-  for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) if (BAYER[((y + yy) & 3) * 4 + ((x + xx) & 3)] < level) g.fillRect(x + xx, y + yy, 1, 1);
+const mixCache = new Map();
+function hexRGB(c) { if (c[0] !== '#') return null; if (c.length === 4) c = '#' + c[1] + c[1] + c[2] + c[2] + c[3] + c[3]; const n = parseInt(c.slice(1, 7), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function mix(c1, c2, k) { // k 0..1 towards c2
+  const key = c1 + c2 + k; let r = mixCache.get(key); if (r) return r;
+  const a = hexRGB(c1), b = hexRGB(c2);
+  if (!a || !b) r = b ? 'rgba(' + b.join(',') + ',' + k.toFixed(3) + ')' : c2;
+  else r = '#' + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, '0')).join('');
+  mixCache.set(key, r); return r;
 }
-function vgrad(x, y, w, h, cols) { // banded + dithered vertical gradient through a list of colours
+function dither(x, y, w, h, c1, c2, level) { // level 0..16 = amount of c2
+  if (level <= 0) { rect(x, y, w, h, c1); return; }
+  if (level >= 16) { rect(x, y, w, h, c2); return; }
+  if (!hexRGB(c1)) { if (c1 !== 'rgba(0,0,0,0)') rect(x, y, w, h, c1); rect(x, y, w, h, mix(c1, c2, level / 16)); return; }
+  rect(x, y, w, h, mix(c1, c2, level / 16));
+}
+function vgrad(x, y, w, h, cols) { // smooth vertical gradient through a list of colours
   const seg = h / (cols.length - 1);
-  for (let yy = 0; yy < h; yy++) {
-    const t = yy / seg, i = Math.min(cols.length - 2, Math.floor(t)), f = t - i;
-    const lvl = Math.round(f * 16);
-    g.fillStyle = cols[i]; g.fillRect(x, y + yy, w, 1);
-    if (lvl > 0) { g.fillStyle = cols[i + 1]; for (let xx = 0; xx < w; xx++) if (BAYER[((y + yy) & 3) * 4 + ((x + xx) & 3)] < lvl) g.fillRect(x + xx, y + yy, 1, 1); }
-  }
+  for (let yy = 0; yy < h; yy++) { const t = yy / seg, i = Math.min(cols.length - 2, Math.floor(t)); g.fillStyle = mix(cols[i], cols[i + 1], Math.round((t - i) * 16) / 16); g.fillRect(x, y + yy, w, 1); }
 }
 // raised / sunken bevel boxes, MicroProse-menu style
 function bevel(x, y, w, h, face, hi, lo) { rect(x, y, w, h, face); rect(x, y, w, 1, hi); rect(x, y, 1, h, hi); rect(x, y + h - 1, w, 1, lo); rect(x + w - 1, y, 1, h, lo); }
@@ -77,6 +84,16 @@ function sprite(key, w, h, drawFn) {
   if (!c) { c = document.createElement('canvas'); c.width = w; c.height = h; drawTo(c.getContext('2d'), drawFn); spriteCache.set(key, c); }
   return c;
 }
+// hi-res art: art() caches a picture drawn on the FINE grid (RES x the layout pixels);
+// fine(fn) draws straight to the screen in fine-grid coordinates. blit() places an art() canvas in layout coords.
+const artCache = new Map();
+function art(key, w, h, drawFn) {
+  let c = artCache.get(key);
+  if (!c) { c = document.createElement('canvas'); c.width = w * RES; c.height = h * RES; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; drawTo(x, drawFn); artCache.set(key, c); }
+  return c;
+}
+function blit(c, x, y) { g.drawImage(c, x, y, c.width / RES, c.height / RES); }
+function fine(fn) { g.save(); g.scale(1 / RES, 1 / RES); try { fn(); } finally { g.restore(); } }
 let gStack = [];
 function drawTo(ctx, fn) { gStack.push(g); g = ctx; try { fn(); } finally { g = gStack.pop(); } }
 

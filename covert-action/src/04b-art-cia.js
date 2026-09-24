@@ -912,3 +912,6 @@ function cryptoLabArt(x, y, w, h, t) {
   if (ciaX_blink(t, 1.7)) { px(x + 22, y + 110, P.SK); px(x + 26, y + 110, P.SK); }
   g.restore();
 }
+
+// the floor-select panel beside the 'Which floor?' menu (placeholder until redrawn)
+function ciaFloorsArt(x, y, w, h, t, floor, sel) { ciaLobbyArt(x, y, w, h, t); }
