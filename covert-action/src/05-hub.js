@@ -113,18 +113,6 @@ function serifLogo() {
   const d = x.getImageData(0, 0, 320, 124); for (let i = 0; i < d.data.length; i += 4) d.data[i + 3] = d.data[i + 3] > 110 ? 255 : 0;
   x.putImageData(d, 0, 0); serifCache = c; return c;
 }
-function titleBackdrop(t) {
-  rect(0, 0, W, H, P.BL); for (let y = 0; y < H; y += 2) rect(0, y, W, 1, P.K);
-  // running agents in silhouette, sliding in
-  const k = Math.min(1, t / 1.5); g.fillStyle = P.K;
-  const figs = [[34, 1.6, -1], [104, 1.8, 1], [170, 1.65, -1], [240, 1.85, 1], [300, 1.55, -1]];
-  for (const [fx, s, dir] of figs) {
-    const x = fx + (1 - k) * dir * 80;
-    g.beginPath(); g.ellipse(x, 22 * s, 11 * s, 13 * s, 0, 0, 7); g.fill();
-    g.beginPath(); g.moveTo(x - 20 * s, 38 * s); g.lineTo(x + 22 * s, 38 * s); g.lineTo(x + 28 * s, 120 * s); g.lineTo(x - 26 * s, 120 * s); g.fill();
-    g.fillRect(x + 18 * s * dir, 44 * s, 34 * s * dir, 8 * s); g.fillRect(x - 24 * s, 110 * s, 18 * s, 100); g.fillRect(x + 8 * s, 110 * s, 18 * s, 100);
-  }
-}
 function titleScene() {
   let menuOpen = false; let s;
   const items = () => [
