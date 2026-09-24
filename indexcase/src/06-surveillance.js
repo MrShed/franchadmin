@@ -26,7 +26,12 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   GP.msg = function (kind, title, from, lines, o) {
     o = o || {};
     var S = this.S;
-    var body = (lines || []).map(function (l) { return typeof l === 'string' ? { k: 'p', x: [l] } : Array.isArray(l) ? { k: 'p', x: l } : l; });
+    var body = (lines || []).filter(function (l) { return l !== '' && l !== null && l !== undefined; }).map(function (l) {
+      if (typeof l === 'string') return { k: 'p', x: [l] };
+      if (Array.isArray(l)) return { k: 'p', x: l };
+      if (!l.k) return { k: 'p', x: [l] };   // a bare ref
+      return l;
+    });
     var refs = [], seen = {};
     function scan(seg) { if (seg && typeof seg === 'object' && seg.t) { var k = seg.t + ':' + seg.id; if (!seen[k]) { seen[k] = 1; refs.push(seg); } } }
     body.forEach(function (l) { (l.x || []).forEach(scan); if (l.rows) l.rows.forEach(function (r) { r.forEach(scan); }); if (l.who) scan(l.who); });
@@ -1202,7 +1207,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var S = this.S, C = this.C, p = C.places[pi];
     if (!p) return { ok: false, err: 'Unknown place.' };
     this.schedule('quest', S.day + 2, { place: pi, asked: S.day });
-    var m = this.msg('result', 'Questionnaire sent: ' + p.name, 'Epidemiology analysts', ['A short exposure questionnaire has gone to everyone who was at ', this.plref(pi), ' around the time of the cluster: where they sat or stood, what they did, what they ate, and whether they have been ill. Analysis in two days.']);
+    var m = this.msg('result', 'Questionnaire sent: ' + p.name, 'Epidemiology analysts', [['A short exposure questionnaire has gone to everyone who was at ', this.plref(pi), ' around the time of the cluster: where they sat or stood, what they did, what they ate, and whether they have been ill. Analysis in two days.']]);
     return { ok: true, msgs: [m] };
   };
   GP.job_quest = function (d, sdNowPlus) {
@@ -1212,7 +1217,15 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var byDay = {};
     for (var x = 0; x < sim.n; x++) if (sim.xplace[x] === pi && sim.xday[x] <= sdEnd && sim.xday[x] >= sdEnd - 28 && (sim.xset[x] !== SET.WORK || p.kind === 'meat_plant' || p.kind === 'factory' || p.kind === 'office')) byDay[sim.xday[x]] = (byDay[sim.xday[x]] || 0) + 1;
     var key = -1, bestN = 0;
-    Object.keys(byDay).forEach(function (k) { if (byDay[k] > bestN) { bestN = byDay[k]; key = +k; } });
+    // the event is the day most known cases were there (from interviews and attendance lists)
+    var kd = {};
+    S.caseOrder.forEach(function (q) {
+      var cs = S.cases[q]; if (cs.status === 'discarded') return;
+      (cs.exposures || []).forEach(function (e) { if (e.kind === 'place' && e.place && self.placeIdx(e.place.id) === pi) e.days.forEach(function (d0) { var sd0 = self.sdOf(d0); if (sd0 <= sdEnd && sd0 >= sdEnd - 28) kd[sd0] = (kd[sd0] || 0) + 1; }); });
+      var kp = S.people[q]; if (kp && kp.seenAt && kp.seenAt[pi]) kp.seenAt[pi].forEach(function (d0) { var sd0 = self.sdOf(d0); if (sd0 <= sdEnd && sd0 >= sdEnd - 28) kd[sd0] = (kd[sd0] || 0) + 1; });
+    });
+    Object.keys(kd).forEach(function (k) { if (kd[k] > bestN || (kd[k] === bestN && +k < key)) { bestN = kd[k]; key = +k; } });
+    if (bestN < 2) { key = -1; bestN = 0; Object.keys(byDay).forEach(function (k) { if (byDay[k] > bestN) { bestN = byDay[k]; key = +k; } }); }
     if (key < 0) {
       // no cluster here: use the most recent day a known case attended
       key = sdEnd - 7;
@@ -1230,8 +1243,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     resp.forEach(function (q) {
       var x = self.infBy(q, key + 14);
       var infectedHere = x >= 0 && sim.xday[x] === key && sim.xplace[x] === pi;
-      var on = self.illOnsetOf(q, Math.min(sdEnd + 2, key + 14));
-      var ill = on > key && on <= key + 12;
+      var on = self.illOnsetOf(q, Math.min(sdEnd + 2, key + 21));
+      var ill = on > key && on <= key + 21;
       if (ill) illList.push(q);
       if (infectedHere) nIllTrue++;
       var mode = infectedHere ? sim.xmode[x] : -1;
@@ -1245,18 +1258,18 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     });
     var rows = Object.keys(cats).map(function (k) { var c = cats[k]; return [k, String(c.n), String(c.ill), c.n ? Math.round(100 * c.ill / c.n) + '%' : '–']; });
     // the onset curve of a point-source event: days from the event to illness
-    var onsetRel = illList.map(function (q) { var on = self.illOnsetOf(q, Math.min(sdEnd + 2, key + 14)); var e = u(K.recall, q, 60, 0), err = e < 0.75 ? 0 : e < 0.88 ? -1 : 1; return on - key + err; }).filter(function (v) { return v >= 0; });
+    var onsetRel = illList.map(function (q) { var on = self.illOnsetOf(q, Math.min(sdEnd + 2, key + 21)); var e = u(K.recall, q, 60, 0), err = e < 0.75 ? 0 : e < 0.88 ? -1 : 1; return on - key + err; }).filter(function (v) { return v >= 0; });
     var hist = {}; onsetRel.forEach(function (v) { hist[v] = (hist[v] || 0) + 1; });
     var tot = resp.length, nIll = illList.length;
     // ill respondents join the line list
     illList.forEach(function (q) { if (!S.cases[q]) { var cs = self.addCase(q, 'questionnaire', S.recognized ? 'probable' : 'suspected'); cs.epiLinked = true; } });
     var lines = [
-      ['Event studied: ', this.plref(pi), ' on ' + this.dateLong(this.gd(key)) + '. ' + att.length + ' people present, ' + tot + ' responded (' + Math.round(100 * tot / Math.max(1, att.length)) + '%). ' + nIll + ' reported illness starting within 14 days.'],
+      ['Event studied: ', this.plref(pi), ' on ' + this.dateLong(this.gd(key)) + '. ' + att.length + ' people present, ' + tot + ' responded (' + Math.round(100 * tot / Math.max(1, att.length)) + '%). ' + nIll + ' reported illness starting within three weeks.'],
       { k: 'table', head: ['Exposure', 'Respondents', 'Ill', 'Attack rate'], rows: rows },
       onsetRel.length ? { k: 'm', x: ['Illness began (days after the event): ' + Object.keys(hist).map(Number).sort(function (a, b) { return a - b; }).map(function (d2) { return '+' + d2 + ': ' + hist[d2]; }).join('  ')] } : '',
       { k: 'n', x: ['Ill respondents who were not already known have been added to the line list. Some illness will be ordinary winter bugs.'] }
     ];
-    S.quests.push({ place: pi, day: this.gd(key), resp: tot, ill: nIll, cats: cats, onsets: onsetRel });
+    S.quests.push({ place: pi, kind: p.kind, day: this.gd(key), resp: tot, ill: nIll, cats: cats, onsets: onsetRel });
     this.msg('result', 'Questionnaire results: ' + p.name + ' (' + nIll + ' of ' + tot + ' ill)', 'Epidemiology analysts', lines, { day: S.day + 1 });
   };
 
@@ -1302,7 +1315,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var S = this.S, p = this.C.places[pi];
     if (!p || !(p.animal || p.kind === 'market' || p.kind === 'farm' || p.kind === 'meat_plant')) return { ok: false, err: 'Not an animal site.' };
     this.schedule('animal', S.day + 3, { place: pi, asked: S.day });
-    return { ok: true, msgs: [this.msg('result', 'Animal sampling: ' + p.name, 'Field epidemiology team, with the animal health agency', ['Swabs from animals, pens and surfaces at ', this.plref(pi), ' have gone to the lab. Results in three days.'])] };
+    return { ok: true, msgs: [this.msg('result', 'Animal sampling: ' + p.name, 'Field epidemiology team, with the animal health agency', [['Swabs from animals, pens and surfaces at ', this.plref(pi), ' have gone to the lab. Results in three days.']])] };
   };
   GP.job_animal = function (d, sd) {
     var S = this.S, sim = this.sim, P = this.P, K = this.keys, pi = d.place, p = this.C.places[pi];

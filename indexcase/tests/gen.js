@@ -30,7 +30,7 @@ p('  primary case: ' + g.name(g.sim.primary) + ' (' + C.age[g.sim.primary] + ', 
 p();
 if (args.indexOf('--truth-only') < 0) {
   p('== INBOX, DAY 1 (' + g.dateLong(0) + ')');
-  g.inbox().forEach(function (m) { p(IX.msgText(m)); p(); });
+  g.inbox().forEach(function (m) { try { p(IX.msgText(m)); } catch (e) { console.error('BAD', m.title, JSON.stringify(m.body).slice(0, 400)); throw e; } p(); });
 }
 // ghost curve
 var gh = g.ghost().sim;

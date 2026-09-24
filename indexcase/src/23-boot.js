@@ -17,7 +17,7 @@ var UIBoot = {
       (sv && !sv.over ? '<button class="btn pri t-cont" id="t-cont"><span>Continue · ' + UIesc(sv.city || '') + '</span><small>Day ' + ((sv.day || 0) + 1) + ' · ' + UIesc((UIA.ACTS[sv.act] || ['', ''])[1]) + ' · ' + UIesc((grades.filter(function (g) { return g.id === sv.grade; })[0] || { label: '' }).label) + (sv.tutorial ? ' · guided' : '') + '</small></button>' : '') +
       '<div class="t-grades" role="radiogroup" aria-label="Grade">' + grades.map(function (g, i) { return '<button class="t-grade' + (g.id === gr ? ' on' : '') + '" role="radio" aria-checked="' + (g.id === gr) + '" data-g="' + UIesc(g.id) + '"><i>Grade ' + (i + 1) + '</i><b>' + UIesc(g.label) + '</b><span class="lv">' + [0, 1, 2].map(function (k) { return '<u class="' + (k <= i ? 'f' : '') + '"></u>'; }).join('') + '</span></button>'; }).join('') + '</div>' +
       '<p class="t-blurb" id="t-blurb">' + UIesc((grades.filter(function (g) { return g.id === gr; })[0] || {}).blurb || '') + '</p>' +
-      '<div class="t-row"><button class="btn ' + (sv && !sv.over ? '' : played ? 'pri' : '') + '" id="t-new">' + UIICON.play + 'New outbreak</button><button class="btn ' + (!played && !(sv && !sv.over) ? 'pri' : '') + '" id="t-tut">' + UIICON.mentor + 'Guided first case</button></div>' +
+      '<div class="t-row"><button class="btn ' + (sv && !sv.over ? '' : played ? 'pri' : '') + '" id="t-new">' + UIICON.play + 'New outbreak</button><button class="btn ' + (!played && !(sv && !sv.over) ? 'pri' : '') + '" id="t-tut">' + UIICON.mentor + 'Guided case</button></div>' +
       '<div class="t-seed"><label for="t-seed">City seed</label><input id="t-seed" inputmode="numeric" value="' + seed + '" maxlength="10" aria-label="City seed"><span id="t-msg" class="t-msg"></span></div>' +
       '<p class="t-foot">A fictional city, fictional diseases and fictional officials. The dead in this game have names; it is meant to be played seriously.</p></div></div>';
     this.backdrop();
@@ -30,7 +30,7 @@ var UIBoot = {
     var armed = false;
     function go(tut) {
       var b = UI$(tut ? '#t-tut' : '#t-new');
-      if (sv && !sv.over && !armed) { armed = true; b.innerHTML = 'Replace saved game?'; b.classList.add('danger'); setTimeout(function () { armed = false; if (b.isConnected) { b.classList.remove('danger'); b.innerHTML = tut ? UIICON.mentor + 'Guided first case' : UIICON.play + 'New outbreak'; } }, 3500); return; }
+      if (sv && !sv.over && !armed) { armed = true; b.innerHTML = 'Replace saved game?'; b.classList.add('danger'); setTimeout(function () { armed = false; if (b.isConnected) { b.classList.remove('danger'); b.innerHTML = tut ? UIICON.mentor + 'Guided case' : UIICON.play + 'New outbreak'; } }, 3500); return; }
       UIBoot.start(UI$('#t-seed').value.trim() || seed, tut ? (grades[0].id) : gr, tut);
     }
     UI$('#t-new').addEventListener('click', function () { go(false); });

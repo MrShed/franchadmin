@@ -34,48 +34,73 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var E = { n: {} };
     var live = ll.filter(function (c) { return c.status === 'confirmed' || c.status === 'probable'; });
 
-    // --- pairs from tracing with a single-day, out-of-home exposure (an event, a visit, a night out)
-    var pairs = [];
+    // --- source-contact pairs with a single known exposure day. A pair counts only if the contact names no other
+    //     ill person they knew (from their own interview) and nobody at home fell ill first.
+    var pairs = [], early0 = (S.recognizedDay || 0) + 14;
+    function otherSources(c, src) {
+      var oc = byPid[c];
+      if (!oc || !oc.interviewed) return false;
+      return (oc.illContacts || []).some(function (i) { return i.person.id !== src && i.onset <= oc.onset; });
+    }
     cons.forEach(function (c) {
       if (c.onset === undefined || c.setting === 'household') return;
       var cs = byPid[c.pid]; if (!cs || cs.status === 'discarded' || cs.status === 'suspected') return;
       c.of.forEach(function (src) {
         var s = byPid[src]; if (!s || s.onset === null || s.status === 'discarded' || s.status === 'suspected') return;
         var days = (c.days && c.days[src]) || [c.exposure];
-        if (days.length !== 1) return;       // only one exposure: the day is known
+        if (days.length !== 1 || days[0] > early0) return;
         var inc = c.onset - days[0];
-        if (inc < 1 || inc > 16) return;
+        if (inc < 1 || inc > 21 || otherSources(c.pid, src)) return;
         pairs.push({ day: days[0], inc: inc, si: c.onset - s.onset, pre: days[0] < s.onset });
       });
     });
-    // early pairs are the cleanest: later, contacts are as likely to have caught it somewhere else
-    var early0 = (S.recognizedDay || 0) + 12;
-    pairs = pairs.filter(function (p) { return p.day <= early0; });
-    // incubation: point-source events (questionnaire onset curves) and single-exposure pairs
+    // interviews: a case whose only link to a known earlier case is one day at one place
+    ll.forEach(function (c) {
+      if (!c.interviewed || !c.exposures || c.onset === null || c.status !== 'confirmed' || c.onset > early0) return;
+      if ((c.illContacts || []).length) return;
+      var links = [];
+      c.exposures.forEach(function (e) {
+        if (e.kind !== 'place' || !e.place || e.days.length > 2) return;
+        var pi = g.placeIdx(e.place.id);
+        e.days.forEach(function (d0) {
+          ll.forEach(function (o) {
+            if (o.pid === c.pid || o.onset === null || o.status !== 'confirmed' || o.onset > c.onset - 1) return;
+            var there = (o.exposures || []).some(function (e2) { return e2.place && g.placeIdx(e2.place.id) === pi && e2.days.indexOf(d0) >= 0; });
+            if (there && d0 >= o.onset - 3 && d0 <= o.onset + 7) links.push({ day: d0, src: o });
+          });
+        });
+      });
+      var ds = links.map(function (l) { return l.day; });
+      if (links.length && Math.max.apply(null, ds) - Math.min.apply(null, ds) <= 1) { var l0 = links[0]; var inc2 = c.onset - l0.day; if (inc2 >= 1 && inc2 <= 21) pairs.push({ day: l0.day, inc: inc2, si: c.onset - l0.src.onset, pre: l0.day < l0.src.onset, interview: true }); }
+    });
+    // incubation: onset curves of point-source events (questionnaires at gatherings) and single-exposure pairs
+    var EVENT_KINDS = { pub: 1, restaurant: 1, choir: 1, church: 1, mosque: 1, temple: 1, gurdwara: 1, hotel: 1, community_hall: 1, gym: 1, stadium: 1 };
     var inc = [];
-    S.quests.forEach(function (q) { (q.onsets || []).forEach(function (v) { if (v >= 1 && v <= 14) inc.push(v); }); });
+    S.quests.forEach(function (q) { if (!EVENT_KINDS[q.kind] || (q.onsets || []).length < 3) return; q.onsets.forEach(function (v) { if (v >= 1 && v <= 21) inc.push(v); }); });
     pairs.forEach(function (p) { inc.push(p.inc); });
     E.n.incubation = inc.length;
-    if (inc.length >= 8) E.incubation = IX.round(robustMean(inc), 1);
-    // serial interval: households and early pairs
+    if (inc.length >= 8) E.incubation = IX.round(IX.median(inc) * 1.04, 1);
+    // serial interval: households and pairs
     var si = [];
-    S.hhStudies.forEach(function (st) { if (st.result && st.result.si) st.result.si.forEach(function (v) { if (v >= -5 && v <= 21) si.push(v); }); });
-    pairs.forEach(function (p) { if (p.si >= -5 && p.si <= 21) si.push(p.si); });
+    S.hhStudies.forEach(function (st) { if (st.result && st.result.si) st.result.si.forEach(function (v) { if (v >= -5 && v <= 25) si.push(v); }); });
+    pairs.forEach(function (p) { if (p.si >= -5 && p.si <= 25) si.push(p.si); });
     E.n.si = si.length;
     if (si.length >= 6) E.serial = IX.round(IX.mean(si), 1);
-    // presymptomatic transmission: time of infection relative to the source's onset is (serial interval - incubation);
-    // its mean and spread come from the two distributions (He et al. / Ganyani et al. method)
+    // presymptomatic transmission: directly, from pairs where we know the exposure day; or from the serial
+    // interval minus the incubation period (He et al. / Ganyani et al.)
     var pre = 0, post = 0;
-    pairs.forEach(function (p) { if (p.si >= 0) { if (p.pre) pre++; else post++; } });
-    E.n.presym = si.length;
+    pairs.forEach(function (p) { if (p.si >= -3) { if (p.pre) pre++; else post++; } });
+    E.n.presym = pre + post;
     if (si.length >= 10 && inc.length >= 8) {
-      var mSi = IX.mean(si), vSi = Math.pow(IX.sd(si), 2), mIn = robustMean(inc), vIn = Math.pow(IX.sd(inc.filter(function (v) { return v <= 2 * IX.median(inc) + 2; })), 2);
+      var mSi = IX.mean(si), vSi = Math.pow(IX.sd(si), 2), mIn = IX.median(inc) * 1.04, vIn = Math.pow(0.35 * mIn, 2);
       var mt = mSi - mIn, sdt = Math.sqrt(Math.max(1, vSi - vIn));
-      var z = -mt / sdt, phi = 0.5 * (1 + erf(z / Math.SQRT2));
-      E.presymModel = Math.round(100 * phi);
-      E.presym = E.presymModel;
-      if (pre + post >= 15) E.presym = Math.round((E.presymModel + 100 * pre / (pre + post)) / 2);
-    } else if (pre + post >= 12) E.presym = Math.round(100 * pre / (pre + post));
+      E.presymModel = Math.round(100 * 0.5 * (1 + erf(-mt / sdt / Math.SQRT2)));
+    }
+    // venue pairs over-represent transmission before symptoms (the ill stay home), so the serial-interval
+    // method, which includes households, leads; the direct count is only a fallback
+    if (E.presymModel !== undefined) E.presym = E.presymModel;
+    else if (pre + post >= 12) E.presym = Math.round(100 * pre / (pre + post));
+    E.presymDirect = pre + post ? Math.round(100 * pre / (pre + post)) : undefined;
 
     // --- hidden infections: household studies
     var hi = 0, ha = 0, hs = 0;
@@ -198,22 +223,26 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   function routeGuess(g, ll, E) {
     var S = g.S;
     var ev = { airborne: 0, droplet: 0, contact: 0, gut: 0, animal: 0 };
+    E.routeEv = ev;
     // symptoms: faecal-oral bugs look like it
     var nC = 0, gutS = 0, bleed = 0;
     ll.forEach(function (c) { if (c.status === 'confirmed' && c.symptoms) { nC++; if (c.symptoms.indexOf('diarrhoea') >= 0 || c.symptoms.indexOf('vomiting') >= 0) gutS++; if (c.symptoms.indexOf('bleeding_gums') >= 0 || c.symptoms.indexOf('nosebleeds') >= 0) bleed++; } });
     if (nC >= 5 && gutS / nC > 0.6) ev.gut += 2;
     if (nC >= 5 && bleed / nC > 0.2) ev.contact += 1;
     // questionnaires
+    var pc = { n: 0, ill: 0 }, pf = { n: 0, ill: 0 }, foodQ = 0;
     S.quests.forEach(function (q) {
-      var cats = q.cats, close = cats[IX.QCAT.close], near = cats[IX.QCAT.near], far = cats[IX.QCAT.far];
+      var cats = q.cats, close = cats[IX.QCAT.close], far = cats[IX.QCAT.far];
       var ate = cats[IX.QCAT.ate], nate = cats[IX.QCAT.nate];
-      if (ate && nate && ate.n >= 5 && nate.n >= 3) { var ra = ate.ill / ate.n, rn = (nate.ill + 0.5) / (nate.n + 1); if (ra > 2.5 * rn && ra > 0.15) ev.gut += 2.5; }
-      if (close && far && close.n >= 3 && far.n >= 6 && q.ill >= 3) {
-        var rc = close.ill / close.n, rf = far.ill / far.n;
-        if (rf >= 0.1 && rf > 0.3 * rc) ev.airborne += 2;
-        else if (rc >= 0.12 && rf < 0.25 * rc) { ev.droplet += 1.2; ev.contact += 0.8; }
-      }
+      if (ate && nate && ate.n >= 5 && nate.n >= 3) { var ra = ate.ill / ate.n, rn = (nate.ill + 0.5) / (nate.n + 1); if (ra > 2.5 * rn && ra > 0.12) { ev.gut += 2.5; foodQ++; return; } }
+      if (q.ill < 3 || !close || !far) return;
+      pc.n += close.n; pc.ill += close.ill; pf.n += far.n; pf.ill += far.ill;
     });
+    if (pc.n >= 8 && pf.n >= 15 && pc.ill >= 3) {
+      var rc = pc.ill / pc.n, rf = pf.ill / pf.n;
+      if (rf >= 0.35 * rc && rf >= 0.06) ev.airborne += 2.2;
+      else if (rf < 0.2 * rc) { ev.droplet += 1.2; ev.contact += 0.8; }
+    }
     // cluster settings
     var cl = g.clusters(), venue = 0, hh = 0, care = 0;
     cl.forEach(function (c) { if (c.kind === 'household') hh++; else if (c.kind === 'care_home' || c.kind === 'hospital') care += c.size; else venue += c.size >= 3 ? 1 : 0; });
@@ -274,7 +303,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           if (!k.place) return;
           var pi = g.placeIdx(k.place.id);
           if (!done.site[pi] && act('site_visit', pi)) done.site[pi] = 1;
-          if (k.size >= 3 && !done.quest[pi] && act('questionnaire', pi)) done.quest[pi] = 1;
+          var ek = g.C.places[pi].kind;
+          if (k.size >= 3 && !done.quest[pi] && (['pub', 'restaurant', 'choir', 'church', 'mosque', 'temple', 'gurdwara', 'hotel', 'community_hall', 'gym', 'stadium'].indexOf(ek) >= 0 || k.size >= 6) && act('questionnaire', pi)) done.quest[pi] = 1;
         });
         if (S.day - lastReview >= 7 && act('record_review')) lastReview = S.day;
         live.slice(0, 3).forEach(function (c) { if (!done.seq[c.pid] && g.canAct('sequence', c.pid) === null && act('sequence', c.pid)) done.seq[c.pid] = 1; });
@@ -294,6 +324,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           if (!ok && rep.traitDay[k] !== undefined && S.day - rep.traitDay[k] < 5) delete rep.traitDay[k];
         });
         rep.estimates = E;
+        if (opts.history) (rep.hist = rep.hist || {})[S.day] = { E: E, T: IX.clone(g.truthCard()) };
       }
     }
     rep.day = S.day;
