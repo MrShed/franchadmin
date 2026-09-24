@@ -14,11 +14,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   // ---------------------------------------------------------------- grades
   IX.GRADES = [
     { id: 'probationer', label: 'Probationer', blurb: 'Respiratory viruses only, a bigger team, quicker lab results and a patient council.',
-      staff: { tracers: 5, field: 3, analysts: 2 }, panel: 16, pcrStart: 40, pcrGrow: 3, pcrMax: 160, seq: 4, funding: 450, vaccineBase: 60, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
+      staff: { tracers: 5, field: 3, analysts: 2 }, panel: 16, pcrStart: 40, pcrGrow: 3, pcrMax: 160, seq: 4, funding: 450, vaccineBase: 50, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
     { id: 'consultant', label: 'Consultant', blurb: 'The full range of diseases, a small team and a lab that is doing its best.',
-      staff: { tracers: 4, field: 2, analysts: 2 }, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 72, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
+      staff: { tracers: 4, field: 2, analysts: 2 }, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 60, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
     { id: 'director', label: 'Director', blurb: 'Wider and nastier diseases, noisier data, slower results and a council that wants the city open.',
-      staff: { tracers: 3, field: 1, analysts: 1 }, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 85, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
+      staff: { tracers: 3, field: 1, analysts: 1 }, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 75, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
   ];
   IX.gradeOf = function (id) { return IX.GRADES.filter(function (g) { return g.id === id; })[0] || IX.GRADES[1]; };
   GP.grades = function () { return IX.gradeOf(this.grade); };
@@ -572,7 +572,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       case 'originCase': return +value === T.originCase ? 0 : 1;
       case 'caseDef': return 0;
       case 'incubation': return Math.min(1, Math.abs(value - t) / Math.max(2, 0.5 * t));
-      case 'presym': case 'asym': return Math.min(1, Math.abs(value - t) / 20);
+      case 'presym': return Math.min(1, Math.abs(value - t) / 40);
+      case 'asym': return Math.min(1, Math.abs(value - t) / 30);
       case 'R': return Math.min(1, Math.abs(value - t) / Math.max(0.5, 0.4 * t));
       case 'ifr': case 'ihr': return Math.min(1, Math.abs(Math.log(Math.max(0.01, value) / Math.max(0.01, t))) / (2 * Math.log(2)));
     }
@@ -647,13 +648,13 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   GP.checkCureClock = function () {
     var S = this.S, self = this;
     if (S.vaccine || S.seqPublished === undefined) return;
-    // enough of a characterisation to design a vaccine against: four of the key traits published
-    if (IX.KEY_TRAITS.filter(function (k) { return S.published[k]; }).length < 4) return;
-    // the better the characterisation, the sooner it lands
+    // developers need the genome and at least a start on the disease itself: two key traits published
+    if (IX.KEY_TRAITS.filter(function (k) { return S.published[k]; }).length < 2) return;
+    // the better the characterisation, the sooner it lands (unpublished traits count as wrong)
     var err = 0;
     IX.KEY_TRAITS.forEach(function (k) { var p = S.published[k]; err += p ? self.estimateError(k, p.value) : 1; });
     var base = this.grades().vaccineBase;
-    var eta = S.day + Math.round(base + 6 * err);
+    var eta = S.day + Math.round(base + 7 * err);
     S.vaccine = { status: 'developing', start: S.day, eta: eta, err: IX.round(err, 2) };
     this.msg('lab', 'The cure clock has started', 'UK Health Security Agency', ['With the genome and your characterisation published, three vaccine developers and a drugs repurposing consortium have started work on ' + S.agentName + '.',
       'Their current estimate: doses could reach ' + this.C.name + ' around ' + this.dateLong(eta) + '. Better estimates (the ones you have not published yet, or the ones that are wrong) would bring that forward.'], { urgent: true });
@@ -664,11 +665,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (!V || V.status !== 'developing') return;
     var err = 0;
     IX.KEY_TRAITS.forEach(function (k) { var p = S.published[k]; err += p ? self.estimateError(k, p.value) : 1; });
-    var eta = V.start + Math.round(this.grades().vaccineBase + 6 * err);
+    var eta = V.start + Math.round(this.grades().vaccineBase + 7 * err);
     if (eta < V.eta - 1) { V.eta = Math.max(S.day + 7, eta); this.msg('lab', 'Vaccine timeline brought forward', 'UK Health Security Agency', ['Better characterisation means developers can skip some work. Doses now expected around ' + this.dateLong(V.eta) + '.']); }
     if (S.day === V.eta - 30) this.msg('press', 'Vaccine shows promise in trials', this.paperName(), ['Early results from the ' + S.agentName + ' vaccine trial look good, the developers say. Approval could come within a month.']);
     if (S.day >= V.eta) {
-      V.status = 'rollout'; V.perDay = Math.round(0.012 * this.C.N); V.done = 0; V.arrived = S.day;
+      V.status = 'rollout'; V.perDay = Math.round(0.02 * this.C.N); V.done = 0; V.arrived = S.day;
       this.msg('lab', 'Vaccine approved: doses arriving', 'UK Health Security Agency', ['The first ' + IX.fmt(V.perDay * this.C.scale) + ' doses a day are arriving in ' + this.C.name + ' from today. Set the priority order (PROTECT → Vaccination programme).', { k: 'n', x: ['About two-thirds protection against infection and more against severe illness, two weeks after the dose.'] }], { urgent: true });
       this.trustAll(4);
       S.pressQueue.push({ kind: 'vaccine' });
@@ -760,7 +761,18 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       choices = [{ id: 'reopen', label: 'Reopen schools next week', hint: 'Parents relieved' }, { id: 'hold', label: 'Not yet', hint: 'Trust among parents falls' }];
       meta = { ask: 'schools' };
     } else {
-      lines.push('2. ' + PE.opp.name + ' asked whether the council had "a plan, or just a spreadsheet". ' + PE.mayor.name + ' asked her to keep it civil. ' + IX.pickText(this, 'council_quip', S.day, {}));
+      var opts2 = [
+        PE.opp.name + ' asked whether the council had "a plan, or just a spreadsheet". ' + PE.mayor.name + ' asked her to keep it civil.',
+        PE.heads.name + ' asked for clear advice for schools on what to do when a child is sent home ill. The Director agreed to issue it this week.',
+        PE.nhs.name + ' reported that staff sickness at St Anne\'s is at ' + (6 + (S.day % 5)) + '% and rising, and asked members to remember that "the hospital is people".',
+        PE.chamber.name + ' reported that the Christmas market stallholders want to know whether to order stock. The Director said the data would decide, and the data are not yet in.',
+        PE.leader.name + ' asked how the city compares with its neighbours. The Director said the virus does not read league tables.'
+      ];
+      lines.push('2. ' + opts2[(S.day / 7 | 0) % opts2.length]);
+      var qi = S.councilQuips || (S.councilQuips = []);
+      var qs = IX.DATA.TEXT.council_quip, pick = null;
+      for (var qk = 0; qk < qs.length; qk++) { var cand = (IX.h3(this.keys.text, S.day, qk, 3) + qk) % qs.length; if (qi.indexOf(cand) < 0) { pick = cand; break; } }
+      if (pick !== null && u(this.keys.text, S.day, 5, 0) < 0.7) { qi.push(pick); lines.push('   ' + qs[pick]); }
     }
     // funding requests
     var reqs = S.fundingRequests.filter(function (r) { return !r.decided; });
@@ -838,12 +850,17 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   };
 
   IX.DATA.TEXT.council_quip = [
-    'Cllr Pettifer asked whether the virus could be asked to observe the half-term holiday. The Director said she would put it to the virus.',
+    'Cllr Pettifer asked whether the virus could be asked to observe the half-term holiday. The Director undertook to put it to the virus.',
     'The Chief Executive reminded members that the meeting was being streamed and that the chat function was not the place for that sort of language.',
     'The Chamber of Commerce proposed a "Shop Safe" logo. A draft was circulated. It was felt the mask on the cartoon sheep was upside down.',
     'The Leader of the Opposition asked why the figures in the Echo differed from the figures in the papers. The Director explained, not for the first time, about reporting delays.',
     'Members noted the tea urn in the council chamber had been removed on public health advice, and several expressed regret.',
-    'Cllr Lister asked whether the Director had considered simply testing everyone. The Director said she had considered it for about four seconds.'
+    'Cllr Lister asked whether the Director had considered simply testing everyone. The Director confirmed that the idea had been considered, briefly.',
+    'Cllr Pettifer wondered aloud whether "all this" might be over by Christmas. Nobody answered.',
+    'The Leader asked for "fewer graphs and more answers". The Director offered one graph that answered the question. It was accepted.',
+    'A resident\'s question about whether the virus could survive on bus tickets was referred to the Director, who said it would rather not.',
+    'Mrs Holroyd reported that a Year 3 class had written to the Director. The letters were minuted as "encouraging, mostly".',
+    'The Chamber of Commerce asked for a date. Any date. The chair noted the request.'
   ];
 
   GP.pressDay = function () {
@@ -860,18 +877,35 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (!item) return;
     switch (item.kind) {
       case 'leak': story = { h: IX.pickText(this, 'hl_leak', item.place, { place: C.places[item.place].name, n: item.n }), b: ['Parents and staff at ', this.plref(item.place), ' say at least ' + item.n + ' people there have been ill in the past fortnight. "Nobody from the council has been in touch," said one.'], mayor: 'press' }; break;
-      case 'order': story = { h: IX.pickText(this, 'hl_' + item.type, S.day, { place: item.place !== undefined ? C.places[item.place].name : '' }), b: [IX.pickText(this, 'pb_' + item.type, S.day, { place: item.place !== undefined ? C.places[item.place].name : '' })] }; break;
+      case 'order':
+        var pubs = C.places.filter(function (q) { return q.kind === 'pub'; }), pubN = pubs.length ? pubs[S.day % pubs.length].name : 'the Red Lion';
+        var vars = { place: item.place !== undefined ? C.places[item.place].name : '', pub: pubN };
+        story = { h: IX.pickText(this, 'hl_' + item.type, S.day, vars).toUpperCase(), b: [IX.pickText(this, 'pb_' + item.type, S.day, vars)] }; break;
       case 'rumour': story = { h: IX.pickText(this, 'hl_rumour', S.day, { r: IX.RUMOURS[item.rumour].short }), b: [IX.RUMOURS[item.rumour].text] }; break;
-      case 'estimates': story = { h: item.revised ? IX.pickText(this, 'hl_revise', S.day, {}) : IX.pickText(this, 'hl_estimate', S.day, { what: self.estLabel(item.traits[0], S.published[item.traits[0]].value) }), b: ['The Director of Public Health published new figures on ' + (S.agentName || 'the illness') + ' yesterday: ' + item.traits.map(function (k) { return self.estLabel(k, S.published[k].value); }).join('; ') + '.'] }; break;
+      case 'estimates': story = { h: item.revised ? IX.pickText(this, 'hl_revise', S.day, {}) : this.estimateHeadline(item.traits[0], S.published[item.traits[0]].value), b: ['The Director of Public Health published new figures on ' + (S.agentName || 'the illness') + ' yesterday: ' + item.traits.map(function (k) { return self.estLabel(k, S.published[k].value); }).join('; ') + '.'] }; break;
       case 'vaccine': story = { h: 'JAB DAY: FIRST DOSES ARRIVE', b: ['The first vaccines against ' + S.agentName + ' arrived at St Anne\'s last night under police escort. "I cried," said one nurse.'] }; break;
       case 'death': story = { h: item.n === 1 ? 'FIRST DEATH FROM MYSTERY BUG' : item.n + ' DEAD: CITY MOURNS', b: [item.n === 1 ? 'Tributes have been paid to ' + item.name + ', ' + item.age + ', the first person known to have died.' : 'The death toll from ' + (S.agentName || 'the illness') + ' has reached ' + item.n + '.'] }; break;
       case 'agent': story = { h: 'NEW VIRUS: WHAT WE KNOW', b: ['Scientists have identified a previously unknown virus, ' + S.agentName + ', behind the illness. The Director of Public Health said it was "too early to say" how it spreads.'] }; break;
       case 'variant': story = { h: 'NEW STRAIN FEARS', b: ['Scientists are watching a new branch of ' + S.agentName + ' that appears to be spreading faster than the rest.'] }; break;
     }
     if (!story) return;
+    story.h = story.h.toUpperCase();
     this.msg('press', story.h, paper, [{ k: 'h', x: [story.h] }, story.b], { meta: { place: item.place } });
     if (story.mayor) S.mayorQueue.push({ kind: story.mayor });
     if (item.kind === 'leak') { this.credit(-1, 'press got there first'); this.trustAll(-0.3); }
+  };
+  GP.estimateHeadline = function (k, v) {
+    switch (k) {
+      case 'caseDef': return (v && v.length ? D.SYM[v[0]].label.toUpperCase() : 'SYMPTOMS') + ': THE SIGNS TO WATCH FOR';
+      case 'R': return v >= 1.5 ? 'EACH CASE "INFECTS ' + (v >= 2.5 ? 'TWO OR THREE' : 'ONE OR TWO') + ' OTHERS"' : 'VIRUS SPREADING "SLOWLY", SAYS HEALTH CHIEF';
+      case 'route': return { airborne: '"IT\'S IN THE AIR": VENTILATION WARNING', droplet: 'KEEP YOUR DISTANCE, SAYS HEALTH CHIEF', contact: 'HANDS, NOT AIR: HOW THE VIRUS SPREADS', gut: 'WASH YOUR HANDS: BUG SPREADS THROUGH FOOD', animal: 'ANIMALS BLAMED FOR OUTBREAK' }[v];
+      case 'incubation': return 'VIRUS "CAN HIDE FOR ' + Math.round(v) + ' DAYS"';
+      case 'presym': return v >= 25 ? 'YOU CAN SPREAD IT BEFORE YOU FEEL ILL' : 'MOST SPREAD "AFTER SYMPTOMS START"';
+      case 'asym': return v >= 30 ? '"MANY WHO CATCH IT NEVER KNOW"' : 'MOST WHO CATCH IT FALL ILL, SAY EXPERTS';
+      case 'ifr': return v >= 1 ? 'DEATH RATE "AROUND ' + IX.round(v, 1) + ' IN 100"' : 'MOST WILL RECOVER, SAYS HEALTH CHIEF';
+      case 'ageRisk': return { elderly: 'ELDERLY MOST AT RISK', 'young-adult': 'YOUNG ADULTS "HIT HARDEST"', children: 'CHILDREN MOST AT RISK, PARENTS WARNED', even: '"NO AGE GROUP IS SAFE"' }[v];
+    }
+    return 'NEW FIGURES ON THE VIRUS';
   };
   GP.findUnseenCluster = function () {
     var S = this.S, sim = this.sim, C = this.C, sd = this.sdOf(S.day) - 1, byP = {};
@@ -896,7 +930,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   TX.hl_close_schools = ['SCHOOLS SHUT: PARENTS IN CHILDCARE SCRAMBLE', 'CLASS DISMISSED'];
   TX.pb_close_schools = ['Every school and nursery in the city closes from tomorrow. "I work nights at the distribution centre. Who is supposed to have my kids?" said one mother.'];
   TX.hl_close_hospitality = ['LAST ORDERS', 'PUBS CALL TIME: LANDLORDS FURIOUS'];
-  TX.pb_close_hospitality = ['Pubs, restaurants and gyms close from tomorrow. The landlord of the Red Lion said he had "just bought forty kilos of chips".'];
+  TX.pb_close_hospitality = ['Pubs, restaurants and gyms close from tomorrow. The landlord of {pub} said he had "just bought forty kilos of chips".', 'Pubs, restaurants and gyms close from tomorrow. At {pub}, regulars held what one called "a wake for the darts league".'];
   TX.hl_lockdown = ['CITY IN LOCKDOWN', 'STAY HOME: CITY GRINDS TO A HALT'];
   TX.pb_lockdown = ['From tomorrow people may leave home only for work that cannot be done from home, food, medicine and exercise. The Chamber of Commerce called it "a hammer to crack a nut". The hospital called it overdue.'];
   TX.hl_gatherings = ['WEDDINGS OFF AS GATHERINGS LIMITED', 'NO MORE PARTIES'];

@@ -68,7 +68,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var r0 = hr === 'airborne' ? 1.8 + 3.1 * Math.pow(R.next(), 1.3) : hr === 'droplet' ? R.range(1.3, 3.4) : hr === 'contact' ? R.range(1.25, 2.1) : R.range(1.35, 2.6);
     if (P.route === 'animal') r0 = R.range(1.25, 2.0);
     r0 *= Math.exp(-0.06 * v);
-    if (grade === 'probationer') r0 = clamp(r0, 1.4, 2.8);
+    if (grade === 'probationer') r0 = clamp(r0 * 0.8, 1.3, 2.3);
     P.R = IX.round(clamp(fx.R || r0, 1.2, 5), 2);
 
     // who it hits

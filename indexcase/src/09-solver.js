@@ -15,6 +15,166 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   var SINGLE_DAY = { 'celebration': 1, 'social visit': 1, 'choir': 1, 'pub': 1, 'restaurant': 1, 'place of worship': 1, 'football ground': 1, 'gym': 1, 'funeral': 1, 'doorstep delivery': 1, 'market': 1 };
 
   // ================================================================ estimators (observable data only)
+
+  // ---------------------------------------------------------------- interval-censored incubation and the
+  // transmission-timing profile (the machinery behind incubation, presymptomatic share and generation time)
+  function gammp(a, x) {   // regularised lower incomplete gamma P(a, x)
+    if (x <= 0) return 0;
+    var gln = lgam(a), sum, del, ap, n;
+    if (x < a + 1) {
+      ap = a; sum = del = 1 / a;
+      for (n = 0; n < 200; n++) { ap++; del *= x / ap; sum += del; if (Math.abs(del) < Math.abs(sum) * 1e-9) break; }
+      return sum * Math.exp(-x + a * Math.log(x) - gln);
+    }
+    var b = x + 1 - a, c = 1e30, d = 1 / b, h = d, an;
+    for (n = 1; n < 200; n++) { an = -n * (n - a); b += 2; d = an * d + b; if (Math.abs(d) < 1e-30) d = 1e-30; c = b + an / c; if (Math.abs(c) < 1e-30) c = 1e-30; d = 1 / d; var dl = d * c; h *= dl; if (Math.abs(dl - 1) < 1e-9) break; }
+    return 1 - Math.exp(-x + a * Math.log(x) - gln) * h;
+  }
+  function lgam(z) { var c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5]; var x = z, y = z, t = x + 5.5; t -= (x + 0.5) * Math.log(t); var ser = 1.000000000190015; for (var j = 0; j < 6; j++) ser += c[j] / ++y; return -t + Math.log(2.5066282746310005 * ser / x); }
+  var MUS = [], CVS = [0.25, 0.35, 0.45, 0.55], PIS = [0.4, 0.55, 0.7, 0.85, 1], CDF = null;
+  for (var mu0 = 1.5; mu0 <= 16.01; mu0 += 0.25) MUS.push(IX.round(mu0, 2));
+  /** CDF[mi][ci][k] = P(inc <= k + 0.5), k = -1..30 (index k+1) for integer-day incubation */
+  function cdfTable() {
+    if (CDF) return CDF;
+    CDF = MUS.map(function (mu) { return CVS.map(function (cv) { var k = 1 / (cv * cv), th = mu / k, row = []; for (var q = -1; q <= 30; q++) row.push(q < 0 ? 0 : gammp(k, (q + 0.5) / th)); return row; }); });
+    return CDF;
+  }
+  function cdfAt(row, v) { return v < 0 ? 0 : v > 30 ? 1 : row[v + 1]; }
+  /** fit incubation to intervals [lo, hi] (whole days) as gamma + flat background. Returns {mean, sd, share, pmf} */
+  function fitIntervals(iv) {
+    if (iv.length < 8) return null;
+    var T = cdfTable(), best = null, bestLL = -Infinity;
+    for (var mi = 0; mi < MUS.length; mi++) for (var ci = 0; ci < CVS.length; ci++) {
+      var row = T[mi][ci];
+      for (var pj = 0; pj < PIS.length; pj++) {
+        var pi = PIS[pj], ll = 0;
+        for (var i = 0; i < iv.length; i++) {
+          var lo = iv[i][0], hi = iv[i][1];
+          var p = cdfAt(row, hi) - cdfAt(row, lo - 1);
+          ll += Math.log(pi * p + (1 - pi) * (hi - lo + 1) / 21 + 1e-9);
+        }
+        if (ll > bestLL) { bestLL = ll; best = { mi: mi, ci: ci, pi: pi }; }
+      }
+    }
+    var row2 = T[best.mi][best.ci], pmf = [];
+    for (var v = 0; v <= 30; v++) pmf.push(cdfAt(row2, v) - cdfAt(row2, v - 1));
+    return { mean: MUS[best.mi], sd: IX.round(MUS[best.mi] * CVS[best.ci], 2), share: best.pi, pmf: pmf };
+  }
+  IX.fitIntervals = fitIntervals;
+  /** EM for the timing of infection relative to the source's onset, w[k], k = -6..12 (index k+6) */
+  function timingProfile(pairs, fit) {
+    var K0 = -6, K1 = 12, n = K1 - K0 + 1, w = [], k;
+    for (k = 0; k < n; k++) w.push(1 / n);
+    var bg = 1 - fit.share;
+    for (var it = 0; it < 40; it++) {
+      var acc = new Array(n).fill(0), tot = 0;
+      pairs.forEach(function (p) {
+        var post = new Array(n).fill(0), z = 0;
+        p.D.forEach(function (s) {
+          var off = s - p.oA, inc = p.t - s;
+          if (off < K0 || off > K1 || inc < 0 || inc > 30) return;
+          var v = fit.pmf[inc] * w[off - K0];
+          post[off - K0] += v; z += v;
+        });
+        // background: this contact may have caught it elsewhere
+        var zb = bg * p.D.length / 21 / n;
+        if (z <= 0) return;
+        var keep = z / (z + zb);
+        for (var q = 0; q < n; q++) { acc[q] += keep * post[q] / z; }
+        tot += keep;
+      });
+      if (tot <= 0) return null;
+      for (k = 0; k < n; k++) w[k] = (acc[k] + 0.01) / (tot + 0.01 * n);
+    }
+    var pre = 0, mean = 0;
+    for (k = 0; k < n; k++) { if (k + K0 < 0) pre += w[k]; mean += w[k] * (k + K0); }
+    return { w: w, pre: pre, mean: mean };
+  }
+  IX.timingProfile = timingProfile;
+
+
+  /** Joint EM for the incubation period (gamma) and the timing of infection relative to the source's onset.
+   *  pairs: {t: infectee onset, oA: source onset, D: [possible exposure days]}; exact: incubation values observed directly
+   *  (point-source events). Each pair may instead be a coincidence (caught elsewhere): a flat background share. */
+  function jointFit(pairs, exact) {
+    var T = cdfTable(), K0 = -6, K1 = 12, nW = K1 - K0 + 1, k, i;
+    var w = []; for (k = 0; k < nW; k++) w.push(1 / nW);
+    var mi = MUS.indexOf(5), ci = 1, share = 0.8;
+    function pmfOf(mi2, ci2) { var row = T[mi2][ci2], out = []; for (var v = 0; v <= 30; v++) out.push(Math.max(1e-6, cdfAt(row, v) - cdfAt(row, v - 1))); return out; }
+    var f = pmfOf(mi, ci);
+    for (var it = 0; it < 30; it++) {
+      var accW = new Array(nW).fill(0), accI = new Array(31).fill(0), totModel = 0, totAll = 0;
+      for (i = 0; i < pairs.length; i++) {
+        var p = pairs[i], post = [], z = 0;
+        for (var d = 0; d < p.D.length; d++) {
+          var sday = p.D[d], off = sday - p.oA, inc = p.t - sday;
+          if (off < K0 || off > K1 || inc < 0 || inc > 30) continue;
+          var v2 = f[inc] * w[off - K0];
+          post.push([off - K0, inc, v2]); z += v2;
+        }
+        var zb = (1 - share) * p.D.length / (21 * nW);
+        var pm = z * share / (z * share + zb + 1e-12);
+        totModel += pm; totAll++;
+        if (z <= 0) continue;
+        for (var q = 0; q < post.length; q++) { var wt = pm * post[q][2] / z; accW[post[q][0]] += wt; accI[post[q][1]] += wt; }
+      }
+      (exact || []).forEach(function (v3) { if (v3 >= 0 && v3 <= 30) { var pe = share * f[v3] / (share * f[v3] + (1 - share) / 21); accI[v3] += pe; totModel += pe; totAll++; } });
+      var sw = 0; for (k = 0; k < nW; k++) sw += accW[k];
+      if (sw > 0) for (k = 0; k < nW; k++) w[k] = (accW[k] + 0.02) / (sw + 0.02 * nW);
+      // incubation: the grid gamma that best explains the expected incubation counts
+      var best = -Infinity, bm = mi, bc = ci;
+      for (var m2 = 0; m2 < MUS.length; m2++) for (var c2 = 0; c2 < CVS.length; c2++) {
+        var row = T[m2][c2], ll = 0;
+        for (var v = 0; v <= 30; v++) if (accI[v] > 0) ll += accI[v] * Math.log(Math.max(1e-9, cdfAt(row, v) - cdfAt(row, v - 1)));
+        if (ll > best) { best = ll; bm = m2; bc = c2; }
+      }
+      mi = bm; ci = bc; f = pmfOf(mi, ci);
+      share = Math.min(0.98, Math.max(0.3, totModel / Math.max(1, totAll)));
+    }
+    var pre = 0, mean = 0; for (k = 0; k < nW; k++) { if (k + K0 < 0) pre += w[k]; mean += w[k] * (k + K0); }
+    return { incMean: MUS[mi], incSd: IX.round(MUS[mi] * CVS[ci], 2), pre: pre, meanOffset: mean, share: share, w: w };
+  }
+  IX.jointFit = jointFit;
+
+
+  /** Parametric joint fit: incubation ~ gamma(mu, cv), infection time relative to the source's onset ~ normal(m, sd)
+   *  (discretised), plus a flat background share. Maximum likelihood on a grid. */
+  function jointParam(pairs, exact) {
+    var T = cdfTable(), best = null, bestLL = -Infinity;
+    var MU2 = [], M2 = [], SD2 = [1, 1.75, 2.75], CV2 = [0.3, 0.45], SH = [0.6, 0.8, 0.95];
+    for (var a = 1.5; a <= 16; a += 0.5) MU2.push(a);
+    for (var b = -4; b <= 6; b += 0.5) M2.push(b);
+    function norm(k, m, sd) { var z1 = (k - 0.5 - m) / sd, z2 = (k + 0.5 - m) / sd; return 0.5 * (erf(z2 / Math.SQRT2) - erf(z1 / Math.SQRT2)); }
+    var ph = {};
+    for (var mi = 0; mi < MU2.length; mi++) {
+      var mIdx = MUS.indexOf(MU2[mi]); if (mIdx < 0) continue;
+      for (var ci = 0; ci < CV2.length; ci++) {
+        var cIdx = CVS.indexOf(CV2[ci]) >= 0 ? CVS.indexOf(CV2[ci]) : (CV2[ci] < 0.4 ? 1 : 2);
+        var row = T[mIdx][cIdx], f = [];
+        for (var v = 0; v <= 30; v++) f.push(Math.max(1e-7, cdfAt(row, v) - cdfAt(row, v - 1)));
+        var llE = 0;
+        for (var mj = 0; mj < M2.length; mj++) for (var sj = 0; sj < SD2.length; sj++) {
+          var key = mj + ':' + sj, wv = ph[key];
+          if (!wv) { wv = ph[key] = {}; for (var k2 = -8; k2 <= 14; k2++) wv[k2] = norm(k2, M2[mj], SD2[sj]); }
+          for (var hi = 0; hi < SH.length; hi++) {
+            var sh = SH[hi], ll = 0;
+            for (var i = 0; i < pairs.length; i++) {
+              var p = pairs[i], z = 0;
+              for (var d = 0; d < p.D.length; d++) { var off = p.D[d] - p.oA, inc = p.t - p.D[d]; if (off < -8 || off > 14 || inc < 0 || inc > 30) continue; z += f[inc] * wv[off]; }
+              ll += Math.log(sh * z + (1 - sh) * p.D.length / 21 / 23 + 1e-12);
+            }
+            for (var e = 0; e < exact.length; e++) { var ve = exact[e]; if (ve >= 0 && ve <= 30) ll += Math.log(sh * f[ve] + (1 - sh) / 21); }
+            if (ll > bestLL) { bestLL = ll; best = { incMean: MU2[mi], incSd: MU2[mi] * CV2[ci], m: M2[mj], sd: SD2[sj], share: sh }; }
+          }
+        }
+      }
+    }
+    if (!best) return null;
+    best.pre = 0.5 * (1 + erf((-0.5 - best.m) / best.sd / Math.SQRT2));
+    return best;
+  }
+  IX.jointParam = jointParam;
+
   function erf(x) { var t = 1 / (1 + 0.3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; }
   IX.erf = erf;
   /** gamma(mean, cv) + uniform(1..21) mixture fitted by grid search; returns {mean, sd, share} */
@@ -50,29 +210,36 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var E = { n: {} };
     var live = ll.filter(function (c) { return c.status === 'confirmed' || c.status === 'probable'; });
 
-    // --- source-contact pairs with a single known exposure day. A pair counts only if the contact names no other
-    //     ill person they knew (from their own interview) and nobody at home fell ill first.
-    var pairs = [], early0 = (S.recognizedDay || 0) + 14;
-    function otherSources(c, src) {
-      var oc = byPid[c];
-      if (!oc || !oc.interviewed) return false;
-      return (oc.illContacts || []).some(function (i) { return i.person.id !== src && i.onset <= oc.onset; });
+    // --- transmission pairs: a case (or traced contact who fell ill) and a known earlier case they were exposed to,
+    //     with the days they were together. Early pairs only: later, people catch it anywhere.
+    var early0 = (S.recognizedDay || 0) + 14;
+    var tp = [], seenPair = {};
+    function addPair(b, a, days) {
+      var cb = byPid[b], ca = byPid[a];
+      if (!cb || !ca || cb.onset === null || ca.onset === null) return;
+      if (cb.status === 'discarded' || ca.status === 'discarded' || cb.status === 'suspected' || ca.status === 'suspected') return;
+      if (ca.onset > early0 || cb.onset <= ca.onset - 6) return;
+      var D = days.filter(function (d0) { return d0 >= ca.onset - 6 && d0 <= ca.onset + 12 && d0 < cb.onset; });
+      if (!D.length) return;
+      var key = b + ':' + a; if (seenPair[key]) return; seenPair[key] = 1;
+      tp.push({ b: b, a: a, t: cb.onset, oA: ca.onset, D: D, single: D.length === 1 });
     }
     cons.forEach(function (c) {
-      if (c.onset === undefined || c.setting === 'household') return;
-      var cs = byPid[c.pid]; if (!cs || cs.status === 'discarded' || cs.status === 'suspected') return;
-      c.of.forEach(function (src) {
-        var s = byPid[src]; if (!s || s.onset === null || s.status === 'discarded' || s.status === 'suspected') return;
-        var days = (c.days && c.days[src]) || [c.exposure];
-        if (days.length !== 1 || days[0] > early0) return;
-        var inc = c.onset - days[0];
-        if (inc < 1 || inc > 21 || otherSources(c.pid, src)) return;
-        pairs.push({ day: days[0], inc: inc, si: c.onset - s.onset, pre: days[0] < s.onset });
-      });
+      if (c.onset === undefined) return;
+      c.of.forEach(function (src) { addPair(c.pid, src, (c.days && c.days[src]) || [c.exposure]); });
+    });
+    // interviews: someone at home, or a friend or workmate, was ill first
+    ll.forEach(function (c) {
+      if (!c.interviewed || c.onset === null) return;
+      var before = (c.illContacts || []).filter(function (i) { return i.onset < c.onset; });
+      if (before.length !== 1) return;
+      var src = before[0].person.id, rel = before[0].relation, D = [];
+      for (var d0 = c.onset - 14; d0 < c.onset; d0++) D.push(d0);
+      if (rel === 'household' || rel === 'care home' || rel === 'colleague' || rel === 'classmate') addPair(c.pid, src, D);
     });
     // interviews: a case whose only link to a known earlier case is one day at one place
     ll.forEach(function (c) {
-      if (!c.interviewed || !c.exposures || c.onset === null || c.status !== 'confirmed' || c.onset > early0) return;
+      if (!c.interviewed || !c.exposures || c.onset === null || c.status !== 'confirmed' || c.onset > early0 + 7) return;
       if ((c.illContacts || []).length) return;
       var links = [];
       c.exposures.forEach(function (e) {
@@ -81,46 +248,28 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
         e.days.forEach(function (d0) {
           ll.forEach(function (o) {
             if (o.pid === c.pid || o.onset === null || o.status !== 'confirmed' || o.onset > c.onset - 1) return;
-            var there = (o.exposures || []).some(function (e2) { return e2.place && g.placeIdx(e2.place.id) === pi && e2.days.indexOf(d0) >= 0; });
-            if (there && d0 >= o.onset - 3 && d0 <= o.onset + 7) links.push({ day: d0, src: o });
+            if ((o.exposures || []).some(function (e2) { return e2.place && g.placeIdx(e2.place.id) === pi && e2.days.indexOf(d0) >= 0; })) links.push({ day: d0, src: o.pid });
           });
         });
       });
-      var ds = links.map(function (l) { return l.day; });
-      if (links.length && Math.max.apply(null, ds) - Math.min.apply(null, ds) <= 1) { var l0 = links[0]; var inc2 = c.onset - l0.day; if (inc2 >= 1 && inc2 <= 21) pairs.push({ day: l0.day, inc: inc2, si: c.onset - l0.src.onset, pre: l0.day < l0.src.onset, interview: true }); }
+      if (links.length === 1) addPair(c.pid, links[0].src, [links[0].day]);
     });
-    // incubation: onset curves of point-source events (questionnaires at gatherings) and single-exposure pairs
-    var EVENT_KINDS = { pub: 1, restaurant: 1, choir: 1, church: 1, mosque: 1, temple: 1, gurdwara: 1, hotel: 1, community_hall: 1, gym: 1, stadium: 1 };
-    var inc = [];
-    S.quests.forEach(function (q) { if (!EVENT_KINDS[q.kind] || (q.onsets || []).length < 3) return; q.onsets.forEach(function (v) { if (v >= 1 && v <= 21) inc.push(v); }); });
-    pairs.forEach(function (p) { inc.push(p.inc); });
-    E.n.incubation = inc.length;
-    // onsets after a single exposure are a mixture: the incubation distribution, plus illness caught elsewhere
-    // (roughly flat over the three-week window). Fit both by maximum likelihood.
-    var fit = inc.length >= 8 ? incubationFit(inc) : null;
-    if (fit) { E.incubation = fit.mean; E.incFit = fit; }
-    // serial interval: households and pairs
-    var si = [];
-    S.hhStudies.forEach(function (st) { if (st.result && st.result.si) st.result.si.forEach(function (v) { if (v >= -5 && v <= 25) si.push(v); }); });
-    pairs.forEach(function (p) { if (p.si >= -5 && p.si <= 25) si.push(p.si); });
-    E.n.si = si.length;
-    if (si.length >= 6) E.serial = IX.round(IX.mean(si), 1);
-    // presymptomatic transmission: directly, from pairs where we know the exposure day; or from the serial
-    // interval minus the incubation period (He et al. / Ganyani et al.)
-    var pre = 0, post = 0;
-    pairs.forEach(function (p) { if (p.si >= -3) { if (p.pre) pre++; else post++; } });
-    E.n.presym = pre + post;
-    if (si.length >= 10 && fit) {
-      var mSi = IX.median(si), madSi = IX.median(si.map(function (v) { return Math.abs(v - mSi); })) * 1.4826;
-      var vSi = Math.pow(Math.max(1, madSi), 2), mIn = fit.mean, vIn = Math.pow(fit.sd, 2);
-      var mt = mSi - mIn, sdt = Math.sqrt(Math.max(1, vSi - vIn));
-      E.presymModel = Math.round(100 * 0.5 * (1 + erf(-mt / sdt / Math.SQRT2)));
+    E.n.pairs = tp.length;
+    // incubation and the timing of transmission, estimated together from every pair (and point-source events)
+    var exact = [];
+    S.quests.forEach(function (q) { if (!q.event || (q.onsets || []).length < 2) return; q.onsets.forEach(function (v) { if (v >= 1 && v <= 21) exact.push(v); }); });
+    E.n.incubation = tp.length + exact.length;
+    var narrow = tp.filter(function (p) { return p.D[p.D.length - 1] - p.D[0] <= 2; }).length + exact.length;
+    if (tp.length >= 12 || (tp.length + exact.length >= 12 && exact.length >= 5)) {
+      var jf = jointFit(tp, exact);
+      E.joint = { incMean: jf.incMean, incSd: jf.incSd, pre: IX.round(jf.pre, 2), share: IX.round(jf.share, 2), narrow: narrow };
+      if (narrow >= 4) E.incubation = jf.incMean;
+      E.n.presym = tp.length;
+      if (tp.length >= 15) E.presym = Math.round(100 * jf.pre);
+      E.serial = IX.round(jf.incMean + jf.meanOffset, 1);   // mean serial interval = incubation + mean infection time after onset
+      E.timing = jf.w.map(function (v) { return IX.round(v, 3); });
     }
-    // venue pairs over-represent transmission before symptoms (the ill stay home), so the serial-interval
-    // method, which includes households, leads; the direct count is only a fallback
-    if (E.presymModel !== undefined) E.presym = E.presymModel;
-    else if (pre + post >= 12) E.presym = Math.round(100 * pre / (pre + post));
-    E.presymDirect = pre + post ? Math.round(100 * pre / (pre + post)) : undefined;
+    E.n.si = tp.length;
 
     // --- hidden infections: household studies
     var hi = 0, ha = 0, hs = 0;
@@ -255,10 +404,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var cats = q.cats, close = cats[IX.QCAT.close], far = cats[IX.QCAT.far];
       var ate = cats[IX.QCAT.ate], nate = cats[IX.QCAT.nate];
       if (ate && nate && ate.n >= 5 && nate.n >= 3) { var ra = ate.ill / ate.n, rn = (nate.ill + 0.5) / (nate.n + 1); if (ra > 2.5 * rn && ra > 0.12) { ev.gut += 2.5; foodQ++; return; } }
-      if (q.ill < 3 || !close || !far) return;
+      if (q.ill < 3 || !close || !far || (!q.event && ['choir', 'pub', 'restaurant', 'church', 'mosque', 'temple', 'gurdwara'].indexOf(q.kind) < 0)) return;
       pc.n += close.n; pc.ill += close.ill; pf.n += far.n; pf.ill += far.ill;
     });
-    if (pc.n >= 8 && pf.n >= 15 && pc.ill >= 3) {
+    E.qPool = { close: pc.n ? IX.round(pc.ill / pc.n, 3) : null, far: pf.n ? IX.round(pf.ill / pf.n, 3) : null, nc: pc.n, nf: pf.n, food: foodQ };
+    if (pc.n >= 6 && pf.n >= 12 && pc.ill >= 2) {
       var rc = pc.ill / pc.n, rf = pf.ill / pf.n;
       if (rf >= 0.35 * rc && rf >= 0.06) ev.airborne += 2.2;
       else if (rf < 0.2 * rc) { ev.droplet += 1.2; ev.contact += 0.8; }
@@ -274,7 +424,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     // animal: positive animal samples, or early cases with animal exposure and no human source
     if (S.animalFound !== undefined) ev.animal += 3;
     var an = 0; ll.forEach(function (c) { if ((c.exposures || []).some(function (e) { return e.kind === 'animal'; }) && !(c.illContacts || []).length) an++; });
-    if (an >= 3) ev.animal += 1.5;
+    if (an >= 3) ev.animal += 0.8;
     var best = null, bv = 0.9;
     Object.keys(ev).forEach(function (k) { if (ev[k] > bv) { bv = ev[k]; best = k; } });
     if (!best && E.presym !== undefined) best = E.presym < 8 ? 'contact' : null;
@@ -535,7 +685,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     opts = opts || {};
     var S = g.S, until = opts.until || IX.DAY_LIMIT + 1;
     var done = { interview: {}, trace: {}, household: {}, site: {}, quest: {}, seq: {} }, lastSero = -99, lastBrief = -99, lastReview = -99, lastFund = -99;
-    var restrictSince = {};
+    var restrictSince = {}, peakWk = 0, lastStep = -99;
     function act(id, t, p) { var r = g.act(id, t, p); return r.ok; }
     function ord(id, p) { if (g.ordersOf(id).length) return false; var r = g.order(id, p || {}); return r.ok; }
     function lift(id) { g.ordersOf(id).forEach(function (o) { g.revoke(o.id); }); }
@@ -600,20 +750,28 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           var beds = g.sim.hospNow, cap = g.bedCap();
           if (beds > 0.6 * cap) ord('surge');
           var wk = g.weekStats();
-          var rising = wk.cases > 1.15 * wk.casesPrev && wk.cases >= 8;
-          var basics = g.ordersOf('isolate')[0], since = basics ? S.day - basics.since : 0;
-          var Rest = (S.published.R && S.published.R.value) || E.R || 2;
-          // escalate in steps while cases keep rising despite isolation and tracing
-          if (rising && (since >= 7 || Rest > 2.2)) ord('gatherings', { max: 30 });
-          if (rising && (since >= 14 || Rest > 2.5)) { ord('close_hospitality'); ord('wfh'); }
-          if (rising && ((since >= 21 && beds > 0.4 * cap) || Rest > 3)) ord('close_schools');
-          if (beds > 0.7 * cap) ord('gatherings', { max: 30 });
+          var rising = wk.cases > 1.1 * wk.casesPrev && wk.cases >= 6;
+          peakWk = Math.max(peakWk, wk.cases);
+          var Rest = E.R || (S.published.R && S.published.R.value) || 2;
+          var fast = (E.growth !== undefined && E.growth !== null && E.growth > 0.09) || Rest >= 2.2;
+          // a respiratory-looking illness gets masks whatever the route estimate says
+          if ((E.caseDef || []).some(function (x) { return x === 'cough' || x === 'breathless' || x === 'sore_throat'; })) ord('masks');
+          // escalate one step for every week it is still rising, two if it is growing fast
+          if (S.day - lastStep >= 7 && rising) {
+            lastStep = S.day;
+            var steps = fast ? 2 : 1;
+            var ladder = [function () { return ord('gatherings', { max: 30 }); }, function () { return ord('close_hospitality') | ord('wfh'); }, function () { return ord('close_schools'); }, function () { return beds > 0.8 * cap ? ord('lockdown') : false; }];
+            for (var li = 0; li < ladder.length && steps > 0; li++) if (ladder[li]()) steps--;
+          }
           if (beds > 1.05 * cap && rising) ord('lockdown');
-          // stand down when it is falling and the hospital is fine
-          if (!rising && wk.cases < 0.8 * wk.casesPrev && beds < 0.5 * cap) {
-            ['lockdown'].forEach(function (id) { if (g.ordersOf(id).length && S.day - g.ordersOf(id)[0].since >= 14) lift(id); });
-            if (!g.ordersOf('lockdown').length) ['close_hospitality', 'wfh'].forEach(function (id) { if (g.ordersOf(id).length && S.day - g.ordersOf(id)[0].since >= 21) lift(id); });
-            if (wk.cases < 5) ['gatherings', 'close_schools'].forEach(function (id) { if (g.ordersOf(id).length && S.day - g.ordersOf(id)[0].since >= 21) lift(id); });
+          // stand down in steps once it has clearly turned
+          var falling = wk.cases < 0.75 * wk.casesPrev && wk.cases < 0.5 * peakWk;
+          if (falling && beds < 0.6 * cap) {
+            var age = function (id) { var o = g.ordersOf(id)[0]; return o ? S.day - o.since : -1; };
+            if (age('lockdown') >= 14) lift('lockdown');
+            else if (!g.ordersOf('lockdown').length && age('close_schools') >= 14) lift('close_schools');
+            else if (!g.ordersOf('close_schools').length && age('close_hospitality') >= 14 && wk.cases < 0.25 * peakWk) { lift('close_hospitality'); lift('wfh'); }
+            else if (!g.ordersOf('close_hospitality').length && age('gatherings') >= 14 && wk.cases < 0.1 * peakWk) lift('gatherings');
           }
           // communication and money
           if (S.day - lastBrief >= 7 && act('briefing')) lastBrief = S.day;

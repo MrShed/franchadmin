@@ -195,7 +195,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     } else if (al.kind === 'school' || al.kind === 'nursery') {
       from = 'Headteacher, ' + place.name;
       title = place.name + ': unusual illness among pupils and staff';
-      lines.push({ k: 'q', x: ['Attendance has dropped off a cliff in some classes and parents are describing ' + illness + '. One of my teaching assistants is in St Anne\'s. I\'ve had to send a letter home and I don\'t know what to put in it.'] });
+      var inHosp = pids.filter(function (q) { var st = self.sim.st[q]; return st === IX.ST.H || st === IX.ST.C; })[0];
+      var hospLine = inHosp === undefined ? '' : C.age[inHosp] < 18 ? ' One of the children is in St Anne\'s.' : ' One of my staff is in St Anne\'s.';
+      lines.push({ k: 'q', x: ['Attendance has dropped off a cliff in some classes and parents are describing ' + illness + '.' + hospLine + ' I\'ve had to send a letter home and I don\'t know what to put in it.'] });
     } else if (al.kind === 'choir') {
       from = 'GP, ' + C.places[C.gpOfDist[place.di]].name;
       title = n + ' members of ' + place.name + ' ill';
@@ -356,7 +358,12 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (!sim.active.length && !spillLive && !pendingExtra) { if (S.extinctDay === undefined) S.extinctDay = S.day; }
     else S.extinctDay = undefined;
     var tr = this.trustSummary().overall;
-    if (S.extinctDay !== undefined && S.day - S.extinctDay >= 21) out = { kind: 'contained', title: 'It\'s over', text: 'No new infections for three weeks: ' + (S.agentName || 'the outbreak') + ' is gone from ' + C.name + '.' };
+    if (S.extinctDay !== undefined && S.day - S.extinctDay >= 21) {
+      // did we stop it, or did it run out of people to infect?
+      var gh = this.ghost(this.sdOf(DAY_LIMIT)).sim;
+      if (sim.n >= 0.6 * gh.n) out = { kind: 'burnout', title: 'It burned itself out', text: 'No new infections for three weeks. ' + (S.agentName || 'The virus') + ' has gone from ' + C.name + ', but mostly because it ran out of people to infect: ' + Math.round(100 * sim.n / C.N) + '% of the city caught it.' };
+      else out = { kind: 'contained', title: 'It\'s over', text: 'No new infections for three weeks: ' + (S.agentName || 'the outbreak') + ' is gone from ' + C.name + '.' };
+    }
     else if (S.vaccine && S.vaccine.status === 'done') out = { kind: 'vaccine', title: 'Vaccination programme complete', text: 'Everyone who wanted a vaccine in your priority groups has had one. The emergency is over, though the virus is not.' };
     else if (S.credibility <= 0 || tr < 15) out = { kind: 'collapse', title: 'Relieved of command', text: S.credibility <= 0 ? 'The council has lost confidence in you. An interim director starts on Monday.' : 'The city has stopped listening. The council has asked the national agency to take over the response.' };
     else if (S.day >= DAY_LIMIT) out = { kind: 'timeout', title: 'Six months on', text: 'Six months after the first alert, the response moves to a national footing. Your part in it ends here.' };

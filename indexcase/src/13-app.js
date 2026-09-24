@@ -312,12 +312,16 @@ UI.endDay = function (nDays) {
   if (UI.busy) return; UI.busy = true;
   var n = UI$('#night'), d0 = UIA.day();
   UIsheet.close();
-  var ticks = ''; for (var i = 0; i < 60; i++) { var a = i / 60 * Math.PI * 2, r1 = i % 5 ? 58 : 54; ticks += '<line x1="' + (66 + Math.sin(a) * r1).toFixed(1) + '" y1="' + (66 - Math.cos(a) * r1).toFixed(1) + '" x2="' + (66 + Math.sin(a) * 61).toFixed(1) + '" y2="' + (66 - Math.cos(a) * 61).toFixed(1) + '"/>'; }
-  n.innerHTML = '<svg class="n-ring" viewBox="0 0 132 132"><g stroke="#2b3d4f" stroke-width="1.2">' + ticks + '</g><circle cx="66" cy="66" r="46" fill="none" stroke="#16222e" stroke-width="3"/><circle id="n-arc" cx="66" cy="66" r="46" fill="none" stroke="#ff7a45" stroke-width="3" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" transform="rotate(-90 66 66)" style="transition:stroke-dashoffset 1.3s cubic-bezier(.4,0,.2,1);filter:drop-shadow(0 0 6px rgba(255,122,69,.8))"/></svg>' +
+  var ticks = ''; for (var i = 0; i < 72; i++) { var a = i / 72 * Math.PI * 2, r1 = i % 6 ? 70 : 65; ticks += '<line x1="' + (78 + Math.sin(a) * r1).toFixed(1) + '" y1="' + (78 - Math.cos(a) * r1).toFixed(1) + '" x2="' + (78 + Math.sin(a) * 73).toFixed(1) + '" y2="' + (78 - Math.cos(a) * 73).toFixed(1) + '"' + (i % 6 ? '' : ' stroke="#4a6076"') + '/>'; }
+  n.classList.remove('dawn');
+  n.innerHTML = '<div class="n-clock"><svg class="n-ring" viewBox="0 0 156 156"><defs><linearGradient id="n-g" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#8fcbff"/><stop offset=".55" stop-color="#a592ff"/><stop offset="1" stop-color="#ff7a45"/></linearGradient></defs><g stroke="#233445" stroke-width="1">' + ticks + '</g><circle cx="78" cy="78" r="56" fill="none" stroke="rgba(143,203,255,.08)" stroke-width="2"/><circle id="n-arc" cx="78" cy="78" r="56" fill="none" stroke="url(#n-g)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="352" stroke-dashoffset="352" transform="rotate(-90 78 78)" style="transition:stroke-dashoffset 1.3s cubic-bezier(.45,0,.2,1);filter:drop-shadow(0 0 6px rgba(165,146,255,.7))"/></svg><div class="n-time"><div><span id="n-time">19:00</span><small>Hours</small></div></div></div>' +
     '<div class="n-k" id="n-k">Overnight</div><div class="n-day" id="n-day">Day ' + (d0 + 1) + '</div><div class="n-date" id="n-date">' + UIesc(UIA.dateLabel(d0)) + '</div><div class="n-sum" id="n-sum"></div>';
   n.classList.add('on');
   UIAudio.cue('night');
   setTimeout(function () { var a = UI$('#n-arc'); if (a) a.style.strokeDashoffset = '0'; }, 50);
+  // the clock runs through the night: 19:00 to 07:00
+  var tc0 = performance.now(), tms = UImotion() ? 1300 : 1;
+  (function tick() { var el = UI$('#n-time'); if (!el) return; var f = Math.min(1, (performance.now() - tc0) / tms), e = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2, m = Math.round((19 * 60 + e * 12 * 60) / 5) * 5 % 1440; el.textContent = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); if (f < 1) requestAnimationFrame(tick); })();
   var before = { cases: UIA.cases().length, adm: UIsum(UIA.curve().admissions), deaths: UIsum(UIA.curve().deaths) };
   setTimeout(function () {
     var res;
@@ -326,14 +330,18 @@ UI.endDay = function (nDays) {
     UI.save();
     var d1 = UIA.day(), cv = UIA.curve();
     var after = { cases: UIA.cases().length, adm: UIsum(cv.admissions), deaths: UIsum(cv.deaths) };
-    UI$('#n-k').textContent = 'Morning · 07:00';
-    UI$('#n-day').textContent = 'Day ' + (d1 + 1);
-    UI$('#n-date').textContent = UIA.dateLabel(d1);
     var nm = res.newMsgs.length;
     var tiles = [[after.cases - before.cases, 'new cases', 'var(--ember)'], [after.adm - before.adm, 'admitted', 'var(--amber)'], [after.deaths - before.deaths, after.deaths - before.deaths === 1 ? 'death' : 'deaths', 'var(--bone)'], [nm, 'messages', 'var(--ice)']];
-    UI$('#n-sum').innerHTML = tiles.map(function (t) { return '<div><b style="color:' + t[2] + '">' + Math.max(0, t[0]) + '</b><span>' + t[1] + '</span></div>'; }).join('');
-    UI$$('#n-sum div').forEach(function (el, i) { setTimeout(function () { el.classList.add('on'); }, 120 + i * 140); });
-    UIAudio.cue('morning');
+    setTimeout(function () {
+      if (!UI$('#n-k')) return;
+      n.classList.add('dawn');
+      UI$('#n-k').textContent = 'Morning · 07:00';
+      UI$('#n-day').textContent = 'Day ' + (d1 + 1);
+      UI$('#n-date').textContent = UIA.dateLabel(d1);
+      UI$('#n-sum').innerHTML = tiles.map(function (t) { return '<div><b style="color:' + t[2] + '">' + Math.max(0, t[0]) + '</b><span>' + t[1] + '</span></div>'; }).join('');
+      UI$$('#n-sum div').forEach(function (el, i) { setTimeout(function () { el.classList.add('on'); }, 60 + i * 110); });
+      UIAudio.cue('morning');
+    }, Math.max(0, tc0 + tms - performance.now()));
     if (after.deaths > before.deaths) setTimeout(function () { UIAudio.cue('toll'); }, 700);
     UI.refresh();
     var actEv = res.events.filter(function (e) { return e.kind === 'act'; }).pop();
@@ -351,11 +359,27 @@ UI.endDay = function (nDays) {
 UI.actCard = function (act, then) {
   var A = UIA.ACTS[act] || ['Act ' + act, ''];
   var SUB = { 1: 'Something is making people ill and nobody knows what. Find out whether it is new.', 2: 'It is new. Now learn what it is — how it spreads, how long it hides, who it harms — and say so publicly.', 3: 'It is in the community. Hold the line: slow it, protect the hospital, keep the city with you until help arrives.' };
-  var c = UI$('#actcard');
-  c.innerHTML = '<div class="a-k">' + UIesc(A[0]) + '</div><div class="a-t">' + UIesc(A[1]) + '</div><div class="a-line"></div><p class="a-s">' + UIesc(SUB[act] || '') + '</p><div class="a-go"><button class="btn pri" id="act-go">Continue</button></div>';
-  c.classList.add('on');
+  var c = UI$('#actcard'), word = String(A[1]).split('').map(function (ch, i) { return '<span style="--i:' + i + '">' + UIesc(ch) + '</span>'; }).join('');
+  c.innerHTML = '<div class="a-map" id="a-map"></div><div class="a-in"><div class="a-k">' + UIesc(A[0]) + '</div><div class="a-t" aria-label="' + UIesc(A[1]) + '">' + word + '</div><div class="a-line"></div><p class="a-s">' + UIesc(SUB[act] || '') + '</p>' +
+    '<div class="a-meta">' + UIesc(UIA.city().name) + ' · Day ' + (UIA.day() + 1) + ' · ' + UIesc(UIA.dateLabel(UIA.day())) + '</div><div class="a-go"><button class="btn pri" id="act-go">Continue</button></div></div>';
+  UI.actMap(UI$('#a-map'));
+  requestAnimationFrame(function () { c.classList.add('on'); });
   UIAudio.cue('act');
   UI$('#act-go').addEventListener('click', function () { c.classList.remove('on'); UI.emit('actcard', act); if (then) then(); });
+};
+
+/** a still of tonight's city behind the act card: cases glowing, slow push-in (CSS) */
+UI.actMap = function (host) {
+  try {
+    var w = window.innerWidth, h = window.innerHeight, dpr = Math.min(2, window.devicePixelRatio || 1), cv = document.createElement('canvas');
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    var ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var city = UIA.city(), day = UIA.day();
+    var T = UIMapR.base(ctx, w, h, { city: city, view: { x: 0, y: 0, k: 1 }, fit: { city: city, t: h * .12, b: h * .12, l: -w * .1, r: -w * .1 }, noVignette: true });
+    var pts = UIA.cases().filter(function (c) { return c.status !== 'negative' && c.status !== 'contact'; }).map(function (c) { var ref = c.onset !== null ? c.onset : c.reported; return { p: UIMapR.homePos(city, c.pid, c.district, c.pos), b: UIMapR.bucket(day - (ref === null ? day : ref)) }; });
+    UIMapR.bloom(ctx, T, pts, { scale: 1.4 }); UIMapR.dots(ctx, T, pts, { scale: 1.2 });
+    host.appendChild(cv);
+  } catch (e) { /* the card works without its backdrop */ }
 };
 
 // ------------------------------------------------------------ keyboard & scrim

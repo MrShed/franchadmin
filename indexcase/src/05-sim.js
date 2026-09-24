@@ -370,6 +370,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (P.family === 'gut' && (C.flags[i] & FLAG.FOOD) && set === SET.WORK && place >= 0 && C.places[place].food) this.spreadFood(i, x, place, sd, wd, pol, beta);
       if (P.family === 'gut' && (C.flags[i] & FLAG.FOOD) && set === SET.EVENT) this.spreadRoomFood(i, x, g, L, sd, beta * FOODK * pol.foodMult, place);
     }
+    // funerals (planned when someone dies of it)
+    if (this.funeralDays && this.funeralDays[sd]) this.spreadFuneral(i, x, sd, pol, beta);
     // visits with friends
     var fa = C.fStart[i], fb = C.fStart[i + 1];
     var vm = pol.visitMult === undefined ? 1 : pol.visitMult;
@@ -607,7 +609,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       // admission day: decide ICU and outcome (hospital capacity matters)
       if (this.xhosp[x] === sd && !(this.xflags[x] & XFL.DECIDED)) this.decide(x, sd, pol, beds, icuCap);
       var s = this.stateOn(x, sd);
-      if (s === ST.D && this.st[j] !== ST.D) { deaths++; newDeaths.push(x); this.deadList.push(j); }
+      if (s === ST.D && this.st[j] !== ST.D) { deaths++; newDeaths.push(x); this.deadList.push(j); this.planFuneral(j, sd); }
       if (this.xhosp[x] === sd && !(this.xflags[x] & XFL.CAREDEATH)) adm++;
       this.st[j] = s;
       if (s === ST.H) nH++; else if (s === ST.C) nC++;
@@ -712,6 +714,59 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     }
   };
 
+
+  // ---------------------------------------------------------------- funerals
+  /** a funeral a week or so after a death (the next day for Muslim families): family, friends, their families */
+  SP.planFuneral = function (j, sd) {
+    var C = this.C, K = this.K, att = [], seen = {};
+    function add(q) { if (!seen[q] && !(C.flags[q] & FLAG.CARE_RES)) { seen[q] = 1; att.push(q); } }
+    var h = C.hh[j];
+    for (var a = C.hStart[h]; a < C.hStart[h + 1]; a++) if (C.hMem[a] !== j) add(C.hMem[a]);
+    for (a = C.fStart[j]; a < C.fStart[j + 1] && att.length < 40; a++) {
+      var f = C.fList[a]; add(f);
+      var hf = C.hh[f];
+      for (var b = C.hStart[hf]; b < C.hStart[hf + 1] && att.length < 40; b++) if (u(K.beh, j, C.hMem[b], 77) < 0.5) add(C.hMem[b]);
+    }
+    if (att.length < 4) return;
+    var her = D.HERITAGES[C.her[j]], muslim = her === 'pakistani' || her === 'bangladeshi' || her === 'somali';
+    var place = -1;
+    for (var mi = C.mStart[j]; mi < C.mStart[j + 1]; mi++) { var g = C.mGroup[mi]; if (C.gSet[g] === SET.FAITH) { place = C.gPlace[g]; break; } }
+    if (place < 0) { var best = 9; C.places.forEach(function (p) { if (p.kind === 'church' || p.kind === 'community_hall') { var d = Math.hypot(p.pos[0] - C.districts[C.dist[j]].centre[0], p.pos[1] - C.districts[C.dist[j]].centre[1]); if (d < best) { best = d; place = p.i; } } }); }
+    var fsd = sd + (muslim ? 1 : 6 + Math.floor(u(K.beh, j, 78, 0) * 6));
+    if (!this.funerals) { this.funerals = []; this.funeralDays = {}; }
+    var f = { sd: fsd, place: place, att: att, dead: j };
+    this.funerals.push(f);
+    (this.funeralDays[fsd] = this.funeralDays[fsd] || []).push(this.funerals.length - 1);
+  };
+  /** who actually comes: not in hospital or isolating; limits on gatherings keep it to close family */
+  SP.funeralPresent = function (fi, sd, pol) {
+    var f = this.funerals[fi];
+    if (f._sd === sd && f._pol === pol) return f._pres;
+    var out = [], h = this.C.hh[f.dead];
+    for (var t = 0; t < f.att.length; t++) {
+      var q = f.att[t];
+      if (this.away[q]) continue;
+      var family = this.C.hh[q] === h;
+      if (!family && pol.setRestr && pol.setRestr[SET.EVENT]) { var rs = pol.setRestr[SET.EVENT], skip = false; for (var k = 0; k < rs.length; k += 2) if (rs[k] >= 0 && this.complies(q, rs[k], pol) && t >= 10) skip = true; if (skip) continue; }
+      out.push(q);
+    }
+    f._sd = sd; f._pol = pol; f._pres = out;
+    return out;
+  };
+  SP.spreadFuneral = function (i, x, sd, pol, beta) {
+    var L = this.funeralDays[sd];
+    for (var q = 0; q < L.length; q++) {
+      var f = this.funerals[L[q]];
+      if (f.att.indexOf(i) < 0) continue;
+      var P = this.funeralPresent(L[q], sd, pol);
+      if (P.indexOf(i) < 0 || P.length < 2) continue;
+      var cl = beta * IX.SET_PARAMS[SET.FUNERAL].dur * this.closeT[SET.FUNERAL];
+      for (var k = 0; k < 5; k++) { var j = P[Math.floor(u(this.K.cont, i, sd * 64 + 40 + k, 900000 + L[q]) * P.length)]; if (j !== i) this.expose(i, x, j, cl, sd, SET.FUNERAL, f.place, 0, 120 + k); }
+      var rw = this.roomW * IX.roomFactor(SET.FUNERAL) * ROOMK;
+      if (rw > 1e-4) this.spreadRoom(i, x, 900000 + L[q], P, sd, beta * rw, SET.FUNERAL, f.place);
+    }
+  };
+
   // ---------------------------------------------------------------- genome helpers
   /** all mutation ids of infection x (root first) */
   SP.genome = function (x) {
@@ -730,7 +785,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   SP.snapshot = function () {
     var o = { sd: this.sd, n: this.n, mutN: this.mutN, variantBorn: this.variantBorn, variantSd: this.variantSd, spills: this.spills, primary: this.primary, sourcePlace: this.sourcePlace,
       spillSite: this.spillSite, spillRate: this.spillRate, extra: this.extra || null, active: this.active, deadList: this.deadList, bgList: this.bgList || [], admLog: this.admLog, daily: this.daily,
-      hospNow: this.hospNow, icuNow: this.icuNow, fear: this.fear, baseBeds: this.baseBeds, baseIcu: this.baseIcu, VE_inf: this.VE_inf };
+      hospNow: this.hospNow, icuNow: this.icuNow, fear: this.fear, baseBeds: this.baseBeds, baseIcu: this.baseIcu, VE_inf: this.VE_inf,
+      funerals: (this.funerals || []).map(function (f) { return { sd: f.sd, place: f.place, att: f.att, dead: f.dead }; }), funeralDays: this.funeralDays || {} };
     var self = this;
     o.arr = {};
     ['st', 'cur', 'nInf', 'vac', 'bgUntil', 'isoUntil', 'quarUntil'].forEach(function (k) { o.arr[k] = IX.b64enc(self[k]); });

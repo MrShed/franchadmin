@@ -7,6 +7,8 @@ function UIrand(seed) { var a = UIh(seed); return function () { a |= 0; a = a + 
 function UIel(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
 function UIcap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
 function UIvibe(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* ignore */ } }
+/** false when the player asked the system for reduced motion */
+function UImotion() { try { return !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return true; } }
 function UIclamp(x, a, b) { return x < a ? a : x > b ? b : x; }
 function UIsum(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i] || 0; return s; }
 
