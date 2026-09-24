@@ -1,0 +1,212 @@
+<title>Index Case Design Brief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EDF0F2; --sheet:#FAFBFC; --ink:#142029; --ink2:#546370; --rule:#CCD5DC;
+  --alert:#D2512A; --phylo:#23806A; --band:#E2E8EC; --blue:#2D6397;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#0F151A; --sheet:#161E25; --ink:#E3E9EE; --ink2:#98A6B2; --rule:#2A3640;
+  --alert:#F07A52; --phylo:#4FC1A1; --band:#1D2730; --blue:#7FB0E3; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --ground:#0F151A; --sheet:#161E25; --ink:#E3E9EE; --ink2:#98A6B2; --rule:#2A3640;
+  --alert:#F07A52; --phylo:#4FC1A1; --band:#1D2730; --blue:#7FB0E3; color-scheme:dark;}
+body{background:var(--ground);color:var(--ink);font:16.5px/1.62 var(--body);padding-inline:20px;padding-block:40px 80px}
+.wrap{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+header{display:flex;flex-direction:column;gap:14px;padding-bottom:28px;border-bottom:2px solid var(--ink)}
+.eyebrow{font:600 12px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--alert);display:flex;gap:16px;flex-wrap:wrap}
+h1{font:700 clamp(58px,14vw,120px)/.86 var(--display);letter-spacing:-.01em;margin:0;text-transform:uppercase}
+.dek{font-size:20px;line-height:1.45;max-width:36em;margin:0;text-wrap:pretty}
+.meta{font:13px/1.55 var(--mono);color:var(--ink2)}
+section{display:flex;flex-direction:column;gap:16px}
+h2{font:700 32px/1.05 var(--display);text-transform:uppercase;margin:0;text-wrap:balance;display:flex;gap:14px;align-items:baseline}
+h2 .no{font:600 13px var(--mono);color:var(--alert);letter-spacing:.06em}
+h3{font:700 20px/1.2 var(--display);text-transform:uppercase;letter-spacing:.03em;margin:8px 0 0}
+p{margin:0;max-width:66ch}
+ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;max-width:66ch}
+.lede{font-size:18.5px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--rule)}
+th{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}
+td.k{font:700 16px var(--display);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
+td.r{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.acts div{background:var(--sheet);padding:18px;display:flex;flex-direction:column;gap:6px}
+.acts b{font:700 20px/1 var(--display);text-transform:uppercase}
+.acts i{font:600 11px var(--mono);font-style:normal;letter-spacing:.1em;color:var(--alert);text-transform:uppercase}
+.acts span{font-size:14.5px;line-height:1.5;color:var(--ink2)}
+.bugs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.bug{background:var(--sheet);border:1px solid var(--rule);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.bug h4{margin:0;font:700 20px/1 var(--display);text-transform:uppercase}
+.bug .sub{font:12px var(--mono);color:var(--ink2)}
+.bug dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13.5px}
+.bug dt{font:600 11px/1.9 var(--mono);color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
+.bug dd{margin:0;font-variant-numeric:tabular-nums}
+.bug .feel{font-size:14px;border-top:1px dashed var(--rule);padding-top:8px}
+.tree{background:var(--sheet);border:1px solid var(--rule);padding:14px 16px;overflow-x:auto}
+.tree svg{display:block;max-width:100%;height:auto}
+.note{font:13px/1.5 var(--mono);color:var(--ink2)}
+.care{border-left:3px solid var(--phylo);background:var(--sheet);padding:14px 18px;display:flex;flex-direction:column;gap:6px}
+.miles{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.mile{display:grid;grid-template-columns:64px 1fr;gap:16px;padding:16px 0;border-bottom:1px solid var(--rule)}
+.mile .m{font:700 30px/1 var(--display);color:var(--blue)}
+.mile b{font:700 18px var(--display);text-transform:uppercase;display:block;margin-bottom:4px}
+.q{display:flex;flex-direction:column;gap:14px}
+.q div{display:flex;flex-direction:column;gap:4px}
+.q b{font:700 18px var(--display);text-transform:uppercase}
+.q .rec{font:13px var(--mono);color:var(--blue)}
+@media (max-width:520px){.mile{grid-template-columns:44px 1fr}body{font-size:16px}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow"><span>Unknown aetiology</span><span>Design brief · draft 2</span></div>
+  <h1>Index Case</h1>
+  <p class="dek">A new disease nobody has seen before appears in a city of a quarter of a million people. You lead the public health response. Work out what it is while it spreads, and decide what to do before you are sure.</p>
+  <p class="meta">Working title. The index case is the first case that brings an outbreak to attention, not necessarily the first person infected. Finding the real first person is one of the game's threads.</p>
+</header>
+
+<section>
+  <h2><span class="no">01</span>The idea</h2>
+  <p class="lede">Every game generates a new pathogen with its own biology, and a city for it to spread through. You don't know how it spreads, how long it hides, whether people pass it on before they feel ill, or who it kills. Neither does anyone else. You find out from the data, and the data arrives late, partial and noisy.</p>
+  <p>The game runs in three acts. It starts as a detective story at the scale of one hospital ward and, if you are slow or unlucky, becomes a strategy game at the scale of a city. The same deduction runs all the way through: every decision is only as good as your current understanding of the disease.</p>
+  <div class="acts">
+    <div><i>Act one</i><b>Detect</b><span>A strange pneumonia cluster: four patients at St Anne's, a care home, a wedding. Most people think it's flu. You decide whether it's something new, and you are the only one who can get the lab to look.</span></div>
+    <div><i>Act two</i><b>Characterise</b><span>Write the case definition. Estimate incubation, the route, spread before symptoms, hidden cases and severity by age. Sequence samples and read the family tree. Find where it came from.</span></div>
+    <div><i>Act three</i><b>Contain</b><span>Testing, tracing, isolation, masks, closures, what to tell the public. Hospital capacity, trust, the council, the press and rumours. Hold on until treatment or a vaccine arrives.</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">02</span>The pathogen generator</h2>
+  <p>This is what makes every game different. Each run draws a disease from these hidden traits. The ranges are wide on purpose, and the traits are drawn together so the result is biologically plausible (a disease that kills most of the people it infects rarely spreads silently at the same time).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Trait</th><th>Range</th><th>How you work it out</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Route</td><td class="r">airborne · droplet · contact · gut · animal</td><td>Which settings produce clusters: a stuffy choir practice (airborne) versus households only (droplet or contact), a shared kitchen (gut), cases with no human contact at all (animal source still spilling over).</td></tr>
+      <tr><td class="k">Incubation</td><td class="r">2 – 14 days</td><td>People with one known exposure and a known onset date: the delivery driver who only met one case, the wedding guest.</td></tr>
+      <tr><td class="k">Silent spread</td><td class="r">0 – 60% before symptoms</td><td>Contacts who fall ill before the person who infected them, and serial intervals shorter than the incubation period.</td></tr>
+      <tr><td class="k">Hidden cases</td><td class="r">0 – 70% never ill</td><td>Test every contact in a household, symptoms or not, and see how many are positive but well.</td></tr>
+      <tr><td class="k">Spread rate</td><td class="r">R 1.2 – 5</td><td>How fast the epidemic curve doubles, and how many people each case infects in traced chains.</td></tr>
+      <tr><td class="k">Severity</td><td class="r">death 0.1% – 12%</td><td>Hospital admissions and deaths against confirmed cases, corrected for the cases you never find.</td></tr>
+      <tr><td class="k">Who it hits</td><td class="r">elderly · young adults · children · even</td><td>Admissions by age compared with infections by age. The 1918 flu killed young adults; COVID killed the old.</td></tr>
+      <tr><td class="k">Symptoms</td><td class="r">4–7 from ~20</td><td>Frequencies across confirmed cases. Some diseases have a tell (a rash, loss of taste, red eyes) that makes the case definition easy; others look exactly like flu.</td></tr>
+      <tr><td class="k">Testability</td><td class="r">test finds it days −2 to +10</td><td>False negatives early in illness. You find out when repeat tests turn positive.</td></tr>
+      <tr><td class="k">Mutation rate</td><td class="r">slow – fast</td><td>How much the genome tree can tell you. Slow viruses give identical sequences; fast ones show every link.</td></tr>
+      <tr><td class="k">Variant</td><td class="r">0–1 per game, from week 4</td><td>A new branch on the tree that grows faster than the rest, sometimes more severe or better at slipping past immunity.</td></tr>
+      <tr><td class="k">Source</td><td class="r">market · farm · lab · traveller · hospital</td><td>The earliest cases, where the first sequences sit on the tree, and anyone who had contact with animals or travel.</td></tr>
+      <tr><td class="k">Treatment</td><td class="r">none · partial · good</td><td>Whether an existing drug helps, found only by running a small trial and reading the result honestly.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Three example draws</h3>
+  <div class="bugs">
+    <div class="bug"><h4>The Slow Fuse</h4><span class="sub">seed 4471</span><dl><dt>Route</dt><dd>droplet</dd><dt>Incubation</dt><dd>11 days</dd><dt>Silent</dt><dd>45%</dd><dt>R</dt><dd>1.9</dd><dt>Death</dt><dd>0.8%, elderly</dd><dt>Tell</dt><dd>none</dd></dl><p class="feel">Looks like nothing for weeks. By the time the curve bends up, it's everywhere. Punishes waiting for certainty.</p></div>
+    <div class="bug"><h4>The Burner</h4><span class="sub">seed 902</span><dl><dt>Route</dt><dd>contact</dd><dt>Incubation</dt><dd>4 days</dd><dt>Silent</dt><dd>2%</dd><dt>R</dt><dd>1.4</dd><dt>Death</dt><dd>9%, all ages</dd><dt>Tell</dt><dd>bleeding gums</dd></dl><p class="feel">Frightening and obvious. Easy to find, hard to hold your nerve. Classic tracing and isolation beats it, if the hospital copes.</p></div>
+    <div class="bug"><h4>The Choir</h4><span class="sub">seed 13</span><dl><dt>Route</dt><dd>airborne</dd><dt>Incubation</dt><dd>5 days</dd><dt>Silent</dt><dd>30%</dd><dt>R</dt><dd>3.6</dd><dt>Death</dt><dd>1.5%, young adults</dd><dt>Tell</dt><dd>loss of taste</dd></dl><p class="feel">Explosive clusters indoors. Ventilation and gathering limits matter more than hand washing, and you have to spot that fast.</p></div>
+  </div>
+  <p class="note">The names are for this brief only. In the game the disease is known only by what you call it, usually a code from the lab ("Agent SA-3").</p>
+</section>
+
+<section>
+  <h2><span class="no">03</span>How deduction works</h2>
+  <p>A worked example: reading the genome tree. You have sent eight samples for sequencing. Each branch point is a mutation; cases on the same twig are closely linked.</p>
+  <div class="tree" role="img" aria-label="Genome tree of eight cases. Ward 4 patients A and B are identical to nurse C. Care home cases D and E share a mutation with C. Wedding cases F and G sit on a separate branch with the delivery driver H at its root.">
+    <svg viewBox="0 0 600 250" width="600" height="250">
+      <g stroke="currentColor" stroke-width="2" fill="none" stroke-opacity=".75">
+        <path d="M30 125 H90 V60 H200"/><path d="M90 125 V190 H200"/>
+        <path d="M200 60 V40 H330"/><path d="M200 60 V80 H330"/><path d="M200 80 V110 H330"/>
+        <path d="M330 80 V70 H450"/><path d="M330 80 V95 H450"/>
+        <path d="M200 190 V170 H330"/><path d="M330 170 V160 H450"/><path d="M330 170 V185 H450"/><path d="M200 190 V215 H330"/>
+      </g>
+      <g font-family="IBM Plex Mono, monospace" font-size="12" fill="currentColor">
+        <text x="336" y="44">A · Ward 4 patient</text>
+        <text x="456" y="74">B · Ward 4 patient</text><text x="456" y="99">C · Nurse, Ward 4</text>
+        <text x="336" y="114">D, E · Elm Lodge care home</text>
+        <text x="456" y="164">F · Wedding guest</text><text x="456" y="189">G · Wedding guest</text>
+        <text x="336" y="219">H · Delivery driver</text>
+        <text x="30" y="115" font-size="11" fill-opacity=".7">root</text>
+      </g>
+      <g fill="#D2512A" style="fill:var(--alert)"><circle cx="90" cy="125" r="4"/><circle cx="200" cy="60" r="4"/><circle cx="200" cy="190" r="4"/><circle cx="330" cy="80" r="4"/><circle cx="330" cy="170" r="4"/></g>
+    </svg>
+  </div>
+  <p>Two separate branches mean two separate introductions, not one outbreak. The nurse sits between the ward and the care home, so she probably carried it between them, which says something about spread between staff, maybe before symptoms. The delivery driver sits at the root of the wedding branch but was never at the wedding. So check his route: who else did he deliver to? Each of those is a hypothesis you file and test with the next round of tracing and sequencing.</p>
+  <p><strong>Estimates, not answers.</strong> You publish your working estimates as you go ("incubation about 5 days; roughly 30% of cases never have symptoms; airborne indoors"), and the game compares them with the truth only in the debrief. Your estimates drive your policy, and in the game the public and the council react to what you publish. Revising publicly costs some trust; being wrong for too long costs more.</p>
+  <p><strong>Everything else in the investigation</strong>: the case line list; a city map with cases and clusters; the epidemic curve with a "nowcast" band for cases not yet reported; contact-tracing diagrams; household studies; hospital admissions by age; wastewater readings by district, which rise days before cases do; and exposure questionnaires for clusters.</p>
+</section>
+
+<section>
+  <h2><span class="no">04</span>The city underneath</h2>
+  <p>A generated city of about 250,000 people, simulated as around 8,000 representative residents so it runs smoothly on a phone. Each has an age, a household, a job or school, a neighbourhood, a commute, habits (pub, gym, church, choir, football) and a level of trust in authority. Places have size, crowding and ventilation. The disease spreads through those actual contacts, so the clusters you find are real.</p>
+  <p>Noise is part of the design: an ordinary flu season running alongside, doctors who don't recognise the new disease, test shortages, people who won't say where they were, and a newspaper that sometimes gets there first.</p>
+</section>
+
+<section>
+  <h2><span class="no">05</span>What you can do</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Area</th><th>Actions</th><th>Limited by</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Investigate</td><td>Interview cases, trace contacts, household testing, questionnaires, site visits, hospital record reviews.</td><td>Staff hours; your team grows if the council funds it.</td></tr>
+      <tr><td class="k">Laboratory</td><td>Tests, repeat tests, sequencing, wastewater sampling, a small treatment trial.</td><td>Test capacity (grows over weeks); sequencing takes days.</td></tr>
+      <tr><td class="k">Contain</td><td>Isolation, quarantine of contacts, targeted closures (a venue, a school), gathering limits, masks indoors, ventilation guidance, travel advice, a city-wide lockdown as a last resort.</td><td>Trust, money, political will. Each order has a lag before it shows in the curve.</td></tr>
+      <tr><td class="k">Protect</td><td>Hospital surge planning, shielding advice for the vulnerable group, care home visiting rules.</td><td>Beds and staff. An overwhelmed hospital raises the death rate for everyone.</td></tr>
+      <tr><td class="k">Communicate</td><td>Press briefings, published estimates, guidance, answering rumours.</td><td>Credibility. Saying too little breeds rumours; saying something wrong costs you later.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Pressure</h3>
+  <ul>
+    <li><strong>Trust and compliance</strong> by neighbourhood and age group. They fall when orders feel pointless or unfair, and rise when your estimates prove right.</li>
+    <li><strong>The council and the mayor</strong> (fictional) want the city open; the hospital wants it shut; local businesses, schools and the press all push.</li>
+    <li><strong>Rumours</strong> spread through the same social network as the disease, and a bad one ("it's in the water", "the test causes it") changes behaviour.</li>
+    <li><strong>The cure clock</strong>: once you have characterised the pathogen and published its sequence, a vaccine or treatment arrives some weeks later. The better your characterisation, the sooner it lands.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">06</span>Winning</h2>
+  <ul>
+    <li><strong>Lives</strong>: deaths and hospitalisations compared with a "ghost city" in which nobody acted, shown side by side at the end.</li>
+    <li><strong>Understanding</strong>: how close your published estimates were to the truth, and how early you had them.</li>
+    <li><strong>Cost</strong>: days of closures, money spent, trust left.</li>
+    <li><strong>The origin</strong>: finding the real first case and the source.</li>
+    <li><strong>The debrief</strong>: the true outbreak replayed on the map, infection by infection, with the real disease card revealed next to your estimates.</li>
+  </ul>
+  <p>A short game can end at act two (you characterised it fast and it never escaped). A long one runs to the vaccine.</p>
+</section>
+
+<section>
+  <h2><span class="no">07</span>Handling the subject</h2>
+  <div class="care">
+    <p>COVID is recent and painful for many people. The game treats it seriously: the pathogens are fictional, there are no real politicians or institutions to mock, deaths are shown as people with names and families rather than as a score to farm, and there is no "infect the world" mode. It aims for the feel of the film <em>Contagion</em>: procedural, humane and tense, never gleeful.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">08</span>Look and feel</h2>
+  <p>A modern incident room: a large city map with cases and districts, printouts, a whiteboard of estimates, the genome tree on a second screen, the phone that rings when the mayor calls. Clean, clinical data design (line lists, curves, trees, dashboards) that makes patterns readable at a glance, with the illustrated style from Covert Action for people, interviews and places. Phone-first: Map, Cases, Lab, Actions and Briefing tabs, with the map and tree pinch-to-zoom.</p>
+</section>
+
+<section>
+  <h2><span class="no">09</span>Build plan</h2>
+  <div class="miles">
+    <div class="mile"><span class="m">M1</span><div><b>The disease and the city</b>Pathogen generator with plausible trait combinations; city generator with residents, places and routines; the spread simulation; reporting with delays and noise; line list, map, epidemic curve and the genome tree; a solver that checks each game can be characterised from the evidence. Playable as act one and two.</div></div>
+    <div class="mile"><span class="m">M2</span><div><b>Acting on it</b>Interventions and their lags, testing and tracing capacity, trust and compliance, hospital capacity, the cure clock.</div></div>
+    <div class="mile"><span class="m">M3</span><div><b>People and pressure</b>Interviews, the council, the press, rumours, variants, the published-estimates system.</div></div>
+    <div class="mile"><span class="m">M4</span><div><b>Polish</b>Art, sound, difficulty grades and a mentor character, a tutorial outbreak, a scenario list of hand-tuned pathogens, and saves.</div></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">10</span>Decisions for you</h2>
+  <div class="q">
+    <div><b>Setting</b><span>A fictional British city, a fictional city with no country named, or one of each region type across a campaign.</span><span class="rec">Recommendation: a fictional British city. Local detail and dry humour come easier when it feels specific.</span></div>
+    <div><b>How wide the pathogen draw goes</b><span>Respiratory viruses only (COVID-like, most readable), or the full range including gut, contact-spread and animal-source diseases.</span><span class="rec">Recommendation: full range, weighted towards respiratory, so most games feel COVID-like but some surprise you.</span></div>
+    <div><b>Game length</b><span>Act one and two only (45–60 minutes), or all three acts through to a vaccine (2 hours or more, over several sittings).</span><span class="rec">Recommendation: build for the full three acts with saves, and let many games end early because you contained it.</span></div>
+    <div><b>Time</b><span>Turn-based days (plan, then advance), or real time with pause.</span><span class="rec">Recommendation: turn-based days, with a faster "advance a week" once things settle. Much better on a phone.</span></div>
+  </div>
+</section>
+</div>
