@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 // Checks generated timelines for contradictions a careful player could spot.
-// Usage: node tests/consistency.js [N]
+// Usage: node tests/consistency.js [N] [--level=probationer|officer|head]
 var CX = require('./load.js')();
-var N = +(process.argv[2] || 100);
+var N = +(process.argv.slice(2).filter(function (a) { return a.charAt(0) !== '-'; })[0] || 100);
+var lArg = process.argv.slice(2).filter(function (a) { return /^--level=/.test(a); })[0];
+var gopts = lArg ? { level: lArg.split('=')[1] } : {};
 var issues = {}, examples = {};
 function flag(k, msg) { issues[k] = (issues[k] || 0) + 1; if (!examples[k]) examples[k] = msg; }
 for (var i = 1; i <= N; i++) {
   var W;
-  try { W = CX.buildWorld(String(i), {}); CX.makeTraces(W); } catch (e) { flag('gen error', e.message); continue; }
+  try { W = CX.buildWorld(String(i), gopts); CX.makeTraces(W); } catch (e) { flag('gen error', e.message); continue; }
   var stays = W.steps.filter(function (s) { return s.kind === 'stay'; });
   function whereAt(pid, day) {
     var st = stays.filter(function (s) { return s.parts[0].pid === pid && s.from <= day && day < s.to; })[0];

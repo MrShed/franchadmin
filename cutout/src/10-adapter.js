@@ -11,12 +11,15 @@ var UIA = (function () {
 
   // ------------------------------------------------------------ lifecycle
   A.ready = function () { return typeof CX !== 'undefined' && typeof CX.newCase === 'function' && typeof CX.load === 'function'; };
-  A.create = function (seed) {
-    A.cs = CX.newCase(seed);
+  /** level: 'probationer' | 'officer' | 'head' (the standard grade keeps the original opts) */
+  A.create = function (seed, level) {
+    A.cs = CX.newCase(seed, level && level !== 'officer' ? { level: level } : {});
+    A._xr = null;
     return A.cs;
   };
   A.restore = function (json) {
     A.cs = CX.load(json);
+    A._xr = null;
     return A.cs;
   };
   A.serialize = function () { return A.cs.save(); };
@@ -29,7 +32,7 @@ var UIA = (function () {
     if (!A.cs) return false;
     try {
       var eng = JSON.parse(A.cs.save());
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, engine: eng, ui: ui, when: Date.now(), day: A.cs.day, seed: A.cs.seed, label: A.dateLong(A.cs.day) }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, engine: eng, ui: ui, when: Date.now(), day: A.cs.day, seed: A.cs.seed, label: A.dateLong(A.cs.day), level: A.cs.levelLabel || '' }));
       return true;
     } catch (e) { return false; }
   };
@@ -46,8 +49,43 @@ var UIA = (function () {
   A.dateLabel = function (d) { return A.cs.dateLabel(d); };
   A.dateLong = function (d) { return A.cs.dateLong(d); };
   A.topDate = function (d) { var L = A.cs.dateLong(d).split(' '); return L[0].slice(0, 3) + ' ' + L[1] + ' ' + L[2].slice(0, 3) + ' ' + L[3]; };
-  A.clock = function () { var h = 8 + (A.dayHours() - A.hoursLeft()); return (h < 10 ? '0' : '') + h + ':00'; };
+  A.clock = function () { return A.cs.clock(); };
   A.credibility = function () { return A.cs.credibility === undefined ? 100 : A.cs.credibility; };
+
+  // ------------------------------------------------------------ difficulty grade
+  A.levels = function () { return CX.LEVELS.slice(); };
+  A.levelInfo = function (id) { return CX.level(id); };
+  /** grade of the open case (old saves have none: the standard grade) */
+  A.level = function () { return CX.level(A.cs && A.cs.level); };
+
+  // ------------------------------------------------------------ cross-references (from the player's documents only)
+  var XR_TYPES = { passport: 1, number: 1, plate: 1, account: 1, address: 1, company: 1 };
+  A.xrefTypes = XR_TYPES;
+  /** identifiers that appear in 2+ of the documents on the desk: {key: {t, v, d, docs:[id...]}} */
+  A.xrefs = function () {
+    var docs = A.cs.inbox();
+    if (A._xr && A._xr.n === docs.length) return A._xr.map;
+    var map = {};
+    docs.forEach(function (d) {
+      (d.tokens || []).forEach(function (t) {
+        if (!XR_TYPES[t.t]) return;
+        var k = t.t + ':' + t.v;
+        var e = map[k] || (map[k] = { t: t.t, v: t.v, d: t.d || t.v, docs: [], mine: [] });
+        if (e.docs[e.docs.length - 1] === d.id) return;
+        e.docs.push(d.id);
+        // a result of pulling records on this very identifier (the player asked for it)
+        if (d.query && d.query.key && d.query.key.t === t.t && String(d.query.key.v) === t.v) e.mine.push(d.id);
+      });
+    });
+    Object.keys(map).forEach(function (k) { if (map[k].docs.length < 2) delete map[k]; });
+    A._xr = { n: docs.length, map: map };
+    return map;
+  };
+
+  // ------------------------------------------------------------ the night analyst
+  A.analyst = function () { return CX.ANALYST; };
+  A.hintStatus = function () { return A.cs.hintStatus(); };
+  A.hint = function (tier) { return A.cs.hint(tier); };
 
   // ------------------------------------------------------------ documents
   A.docs = function () { return A.cs.inbox(); };

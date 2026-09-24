@@ -232,7 +232,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
           break;
         }
         case 'meet': {
-          if (net && R.chance(0.18) && s.day >= -3) {
+          if (net && R.chance(W.LV ? W.LV.informant.meet : 0.18) && s.day >= -3) {
             var who = s.parts[R.int(0, s.parts.length - 1)];
             var other = s.parts.filter(function (q) { return q !== who; })[0];
             push(s.day + R.int(1, 2), base({ r: 'informant', kind: 'meet', day: s.day, source: R.pick(DATA.FLAVOUR.informants), name: who.name, body: [
@@ -411,6 +411,29 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       L(tk('name', hr.real), ' is moving ', W.herringGoods.d, ' again and has "a new partner with a car". Meeting place: ', { t: 'place', v: hrCafe + ', ' + cityName(hr.homeCity), d: hrCafe }, '.'),
       L(R.pick(['Source asks to be paid in Deutschmarks this time.', 'Source adds that it is "a big one this month".', 'Source thinks there may be "political people" in it. Source always thinks that.']))
     ], _pids: [hr.id], _herring: true });
+
+    // ------------------------------------------------------ disinformation (hardest grade)
+    // A plausible partner-service report that points at a decoy event and at a
+    // member of the smuggling ring. Nothing in the records supports it.
+    if (W.LV && W.LV.disinfo) {
+      // a decoy still ahead when the telex arrives (a report about last week would be no trap)
+      var decoys = W.events.filter(function (ev) { return !ev.real && ev.day >= 5; });
+      var dz = decoys.filter(function (ev) { return ev.subject.trait.cat === W.realEvent.subject.trait.cat || ev.city === W.actCity || ev.day === W.D; });
+      var fake = decoys.length ? R.pick(dz.length ? dz : decoys) : null;
+      var patsy = R.pick(W.herrings);
+      var dday = fake ? R.int(3, Math.max(3, Math.min(D - 4, fake.day - 2))) : 0;
+    }
+    if (W.LV && W.LV.disinfo && fake) {
+      var fv = W.venues[fake.venue];
+      var fsvc = R.pick(['SIS liaison, Vienna station', 'BND Pullach', 'DST Paris', 'SISDE Rome']);
+      push(dday, { r: 'liaison', kind: 'disinfo', day: dday, event: fake.id, name: patsy.real, body: [
+        L('TELEX — ROUTINE — FROM ', { t: 'txt', v: fsvc }, ' TO LIAISON DESK VIENNA — ', cal.telex(dday)),
+        L('Reference your enquiry. A well-placed source (reliability B, ', R.pick(['two years\' reporting', 'recruited 1987', 'handled by our Bonn office']), ') states the operation is aimed at ', tk('target', fake.subject.name), ' during the ', fake.type || 'visit', ' at the ', { t: 'place', v: fake.venue, d: fv.name }, ', ', cityName(fake.city), ', on ', dateTok(fake.day), '.'),
+        L('The source names ', tk('name', patsy.real), ' as "the one who will do it" and says the team is already in place.'),
+        L(R.pick(['Source was paid on delivery and asked for more.', 'Source could not say how he came by the information.', 'We have not been able to corroborate. We pass it on in good faith.'])),
+        L('ENDS')
+      ], _pids: [patsy.id], _herring: true, _disinfo: true });
+    }
 
     // ------------------------------------------------------ noise traffic
     function pol(c) { return DATA.COUNTRY[ccOf(c)].police + ' ' + cityName(c); }

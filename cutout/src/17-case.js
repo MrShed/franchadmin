@@ -13,6 +13,8 @@ var UICase = UI.views['case'] = {
       else if (a === 'warrant') self.warrantSheet({});
       else if (a === 'resp') self.respondSheet(x);
       else if (a === 'debrief') UIDebrief.show();
+      else if (a === 'night') UINight.open();
+      else if (a === 'xref') { UIS.xref = !UI.xrefOn(); UI.save(); self.render(); UItoast('Cross-reference marks ' + (UIS.xref ? 'on' : 'off')); if (UI.views.desk.built) UI.views.desk._n = -1; }
     });
   },
   show: function () { this.render(); },
@@ -25,6 +27,12 @@ var UICase = UI.views['case'] = {
     var html = '';
     // --- timeline
     html += '<div class="case-sec wide"><h3>The operation</h3>' + this.timelineHTML() + '</div>';
+    // --- the night desk
+    var N = UIA.analyst(), hs = UIA.hintStatus();
+    var lastN = hs.log[hs.log.length - 1];
+    html += '<div class="case-sec"><h3>The night desk</h3><div class="na-mini"><div class="na-mini-hd">' + UINight.portrait() + '<div><b>' + UIesc(N.name) + '</b><small>' + UIesc(N.title) + ' · ' + (hs.total ? 'consulted ' + hs.total + ' time' + (hs.total > 1 ? 's' : '') : 'not yet consulted') + '</small></div></div>' +
+      (lastN ? '<p class="hand na-last">' + UIesc(lastN.text) + '</p>' : '<p class="na-last muted">Stuck? She has read everything on your desk and will say so, for a price: a nudge is free once a night, a pointer costs two team-hours, a straight answer costs credibility.</p>') +
+      (UIA.over() ? '' : '<button class="btn small block" data-c="night">' + UIICON.lamp + ' Ask the night desk' + (hs.nudge.ok ? ' · tonight’s nudge unused' : '') + '</button>') + '</div></div>';
     // --- propositions
     var sr = props.filter(function (p) { return p.type === 'same' || p.type === 'role'; });
     var nConf = sr.filter(function (p) { return p.status === 'confirmed'; }).length;
@@ -60,6 +68,10 @@ var UICase = UI.views['case'] = {
       '<button class="opt" data-c="resp" data-x="arrest-only"><b>Arrest only</b><small>Execute your warrants and stand back. The act is stopped only if the operative is in a cell.</small></button>' +
       '<button class="opt" data-c="resp" data-x="protect"><b>Protect the target</b><small>Warn and move the person or object. Stops the act if you chose the right target — and lets everyone walk.</small></button>' +
       '<button class="opt" data-c="resp" data-x="trap"><b>Set a trap</b><small>Let them come, and be waiting. Right place and date catches the team in the act; the money trail decides whether the principal falls too.</small></button></div></div>';
+    // --- settings
+    var on = UI.xrefOn();
+    html += '<div class="case-sec"><h3>Desk settings</h3><div class="set-row"><div><b>Grade</b><small>' + UIesc(UIA.level().label) + ' · ' + UIA.dayHours() + ' team-hours a day. Chosen when the file was opened.</small></div></div>' +
+      '<button class="set-row" data-c="xref" role="switch" aria-checked="' + on + '"><div><b>Cross-reference marks</b><small>Mark passports, numbers, plates, accounts, firms and addresses that already appear in another of your documents.</small></div><span class="sw' + (on ? ' on' : '') + '"><i></i></span></button></div>';
     pad.innerHTML = html;
     if (fresh.length) this.stampAnim(fresh);
   },

@@ -13,16 +13,27 @@ Everything is deterministic from the seed.
 | `05-records.js` | `CX.Case` — query API, document rendering, clock, save/load |
 | `06-truth.js` | propositions + batch confirmation, warrants/arrests, resolution, debrief |
 | `07-solver.js` | headless ideal analyst, `CX.newCase` (generation retries until solver-verified) |
+| `08-analyst.js` | the night analyst: hints computed by the solver from the player's current holdings |
 
 ## Creating / loading a case
 
 ```js
-var cs = CX.newCase(seed, opts)   // seed: number|string; opts: {template?: 'rifle'|'pistol'|'poison'|'bomb'|'burglary'|'abduction'}
+var cs = CX.newCase(seed, opts)   // seed: number|string; opts: {template?: 'rifle'|'pistol'|'poison'|'bomb'|'burglary'|'abduction',
+                                  //                              level?: 'probationer'|'officer'|'head'}
 cs.save()                         // -> JSON string {v, seed, attempt, opts, log:[actions]} (~1 KB; replayed on load)
 var cs2 = CX.load(json)           // rebuilds the same case and replays the log (fast, no re-verification)
 ```
 `newCase` builds generation attempts `seed`, `seed#1`, ... until the headless solver proves the case solvable
 with 9 of the 16 daily team-hours and NOT solvable with 3 (≈1.2 attempts, ~300 ms each in node).
+
+### Difficulty grades (`opts.level`, `CX.DATA.LEVELS`, `CX.level(id)`, `CX.LEVELS`)
+Saved in `opts` (so `cs.save()` carries it; saves without it are the standard grade). `cs.level`, `cs.levelLabel`.
+
+| grade | generator | day | acceptance (ideal solver by D-2) |
+|---|---|---|---|
+| `probationer` | 5-member network (one specialist fewer, no optional roles/2nd cutout/backup), ≤1 alias each (no archive "old" aliases), 1 herring and no false-link traps, 2 decoy events (the pair that keeps clues combined), supply informant notes always, name the buyer 85% | 20 team-hours, D + 2 | solved with 5 h/day; no floor; ≥1 plot clue |
+| `officer` (default) | the original generator — byte-identical cases | 16 | solved with 9 h/day, not with 3; ≥2 plot clues |
+| `head` | +2–3 optional roles, likely 2nd cutout and backup, more aliases, 3-member ring + both false-link traps, +2 decoy events, a planted disinformation telex (`kind:'liaison'`, points at a decoy and a smuggler) | 16 | solved with 12 h/day, not with 5; ≥2 plot clues |
 
 ## Case state (read-only)
 
@@ -30,13 +41,14 @@ with 9 of the 16 daily team-hours and NOT solvable with 3 (≈1.2 attempts, ~300
 |---|---|
 | `cs.seed`, `cs.attempt` | seed string, generation attempt used |
 | `cs.day` | current day index (0 = case start morning) |
-| `cs.hoursLeft` / `cs.dayHours` | team-hours left today / 16 |
+| `cs.hoursLeft` / `cs.dayHours` | team-hours left today / per day (16; 20 for Probationer) |
 | `cs.over`, `cs.outcome` | resolved? and the outcome object (see respond) |
 | `cs.credibility` | starts 100; each wrongful warrant request costs 20 |
 | `cs.startLabel` | e.g. `"Monday 9 October 1989"` |
 
 Helpers: `cs.dateLabel(day)` → `"Fri 13 Oct"`, `cs.dateLong(day)` → `"Friday 13 October 1989"`,
-`cs.dmy(day)` → `"13.10.1989"`, `cs.clock()` → desk time (`"08:00"` + hours used today).
+`cs.dmy(day)` → `"13.10.1989"`, `cs.clock()` → desk time: 08:00 + hours used today, scaled so the whole day
+fits 08:00–23:59 (one hour per team-hour at 16/day; never wraps to 00:00).
 The act day is never exposed (only via `cs.timeline()` hints and the debrief).
 
 ## Documents
@@ -180,6 +192,23 @@ cs.debrief()  // once cs.over:
 Trap: caught in the act iff place and date are right; every network member with any seen trace is taken;
 the principal only if a correct principal role or same-link to one of the principal's names was filed.
 
+## The night analyst (hints)
+
+```js
+cs.hintStatus() // -> {nudge:{ok, why}, pointer:{ok, cost:2, why}, direct:{ok, cost:10, why}, used:{nudge,pointer,direct}, total, log:[entry]}
+cs.hint(tier)   // tier 'nudge' | 'pointer' | 'direct'
+  // -> {ok:true, tier, text, refs:{docs:[id], pull:{sys, key, label, system, cost, today}|null, prop:{type,...}|null}, charged:{hours, credibility}, entry}
+  //  | {ok:false, tier, text, empty?}   (nothing charged, nothing logged)
+CX.ANALYST      // {name, title, bio, costs:{nudge:0, pointer:2, direct:10}, penalty:{nudge:2, pointer:5, direct:10}}
+```
+Computed by the solver (`CX._derive` over the player's own documents, `CX._scorePulls` over held keys and
+records that already exist): **nudge** (free, one per day) names a document to reread — where the best next key
+sits, or the two documents that share an identifier the player has not linked; **pointer** (2 team-hours)
+names system + held key of the best next pull (preferring one that still fits today); **direct**
+(10 credibility) states the most useful true, derivable, unfiled deduction — an alias link, then a role; plot
+elements rank first in the last three days. Hints are logged (`['h', tier]`) and replay from saves; the
+outcome gets a score line "Help from the night desk" (−2/−5/−10 each); `cs.debrief()` adds `level` and `hints`.
+
 ## Constants and test hooks
 
 `CX.METHODS`, `CX.ROLES`, `CX.SYSTEMS`, `CX.DATA`. Tests only: `CX.caseFromAttempt(seed, opts, attempt)`,
@@ -193,4 +222,6 @@ node tests/solve.js 1..200 [--raw] [--template=x] [--verbose]                # s
 node tests/api.js [seed]                                                      # API walk-through + invariants
 node tests/consistency.js [N]                                                 # timeline contradiction checks
 node tests/debug.js <seed> [attempt]                                          # what the solver never saw
+node tests/hints.js [N] [--level=x]                                           # night-analyst hints: valid, true, replayable
+# solve.js, gen.js and consistency.js also take --level=probationer|officer|head
 ```

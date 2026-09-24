@@ -428,8 +428,29 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     KEYS: { hotels: ['name', 'passport', 'hotel+date'], border: ['name', 'passport', 'plate'], airline: ['name', 'flight'], phones: ['number'],
       bank: ['account', 'company'], vehicles: ['plate'], residents: ['name', 'address'], companies: ['company'], archive: ['name'] },
     DAY_HOURS: 16,
+    // difficulty grades: generator options + solver acceptance thresholds (see 03-world.js, 07-solver.js).
+    // 'officer' is the original game and must keep generating exactly the same cases.
+    LEVELS: {
+      probationer: { id: 'probationer', label: 'Probationer', order: 0,
+        blurb: 'A small network, one false name each, a single red herring. Twenty team-hours a day and two extra days.',
+        dayHours: 20, extraDays: 2, small: true, oneAlias: true, herrings: 1, herringTraps: 0, decoys: 2,
+        informant: { supply: 1, namesBuyer: 0.85, meet: 0.35 }, disinfo: false,
+        acceptCap: 5, easyCap: 0, minClues: 1, xref: true },
+      officer: { id: 'officer', label: 'Case Officer', order: 1,
+        blurb: 'The standard file: a working network, aliases, a smuggling ring in the way. Sixteen team-hours a day.',
+        dayHours: 16, extraDays: 0, herringTraps: 1, informant: { supply: 0.8, namesBuyer: 0.5, meet: 0.18 },
+        acceptCap: 9, easyCap: 3, minClues: 2, xref: true },
+      head: { id: 'head', label: 'Head of Station', order: 2,
+        blurb: 'A bigger network with more identities, extra decoy events and a planted disinformation report. No hand-holding.',
+        dayHours: 16, extraDays: 0, big: true, moreAliases: true, herrings: 3, herringTraps: 2, extraDecoys: 2,
+        informant: { supply: 0.7, namesBuyer: 0.4, meet: 0.14 }, disinfo: true,
+        acceptCap: 12, easyCap: 5, minClues: 2, xref: false }
+    },
     fem: function (nat, sur) { var n = NAT[nat]; return n && n.fem ? n.fem(sur) : sur; }
   };
   CX.METHODS = METHODS;
   CX.ROLES = CX.DATA.ROLES;
 })();
+/** difficulty grade by id (defaults to the standard 'officer') */
+CX.level = function (id) { var L = CX.DATA.LEVELS; return L[id] || L.officer; };
+CX.LEVELS = ['probationer', 'officer', 'head'].map(function (k) { return CX.DATA.LEVELS[k]; });

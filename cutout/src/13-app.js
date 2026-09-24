@@ -3,8 +3,10 @@ var UIS = null; // UI state saved alongside the engine save
 var UI = {
   views: {},
   freshState: function () {
-    return { v: 1, tab: 'desk', read: {}, hl: {}, openDoc: null, filter: 'all', board: { cards: [], links: [], view: null, n: 0 }, warrants: [], stamped: {}, recSys: 'hotels', recType: null, queries: [] };
+    return { v: 1, tab: 'desk', read: {}, hl: {}, openDoc: null, filter: 'all', board: { cards: [], links: [], view: null, n: 0 }, warrants: [], stamped: {}, recSys: 'hotels', recType: null, queries: [], xref: null };
   },
+  /** cross-reference marks: the player's setting, else the grade's default */
+  xrefOn: function () { return UIS && UIS.xref !== null && UIS.xref !== undefined ? !!UIS.xref : !!UIA.level().xref; },
   save: function () { if (UIA.cs) UIA.writeSave(UIS); },
   /** re-render whatever depends on case state */
   refresh: function () {
@@ -59,14 +61,14 @@ var UIsheet = {
     sc.hidden = false;
     if (!UIsheet.cur) UIhist.push('sheet', function () { UIsheet.close(true); });
     UIsheet.cur = o;
-    requestAnimationFrame(function () { sc.classList.add('on'); sh.classList.add('on'); });
+    requestAnimationFrame(function () { if (UIsheet.cur !== o) return; sc.classList.add('on'); sh.classList.add('on'); });
     if (o.mount) o.mount(sh.querySelector('.sh-body'), sh);
     UIsheet.lastFocus = document.activeElement;
     setTimeout(function () { var f = sh.querySelector('[autofocus]'); if (f && !('ontouchstart' in window)) f.focus(); }, 60);
   },
   close: function (fromPop) {
     var sh = UI$('#sheet'), sc = UI$('#scrim');
-    if (!sh.classList.contains('on')) return;
+    if (!sh.classList.contains('on') && !UIsheet.cur) return; // (closing before the open frame counts too)
     if (fromPop !== true) UIhist.drop('sheet');
     sh.classList.remove('on'); sc.classList.remove('on');
     var cur = UIsheet.cur; UIsheet.cur = null;
@@ -115,9 +117,11 @@ UI.buildFrame = function () {
   var tabsHTML = UI.tabs.map(function (t) { return '<button class="tab" data-tab="' + t[0] + '" aria-label="' + t[1] + '">' + UIICON[t[0]] + '<span>' + t[1].toUpperCase() + '</span></button>'; }).join('');
   UI$('#tabbar').innerHTML = tabsHTML;
   UI$('#topbar').innerHTML = '<div class="tb-date"><b id="tb-date"></b><span id="tb-sub"></span></div><div class="tb-tabs">' + tabsHTML + '</div>' +
-    '<div class="tb-hours" title="Team-hours left today"><div class="pips" id="tb-pips"></div><div class="tb-hnum" id="tb-h"></div></div><button class="tb-end" id="tb-end">End day</button>';
+    '<div class="tb-hours" title="Team-hours left today"><div class="pips" id="tb-pips"></div><div class="tb-hnum" id="tb-h"></div></div>' +
+    '<button class="tb-na" id="tb-na" aria-label="Night desk — ask the night analyst" title="Night desk — ask the night analyst">' + UIICON.lamp + '</button><button class="tb-end" id="tb-end">End day</button>';
   UI$$('.tab').forEach(function (b) { b.addEventListener('click', function () { UI.go(b.dataset.tab); }); });
   UI$('#tb-end').addEventListener('click', UI.confirmEndDay);
+  UI$('#tb-na').addEventListener('click', function () { UINight.open(); });
 };
 UI.topbar = function () {
   if (!UIA.cs) return;
@@ -127,6 +131,10 @@ UI.topbar = function () {
   var h = UIA.hoursLeft(), H = UIA.dayHours();
   var p = ''; for (var i = 0; i < H; i++) p += '<i class="pip' + (i < h ? ' on' : '') + '"></i>';
   UI$('#tb-pips').innerHTML = p;
+  UI$('#tb-pips').style.setProperty('--pc', Math.ceil(H / 2));
+  var na = UIA.hintStatus();
+  UI$('#tb-na').classList.toggle('fresh', na.nudge.ok);
+  UI$('#tb-na').disabled = UIA.over();
   UI$('#tb-h').innerHTML = h + '<small>HRS</small>';
   UI$('#tb-end').disabled = UIA.over();
 };
@@ -179,6 +187,8 @@ UI.tokenSheet = function (t, v, d, ctx) {
     }).join('') + '</div>';
     else html += '<p class="muted" style="font-size:13px;margin:6px 0 10px">' + (t === 'date' && +v >= UIA.day() ? 'That night has not happened yet.' : 'You need a ' + (t === 'hotel' ? 'past date' : 'hotel') + ' from a document to pair with this.') + '</p>';
   }
+  var xr = UIA.xrefTypes[t] && UI.xrefOn() ? UIA.xrefs()[key] : null;
+  if (xr) html += '<div class="lbl sh-sec">Seen in ' + xr.docs.length + ' documents</div>' + UI.xrefDocsHTML(xr, ctx.doc);
   html += '<div class="lbl sh-sec">Desk</div><div class="sh-list">';
   if (t === 'name') {
     html += UIitem({ act: 'board-subj', ic: '+', label: 'Add to board as a new subject', small: 'A card for the person behind this name' });
@@ -198,7 +208,8 @@ UI.tokenSheet = function (t, v, d, ctx) {
       body.addEventListener('click', function (e) {
         var b = e.target.closest('.sh-item'); if (!b || b.disabled) return;
         var a = b.dataset.act, x = b.dataset.x;
-        if (a === 'pull') { UIsheet.close(); UI.runQuery(x, { t: t, v: v }); }
+        if (a === 'xdoc') { UIsheet.close(); UI.go('desk', { open: x }); }
+        else if (a === 'pull') { UIsheet.close(); UI.runQuery(x, { t: t, v: v }); }
         else if (a === 'night') { var p = x.split('|'); UIsheet.close(); UI.runQuery('hotels', { t: 'hotel+date', hotel: p[0], date: +p[1] }); }
         else if (a === 'board-subj') { UIsheet.close(); UIBoard.addSubjectFor(v); }
         else if (a === 'board-merge') { UIBoard.pickSubjectFor(v); }
@@ -213,13 +224,36 @@ UI.tokenSheet = function (t, v, d, ctx) {
 /** delegate taps on tokens anywhere */
 UI.bindTokens = function (root) {
   root.addEventListener('click', function (e) {
+    var xb = e.target.closest('.xr');
+    if (xb) { e.preventDefault(); e.stopPropagation(); UI.xrefSheet(xb.dataset.t, xb.dataset.v, root.dataset.doc); return; }
     var el = e.target.closest('.tk'); if (!el) return;
     e.preventDefault();
     UI.tokenSheet(el.dataset.t, el.dataset.v, el.textContent, { doc: root.dataset.doc });
   });
   root.addEventListener('keydown', function (e) {
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('tk')) { e.preventDefault(); e.target.click(); }
+    if ((e.key === 'Enter' || e.key === ' ') && (e.target.classList.contains('tk') || e.target.classList.contains('xr'))) { e.preventDefault(); e.target.click(); }
   });
+};
+
+// ------------------------------------------------------------ cross-references
+/** list of the documents an identifier appears in (buttons that open each) */
+UI.xrefDocsHTML = function (xr, here) {
+  return '<div class="sh-list">' + xr.docs.map(function (id) {
+    var d = UIA.doc(id); if (!d) return '';
+    var mine = xr.mine && xr.mine.indexOf(id) >= 0;
+    return UIitem({ act: 'xdoc', data: id, ic: UISYSABBR[d.sys] || 'DOC', label: d.title, small: UIDoc.sourceLabel(d) + ' · ' + UIA.dateLabel(d.day) + ' ' + (d.time || '') + (mine ? ' · your request on it' : '') + (id === here ? ' · this document' : ''), dis: id === here });
+  }).join('') + '</div>';
+};
+UI.xrefSheet = function (t, v, here) {
+  var xr = UIA.xrefs()[t + ':' + v]; if (!xr) return;
+  UIsheet.open({ title: 'Seen in ' + xr.docs.length + ' documents', sub: UIesc((UITYPE[t] || t) + ' · ' + xr.d), html: '<p class="muted" style="font-size:12.5px;margin:2px 0 4px">The same ' + UIesc((UITYPE[t] || t).toLowerCase()) + ' appears in each of these papers on your desk.</p>' + UI.xrefDocsHTML(xr, here) +
+    '<button class="btn small block" id="xr-tok" style="margin-top:6px">Pull records on it…</button>',
+    mount: function (body) {
+      body.addEventListener('click', function (e) {
+        var b = e.target.closest('.sh-item'); if (b && !b.disabled && b.dataset.act === 'xdoc') { UIsheet.close(); UI.go('desk', { open: b.dataset.x }); return; }
+        if (e.target.id === 'xr-tok') { UIsheet.close(); setTimeout(function () { UI.tokenSheet(t, v, xr.d, { doc: here }); }, 240); }
+      });
+    } });
 };
 
 // ------------------------------------------------------------ queries
@@ -244,12 +278,13 @@ UI.confirmEndDay = function () {
   var ex = UI$('.pop'); if (ex) { ex.remove(); return; }
   var h = UIA.hoursLeft();
   var d = UIA.day();
-  var pop = UIel('<div class="pop" role="dialog"><h4>End ' + UIesc(UIA.dateLong(d).split(' ')[0]) + '?</h4><p>' + (h ? h + ' team-hour' + (h > 1 ? 's' : '') + ' unused will be lost. ' : 'The team is spent. ') + 'Overnight the network moves and the morning traffic arrives.</p><div class="row"><button class="btn small ghost" data-x="no">Keep working</button><button class="btn small primary" data-x="yes">End day</button></div></div>');
+  var pop = UIel('<div class="pop" role="dialog"><h4>End ' + UIesc(UIA.dateLong(d).split(' ')[0]) + '?</h4><p>' + (h ? h + ' team-hour' + (h > 1 ? 's' : '') + ' unused will be lost. ' : 'The team is spent. ') + 'Overnight the network moves and the morning traffic arrives.</p><button class="pop-na" data-x="na">' + UIICON.lamp + '<span>Stuck? Ask the night desk first</span></button><div class="row"><button class="btn small ghost" data-x="no">Keep working</button><button class="btn small primary" data-x="yes">End day</button></div></div>');
   document.body.appendChild(pop);
   pop.addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
     pop.remove();
     if (b.dataset.x === 'yes') UI.endDay();
+    else if (b.dataset.x === 'na') UINight.open();
   });
   setTimeout(function () {
     document.addEventListener('pointerdown', function off(e) { if (!pop.contains(e.target) && e.target.id !== 'tb-end') { pop.remove(); } document.removeEventListener('pointerdown', off, true); }, true);

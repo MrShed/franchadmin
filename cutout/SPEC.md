@@ -137,7 +137,7 @@ careful player can disprove (different passport numbers, different arrival times
   exists — 30% of cases have one). Arrest yields an interrogation statement document (partial, may name a cutout).
 
 ## Clock
-- Each query costs team-hours; the desk has 16 team-hours per day (M1 constant). "End day" advances to the next
+- Each query costs team-hours; the desk has 16 team-hours per day (M1 constant; the Probationer grade has 20 — see ENGINE.md "Difficulty grades"). "End day" advances to the next
   morning: new traffic arrives and the network executes that day's steps (records appear in systems only once the
   step has happened — you can't pull a future hotel stay).
 - The act happens on day D at the planned place unless prevented. The UI shows the operation timeline with phase

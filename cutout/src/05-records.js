@@ -69,13 +69,15 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   function Case(W, genSeed, attempt) {
     var self = this;
     Object.defineProperty(this, '_w', { value: W, enumerable: false });
-    Object.defineProperty(this, '_s', { value: { idx: {}, seen: {}, tokens: {}, tokenList: [], docs: [], docById: {}, bgHotel: {}, bgFlight: {}, arrests: {}, log: [], props: [], propN: 0, subjects: [], subjN: 0, queries: 0, hoursUsed: 0, wrongful: 0, warrants: [] }, enumerable: false });
+    Object.defineProperty(this, '_s', { value: { idx: {}, seen: {}, tokens: {}, tokenList: [], docs: [], docById: {}, bgHotel: {}, bgFlight: {}, arrests: {}, log: [], props: [], propN: 0, subjects: [], subjN: 0, queries: 0, hoursUsed: 0, wrongful: 0, warrants: [], hints: null }, enumerable: false });
     this.seed = W.seed.replace(/#\d+$/, '');
     this.genSeed = genSeed; this.attempt = attempt || 0;
     this.opts = W.opts;
+    this.level = W.level || 'officer';
+    this.levelLabel = CX.level(this.level).label;
     this.day = 0;
-    this.dayHours = DATA.DAY_HOURS;
-    this.hoursLeft = DATA.DAY_HOURS;
+    this.dayHours = W.dayHours || DATA.DAY_HOURS;
+    this.hoursLeft = this.dayHours;
     this.over = false; this.outcome = null; this.credibility = 100;
     this.startLabel = W.cal.long(0);
     buildIndex(this);
@@ -87,7 +89,12 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   CP.dateLabel = function (d) { return this._w.cal.nice(d); };
   CP.dateLong = function (d) { return this._w.cal.long(d); };
   CP.dmy = function (d) { return this._w.cal.dmy(d); };
-  CP.clock = function () { return CX.hm(8 * 60 + (this.dayHours - this.hoursLeft) * 60); };
+  /** desk time: the working day runs 08:00 until 23:59 however many team-hours the grade gives
+   *  (16 team-hours = one hour each; never wraps past midnight) */
+  CP.clock = function () {
+    var used = Math.max(0, this.dayHours - this.hoursLeft);
+    return CX.hm(Math.min(23 * 60 + 59, 8 * 60 + Math.round(used * 16 * 60 / this.dayHours)));
+  };
   CP.inbox = function () { return this._s.docs.slice(); };
   CP.doc = function (id) { return this._s.docById[id] || null; };
   CP.newSince = function (n) { return this._s.docs.slice(n); };
@@ -578,6 +585,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   CP._makeDoc = function (res, meta) { return makeDoc(this, res, meta); };
   var TRAFFIC_META = {
     tip: { style: 'telex', title: 'Telex from a partner service', from: 'Liaison traffic' },
+    liaison: { style: 'telex', title: 'Telex from a partner service', from: 'Liaison traffic' },
     intercept: { style: 'telex', title: 'Intercept transcript', from: 'Partner-service intercept' },
     police: { style: 'report', title: 'Police report', from: 'Police' },
     news: { style: 'news', title: 'Newspaper cutting', from: 'Press' },
@@ -653,7 +661,8 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   Object.defineProperty(CP, 'subjects', { get: function () { return this._s.subjects.slice(); } });
 
   // ------------------------------------------------------------ save / load
-  CP.save = function () { return JSON.stringify({ v: 1, seed: this.seed, attempt: this.attempt, opts: this.opts || {}, log: this._s.log }); };
+  // v2 adds opts.level (absent = the standard grade) and 'h' (hint) log entries; v1 saves load unchanged.
+  CP.save = function () { return JSON.stringify({ v: 2, seed: this.seed, attempt: this.attempt, opts: this.opts || {}, log: this._s.log }); };
   CX.load = function (json) {
     var o = typeof json === 'string' ? JSON.parse(json) : json;
     var cs = CX.caseFromAttempt(o.seed, o.opts || {}, o.attempt || 0);
@@ -668,6 +677,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         case 'sa': cs.addSubject(a[1]); break;
         case 'su': cs.updateSubject(a[1], a[2]); break;
         case 'sr': cs.removeSubject(a[1]); break;
+        case 'h': if (cs.hint) cs.hint(a[1]); break;
       }
     });
     return cs;

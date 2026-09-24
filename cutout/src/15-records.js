@@ -93,7 +93,7 @@ var UIRecords = UI.views.records = {
     UIS.read[id] = 1; UI.badges();
     var el = UI$('#rq-prev');
     el.dataset.doc = id;
-    UIDoc.setHighlights(UIS.hl);
+    UIDoc.setHighlights(UIS.hl); UIDoc.setXref(UI.xrefOn() ? UIA.xrefs() : null);
     el.innerHTML = UIDoc.render(d);
   },
   renderLog: function () {

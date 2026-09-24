@@ -1,21 +1,23 @@
 #!/usr/bin/env node
 // Dump a case readably: truth summary, then every document the case can produce,
-// rendered as text. Usage: node tests/gen.js <seed> [template] [--truth-only] [--no-truth]
+// rendered as text. Usage: node tests/gen.js <seed> [template] [--truth-only] [--no-truth] [--level=probationer|officer|head]
 var CX = require('./load.js')();
 var args = process.argv.slice(2);
 var seed = args[0] || '1';
 var template = args[1] && args[1].charAt(0) !== '-' ? args[1] : undefined;
 var truthOnly = args.indexOf('--truth-only') >= 0, noTruth = args.indexOf('--no-truth') >= 0;
 var fast = args.indexOf('--unverified') >= 0;
+var lArg = args.filter(function (a) { return /^--level=/.test(a); })[0];
+var gopts = { template: template }; if (lArg) gopts.level = lArg.split('=')[1];
 
-var cs = fast ? CX.caseFromAttempt(seed, { template: template }, 0) : CX.newCase(seed, { template: template });
+var cs = fast ? CX.caseFromAttempt(seed, gopts, 0) : CX.newCase(seed, gopts);
 var W = cs._w;
 var out = [];
 function p(s) { out.push(s === undefined ? '' : s); }
 
 if (!noTruth) {
   p('================================================================ TRUTH');
-  p('seed ' + cs.seed + ' (attempt ' + cs.attempt + ')  template ' + W.templateKey + ' — ' + W.T.label);
+  p('seed ' + cs.seed + ' (attempt ' + cs.attempt + ')  grade ' + cs.levelLabel + '  template ' + W.templateKey + ' — ' + W.T.label);
   p('case starts ' + W.cal.long(0) + '; act on day ' + W.D + ' = ' + W.cal.long(W.D));
   p('cities: ' + W.cities.map(function (c) { return CX.DATA.CITIES[c].name; }).join(', '));
   p('PLOT: ' + W.T.method + ' / ' + W.realEvent.subject.name + ' (' + W.realEvent.subject.title + ') / ' + W.venues[W.realEvent.venue].name + ' / ' + W.cal.long(W.D) + ' ' + CX.hm(W.realEvent.time));

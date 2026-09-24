@@ -134,11 +134,13 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   // ------------------------------------------------------------ derivation
   function derive(K, cal) {
     var uf = new UF();
-    Object.keys(K.passports).forEach(function (p) { var n = Object.keys(K.passports[p]); for (var i = 1; i < n.length; i++) uf.union(n[0], n[i]); });
-    Object.keys(K.dobAddr).forEach(function (p) { var n = Object.keys(K.dobAddr[p]); for (var i = 1; i < n.length; i++) uf.union(n[0], n[i]); });
-    K.cards.forEach(function (c) { c.aliases.forEach(function (a) { uf.union(c.name, a); }); });
-    Object.keys(K.drivers).forEach(function (pl) { if (K.owner[pl]) Object.keys(K.drivers[pl]).forEach(function (d) { uf.union(K.owner[pl], d); }); });
-    Object.keys(K.payFor).forEach(function (a) { var ac = K.acct[a]; if (ac && ac.holderKind === 'personal') Object.keys(K.payFor[a]).forEach(function (n) { uf.union(ac.holder, n); }); });
+    var links = []; // {a, b, t, v}: the shared identifier that ties two names together
+    function U(a, b, t, v) { if (a === b) return; uf.union(a, b); links.push({ a: a, b: b, t: t, v: v }); }
+    Object.keys(K.passports).forEach(function (p) { var n = Object.keys(K.passports[p]); for (var i = 1; i < n.length; i++) U(n[0], n[i], 'passport', p); });
+    Object.keys(K.dobAddr).forEach(function (p) { var n = Object.keys(K.dobAddr[p]); for (var i = 1; i < n.length; i++) U(n[0], n[i], 'address', p.slice(p.indexOf('|') + 1)); });
+    K.cards.forEach(function (c) { c.aliases.forEach(function (a) { U(c.name, a, 'card', c.name); }); });
+    Object.keys(K.drivers).forEach(function (pl) { if (K.owner[pl]) Object.keys(K.drivers[pl]).forEach(function (d) { U(K.owner[pl], d, 'plate', pl); }); });
+    Object.keys(K.payFor).forEach(function (a) { var ac = K.acct[a]; if (ac && ac.holderKind === 'personal') Object.keys(K.payFor[a]).forEach(function (n) { U(ac.holder, n, 'account', a); }); });
 
     // hubs known now
     function hubNum(n) { var l = K.lines[n]; return l && (l.kind === 'hotel' || l.kind === 'business'); }
@@ -295,7 +297,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         })(0, []);
       }
     }
-    return { uf: uf, sus: sus, isSus: isSus, compRole: compRole, methods: mlist, events: evList, clues: clues, surv: surv, minClues: minClues, principalComp: principalComp };
+    return { uf: uf, links: links, sus: sus, isSus: isSus, compRole: compRole, methods: mlist, events: evList, clues: clues, surv: surv, minClues: minClues, principalComp: principalComp };
   }
   CX._derive = derive;
 
@@ -377,7 +379,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var warrantOK = warrants.indexOf('operative') >= 0 && warrants.length >= 3;
     // herrings must stay out of the suspect set
     W.herrings.forEach(function (h) { if (dv.isSus('N:' + h.real)) fails.push('HERRING SUSPECT ' + h.real); });
-    var solved = linkOK && !wrongMerge && methodOK && eventOK && warrantOK && (dv.minClues || 0) >= 2;
+    var solved = linkOK && !wrongMerge && methodOK && eventOK && warrantOK && (dv.minClues || 0) >= ((W.LV && W.LV.minClues) || 2);
     return { solved: solved, linkOK: linkOK, wrongMerge: wrongMerge, methodOK: methodOK, eventOK: eventOK, warrantOK: warrantOK, warrants: warrants, minClues: dv.minClues, roleWrong: roleWrong, fails: fails, clues: dv.clues.map(function (c) { return c.k; }) };
   }
 
@@ -405,6 +407,64 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   }
   var TYPE_SYS = {}; DATA.KEYS && Object.keys(DATA.KEYS).forEach(function (sys) { DATA.KEYS[sys].forEach(function (ty) { (TYPE_SYS[ty] = TYPE_SYS[ty] || []).push(sys); }); });
 
+  // ------------------------------------------------------------ pull scoring (the oracle)
+  /** every held key worth pulling now, scored by new case material per team-hour.
+   *  queried: {sys|key: true} already pulled; limit: max cost (hours) or undefined.
+   *  Uses the query index (truth about which records matter) but only ever
+   *  proposes keys the player holds and records that already exist. */
+  function scorePulls(cs, queried, limit) {
+    var W = cs._w;
+    var toks = cs.knownTokens();
+    var dates = [], knownDates = [], knownHotels = [];
+    toks.forEach(function (t) { if (t.t === 'date') { dates.push(t); knownDates.push(+t.v); } else if (t.t === 'hotel') knownHotels.push(t.v); });
+    var cands = [];
+    toks.forEach(function (t, i) {
+      CX.SYSTEMS.forEach(function (S) {
+        if (S.keys.indexOf(t.t) >= 0) cands.push({ sys: S.id, key: { t: t.t, v: t.v }, cost: S.hours, order: i, tok: t });
+      });
+      if (t.t === 'hotel') dates.forEach(function (d) { cands.push({ sys: 'hotels', key: { t: 'hotel+date', hotel: t.v, date: +d.v }, cost: 1, order: i + 0.5, tok: t, tok2: d }); });
+    });
+    var tokUseful = {};
+    function unseenRel(list) { return (list || []).some(function (e) { return !cs._s.seen[e._id] && relevant(W, e) && !(e._day >= cs.day) && !(e._step && cs._blocked(e._step)); }); }
+    function useful(ty, v) {
+      var k = ty + ':' + v;
+      if (tokUseful[k] !== undefined) return tokUseful[k];
+      var u = false;
+      if (cs.holds(ty, v)) u = false;
+      else if (ty === 'hotel') u = knownDates.some(function (d) { return unseenRel(cs._s.idx['hotels|hd:' + v + '|' + d]); });
+      else if (ty === 'date') u = knownHotels.some(function (h) { return unseenRel(cs._s.idx['hotels|hd:' + h + '|' + v]); });
+      else u = (TYPE_SYS[ty] || []).some(function (sys) { return unseenRel(cs._s.idx[sys + '|' + ty + ':' + v]); });
+      tokUseful[k] = u;
+      return u;
+    }
+    var out = [];
+    cands.forEach(function (c) {
+      if (limit !== undefined && c.cost > limit) return;
+      var ents = cs._peek(c.sys, c.key);
+      var g = 0, gt = 0, newT = {};
+      for (var i = 0; i < ents.length; i++) {
+        if (!cs._s.seen[ents[i]._id] && relevant(W, ents[i])) g++;
+      }
+      c.fresh = g;
+      if (!g) {
+        for (var j = 0; j < ents.length; j++) {
+          if (ents[j]._bg) continue;
+          entryTokens(W, ents[j]).forEach(function (t) { var k = t[0] + ':' + t[1]; if (!newT[k] && useful(t[0], t[1])) { newT[k] = 1; gt++; } });
+        }
+        g = gt * 0.01;
+      }
+      if (!g) return;
+      var qk = c.sys + '|' + JSON.stringify(c.key);
+      c.again = !!queried[qk];
+      if (queried[qk]) g *= 0.25; // re-pulling a key is rarely worth it
+      c.g = g;
+      c.score = g / c.cost - c.order * 1e-6;
+      out.push(c);
+    });
+    return out;
+  }
+  CX._scorePulls = scorePulls;
+
   // ------------------------------------------------------------ the oracle loop
   CX.solveWorld = function (W, o) {
     o = o || {};
@@ -412,25 +472,12 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var K = K0();
     absorb(K, cs.inbox());
     var lastDay = W.D - 2;
-    var cap = Math.min(DATA.DAY_HOURS, o.dayCap || DATA.DAY_HOURS);
-    var reserve = DATA.DAY_HOURS - cap;
+    var dayH = cs.dayHours;
+    var cap = Math.min(dayH, o.dayCap || dayH);
+    var reserve = dayH - cap;
     var queried = {};
     var st = { queries: 0, hours: 0, solvedDay: null, hoursAtSolve: null, methodDay: null, eventDay: null, linkDay: null };
     var ev = null, dv = null;
-    var tokenOrder = {};
-    function candidates() {
-      var toks = cs.knownTokens();
-      toks.forEach(function (t, i) { var k = t.t + ':' + t.v; if (tokenOrder[k] === undefined) tokenOrder[k] = i; });
-      var out = [];
-      var dates = toks.filter(function (t) { return t.t === 'date'; });
-      toks.forEach(function (t) {
-        CX.SYSTEMS.forEach(function (S) {
-          if (S.keys.indexOf(t.t) >= 0) out.push({ sys: S.id, key: { t: t.t, v: t.v }, cost: S.hours, order: tokenOrder[t.t + ':' + t.v] });
-        });
-        if (t.t === 'hotel') dates.forEach(function (d) { out.push({ sys: 'hotels', key: { t: 'hotel+date', hotel: t.v, date: +d.v }, cost: 1, order: tokenOrder['hotel:' + t.v] + 0.5 }); });
-      });
-      return out;
-    }
     for (;;) {
       // spend the day
       for (;;) {
@@ -441,41 +488,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         if (ev.eventOK && st.eventDay === null) st.eventDay = cs.day;
         if (ev.linkOK && st.linkDay === null) st.linkDay = cs.day;
         var best = null, bestScore = 0;
-        var tokUseful = {};
-        var knownDates = cs.knownTokens().filter(function (t) { return t.t === 'date'; }).map(function (t) { return +t.v; });
-        var knownHotels = cs.knownTokens().filter(function (t) { return t.t === 'hotel'; }).map(function (t) { return t.v; });
-        function unseenRel(list) { return (list || []).some(function (e) { return !cs._s.seen[e._id] && relevant(W, e) && !(e._day >= cs.day) && !(e._step && cs._blocked(e._step)); }); }
-        function useful(ty, v) {
-          var k = ty + ':' + v;
-          if (tokUseful[k] !== undefined) return tokUseful[k];
-          var u = false;
-          if (cs.holds(ty, v)) u = false;
-          else if (ty === 'hotel') u = knownDates.some(function (d) { return unseenRel(cs._s.idx['hotels|hd:' + v + '|' + d]); });
-          else if (ty === 'date') u = knownHotels.some(function (h) { return unseenRel(cs._s.idx['hotels|hd:' + h + '|' + v]); });
-          else u = (TYPE_SYS[ty] || []).some(function (sys) { return unseenRel(cs._s.idx[sys + '|' + ty + ':' + v]); });
-          tokUseful[k] = u;
-          return u;
-        }
-        candidates().forEach(function (c) {
-          if (c.cost > cs.hoursLeft - reserve) return;
-          var ents = cs._peek(c.sys, c.key);
-          var g = 0, gt = 0, newT = {};
-          for (var i = 0; i < ents.length; i++) {
-            if (!cs._s.seen[ents[i]._id] && relevant(W, ents[i])) g++;
-          }
-          if (!g) {
-            for (var j = 0; j < ents.length; j++) {
-              if (ents[j]._bg) continue;
-              entryTokens(W, ents[j]).forEach(function (t) { var k = t[0] + ':' + t[1]; if (!newT[k] && useful(t[0], t[1])) { newT[k] = 1; gt++; } });
-            }
-            g = gt * 0.01;
-          }
-          if (!g) return;
-          var qk = c.sys + '|' + JSON.stringify(c.key);
-          if (queried[qk]) g *= 0.25; // re-pulling a key is rarely worth it
-          var score = g / c.cost - c.order * 1e-6;
-          if (score > bestScore) { bestScore = score; best = c; }
-        });
+        scorePulls(cs, queried, cs.hoursLeft - reserve).forEach(function (c) { if (c.score > bestScore) { bestScore = c.score; best = c; } });
         if (!best) break;
         queried[best.sys + '|' + JSON.stringify(best.key)] = true;
         var r = cs.query(best.sys, best.key);
@@ -491,23 +504,28 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var fin = evaluate(cs, K, dv, true);
     return {
       solved: st.solvedDay !== null, day: st.solvedDay, D: W.D, hours: st.hoursAtSolve !== null ? st.hoursAtSolve : st.hours,
-      available: DATA.DAY_HOURS * (lastDay + 1), cap: cap, queries: st.queries, docs: cs.inbox().length,
+      available: dayH * (lastDay + 1), cap: cap, dayHours: dayH, queries: st.queries, docs: cs.inbox().length,
       methodDay: st.methodDay, eventDay: st.eventDay, linkDay: st.linkDay,
       minClues: fin.minClues, clues: fin.clues, warrants: fin.warrants, fails: fin.fails.slice(0, 12), roleWrong: fin.roleWrong,
       linkOK: fin.linkOK, methodOK: fin.methodOK, eventOK: fin.eventOK, warrantOK: fin.warrantOK,
       _cs: o.keep ? cs : undefined, _K: o.keep ? K : undefined
     };
   };
+  CX._K0 = K0; CX._absorb = absorb; CX._relevant = relevant;
 
   // ------------------------------------------------------------ verified case creation
   CX.MAX_ATTEMPTS = 25;
+  // Acceptance per grade (DATA.LEVELS): the ideal analyst must solve the case with acceptCap
+  // of the daily team-hours, and must NOT be able to with easyCap (0 = no floor).
+  // Standard grade: 9 of 16 (56%), not with 3.
   CX.ACCEPT_CAP = 9;
-  CX.EASY_CAP = 3; // the ideal analyst must solve it with 9 of the 16 daily team-hours (56%)
+  CX.EASY_CAP = 3;
   /** smallest daily budget (team-hours) with which the ideal analyst solves the case by D-2, or null */
   CX.minDailyHours = function (W) {
-    var lo = 1, hi = DATA.DAY_HOURS, best = null, rep;
+    var LV = W.LV || CX.level();
+    var lo = 1, hi = W.dayHours || DATA.DAY_HOURS, best = null, rep;
     rep = CX.solveWorld(W, { dayCap: hi });
-    if (!rep.solved) { hi = CX.ACCEPT_CAP; rep = CX.solveWorld(W, { dayCap: hi }); if (!rep.solved) return { hours: null, rep: rep }; }
+    if (!rep.solved) { hi = LV.acceptCap; rep = CX.solveWorld(W, { dayCap: hi }); if (!rep.solved) return { hours: null, rep: rep }; }
     best = hi; var bestRep = rep;
     while (lo <= hi) {
       var mid = (lo + hi) >> 1;
@@ -519,15 +537,16 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   CX.newCase = function (seed, opts) {
     opts = opts || {};
     seed = String(seed);
+    var LV = CX.level(opts.level);
     var last = null;
     for (var a = 0; a < CX.MAX_ATTEMPTS; a++) {
       var gs = a ? seed + '#' + a : seed;
       var W;
       try { W = CX.buildWorld(gs, opts); CX.makeTraces(W); }
       catch (e) { last = { error: e.message }; continue; }
-      var rep = CX.solveWorld(W, { dayCap: CX.ACCEPT_CAP });
-      // not too easy either: an analyst with only 3 hours a day must not be able to crack it
-      if (rep.solved && CX.solveWorld(W, { dayCap: CX.EASY_CAP }).solved) { last = rep; last.tooEasy = true; continue; }
+      var rep = CX.solveWorld(W, { dayCap: LV.acceptCap });
+      // not too easy either: an analyst with only easyCap hours a day must not be able to crack it
+      if (rep.solved && LV.easyCap && CX.solveWorld(W, { dayCap: LV.easyCap }).solved) { last = rep; last.tooEasy = true; continue; }
       if (rep.solved) {
         var cs = CX.caseFromAttempt(seed, opts, a);
         Object.defineProperty(cs, '_verify', { value: rep, enumerable: false });

@@ -77,7 +77,7 @@ input,select,textarea{font:inherit;color:inherit}
 .tb-date b{font:700 15px var(--f-type);letter-spacing:.02em;color:var(--ui);white-space:nowrap}
 .tb-date span{font-size:11px;color:var(--dim);letter-spacing:.06em;white-space:nowrap}
 .tb-hours{display:flex;align-items:center;gap:8px;margin-left:auto}
-.pips{display:grid;grid-template-columns:repeat(8,5px);gap:2px}
+.pips{display:grid;grid-template-columns:repeat(var(--pc,8),5px);gap:2px}
 .pip{width:5px;height:6px;border-radius:1px;background:#3a3f39}
 .pip.on{background:var(--brass2);box-shadow:0 0 4px rgba(240,197,108,.5)}
 .tb-hnum{font:700 16px var(--f-type);color:var(--brass2);min-width:30px;text-align:right}
@@ -478,6 +478,87 @@ input,select,textarea{font:inherit;color:inherit}
 .db-ctrl{z-index:3;position:sticky;bottom:0;display:flex;gap:8px;justify-content:center;padding:12px 0 calc(8px + var(--safe-b));background:linear-gradient(transparent,var(--desk) 40%)}
 
 /* ---------- desktop ---------- */
+/* ---------- grade (title) ---------- */
+.t-gradeblk{align-items:flex-start}
+.t-gradeblk>b{padding-top:11px}
+.t-grade-w{flex:1;min-width:0}
+.t-grade{display:flex;border:1px solid #5a4526;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.18)}
+.t-grade button{flex:1;min-height:40px;padding:4px 4px;font:600 12.5px/1.15 var(--f-type);color:#2b2112;border-right:1px solid #5a4526}
+.t-grade button:last-child{border-right:0}
+.t-grade button.on{background:#2b2112;color:#f0dcaa}
+.t-gblurb{display:block;font:italic 13.5px/1.4 var(--f-serif);color:#3d301a;margin-top:7px}
+
+/* ---------- cross-reference marks ---------- */
+.tk.xk{border-bottom-style:solid;border-bottom-color:rgba(35,63,120,.7)}
+.xr{position:relative;display:inline-block;min-width:15px;height:15px;padding:0 3px;margin-left:2px;border-radius:8px;background:#233f78;color:#f6f1e3;
+  font:700 9.5px/15px var(--f-ui);letter-spacing:0;text-align:center;vertical-align:4px;cursor:pointer;text-transform:none;text-decoration:none;font-style:normal}
+.xr::after{content:"";position:absolute;inset:-10px -7px}
+.xr:hover{background:#2f5299}
+.hand .xr{vertical-align:6px}
+.xr-row{margin:10px 12px 14px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#1b1f1c}
+.xr-tok{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;width:100%;padding:10px 12px;text-align:left;background:#222823;border-bottom:1px solid var(--line)}
+.xr-tok b{font:600 14px var(--f-type);color:var(--brass2);word-break:break-word;flex:1;min-width:0}
+.xr-ty{font:600 9.5px var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);flex:none;width:100%}
+.xr-mine{font:italic 11.5px var(--f-serif);color:var(--dim)}
+.pop-na{display:flex;align-items:center;gap:8px;width:100%;margin:-4px 0 12px;padding:8px 10px;border:1px dashed #5a4a28;border-radius:8px;color:var(--brass2);font-size:13px;text-align:left}
+.pop-na svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.xr-n{font:700 11px var(--f-ui);color:#f6f1e3;background:#233f78;border-radius:9px;padding:2px 7px;flex:none}
+.xr-doc{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:6px 12px;text-align:left;border-top:1px solid #262c27;font-size:13.5px;color:var(--ui2)}
+.xr-doc:first-of-type{border-top:0}
+.xr-doc.sel{background:#2a2517}
+.xr-doc:active{background:#2a302b}
+.xr-sys{font:700 10.5px var(--f-type);color:var(--brass2);width:30px;flex:none}
+.xr-tt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xr-dt{font:11.5px var(--f-type);color:var(--dim);flex:none}
+
+/* ---------- night desk ---------- */
+.tb-na{flex:none;width:38px;height:38px;display:grid;place-items:center;border-radius:6px;border:1px solid var(--line2);background:#1c201d;color:var(--ui2);position:relative}
+.tb-na svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tb-na.fresh{color:var(--brass2);border-color:#5a4a28}
+.tb-na.fresh::after{content:"";position:absolute;right:4px;top:4px;width:6px;height:6px;border-radius:50%;background:var(--brass2);box-shadow:0 0 6px rgba(240,197,108,.8)}
+.na-card{display:flex;gap:12px;align-items:flex-start;background:var(--paper);background-image:var(--noise);color:var(--ink);border-radius:3px;padding:12px 14px;margin:4px 0 12px;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+.na-card b{font:700 15px var(--f-type)}
+.na-card small{display:block;font:600 9.5px var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:#6e6453;margin-top:1px}
+.na-card p{margin:6px 0 0;font:italic 13.5px/1.4 var(--f-serif);color:var(--ink2)}
+.na-face{width:52px;height:60px;flex:none;background:#e3d9c1;border:1px solid #b9ad95;padding:3px}
+.na-note{position:relative;background:#fbf6e6;background-image:var(--noise);color:var(--ink);padding:12px 14px 12px;margin:0 0 12px;box-shadow:0 5px 14px rgba(0,0,0,.45);border-left:3px solid #d8c9a4}
+.na-note.fresh{animation:nanote .45s cubic-bezier(.2,1.2,.4,1) both}
+@keyframes nanote{from{opacity:0;transform:translateY(-10px) rotate(-1.5deg)}}
+.na-note .hand{font-size:18px;line-height:1.4;margin:2px 0 0}
+.na-note.na-no{background:#efe7d3}
+.na-meta{font:600 9.5px var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:#6e6453}
+.na-sig{display:block;text-align:right;font:16px var(--f-hand);color:#1d3a7a;margin-top:-2px}
+.na-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.na-btns .btn:not(.primary){background:#e3d9c1;border-color:#b9ad95;color:var(--ink)}
+.na-tier.armed{background:#3a2a17}
+.na-tier.armed .tx b{color:var(--brass2)}
+.na-mini{background:#1d211e;border:1px solid var(--line);border-radius:10px;padding:12px}
+.na-mini-hd{display:flex;gap:10px;align-items:center}
+.na-mini-hd .na-face{width:40px;height:46px}
+.na-mini-hd b{font:700 14px var(--f-type)}
+.na-mini-hd small{display:block;color:var(--dim);font-size:12px}
+.na-last{margin:10px 0;font-size:13px;line-height:1.45}
+p.hand.na-last{font-size:17px;line-height:1.35;color:#c9d6f2}
+.na-mini .btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+@media (max-width:430px){
+  #topbar{gap:7px;padding-left:12px;padding-right:8px}
+  .tb-hours{gap:5px}
+  .pips{grid-template-columns:repeat(var(--pc,8),3px);gap:2px 1px}
+  .pip{width:3px}
+  .tb-hnum{min-width:24px}
+  .tb-na{width:34px}
+  .tb-end{padding:0 10px}
+}
+/* ---------- settings rows ---------- */
+.set-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;background:#1d211e;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+.set-row>div{flex:1;min-width:0}
+.set-row b{display:block;font-weight:600}
+.set-row small{display:block;color:var(--dim);font-size:12.5px;margin-top:2px}
+.sw{flex:none;width:44px;height:26px;border-radius:13px;background:#3a3f39;position:relative;transition:background .15s}
+.sw i{position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#b9b19e;transition:transform .15s}
+.sw.on{background:#7a5f2a}
+.sw.on i{transform:translateX(18px);background:var(--brass2)}
 @media (min-width:900px){
   :root{--top:56px}
   #tabbar{display:none}
@@ -1087,11 +1168,32 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     KEYS: { hotels: ['name', 'passport', 'hotel+date'], border: ['name', 'passport', 'plate'], airline: ['name', 'flight'], phones: ['number'],
       bank: ['account', 'company'], vehicles: ['plate'], residents: ['name', 'address'], companies: ['company'], archive: ['name'] },
     DAY_HOURS: 16,
+    // difficulty grades: generator options + solver acceptance thresholds (see 03-world.js, 07-solver.js).
+    // 'officer' is the original game and must keep generating exactly the same cases.
+    LEVELS: {
+      probationer: { id: 'probationer', label: 'Probationer', order: 0,
+        blurb: 'A small network, one false name each, a single red herring. Twenty team-hours a day and two extra days.',
+        dayHours: 20, extraDays: 2, small: true, oneAlias: true, herrings: 1, herringTraps: 0, decoys: 2,
+        informant: { supply: 1, namesBuyer: 0.85, meet: 0.35 }, disinfo: false,
+        acceptCap: 5, easyCap: 0, minClues: 1, xref: true },
+      officer: { id: 'officer', label: 'Case Officer', order: 1,
+        blurb: 'The standard file: a working network, aliases, a smuggling ring in the way. Sixteen team-hours a day.',
+        dayHours: 16, extraDays: 0, herringTraps: 1, informant: { supply: 0.8, namesBuyer: 0.5, meet: 0.18 },
+        acceptCap: 9, easyCap: 3, minClues: 2, xref: true },
+      head: { id: 'head', label: 'Head of Station', order: 2,
+        blurb: 'A bigger network with more identities, extra decoy events and a planted disinformation report. No hand-holding.',
+        dayHours: 16, extraDays: 0, big: true, moreAliases: true, herrings: 3, herringTraps: 2, extraDecoys: 2,
+        informant: { supply: 0.7, namesBuyer: 0.4, meet: 0.14 }, disinfo: true,
+        acceptCap: 12, easyCap: 5, minClues: 2, xref: false }
+    },
     fem: function (nat, sur) { var n = NAT[nat]; return n && n.fem ? n.fem(sur) : sur; }
   };
   CX.METHODS = METHODS;
   CX.ROLES = CX.DATA.ROLES;
 })();
+/** difficulty grade by id (defaults to the standard 'officer') */
+CX.level = function (id) { var L = CX.DATA.LEVELS; return L[id] || L.officer; };
+CX.LEVELS = ['probationer', 'officer', 'head'].map(function (k) { return CX.DATA.LEVELS[k]; });
 /* CUTOUT engine — 03-world.js
  * The generator: world (cities, hotels, venues), people (network, innocents,
  * herrings), identifiers (names, passports, phones, plates, accounts,
@@ -1110,8 +1212,11 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   CX.buildWorld = function (seed, opts) {
     opts = opts || {};
     var R = CX.rng('cutout:' + seed);
+    // difficulty grade. Every branch below keeps the RNG draw sequence of the
+    // standard grade ('officer') unchanged, so its cases stay identical.
+    var LV = CX.level(opts.level);
     var W = {
-      seed: String(seed), opts: opts, R: R,
+      seed: String(seed), opts: opts, R: R, level: LV.id, LV: LV, dayHours: LV.dayHours,
       persons: [], P: {}, nameOwner: {}, oldAliases: {},
       phones: {}, accounts: {}, companies: {}, vehicles: {}, hotels: {}, venues: {},
       events: [], steps: [], herringLinks: [], clues: [], tipSeeds: [],
@@ -1123,7 +1228,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     // ------------------------------------------------------------ basics
     W.startDom = opts.startDom || R.int(2, 20);
     W.cal = CX.Calendar(W.startDom);
-    W.D = opts.D || R.int(10, 14);
+    W.D = opts.D || (R.int(10, 14) + (LV.extraDays || 0));
     var D = W.D;
     var tKeys = Object.keys(DATA.TEMPLATES);
     W.templateKey = opts.template && DATA.TEMPLATES[opts.template] ? opts.template : R.pick(tKeys);
@@ -1270,11 +1375,15 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
 
     // network roles
     var roles = ['principal', 'cutout', 'operative'].concat(T.roles);
+    // small network: one specialist fewer (the forger, else the lookout)
+    if (LV.small && T.roles.length >= 3) { var drop = T.roles.indexOf('forger') >= 0 ? 'forger' : T.roles.indexOf('lookout') >= 0 ? 'lookout' : T.roles[T.roles.length - 1]; roles = roles.filter(function (r) { return r !== drop; }); }
     var opt = R.shuffle(T.opt);
     var nOpt = R.weighted([[0, 2], [1, 4], [2, 3]]);
+    if (LV.small) nOpt = 0;
+    if (LV.big) nOpt = Math.min(opt.length, 2 + (R.chance(0.4) ? 1 : 0));
     roles = roles.concat(opt.slice(0, nOpt));
-    if (roles.length >= 7 && R.chance(0.6)) roles.push('cutout');
-    var backup = R.chance(0.3);
+    if (roles.length >= 7 && R.chance(LV.big ? 0.9 : 0.6)) roles.push('cutout');
+    var backup = R.chance(LV.small ? 0 : LV.big ? 0.5 : 0.3);
     if (backup) roles.push('operative');
 
     var homeFor = {
@@ -1345,7 +1454,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     addPhone(P.officePhone, { kind: 'office', subscriber: frontName, address: frontAddr, city: principalCity, company: frontName });
     var rootAcc = mkAccountNo(principalCity);
     var principalAlias = null;
-    if (R.chance(0.5)) principalAlias = addAlias(P, P.nat);
+    if (R.chance(LV.moreAliases ? 0.8 : 0.5)) principalAlias = addAlias(P, P.nat);
     addAccount(rootAcc, { holder: frontName, holderKind: 'company', address: frontAddr, signatory: (principalAlias || P.idents[0]).name, company: frontName, pid: P.id, root: true });
     W.companies[frontName] = { name: frontName, city: principalCity, address: frontAddr, regNo: regNo(principalCity), founded: -R.int(900, 4000), directors: [(principalAlias || P.idents[0]).name], accounts: [rootAcc.no], notes: 'Foreign-trade enterprise; accounts abroad under licence.', pids: [P.id], front: true };
     W.rootAccount = rootAcc.no;
@@ -1383,13 +1492,13 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     // aliases for the rest of the network
     var O1 = addAlias(O, R.pick(['AT', 'DE', 'CH', 'NL', 'IT', 'FR', 'GB', 'YU', 'TR', 'PT']));
     var O2 = null;
-    if (net.forger || R.chance(0.6)) O2 = addAlias(O, R.pick(['AT', 'DE', 'CH', 'NL', 'IT', 'FR', 'GB', 'PT']));
+    if (!LV.oneAlias && (net.forger || R.chance(LV.moreAliases ? 1 : 0.6))) O2 = addAlias(O, R.pick(['AT', 'DE', 'CH', 'NL', 'IT', 'FR', 'GB', 'PT']));
     var Ob = net.backup ? addAlias(net.backup, R.pick(['AT', 'DE', 'CH', 'IT', 'FR'])) : null;
-    var Dr = net.driver ? (R.chance(0.65) ? addAlias(net.driver, net.driver.nat) : net.driver.idents[0]) : null;
-    var Cr = net.courier ? (R.chance(0.6) ? addAlias(net.courier, R.pick(['AT', 'DE', 'CH', 'NL', net.courier.nat])) : net.courier.idents[0]) : null;
-    var Lk = net.lookout ? (R.chance(0.3) ? addAlias(net.lookout, net.lookout.nat) : net.lookout.idents[0]) : null;
-    var Ch = net.chemist ? (R.chance(0.35) ? addAlias(net.chemist, net.chemist.nat) : net.chemist.idents[0]) : null;
-    var c2Alias = C2 ? (R.chance(0.6) ? addAlias(C2, C2.nat) : C2.idents[0]) : null;
+    var Dr = net.driver ? (R.chance(LV.moreAliases ? 0.9 : 0.65) ? addAlias(net.driver, net.driver.nat) : net.driver.idents[0]) : null;
+    var Cr = net.courier ? (R.chance(LV.moreAliases ? 0.9 : 0.6) ? addAlias(net.courier, R.pick(['AT', 'DE', 'CH', 'NL', net.courier.nat])) : net.courier.idents[0]) : null;
+    var Lk = net.lookout ? (R.chance(LV.moreAliases ? 0.7 : 0.3) ? addAlias(net.lookout, net.lookout.nat) : net.lookout.idents[0]) : null;
+    var Ch = net.chemist ? (R.chance(LV.moreAliases ? 0.7 : 0.35) ? addAlias(net.chemist, net.chemist.nat) : net.chemist.idents[0]) : null;
+    var c2Alias = C2 ? (R.chance(LV.moreAliases ? 0.9 : 0.6) ? addAlias(C2, C2.nat) : C2.idents[0]) : null;
     W.opIdents = { O1: O1, O2: O2 };
 
     // --------------------------------------------------- identity links
@@ -1432,7 +1541,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       var prob = { principal: 0.5, cutout: 0.4, operative: 0.5, armourer: 0.7, forger: 0.75, courier: 0.35, chemist: 0.3, driver: 0.25 }[p.role] || 0;
       if (!needs && !R.chance(prob)) return;
       var cardAliases = als.filter(function (a) { return a.links.indexOf('L3') >= 0; }).map(function (a) { return a.name; });
-      if (R.chance(0.5)) cardAliases.push(oldAlias(p));
+      if (R.chance(LV.oneAlias ? 0 : 0.5)) cardAliases.push(oldAlias(p));
       var summ = {
         principal: 'Believed to be an officer of a hostile service under trade cover. Travels rarely; prefers to be visited.',
         cutout: 'Commercial traveller with an unusual number of border crossings. Suspected go-between for ' + R.pick(['a Middle Eastern group', 'an Eastern service', 'arms brokers']) + '.',
@@ -1582,6 +1691,45 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       }
       return true;
     };
+    // grade: extra decoys (each fails at least one planned clue, so the plot stays separable)
+    for (var xd = 0; xd < (LV.extraDecoys || 0); xd++) {
+      for (var tries = 0; tries < 12; tries++) {
+        var cX = R.pick(W.cities), vX = venuesIn(cX, kindsFor(subjKind), actVenue.key);
+        if (!vX.length) continue;
+        var sX = mkSubject(subjKind, R.chance(0.5) ? targetSubj.trait.cat : otherCat(targetSubj.trait.cat));
+        if (!sX) continue;
+        var cand = { id: 'tmp', subject: sX, venue: R.pick(vX), city: cX, day: R.pick([D - 1, D, D + 1, dayOutsideWindow()]) };
+        cand.city = W.venues[cand.venue].city;
+        if (planned.every(function (c) { return W.eventMatches(cand, c); })) continue;
+        mkEvent(sX, cand.venue, cand.day, false);
+        break;
+      }
+    }
+    // grade: fewer decoys. Keep the subset whose planned clues still need to be combined.
+    if (LV.decoys) {
+      var decoys = W.events.filter(function (e) { return !e.real; });
+      if (decoys.length > LV.decoys) {
+        var need = function (evs) {
+          for (var size = 1; size <= planned.length; size++) {
+            var hit = false;
+            (function rec(start, chosen) {
+              if (hit) return;
+              if (chosen.length === size) { if (evs.filter(function (ev) { return chosen.every(function (c) { return W.eventMatches(ev, c); }); }).length === 1) hit = true; return; }
+              for (var i = start; i < planned.length; i++) rec(i + 1, chosen.concat([planned[i]]));
+            })(0, []);
+            if (hit) return size;
+          }
+          return 99;
+        };
+        var best = null, bestN = -1;
+        for (var i1 = 0; i1 < decoys.length; i1++) for (var i2 = i1 + 1; i2 < decoys.length; i2++) {
+          var keep = [decoys[i1], decoys[i2]];
+          var n = need([realEvent].concat(keep));
+          if (n > bestN) { bestN = n; best = keep; }
+        }
+        W.events = [realEvent].concat(best);
+      }
+    }
     var survivors = W.events.filter(function (ev) { return planned.every(function (c) { return W.eventMatches(ev, c); }); });
     if (survivors.length !== 1) throw new Error('decoys not separable');
     W.events = R.shuffle(W.events);
@@ -1828,7 +1976,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         var acqTime = T_(10 * 60, 19 * 60);
         if (t && t.stay && d === t.stay.from) acqTime = Math.min(22 * 60, t.stay.time + R.int(60, 180));
         it.buyer = buyer; it.buyerName = bIdent.name;
-        it.step = step('acquire', d, acqTime, 'logistics', { item: it.key, itemName: it.name, mode: 'supplier', city: S.homeCity, informant: R.chance(0.8), namesBuyer: R.chance(0.5) });
+        it.step = step('acquire', d, acqTime, 'logistics', { item: it.key, itemName: it.name, mode: 'supplier', city: S.homeCity, informant: R.chance(LV.informant.supply), namesBuyer: R.chance(LV.informant.namesBuyer) });
         it.step.parts = [part(buyer, bIdent, buyer.role), part(S, S.idents[0], S.role)];
         coPay(d + R.int(0, 1), S.account, { weapon: 12, optics: 4, chemical: 8, device: 5, explosive: 15, tools: 3, 'vehicle-work': 6 }[it.cat] * 1000, R.pick(DATA.ITEMS[it.key].ref).replace('{n}', R.num(4)), S, { item: it.key, purpose: 'supply' });
       } else if (it.mode === 'theft') {
@@ -2092,7 +2240,9 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
           if (dest) {
             var d4 = R.int(-6, D - 5);
             var t4 = trip(p, a, p.homeCity, dest, d4, { plate: p.car, nights: 1, role: p.role, phase: 'logistics' });
-            trip(p, a, dest, p.homeCity, d4 + 1, { plate: p.car, noStay: true, role: p.role, bookedDay: d4 });
+            // come back the day after arriving (trip() may have moved the journey to a free slot)
+            var back4 = t4.stay ? t4.stay.to : t4.travel.day + 1;
+            trip(p, a, dest, p.homeCity, back4, { plate: p.car, noStay: true, role: p.role, bookedDay: back4 - 1 });
             var hnd = p.role === 'cutout' ? P : handlerOf(p);
             if (t4.stay) call(d4, { num: hotelLine(t4.stay), p: p, ident: a, stay: t4.stay }, { num: hnd === P ? P.officePhone : hnd.phone, p: hnd, ident: hnd.idents[0] }, { phase: 'logistics' });
           }
@@ -2141,6 +2291,8 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         // a freshly forged identity: the forger recycled the number of an earlier passport
         var prevA = als.filter(function (b) { return b !== a && real[b.name] && passportUse(b.name); })[0];
         if (a.fresh && prevA && passportUse(a.name)) { a.passport = prevA.passport; a.links.push('L1'); real[a.name] = true; return; }
+        // a slip on a registration form: real home address and date of birth
+        if ((a.fresh || R.chance(0.5)) && usedIn(a.name, ['stay', 'hire'])) { a.home = p.address; a.dob = p.dob; a.links.push('L2'); real[a.name] = true; return; }
         // fall back to an archive card that lists this alias
         if (!p.card) p.card = { summary: { operative: 'Believed to have used several identities in the Middle East and Central Europe.', cutout: 'Commercial traveller; cross-referenced from a 1986 enquiry into travel documents.', driver: 'Cross-referenced from a customs enquiry into rental cars taken abroad.', courier: 'Cash courier; cross-referenced from customs declarations.' }[p.role] || 'Cross-referenced from an earlier enquiry.', aliases: [], associates: [], photo: R.chance(0.5) };
         if (p.card.aliases.indexOf(a.name) < 0) p.card.aliases.push(a.name);
@@ -2153,6 +2305,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var goods = R.pick(DATA.FLAVOUR.herringGoods);
     W.herringGoods = goods;
     var hN = R.int(2, 3);
+    if (LV.herrings) hN = LV.herrings;
     var hCities = R.shuffle(W.cities);
     var ring = [];
     for (var hi = 0; hi < hN; hi++) {
@@ -2170,19 +2323,20 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       var hd = R.int(-6, D - 3);
       var ht = trip(h, h.idents[0], h.homeCity, dest, hd, { nights: R.int(1, 2), role: 'herring', phase: 'herring', plate: h.car && landLink(h.homeCity, dest) && cc(h.homeCity) !== cc(dest) ? h.car : null });
       if (ht.stay) call(hd, { num: hotelLine(ht.stay), p: h, ident: h.idents[0], stay: ht.stay }, { num: ring[(i + 1) % ring.length].phone, p: ring[(i + 1) % ring.length], ident: ring[(i + 1) % ring.length].idents[0] }, { phase: 'herring' });
-      if (i === 0) {
+      if (i === 0 && ring.length > 1) {
         call(R.int(0, D - 4), { num: h.phone, p: h, ident: h.idents[0] }, { num: ring[1].phone, p: ring[1], ident: ring[1].idents[0] }, { phase: 'herring', intercept: { service: R.pick(['BfV', 'Staatspolizei', 'Zollfahndung']), lines: [{ spk: 'A', text: goods.code + ' arrive ' + CX.WEEKDAYS[R.int(0, 6)] }, { spk: 'B', text: 'same place as last time?' }, { spk: 'A', text: R.pick(['not on the phone', 'the usual price', 'bring the van, not the car']) }], lag: 1 } });
         var hp2 = pay(R.int(-4, D - 4), h.account, ring[1].account, amt(8000), R.pick([goods.ref.replace('{n}', R.num(4)), 'Darlehen', 'Rückzahlung']), [part(h, h.idents[0], 'herring'), part(ring[1], ring[1].idents[0], 'herring')], { phase: 'herring' });
         hp2.cur = curOf(h.account);
       }
     });
-    step('seizure', R.int(0, D - 4), T_(6 * 60, 23 * 60), 'herring', { goods: goods, city: ring[1].homeCity, plate: ring[1].car || null }).parts = [part(ring[1], ring[1].idents[0], 'herring')];
+    var ringB = ring[ring.length > 1 ? 1 : 0];
+    step('seizure', R.int(0, D - 4), T_(6 * 60, 23 * 60), 'herring', { goods: goods, city: ringB.homeCity, plate: ringB.car || null }).parts = [part(ringB, ringB.idents[0], 'herring')];
 
     // tempting false link 1: same surname, same hotel, overlapping night
     var bait = OA;
     var baitStay = reconStay && reconStay.parts[0].name === OA.name ? reconStay : W.steps.filter(function (s) { return s.kind === 'stay' && s.parts[0].name === bait.name; })[0];
     if (!baitStay) { bait = c1Alias; baitStay = W.steps.filter(function (s) { return s.kind === 'stay' && s.parts[0].name === c1Alias.name; })[0]; }
-    if (baitStay) {
+    if (baitStay && LV.herringTraps) {
       var surname = bait.name.split(' ').slice(1).join(' ');
       var hs0 = ring[0];
       var twin = mkPerson('herring', bait.nat, R.pick(W.cities), { surname: surname.replace(/ová$|á$/, ''), sex: 'm' });
@@ -2196,7 +2350,9 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       W.herringLinks.push({ type: 'surname', herring: twin.real, herringPid: twin.id, bait: bait.name, baitPid: bait.pid, hotel: baitStay.hotel, night: baitStay.from, stayId: tw.id });
     }
     // tempting false link 2: similar company name at the same bank / or wrong informant
-    if (R.chance(0.5)) {
+    // (none for the easiest grade; both for the hardest)
+    var trap2 = LV.herringTraps ? R.chance(0.5) : null;
+    if (trap2 === true || (trap2 === false && LV.herringTraps > 1)) {
       var cov = W.companies[W.coverCompany];
       var hCo = cov.name.replace(/^(\S+)/, function (m) { return m; }).replace(/Import-Export|Handels|Maschinen-Handel|Consulting|Transport|Trading|Technik-Vertrieb/, function (m) { return R.pick(['Handel', 'Export', 'Spedition', 'Warenhandel', 'Vertrieb'].filter(function (x) { return x !== m; })); });
       if (!used.company[hCo]) {
@@ -2209,7 +2365,8 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         var hp3 = pay(R.int(-3, D - 4), hAcc.no, owner.account, amt(6000), 'Privatentnahme', [part(owner, owner.idents[0], 'herring')], { phase: 'herring' }); hp3.cur = curOf(hAcc.no);
         W.herringLinks.push({ type: 'company', herring: owner.real, herringPid: owner.id, company: hCo, bait: W.coverCompany });
       }
-    } else {
+    }
+    if (trap2 === false || (trap2 === true && LV.herringTraps > 1)) {
       var wrongTarget = ring[R.int(0, ring.length - 1)];
       while (wrongTarget.dob === c1Alias.dob) { wrongTarget.dob = mkDob(1935, 1965); wrongTarget.idents[0].dob = wrongTarget.dob; }
       W.herringLinks.push({ type: 'informant', herring: wrongTarget.real, herringPid: wrongTarget.id, bait: c1Alias.name, day: R.int(2, D - 4) });
@@ -2467,7 +2624,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
           break;
         }
         case 'meet': {
-          if (net && R.chance(0.18) && s.day >= -3) {
+          if (net && R.chance(W.LV ? W.LV.informant.meet : 0.18) && s.day >= -3) {
             var who = s.parts[R.int(0, s.parts.length - 1)];
             var other = s.parts.filter(function (q) { return q !== who; })[0];
             push(s.day + R.int(1, 2), base({ r: 'informant', kind: 'meet', day: s.day, source: R.pick(DATA.FLAVOUR.informants), name: who.name, body: [
@@ -2647,6 +2804,29 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       L(R.pick(['Source asks to be paid in Deutschmarks this time.', 'Source adds that it is "a big one this month".', 'Source thinks there may be "political people" in it. Source always thinks that.']))
     ], _pids: [hr.id], _herring: true });
 
+    // ------------------------------------------------------ disinformation (hardest grade)
+    // A plausible partner-service report that points at a decoy event and at a
+    // member of the smuggling ring. Nothing in the records supports it.
+    if (W.LV && W.LV.disinfo) {
+      // a decoy still ahead when the telex arrives (a report about last week would be no trap)
+      var decoys = W.events.filter(function (ev) { return !ev.real && ev.day >= 5; });
+      var dz = decoys.filter(function (ev) { return ev.subject.trait.cat === W.realEvent.subject.trait.cat || ev.city === W.actCity || ev.day === W.D; });
+      var fake = decoys.length ? R.pick(dz.length ? dz : decoys) : null;
+      var patsy = R.pick(W.herrings);
+      var dday = fake ? R.int(3, Math.max(3, Math.min(D - 4, fake.day - 2))) : 0;
+    }
+    if (W.LV && W.LV.disinfo && fake) {
+      var fv = W.venues[fake.venue];
+      var fsvc = R.pick(['SIS liaison, Vienna station', 'BND Pullach', 'DST Paris', 'SISDE Rome']);
+      push(dday, { r: 'liaison', kind: 'disinfo', day: dday, event: fake.id, name: patsy.real, body: [
+        L('TELEX — ROUTINE — FROM ', { t: 'txt', v: fsvc }, ' TO LIAISON DESK VIENNA — ', cal.telex(dday)),
+        L('Reference your enquiry. A well-placed source (reliability B, ', R.pick(['two years\' reporting', 'recruited 1987', 'handled by our Bonn office']), ') states the operation is aimed at ', tk('target', fake.subject.name), ' during the ', fake.type || 'visit', ' at the ', { t: 'place', v: fake.venue, d: fv.name }, ', ', cityName(fake.city), ', on ', dateTok(fake.day), '.'),
+        L('The source names ', tk('name', patsy.real), ' as "the one who will do it" and says the team is already in place.'),
+        L(R.pick(['Source was paid on delivery and asked for more.', 'Source could not say how he came by the information.', 'We have not been able to corroborate. We pass it on in good faith.'])),
+        L('ENDS')
+      ], _pids: [patsy.id], _herring: true, _disinfo: true });
+    }
+
     // ------------------------------------------------------ noise traffic
     function pol(c) { return DATA.COUNTRY[ccOf(c)].police + ' ' + cityName(c); }
     var noiseT = [
@@ -2748,13 +2928,15 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   function Case(W, genSeed, attempt) {
     var self = this;
     Object.defineProperty(this, '_w', { value: W, enumerable: false });
-    Object.defineProperty(this, '_s', { value: { idx: {}, seen: {}, tokens: {}, tokenList: [], docs: [], docById: {}, bgHotel: {}, bgFlight: {}, arrests: {}, log: [], props: [], propN: 0, subjects: [], subjN: 0, queries: 0, hoursUsed: 0, wrongful: 0, warrants: [] }, enumerable: false });
+    Object.defineProperty(this, '_s', { value: { idx: {}, seen: {}, tokens: {}, tokenList: [], docs: [], docById: {}, bgHotel: {}, bgFlight: {}, arrests: {}, log: [], props: [], propN: 0, subjects: [], subjN: 0, queries: 0, hoursUsed: 0, wrongful: 0, warrants: [], hints: null }, enumerable: false });
     this.seed = W.seed.replace(/#\d+$/, '');
     this.genSeed = genSeed; this.attempt = attempt || 0;
     this.opts = W.opts;
+    this.level = W.level || 'officer';
+    this.levelLabel = CX.level(this.level).label;
     this.day = 0;
-    this.dayHours = DATA.DAY_HOURS;
-    this.hoursLeft = DATA.DAY_HOURS;
+    this.dayHours = W.dayHours || DATA.DAY_HOURS;
+    this.hoursLeft = this.dayHours;
     this.over = false; this.outcome = null; this.credibility = 100;
     this.startLabel = W.cal.long(0);
     buildIndex(this);
@@ -2766,7 +2948,12 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   CP.dateLabel = function (d) { return this._w.cal.nice(d); };
   CP.dateLong = function (d) { return this._w.cal.long(d); };
   CP.dmy = function (d) { return this._w.cal.dmy(d); };
-  CP.clock = function () { return CX.hm(8 * 60 + (this.dayHours - this.hoursLeft) * 60); };
+  /** desk time: the working day runs 08:00 until 23:59 however many team-hours the grade gives
+   *  (16 team-hours = one hour each; never wraps past midnight) */
+  CP.clock = function () {
+    var used = Math.max(0, this.dayHours - this.hoursLeft);
+    return CX.hm(Math.min(23 * 60 + 59, 8 * 60 + Math.round(used * 16 * 60 / this.dayHours)));
+  };
   CP.inbox = function () { return this._s.docs.slice(); };
   CP.doc = function (id) { return this._s.docById[id] || null; };
   CP.newSince = function (n) { return this._s.docs.slice(n); };
@@ -3257,6 +3444,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   CP._makeDoc = function (res, meta) { return makeDoc(this, res, meta); };
   var TRAFFIC_META = {
     tip: { style: 'telex', title: 'Telex from a partner service', from: 'Liaison traffic' },
+    liaison: { style: 'telex', title: 'Telex from a partner service', from: 'Liaison traffic' },
     intercept: { style: 'telex', title: 'Intercept transcript', from: 'Partner-service intercept' },
     police: { style: 'report', title: 'Police report', from: 'Police' },
     news: { style: 'news', title: 'Newspaper cutting', from: 'Press' },
@@ -3332,7 +3520,8 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   Object.defineProperty(CP, 'subjects', { get: function () { return this._s.subjects.slice(); } });
 
   // ------------------------------------------------------------ save / load
-  CP.save = function () { return JSON.stringify({ v: 1, seed: this.seed, attempt: this.attempt, opts: this.opts || {}, log: this._s.log }); };
+  // v2 adds opts.level (absent = the standard grade) and 'h' (hint) log entries; v1 saves load unchanged.
+  CP.save = function () { return JSON.stringify({ v: 2, seed: this.seed, attempt: this.attempt, opts: this.opts || {}, log: this._s.log }); };
   CX.load = function (json) {
     var o = typeof json === 'string' ? JSON.parse(json) : json;
     var cs = CX.caseFromAttempt(o.seed, o.opts || {}, o.attempt || 0);
@@ -3347,6 +3536,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         case 'sa': cs.addSubject(a[1]); break;
         case 'su': cs.updateSubject(a[1], a[2]); break;
         case 'sr': cs.removeSubject(a[1]); break;
+        case 'h': if (cs.hint) cs.hint(a[1]); break;
       }
     });
     return cs;
@@ -3570,6 +3760,12 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     if (s.wrongful) pts.push({ label: 'Wrongful warrant requests (' + s.wrongful + ')', pts: -20 * s.wrongful });
     if (out.prevented && out.daysToSpare) pts.push({ label: 'Days to spare (' + out.daysToSpare + ')', pts: 5 * out.daysToSpare });
     if (trapQuality) pts.push({ label: 'Trap well briefed (method/target)', pts: trapQuality });
+    var hu = s.hints && s.hints.used;
+    if (hu && (hu.nudge + hu.pointer + hu.direct)) {
+      var pen = CX.ANALYST ? CX.ANALYST.penalty : { nudge: 2, pointer: 5, direct: 10 };
+      var parts = []; ['nudge', 'pointer', 'direct'].forEach(function (k) { if (hu[k]) parts.push(hu[k] + ' ' + k + (hu[k] > 1 ? 's' : '')); });
+      pts.push({ label: 'Help from the night desk (' + parts.join(', ') + ')', pts: -(hu.nudge * pen.nudge + hu.pointer * pen.pointer + hu.direct * pen.direct) });
+    }
     out.scoreLines = pts;
     out.score = pts.reduce(function (a, b) { return a + b.pts; }, 0);
     out.summary = (out.prevented ? 'Prevented. ' : 'Not prevented. ') + out.how;
@@ -3635,7 +3831,9 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         var tr = (entriesByStep[st.id] || []).map(function (e) { return { sys: e._sys, seen: !!s.seen[e._id] }; });
         return { day: st.day, dateLabel: W.cal.nice(st.day), phase: st.phase, kind: st.kind, text: CX.stepText(W, st), traces: tr, seen: tr.some(function (t) { return t.seen; }), blocked: cs._blocked(st.id) };
       }),
-      stats: { docs: s.docs.length, queries: s.queries, hoursUsed: s.hoursUsed }
+      stats: { docs: s.docs.length, queries: s.queries, hoursUsed: s.hoursUsed },
+      level: { id: this.level, label: this.levelLabel },
+      hints: s.hints ? { used: CX.clone(s.hints.used), total: s.hints.used.nudge + s.hints.used.pointer + s.hints.used.direct, log: CX.clone(s.hints.log) } : { used: { nudge: 0, pointer: 0, direct: 0 }, total: 0, log: [] }
     };
   };
 })();
@@ -3775,11 +3973,13 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   // ------------------------------------------------------------ derivation
   function derive(K, cal) {
     var uf = new UF();
-    Object.keys(K.passports).forEach(function (p) { var n = Object.keys(K.passports[p]); for (var i = 1; i < n.length; i++) uf.union(n[0], n[i]); });
-    Object.keys(K.dobAddr).forEach(function (p) { var n = Object.keys(K.dobAddr[p]); for (var i = 1; i < n.length; i++) uf.union(n[0], n[i]); });
-    K.cards.forEach(function (c) { c.aliases.forEach(function (a) { uf.union(c.name, a); }); });
-    Object.keys(K.drivers).forEach(function (pl) { if (K.owner[pl]) Object.keys(K.drivers[pl]).forEach(function (d) { uf.union(K.owner[pl], d); }); });
-    Object.keys(K.payFor).forEach(function (a) { var ac = K.acct[a]; if (ac && ac.holderKind === 'personal') Object.keys(K.payFor[a]).forEach(function (n) { uf.union(ac.holder, n); }); });
+    var links = []; // {a, b, t, v}: the shared identifier that ties two names together
+    function U(a, b, t, v) { if (a === b) return; uf.union(a, b); links.push({ a: a, b: b, t: t, v: v }); }
+    Object.keys(K.passports).forEach(function (p) { var n = Object.keys(K.passports[p]); for (var i = 1; i < n.length; i++) U(n[0], n[i], 'passport', p); });
+    Object.keys(K.dobAddr).forEach(function (p) { var n = Object.keys(K.dobAddr[p]); for (var i = 1; i < n.length; i++) U(n[0], n[i], 'address', p.slice(p.indexOf('|') + 1)); });
+    K.cards.forEach(function (c) { c.aliases.forEach(function (a) { U(c.name, a, 'card', c.name); }); });
+    Object.keys(K.drivers).forEach(function (pl) { if (K.owner[pl]) Object.keys(K.drivers[pl]).forEach(function (d) { U(K.owner[pl], d, 'plate', pl); }); });
+    Object.keys(K.payFor).forEach(function (a) { var ac = K.acct[a]; if (ac && ac.holderKind === 'personal') Object.keys(K.payFor[a]).forEach(function (n) { U(ac.holder, n, 'account', a); }); });
 
     // hubs known now
     function hubNum(n) { var l = K.lines[n]; return l && (l.kind === 'hotel' || l.kind === 'business'); }
@@ -3936,7 +4136,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         })(0, []);
       }
     }
-    return { uf: uf, sus: sus, isSus: isSus, compRole: compRole, methods: mlist, events: evList, clues: clues, surv: surv, minClues: minClues, principalComp: principalComp };
+    return { uf: uf, links: links, sus: sus, isSus: isSus, compRole: compRole, methods: mlist, events: evList, clues: clues, surv: surv, minClues: minClues, principalComp: principalComp };
   }
   CX._derive = derive;
 
@@ -4018,7 +4218,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var warrantOK = warrants.indexOf('operative') >= 0 && warrants.length >= 3;
     // herrings must stay out of the suspect set
     W.herrings.forEach(function (h) { if (dv.isSus('N:' + h.real)) fails.push('HERRING SUSPECT ' + h.real); });
-    var solved = linkOK && !wrongMerge && methodOK && eventOK && warrantOK && (dv.minClues || 0) >= 2;
+    var solved = linkOK && !wrongMerge && methodOK && eventOK && warrantOK && (dv.minClues || 0) >= ((W.LV && W.LV.minClues) || 2);
     return { solved: solved, linkOK: linkOK, wrongMerge: wrongMerge, methodOK: methodOK, eventOK: eventOK, warrantOK: warrantOK, warrants: warrants, minClues: dv.minClues, roleWrong: roleWrong, fails: fails, clues: dv.clues.map(function (c) { return c.k; }) };
   }
 
@@ -4046,6 +4246,64 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   }
   var TYPE_SYS = {}; DATA.KEYS && Object.keys(DATA.KEYS).forEach(function (sys) { DATA.KEYS[sys].forEach(function (ty) { (TYPE_SYS[ty] = TYPE_SYS[ty] || []).push(sys); }); });
 
+  // ------------------------------------------------------------ pull scoring (the oracle)
+  /** every held key worth pulling now, scored by new case material per team-hour.
+   *  queried: {sys|key: true} already pulled; limit: max cost (hours) or undefined.
+   *  Uses the query index (truth about which records matter) but only ever
+   *  proposes keys the player holds and records that already exist. */
+  function scorePulls(cs, queried, limit) {
+    var W = cs._w;
+    var toks = cs.knownTokens();
+    var dates = [], knownDates = [], knownHotels = [];
+    toks.forEach(function (t) { if (t.t === 'date') { dates.push(t); knownDates.push(+t.v); } else if (t.t === 'hotel') knownHotels.push(t.v); });
+    var cands = [];
+    toks.forEach(function (t, i) {
+      CX.SYSTEMS.forEach(function (S) {
+        if (S.keys.indexOf(t.t) >= 0) cands.push({ sys: S.id, key: { t: t.t, v: t.v }, cost: S.hours, order: i, tok: t });
+      });
+      if (t.t === 'hotel') dates.forEach(function (d) { cands.push({ sys: 'hotels', key: { t: 'hotel+date', hotel: t.v, date: +d.v }, cost: 1, order: i + 0.5, tok: t, tok2: d }); });
+    });
+    var tokUseful = {};
+    function unseenRel(list) { return (list || []).some(function (e) { return !cs._s.seen[e._id] && relevant(W, e) && !(e._day >= cs.day) && !(e._step && cs._blocked(e._step)); }); }
+    function useful(ty, v) {
+      var k = ty + ':' + v;
+      if (tokUseful[k] !== undefined) return tokUseful[k];
+      var u = false;
+      if (cs.holds(ty, v)) u = false;
+      else if (ty === 'hotel') u = knownDates.some(function (d) { return unseenRel(cs._s.idx['hotels|hd:' + v + '|' + d]); });
+      else if (ty === 'date') u = knownHotels.some(function (h) { return unseenRel(cs._s.idx['hotels|hd:' + h + '|' + v]); });
+      else u = (TYPE_SYS[ty] || []).some(function (sys) { return unseenRel(cs._s.idx[sys + '|' + ty + ':' + v]); });
+      tokUseful[k] = u;
+      return u;
+    }
+    var out = [];
+    cands.forEach(function (c) {
+      if (limit !== undefined && c.cost > limit) return;
+      var ents = cs._peek(c.sys, c.key);
+      var g = 0, gt = 0, newT = {};
+      for (var i = 0; i < ents.length; i++) {
+        if (!cs._s.seen[ents[i]._id] && relevant(W, ents[i])) g++;
+      }
+      c.fresh = g;
+      if (!g) {
+        for (var j = 0; j < ents.length; j++) {
+          if (ents[j]._bg) continue;
+          entryTokens(W, ents[j]).forEach(function (t) { var k = t[0] + ':' + t[1]; if (!newT[k] && useful(t[0], t[1])) { newT[k] = 1; gt++; } });
+        }
+        g = gt * 0.01;
+      }
+      if (!g) return;
+      var qk = c.sys + '|' + JSON.stringify(c.key);
+      c.again = !!queried[qk];
+      if (queried[qk]) g *= 0.25; // re-pulling a key is rarely worth it
+      c.g = g;
+      c.score = g / c.cost - c.order * 1e-6;
+      out.push(c);
+    });
+    return out;
+  }
+  CX._scorePulls = scorePulls;
+
   // ------------------------------------------------------------ the oracle loop
   CX.solveWorld = function (W, o) {
     o = o || {};
@@ -4053,25 +4311,12 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var K = K0();
     absorb(K, cs.inbox());
     var lastDay = W.D - 2;
-    var cap = Math.min(DATA.DAY_HOURS, o.dayCap || DATA.DAY_HOURS);
-    var reserve = DATA.DAY_HOURS - cap;
+    var dayH = cs.dayHours;
+    var cap = Math.min(dayH, o.dayCap || dayH);
+    var reserve = dayH - cap;
     var queried = {};
     var st = { queries: 0, hours: 0, solvedDay: null, hoursAtSolve: null, methodDay: null, eventDay: null, linkDay: null };
     var ev = null, dv = null;
-    var tokenOrder = {};
-    function candidates() {
-      var toks = cs.knownTokens();
-      toks.forEach(function (t, i) { var k = t.t + ':' + t.v; if (tokenOrder[k] === undefined) tokenOrder[k] = i; });
-      var out = [];
-      var dates = toks.filter(function (t) { return t.t === 'date'; });
-      toks.forEach(function (t) {
-        CX.SYSTEMS.forEach(function (S) {
-          if (S.keys.indexOf(t.t) >= 0) out.push({ sys: S.id, key: { t: t.t, v: t.v }, cost: S.hours, order: tokenOrder[t.t + ':' + t.v] });
-        });
-        if (t.t === 'hotel') dates.forEach(function (d) { out.push({ sys: 'hotels', key: { t: 'hotel+date', hotel: t.v, date: +d.v }, cost: 1, order: tokenOrder['hotel:' + t.v] + 0.5 }); });
-      });
-      return out;
-    }
     for (;;) {
       // spend the day
       for (;;) {
@@ -4082,41 +4327,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         if (ev.eventOK && st.eventDay === null) st.eventDay = cs.day;
         if (ev.linkOK && st.linkDay === null) st.linkDay = cs.day;
         var best = null, bestScore = 0;
-        var tokUseful = {};
-        var knownDates = cs.knownTokens().filter(function (t) { return t.t === 'date'; }).map(function (t) { return +t.v; });
-        var knownHotels = cs.knownTokens().filter(function (t) { return t.t === 'hotel'; }).map(function (t) { return t.v; });
-        function unseenRel(list) { return (list || []).some(function (e) { return !cs._s.seen[e._id] && relevant(W, e) && !(e._day >= cs.day) && !(e._step && cs._blocked(e._step)); }); }
-        function useful(ty, v) {
-          var k = ty + ':' + v;
-          if (tokUseful[k] !== undefined) return tokUseful[k];
-          var u = false;
-          if (cs.holds(ty, v)) u = false;
-          else if (ty === 'hotel') u = knownDates.some(function (d) { return unseenRel(cs._s.idx['hotels|hd:' + v + '|' + d]); });
-          else if (ty === 'date') u = knownHotels.some(function (h) { return unseenRel(cs._s.idx['hotels|hd:' + h + '|' + v]); });
-          else u = (TYPE_SYS[ty] || []).some(function (sys) { return unseenRel(cs._s.idx[sys + '|' + ty + ':' + v]); });
-          tokUseful[k] = u;
-          return u;
-        }
-        candidates().forEach(function (c) {
-          if (c.cost > cs.hoursLeft - reserve) return;
-          var ents = cs._peek(c.sys, c.key);
-          var g = 0, gt = 0, newT = {};
-          for (var i = 0; i < ents.length; i++) {
-            if (!cs._s.seen[ents[i]._id] && relevant(W, ents[i])) g++;
-          }
-          if (!g) {
-            for (var j = 0; j < ents.length; j++) {
-              if (ents[j]._bg) continue;
-              entryTokens(W, ents[j]).forEach(function (t) { var k = t[0] + ':' + t[1]; if (!newT[k] && useful(t[0], t[1])) { newT[k] = 1; gt++; } });
-            }
-            g = gt * 0.01;
-          }
-          if (!g) return;
-          var qk = c.sys + '|' + JSON.stringify(c.key);
-          if (queried[qk]) g *= 0.25; // re-pulling a key is rarely worth it
-          var score = g / c.cost - c.order * 1e-6;
-          if (score > bestScore) { bestScore = score; best = c; }
-        });
+        scorePulls(cs, queried, cs.hoursLeft - reserve).forEach(function (c) { if (c.score > bestScore) { bestScore = c.score; best = c; } });
         if (!best) break;
         queried[best.sys + '|' + JSON.stringify(best.key)] = true;
         var r = cs.query(best.sys, best.key);
@@ -4132,23 +4343,28 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var fin = evaluate(cs, K, dv, true);
     return {
       solved: st.solvedDay !== null, day: st.solvedDay, D: W.D, hours: st.hoursAtSolve !== null ? st.hoursAtSolve : st.hours,
-      available: DATA.DAY_HOURS * (lastDay + 1), cap: cap, queries: st.queries, docs: cs.inbox().length,
+      available: dayH * (lastDay + 1), cap: cap, dayHours: dayH, queries: st.queries, docs: cs.inbox().length,
       methodDay: st.methodDay, eventDay: st.eventDay, linkDay: st.linkDay,
       minClues: fin.minClues, clues: fin.clues, warrants: fin.warrants, fails: fin.fails.slice(0, 12), roleWrong: fin.roleWrong,
       linkOK: fin.linkOK, methodOK: fin.methodOK, eventOK: fin.eventOK, warrantOK: fin.warrantOK,
       _cs: o.keep ? cs : undefined, _K: o.keep ? K : undefined
     };
   };
+  CX._K0 = K0; CX._absorb = absorb; CX._relevant = relevant;
 
   // ------------------------------------------------------------ verified case creation
   CX.MAX_ATTEMPTS = 25;
+  // Acceptance per grade (DATA.LEVELS): the ideal analyst must solve the case with acceptCap
+  // of the daily team-hours, and must NOT be able to with easyCap (0 = no floor).
+  // Standard grade: 9 of 16 (56%), not with 3.
   CX.ACCEPT_CAP = 9;
-  CX.EASY_CAP = 3; // the ideal analyst must solve it with 9 of the 16 daily team-hours (56%)
+  CX.EASY_CAP = 3;
   /** smallest daily budget (team-hours) with which the ideal analyst solves the case by D-2, or null */
   CX.minDailyHours = function (W) {
-    var lo = 1, hi = DATA.DAY_HOURS, best = null, rep;
+    var LV = W.LV || CX.level();
+    var lo = 1, hi = W.dayHours || DATA.DAY_HOURS, best = null, rep;
     rep = CX.solveWorld(W, { dayCap: hi });
-    if (!rep.solved) { hi = CX.ACCEPT_CAP; rep = CX.solveWorld(W, { dayCap: hi }); if (!rep.solved) return { hours: null, rep: rep }; }
+    if (!rep.solved) { hi = LV.acceptCap; rep = CX.solveWorld(W, { dayCap: hi }); if (!rep.solved) return { hours: null, rep: rep }; }
     best = hi; var bestRep = rep;
     while (lo <= hi) {
       var mid = (lo + hi) >> 1;
@@ -4160,15 +4376,16 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   CX.newCase = function (seed, opts) {
     opts = opts || {};
     seed = String(seed);
+    var LV = CX.level(opts.level);
     var last = null;
     for (var a = 0; a < CX.MAX_ATTEMPTS; a++) {
       var gs = a ? seed + '#' + a : seed;
       var W;
       try { W = CX.buildWorld(gs, opts); CX.makeTraces(W); }
       catch (e) { last = { error: e.message }; continue; }
-      var rep = CX.solveWorld(W, { dayCap: CX.ACCEPT_CAP });
-      // not too easy either: an analyst with only 3 hours a day must not be able to crack it
-      if (rep.solved && CX.solveWorld(W, { dayCap: CX.EASY_CAP }).solved) { last = rep; last.tooEasy = true; continue; }
+      var rep = CX.solveWorld(W, { dayCap: LV.acceptCap });
+      // not too easy either: an analyst with only easyCap hours a day must not be able to crack it
+      if (rep.solved && LV.easyCap && CX.solveWorld(W, { dayCap: LV.easyCap }).solved) { last = rep; last.tooEasy = true; continue; }
       if (rep.solved) {
         var cs = CX.caseFromAttempt(seed, opts, a);
         Object.defineProperty(cs, '_verify', { value: rep, enumerable: false });
@@ -4180,6 +4397,214 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var cs2 = CX.caseFromAttempt(seed, opts, 0);
     Object.defineProperty(cs2, '_verify', { value: last, enumerable: false });
     return cs2;
+  };
+})();
+/* CUTOUT engine — 08-analyst.js
+ * The night analyst: hints driven by the headless solver's knowledge, computed
+ * from the player's CURRENT holdings only (documents received, keys held,
+ * propositions filed). She never mentions a record that does not exist yet or
+ * a key the player does not hold; every deduction she states is true.
+ *
+ *  cs.hintStatus() -> {nudge:{ok, why}, pointer:{ok, cost, why}, direct:{ok, cost, why}, used, total, log}
+ *  cs.hint('nudge'|'pointer'|'direct') -> {ok:true, tier, text, refs, charged} | {ok:false, tier, text}
+ *    refs: {docs:[docId...], pull:{sys, key, label, cost}|null, prop:{type,...}|null}
+ *  Nudge: free, one per in-game day. Pointer: 2 team-hours. Direct: 10 credibility.
+ *  Nothing is charged (and nothing logged) when she has nothing useful to say.
+ */
+var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
+
+(function () {
+  'use strict';
+  var DATA = CX.DATA;
+  var CP = CX.Case.prototype;
+
+  CX.ANALYST = {
+    name: 'Ilse Kranich',
+    title: 'Night desk',
+    bio: 'Thirty-one years in the registry, two in Berlin she will not discuss. Takes her coffee black and her theories with evidence.',
+    costs: { nudge: 0, pointer: 2, direct: 10 },
+    penalty: { nudge: 2, pointer: 5, direct: 10 }
+  };
+  var COST = CX.ANALYST.costs;
+  var AREA = { hotels: 'where people slept', border: 'who crossed which border', airline: 'who flew where', phones: 'who rang whom', bank: 'the money', vehicles: 'the cars', residents: 'where people actually live', companies: 'the firms and who sits on their boards', archive: 'our own old file cards' };
+  var VIA = { passport: 'passport numbers', address: 'home addresses and dates of birth', card: 'alias index', plate: 'number plates', account: 'account numbers' };
+  var WHY = { passport: 'Both names travel on the same passport number', address: 'Same date of birth, same home address', card: 'Our own alias index lists both names', plate: 'The same car, and it is registered to one of them', account: 'The same bank account pays for both' };
+  var ROLE_RANK = { operative: 0, principal: 1, cutout: 2, driver: 3, armourer: 4, chemist: 4, forger: 5, 'inside-man': 5, financier: 6, lookout: 6, courier: 7 };
+
+  function hs(cs) { var s = cs._s; if (!s.hints) s.hints = { used: { nudge: 0, pointer: 0, direct: 0 }, nudgeDay: null, log: [] }; return s.hints; }
+
+  // ------------------------------------------------------------ what the ideal analyst sees in the player's papers
+  function analyse(cs) {
+    var W = cs._w, s = cs._s;
+    var K = CX._K0();
+    CX._absorb(K, s.docs);
+    var dv = CX._derive(K, W.cal);
+    var pidOf = function (n) { return CX.truthPid(W, n); };
+
+    // the player's own filings, as a union-find over names + roles + plot
+    var pf = {};
+    function find(x) { while (pf[x] !== undefined && pf[x] !== x) x = pf[x]; return x; }
+    var filedRole = {}, plot = {};
+    s.props.forEach(function (p) {
+      if (p.type === 'same') { var a = find(p.a), b = find(p.b); if (a !== b) pf[a] = b; }
+      else if (p.type === 'role') { var pid = pidOf(p.name); if (pid) filedRole[pid + '|' + p.role] = true; }
+      else if (p.type === 'plot') plot[p.field] = String(p.value);
+    });
+
+    var ded = [];
+    // alias links
+    var seenPair = {};
+    dv.links.forEach(function (l) {
+      if (!CX.propCorrect(W, { type: 'same', a: l.a, b: l.b })) return;
+      if (find(l.a) === find(l.b)) return;
+      var k = [l.a, l.b].sort().join('|'); if (seenPair[k]) return; seenPair[k] = 1;
+      var p = W.P[pidOf(l.a)];
+      ded.push({ kind: 'same', a: l.a, b: l.b, via: l, role: p.role, rank: 10 + (ROLE_RANK[p.role] || 8) * 2 });
+    });
+    // roles
+    var compNames = {};
+    Object.keys(K.names).forEach(function (n) { var c = dv.uf.find(n); (compNames[c] = compNames[c] || []).push(n); });
+    Object.keys(dv.compRole).forEach(function (c) {
+      var role = dv.compRole[c];
+      var names = (compNames[c] || [c]).filter(function (n) { return CX.propCorrect(W, { type: 'role', name: n, role: role }); });
+      if (!names.length) return;
+      var pid = pidOf(names[0]);
+      if (filedRole[pid + '|' + role]) return;
+      // name the one the player has met most often
+      names.sort(function (a, b) { return count(b) - count(a); });
+      ded.push({ kind: 'role', name: names[0], role: role, rank: 11 + (ROLE_RANK[role] || 8) * 2 });
+    });
+    function count(n) { return s.docs.filter(function (d) { return d.tokens.some(function (t) { return t.t === 'name' && t.v === n; }); }).length; }
+    // plot
+    var late = W.D - cs.day <= 3;
+    var pbase = late ? 0 : 40;
+    if (dv.methods.length === 1 && dv.methods[0] === W.T.method && plot.method !== W.T.method) ded.push({ kind: 'plot', field: 'method', value: W.T.method, rank: pbase + 3 });
+    if (dv.surv.length === 1 && dv.surv[0].event === W.realEvent.id) {
+      var ev = dv.surv[0];
+      if (plot.place !== ev.venue) ded.push({ kind: 'plot', field: 'place', value: ev.venue, label: W.venues[ev.venue].name + ', ' + ev.city, rank: pbase + 1 });
+      if (plot.date !== String(ev.day)) ded.push({ kind: 'plot', field: 'date', value: ev.day, label: W.cal.nice(ev.day), rank: pbase + 2 });
+      if (plot.target !== ev.subject) ded.push({ kind: 'plot', field: 'target', value: ev.subject, label: ev.subject, rank: pbase });
+    }
+    ded.sort(function (a, b) { return a.rank - b.rank; });
+
+    // record pulls the ideal analyst would make next
+    var queried = {};
+    s.log.forEach(function (a) { if (a[0] === 'q') queried[a[1] + '|' + JSON.stringify(a[2].t === 'hotel+date' ? { t: 'hotel+date', hotel: a[2].hotel, date: +a[2].date } : { t: a[2].t, v: String(a[2].v) })] = true; });
+    // (the desk only asks for the register of nights that are over)
+    var pulls = CX._scorePulls(cs, queried).filter(function (c) { return c.key.t !== 'hotel+date' || c.key.date < cs.day; });
+    pulls.sort(function (a, b) { return b.score - a.score; });
+    return { dv: dv, ded: ded, pulls: pulls, late: late };
+  }
+  CX._analyse = analyse;
+
+  // ------------------------------------------------------------ wording helpers
+  function docRef(cs, id) { var d = cs.doc(id); return d ? '“' + d.title + '”' : 'that file'; }
+  function docsWithToken(cs, t, v) { return cs._s.docs.filter(function (d) { return d.tokens.some(function (k) { return k.t === t && k.v === String(v); }); }).map(function (d) { return d.id; }); }
+  function docsWithName(cs, n) { return docsWithToken(cs, 'name', n); }
+  /** the documents that show a same-link (the identifier they share) */
+  function evidenceDocs(cs, d) {
+    var l = d.via, out;
+    if (l.t === 'card') out = cs._s.docs.filter(function (x) { return x.sys === 'archive' && x.tokens.some(function (k) { return k.t === 'name' && k.v === l.a; }) && x.tokens.some(function (k) { return k.t === 'name' && k.v === l.b; }); }).map(function (x) { return x.id; });
+    else {
+      var withTok = docsWithToken(cs, l.t, l.v);
+      var A = withTok.filter(function (id) { return docsWithName(cs, d.a).indexOf(id) >= 0; });
+      var B = withTok.filter(function (id) { return docsWithName(cs, d.b).indexOf(id) >= 0; });
+      out = CX.uniq([A[0], B[0]].filter(Boolean));
+      if (!out.length) out = withTok.slice(0, 2);
+    }
+    return out.slice(0, 2);
+  }
+  function keyLabel(cs, c) {
+    if (c.key.t === 'hotel+date') return (cs._w.hotels[c.key.hotel] ? cs._w.hotels[c.key.hotel].name : c.key.hotel) + ', night of ' + cs.dateLabel(c.key.date);
+    return c.tok.t === 'name' ? c.tok.v : (c.tok.d || c.tok.v);
+  }
+  function sysLabel(id) { var S = CX.SYSTEMS.filter(function (x) { return x.id === id; })[0]; return S ? S.label : id; }
+  function roleName(r) { return { 'inside-man': 'inside man' }[r] || r; }
+  function pick(cs, list, salt) { return list[CX.hash(cs.seed + '/' + cs.day + '/' + salt) % list.length]; }
+
+  var DRY = {
+    empty: ['You have wrung today’s paper dry. Go home; end the day. The network works nights, and so does the post.', 'Nothing on this desk is going to tell you more tonight. End the day. I’ll keep the kettle warm.'],
+    noHours: ['Your team is spent. Whatever I say now keeps till morning.'],
+    tomorrow: 'First thing tomorrow, then — your people are spent.'
+  };
+
+  function nudge(cs, A) {
+    var best = A.pulls[0], d0 = A.ded.filter(function (d) { return d.kind === 'same'; })[0];
+    var useDoc = best && (cs.hoursLeft >= Math.max(best.cost, cs.dayHours / 4) || !d0);
+    if (useDoc) {
+      var docId = best.tok.doc;
+      return { text: 'That ' + docRef(cs, docId) + ' deserves a second read. I would want to know more about ' + AREA[best.sys] + '.', refs: { docs: [docId] } };
+    }
+    if (d0) {
+      var ev = evidenceDocs(cs, d0);
+      if (ev.length === 2) return { text: 'Lay ' + docRef(cs, ev[0]) + ' next to ' + docRef(cs, ev[1]) + '. Compare the ' + VIA[d0.via.t] + '.', refs: { docs: ev } };
+      if (ev.length === 1) return { text: 'Read ' + docRef(cs, ev[0]) + ' again, slowly. Mind the ' + VIA[d0.via.t] + '.', refs: { docs: ev } };
+    }
+    return null;
+  }
+  function pointer(cs, A) {
+    var budget = cs.hoursLeft - COST.pointer;
+    var now = A.pulls.filter(function (c) { return c.cost <= budget; })[0];
+    var c = now || A.pulls[0];
+    if (!c) return null;
+    var S = sysLabel(c.sys);
+    var text = 'Pull ' + S.toLowerCase() + ' on ' + keyLabel(cs, c) + ' (' + c.cost + 'h). You have it in ' + docRef(cs, c.tok.doc) + '.' + (c.again ? ' Yes, again: the file has grown since.' : '') + (now ? '' : ' ' + DRY.tomorrow);
+    return { text: text, refs: { docs: [c.tok.doc], pull: { sys: c.sys, key: c.key.t === 'hotel+date' ? c.key : { t: c.key.t, v: c.key.v, d: c.tok.d }, label: keyLabel(cs, c), system: S, cost: c.cost, today: !!now } } };
+  }
+  function direct(cs, A) {
+    var d = A.ded[0];
+    if (!d) return null;
+    var W = cs._w;
+    if (d.kind === 'same') {
+      var ev = evidenceDocs(cs, d);
+      return { text: d.a + ' and ' + d.b + ' are the same person. ' + WHY[d.via.t] + (ev.length ? ' — see ' + ev.map(function (id) { return docRef(cs, id); }).join(' and ') : '') + '. File it.', refs: { docs: ev, prop: { type: 'same', a: d.a, b: d.b } } };
+    }
+    if (d.kind === 'role') {
+      var ds = docsWithName(cs, d.name).slice(-2);
+      return { text: 'The person behind ' + d.name + ' is your ' + roleName(d.role) + '. The pattern is all there in your papers; I would put it in writing.', refs: { docs: ds, prop: { type: 'role', name: d.name, role: d.role } } };
+    }
+    var what = d.field === 'method' ? 'The method is ' + d.value + '. Look at what they have been buying.'
+      : d.field === 'target' ? 'They mean ' + d.label + '. Everything else on that calendar is scenery.'
+      : d.field === 'place' ? 'It happens at the ' + d.label + '. Your reconnaissance reports all point the same way.'
+      : 'It happens on ' + d.label + '. The telephone told you, if you listened.';
+    return { text: what, refs: { docs: [], prop: { type: 'plot', field: d.field, value: d.value, label: d.label || d.value } } };
+  }
+
+  // ------------------------------------------------------------ public API
+  CP.hintStatus = function () {
+    var h = hs(this);
+    var nudgeUsed = h.nudgeDay === this.day;
+    return {
+      nudge: { ok: !this.over && !nudgeUsed, why: this.over ? 'The case is closed.' : nudgeUsed ? 'One nudge a night. She has already given you today’s.' : '' },
+      pointer: { ok: !this.over && this.hoursLeft >= COST.pointer, cost: COST.pointer, why: this.over ? 'The case is closed.' : this.hoursLeft < COST.pointer ? 'Needs ' + COST.pointer + ' team-hours; you have ' + this.hoursLeft + '.' : '' },
+      direct: { ok: !this.over && this.credibility >= COST.direct, cost: COST.direct, why: this.over ? 'The case is closed.' : this.credibility < COST.direct ? 'Your credibility is too low to ask.' : '' },
+      used: CX.clone(h.used), total: h.used.nudge + h.used.pointer + h.used.direct,
+      log: h.log.map(function (x) { return CX.clone(x); })
+    };
+  };
+  CP.hint = function (tier) {
+    var st = this.hintStatus();
+    if (!st[tier]) return { ok: false, tier: tier, text: 'She only does nudges, pointers and straight answers.' };
+    if (!st[tier].ok) return { ok: false, tier: tier, text: st[tier].why };
+    var A = analyse(this);
+    var r = tier === 'nudge' ? nudge(this, A) : tier === 'pointer' ? pointer(this, A) : direct(this, A);
+    if (!r) {
+      var anyLeft = A.pulls.length || A.ded.length;
+      var txt = tier === 'direct' && A.pulls.length ? 'Nothing you can prove from these papers that you have not already filed. The answer is still in the records — go and pull them.'
+        : tier === 'pointer' && A.ded.length ? 'No record worth the hours today. But you have not written down everything your papers already prove.'
+        : anyLeft ? 'Nothing I can usefully add tonight.' : pick(this, DRY.empty, tier);
+      return { ok: false, tier: tier, text: txt, empty: !anyLeft };
+    }
+    var h = hs(this);
+    var charged = { hours: 0, credibility: 0 };
+    if (tier === 'nudge') h.nudgeDay = this.day;
+    if (tier === 'pointer') { this.hoursLeft -= COST.pointer; this._s.hoursUsed += COST.pointer; charged.hours = COST.pointer; }
+    if (tier === 'direct') { this.credibility -= COST.direct; charged.credibility = COST.direct; }
+    h.used[tier]++;
+    var entry = { n: h.log.length + 1, tier: tier, day: this.day, time: this.clock(), text: r.text, refs: r.refs };
+    h.log.push(entry);
+    this._s.log.push(['h', tier]);
+    return { ok: true, tier: tier, text: r.text, refs: CX.clone(r.refs), charged: charged, entry: CX.clone(entry) };
   };
 })();
 /* CUTOUT UI — 10-adapter.js
@@ -4195,12 +4620,15 @@ var UIA = (function () {
 
   // ------------------------------------------------------------ lifecycle
   A.ready = function () { return typeof CX !== 'undefined' && typeof CX.newCase === 'function' && typeof CX.load === 'function'; };
-  A.create = function (seed) {
-    A.cs = CX.newCase(seed);
+  /** level: 'probationer' | 'officer' | 'head' (the standard grade keeps the original opts) */
+  A.create = function (seed, level) {
+    A.cs = CX.newCase(seed, level && level !== 'officer' ? { level: level } : {});
+    A._xr = null;
     return A.cs;
   };
   A.restore = function (json) {
     A.cs = CX.load(json);
+    A._xr = null;
     return A.cs;
   };
   A.serialize = function () { return A.cs.save(); };
@@ -4213,7 +4641,7 @@ var UIA = (function () {
     if (!A.cs) return false;
     try {
       var eng = JSON.parse(A.cs.save());
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, engine: eng, ui: ui, when: Date.now(), day: A.cs.day, seed: A.cs.seed, label: A.dateLong(A.cs.day) }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, engine: eng, ui: ui, when: Date.now(), day: A.cs.day, seed: A.cs.seed, label: A.dateLong(A.cs.day), level: A.cs.levelLabel || '' }));
       return true;
     } catch (e) { return false; }
   };
@@ -4230,8 +4658,43 @@ var UIA = (function () {
   A.dateLabel = function (d) { return A.cs.dateLabel(d); };
   A.dateLong = function (d) { return A.cs.dateLong(d); };
   A.topDate = function (d) { var L = A.cs.dateLong(d).split(' '); return L[0].slice(0, 3) + ' ' + L[1] + ' ' + L[2].slice(0, 3) + ' ' + L[3]; };
-  A.clock = function () { var h = 8 + (A.dayHours() - A.hoursLeft()); return (h < 10 ? '0' : '') + h + ':00'; };
+  A.clock = function () { return A.cs.clock(); };
   A.credibility = function () { return A.cs.credibility === undefined ? 100 : A.cs.credibility; };
+
+  // ------------------------------------------------------------ difficulty grade
+  A.levels = function () { return CX.LEVELS.slice(); };
+  A.levelInfo = function (id) { return CX.level(id); };
+  /** grade of the open case (old saves have none: the standard grade) */
+  A.level = function () { return CX.level(A.cs && A.cs.level); };
+
+  // ------------------------------------------------------------ cross-references (from the player's documents only)
+  var XR_TYPES = { passport: 1, number: 1, plate: 1, account: 1, address: 1, company: 1 };
+  A.xrefTypes = XR_TYPES;
+  /** identifiers that appear in 2+ of the documents on the desk: {key: {t, v, d, docs:[id...]}} */
+  A.xrefs = function () {
+    var docs = A.cs.inbox();
+    if (A._xr && A._xr.n === docs.length) return A._xr.map;
+    var map = {};
+    docs.forEach(function (d) {
+      (d.tokens || []).forEach(function (t) {
+        if (!XR_TYPES[t.t]) return;
+        var k = t.t + ':' + t.v;
+        var e = map[k] || (map[k] = { t: t.t, v: t.v, d: t.d || t.v, docs: [], mine: [] });
+        if (e.docs[e.docs.length - 1] === d.id) return;
+        e.docs.push(d.id);
+        // a result of pulling records on this very identifier (the player asked for it)
+        if (d.query && d.query.key && d.query.key.t === t.t && String(d.query.key.v) === t.v) e.mine.push(d.id);
+      });
+    });
+    Object.keys(map).forEach(function (k) { if (map[k].docs.length < 2) delete map[k]; });
+    A._xr = { n: docs.length, map: map };
+    return map;
+  };
+
+  // ------------------------------------------------------------ the night analyst
+  A.analyst = function () { return CX.ANALYST; };
+  A.hintStatus = function () { return A.cs.hintStatus(); };
+  A.hint = function (tier) { return A.cs.hint(tier); };
 
   // ------------------------------------------------------------ documents
   A.docs = function () { return A.cs.inbox(); };
@@ -4294,6 +4757,7 @@ var UIICON = {
   records: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="1.5"/><path d="M7 9l3 2.5L7 14M12 14h5M8 21h8M12 17v4"/></svg>',
   board: '<svg viewBox="0 0 24 24"><rect x="2.5" y="3.5" width="19" height="15" rx="1"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="16" cy="7" r="1.4"/><circle cx="12" cy="14" r="1.4"/><path d="M7.5 8L12 14l4-7M8 21l2-2.5M16 21l-2-2.5"/></svg>',
   "case": '<svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM8.5 7V4.5h7V7"/><path d="M3 12h18M11 11v2.5h2V11"/></svg>',
+  lamp: '<svg viewBox="0 0 24 24"><path d="M4.5 21h10M9 21l-2.5-7.5L12 8"/><path d="M11 5.2l6.3 3.1-3.4 3.9z"/><path d="M16.5 13.5l1.3 1.6M18.6 11.8l1.9.6M14.4 14.6l.2 2"/><circle cx="6.5" cy="13.5" r=".9"/></svg>',
   file: '<svg viewBox="0 0 64 64"><path d="M14 8h24l12 12v36H14z"/><path d="M38 8v12h12M21 30h22M21 37h22M21 44h14"/></svg>'
 };
 
@@ -4312,11 +4776,17 @@ var UIDoc = (function () {
   var D = {};
   var hlSet = {};
   D.setHighlights = function (h) { hlSet = h || {}; };
+  // cross-reference marks: identifiers already seen in 2+ documents on the desk
+  var xrMap = null, xrDone = {};
+  D.setXref = function (m) { xrMap = m || null; };
 
   // ---------------------------------------------------------------- segments
   function tokHTML(t) {
     var k = t.t + ':' + t.v;
-    return '<span class="tk' + (hlSet[k] ? ' hl' : '') + '" data-t="' + UIesc(t.t) + '" data-v="' + UIesc(t.v) + '" role="button" tabindex="0">' + UIesc(t.d || t.v) + '</span>';
+    var x = xrMap && xrMap[k] && !xrDone[k] ? xrMap[k] : null;
+    if (x) xrDone[k] = 1; // one mark per document
+    return '<span class="tk' + (hlSet[k] ? ' hl' : '') + (x ? ' xk' : '') + '" data-t="' + UIesc(t.t) + '" data-v="' + UIesc(t.v) + '" role="button" tabindex="0">' + UIesc(t.d || t.v) + '</span>' +
+      (x ? '<span class="xr" data-t="' + UIesc(t.t) + '" data-v="' + UIesc(t.v) + '" role="button" tabindex="0" title="Seen in ' + x.docs.length + ' documents" aria-label="Seen in ' + x.docs.length + ' documents">' + x.docs.length + '</span>' : '');
   }
   function segs(x, upper) {
     return (x || []).map(function (s) {
@@ -4610,6 +5080,7 @@ var UIDoc = (function () {
 
   /** HTML for the whole document (one or more sheets) */
   D.render = function (doc) {
+    xrDone = {};
     var f = R[doc.style] || R.report;
     if (doc.kind === 'statement' || doc.kind === 'police' || doc.kind === 'porter' || doc.kind === 'press') f = R.report;
     if (doc.kind === 'intercept') f = R.telex;
@@ -4640,8 +5111,10 @@ var UIS = null; // UI state saved alongside the engine save
 var UI = {
   views: {},
   freshState: function () {
-    return { v: 1, tab: 'desk', read: {}, hl: {}, openDoc: null, filter: 'all', board: { cards: [], links: [], view: null, n: 0 }, warrants: [], stamped: {}, recSys: 'hotels', recType: null, queries: [] };
+    return { v: 1, tab: 'desk', read: {}, hl: {}, openDoc: null, filter: 'all', board: { cards: [], links: [], view: null, n: 0 }, warrants: [], stamped: {}, recSys: 'hotels', recType: null, queries: [], xref: null };
   },
+  /** cross-reference marks: the player's setting, else the grade's default */
+  xrefOn: function () { return UIS && UIS.xref !== null && UIS.xref !== undefined ? !!UIS.xref : !!UIA.level().xref; },
   save: function () { if (UIA.cs) UIA.writeSave(UIS); },
   /** re-render whatever depends on case state */
   refresh: function () {
@@ -4696,14 +5169,14 @@ var UIsheet = {
     sc.hidden = false;
     if (!UIsheet.cur) UIhist.push('sheet', function () { UIsheet.close(true); });
     UIsheet.cur = o;
-    requestAnimationFrame(function () { sc.classList.add('on'); sh.classList.add('on'); });
+    requestAnimationFrame(function () { if (UIsheet.cur !== o) return; sc.classList.add('on'); sh.classList.add('on'); });
     if (o.mount) o.mount(sh.querySelector('.sh-body'), sh);
     UIsheet.lastFocus = document.activeElement;
     setTimeout(function () { var f = sh.querySelector('[autofocus]'); if (f && !('ontouchstart' in window)) f.focus(); }, 60);
   },
   close: function (fromPop) {
     var sh = UI$('#sheet'), sc = UI$('#scrim');
-    if (!sh.classList.contains('on')) return;
+    if (!sh.classList.contains('on') && !UIsheet.cur) return; // (closing before the open frame counts too)
     if (fromPop !== true) UIhist.drop('sheet');
     sh.classList.remove('on'); sc.classList.remove('on');
     var cur = UIsheet.cur; UIsheet.cur = null;
@@ -4752,9 +5225,11 @@ UI.buildFrame = function () {
   var tabsHTML = UI.tabs.map(function (t) { return '<button class="tab" data-tab="' + t[0] + '" aria-label="' + t[1] + '">' + UIICON[t[0]] + '<span>' + t[1].toUpperCase() + '</span></button>'; }).join('');
   UI$('#tabbar').innerHTML = tabsHTML;
   UI$('#topbar').innerHTML = '<div class="tb-date"><b id="tb-date"></b><span id="tb-sub"></span></div><div class="tb-tabs">' + tabsHTML + '</div>' +
-    '<div class="tb-hours" title="Team-hours left today"><div class="pips" id="tb-pips"></div><div class="tb-hnum" id="tb-h"></div></div><button class="tb-end" id="tb-end">End day</button>';
+    '<div class="tb-hours" title="Team-hours left today"><div class="pips" id="tb-pips"></div><div class="tb-hnum" id="tb-h"></div></div>' +
+    '<button class="tb-na" id="tb-na" aria-label="Night desk — ask the night analyst" title="Night desk — ask the night analyst">' + UIICON.lamp + '</button><button class="tb-end" id="tb-end">End day</button>';
   UI$$('.tab').forEach(function (b) { b.addEventListener('click', function () { UI.go(b.dataset.tab); }); });
   UI$('#tb-end').addEventListener('click', UI.confirmEndDay);
+  UI$('#tb-na').addEventListener('click', function () { UINight.open(); });
 };
 UI.topbar = function () {
   if (!UIA.cs) return;
@@ -4764,6 +5239,10 @@ UI.topbar = function () {
   var h = UIA.hoursLeft(), H = UIA.dayHours();
   var p = ''; for (var i = 0; i < H; i++) p += '<i class="pip' + (i < h ? ' on' : '') + '"></i>';
   UI$('#tb-pips').innerHTML = p;
+  UI$('#tb-pips').style.setProperty('--pc', Math.ceil(H / 2));
+  var na = UIA.hintStatus();
+  UI$('#tb-na').classList.toggle('fresh', na.nudge.ok);
+  UI$('#tb-na').disabled = UIA.over();
   UI$('#tb-h').innerHTML = h + '<small>HRS</small>';
   UI$('#tb-end').disabled = UIA.over();
 };
@@ -4816,6 +5295,8 @@ UI.tokenSheet = function (t, v, d, ctx) {
     }).join('') + '</div>';
     else html += '<p class="muted" style="font-size:13px;margin:6px 0 10px">' + (t === 'date' && +v >= UIA.day() ? 'That night has not happened yet.' : 'You need a ' + (t === 'hotel' ? 'past date' : 'hotel') + ' from a document to pair with this.') + '</p>';
   }
+  var xr = UIA.xrefTypes[t] && UI.xrefOn() ? UIA.xrefs()[key] : null;
+  if (xr) html += '<div class="lbl sh-sec">Seen in ' + xr.docs.length + ' documents</div>' + UI.xrefDocsHTML(xr, ctx.doc);
   html += '<div class="lbl sh-sec">Desk</div><div class="sh-list">';
   if (t === 'name') {
     html += UIitem({ act: 'board-subj', ic: '+', label: 'Add to board as a new subject', small: 'A card for the person behind this name' });
@@ -4835,7 +5316,8 @@ UI.tokenSheet = function (t, v, d, ctx) {
       body.addEventListener('click', function (e) {
         var b = e.target.closest('.sh-item'); if (!b || b.disabled) return;
         var a = b.dataset.act, x = b.dataset.x;
-        if (a === 'pull') { UIsheet.close(); UI.runQuery(x, { t: t, v: v }); }
+        if (a === 'xdoc') { UIsheet.close(); UI.go('desk', { open: x }); }
+        else if (a === 'pull') { UIsheet.close(); UI.runQuery(x, { t: t, v: v }); }
         else if (a === 'night') { var p = x.split('|'); UIsheet.close(); UI.runQuery('hotels', { t: 'hotel+date', hotel: p[0], date: +p[1] }); }
         else if (a === 'board-subj') { UIsheet.close(); UIBoard.addSubjectFor(v); }
         else if (a === 'board-merge') { UIBoard.pickSubjectFor(v); }
@@ -4850,13 +5332,36 @@ UI.tokenSheet = function (t, v, d, ctx) {
 /** delegate taps on tokens anywhere */
 UI.bindTokens = function (root) {
   root.addEventListener('click', function (e) {
+    var xb = e.target.closest('.xr');
+    if (xb) { e.preventDefault(); e.stopPropagation(); UI.xrefSheet(xb.dataset.t, xb.dataset.v, root.dataset.doc); return; }
     var el = e.target.closest('.tk'); if (!el) return;
     e.preventDefault();
     UI.tokenSheet(el.dataset.t, el.dataset.v, el.textContent, { doc: root.dataset.doc });
   });
   root.addEventListener('keydown', function (e) {
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('tk')) { e.preventDefault(); e.target.click(); }
+    if ((e.key === 'Enter' || e.key === ' ') && (e.target.classList.contains('tk') || e.target.classList.contains('xr'))) { e.preventDefault(); e.target.click(); }
   });
+};
+
+// ------------------------------------------------------------ cross-references
+/** list of the documents an identifier appears in (buttons that open each) */
+UI.xrefDocsHTML = function (xr, here) {
+  return '<div class="sh-list">' + xr.docs.map(function (id) {
+    var d = UIA.doc(id); if (!d) return '';
+    var mine = xr.mine && xr.mine.indexOf(id) >= 0;
+    return UIitem({ act: 'xdoc', data: id, ic: UISYSABBR[d.sys] || 'DOC', label: d.title, small: UIDoc.sourceLabel(d) + ' · ' + UIA.dateLabel(d.day) + ' ' + (d.time || '') + (mine ? ' · your request on it' : '') + (id === here ? ' · this document' : ''), dis: id === here });
+  }).join('') + '</div>';
+};
+UI.xrefSheet = function (t, v, here) {
+  var xr = UIA.xrefs()[t + ':' + v]; if (!xr) return;
+  UIsheet.open({ title: 'Seen in ' + xr.docs.length + ' documents', sub: UIesc((UITYPE[t] || t) + ' · ' + xr.d), html: '<p class="muted" style="font-size:12.5px;margin:2px 0 4px">The same ' + UIesc((UITYPE[t] || t).toLowerCase()) + ' appears in each of these papers on your desk.</p>' + UI.xrefDocsHTML(xr, here) +
+    '<button class="btn small block" id="xr-tok" style="margin-top:6px">Pull records on it…</button>',
+    mount: function (body) {
+      body.addEventListener('click', function (e) {
+        var b = e.target.closest('.sh-item'); if (b && !b.disabled && b.dataset.act === 'xdoc') { UIsheet.close(); UI.go('desk', { open: b.dataset.x }); return; }
+        if (e.target.id === 'xr-tok') { UIsheet.close(); setTimeout(function () { UI.tokenSheet(t, v, xr.d, { doc: here }); }, 240); }
+      });
+    } });
 };
 
 // ------------------------------------------------------------ queries
@@ -4881,12 +5386,13 @@ UI.confirmEndDay = function () {
   var ex = UI$('.pop'); if (ex) { ex.remove(); return; }
   var h = UIA.hoursLeft();
   var d = UIA.day();
-  var pop = UIel('<div class="pop" role="dialog"><h4>End ' + UIesc(UIA.dateLong(d).split(' ')[0]) + '?</h4><p>' + (h ? h + ' team-hour' + (h > 1 ? 's' : '') + ' unused will be lost. ' : 'The team is spent. ') + 'Overnight the network moves and the morning traffic arrives.</p><div class="row"><button class="btn small ghost" data-x="no">Keep working</button><button class="btn small primary" data-x="yes">End day</button></div></div>');
+  var pop = UIel('<div class="pop" role="dialog"><h4>End ' + UIesc(UIA.dateLong(d).split(' ')[0]) + '?</h4><p>' + (h ? h + ' team-hour' + (h > 1 ? 's' : '') + ' unused will be lost. ' : 'The team is spent. ') + 'Overnight the network moves and the morning traffic arrives.</p><button class="pop-na" data-x="na">' + UIICON.lamp + '<span>Stuck? Ask the night desk first</span></button><div class="row"><button class="btn small ghost" data-x="no">Keep working</button><button class="btn small primary" data-x="yes">End day</button></div></div>');
   document.body.appendChild(pop);
   pop.addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
     pop.remove();
     if (b.dataset.x === 'yes') UI.endDay();
+    else if (b.dataset.x === 'na') UINight.open();
   });
   setTimeout(function () {
     document.addEventListener('pointerdown', function off(e) { if (!pop.contains(e.target) && e.target.id !== 'tb-end') { pop.remove(); } document.removeEventListener('pointerdown', off, true); }, true);
@@ -4942,7 +5448,11 @@ var UIDesk = UI.views.desk = {
     root.innerHTML = '<div class="desk"><div class="inbox"><div class="scroll" id="ib-scroll"><div class="ib-search"><input type="search" id="ib-q" placeholder="Search documents — a name, a number…" autocomplete="off" spellcheck="false" aria-label="Search documents"></div><div class="ib-head" id="ib-chips"></div><div id="ib-list"></div></div></div>' +
       '<div class="viewer" id="viewer"><div class="vw-bar"><button class="back" aria-label="Back to inbox">‹</button><div class="ttl"><b id="vw-title"></b><span id="vw-sub"></span></div><button class="act" id="vw-pin">Pin to board</button></div>' +
       '<div class="vw-body"><div class="scroll" id="vw-scroll"><div class="vw-inner" id="vw-inner"></div></div></div></div></div>';
-    UI$('#ib-list').addEventListener('click', function (e) { var b = e.target.closest('.ib-item'); if (b) UIDesk.open(b.dataset.id); });
+    UI$('#ib-list').addEventListener('click', function (e) {
+      var x = e.target.closest('.xr-doc'); if (x) { UIDesk.open(x.dataset.id); return; }
+      var t = e.target.closest('.xr-tok'); if (t) { UI.tokenSheet(t.dataset.t, t.dataset.v, t.dataset.d, {}); return; }
+      var b = e.target.closest('.ib-item'); if (b) UIDesk.open(b.dataset.id);
+    });
     UI$('#ib-chips').addEventListener('click', function (e) {
       var b = e.target.closest('.chip'); if (!b) return;
       if (b.dataset.f === 'markall') { UIA.docs().forEach(function (d) { UIS.read[d.id] = 1; }); UI.badges(); UIDesk.refresh(); UI.save(); return; }
@@ -4964,10 +5474,14 @@ var UIDesk = UI.views.desk = {
     var f = UIS.filter || 'all';
     var docs = UIA.docs();
     var nUnread = docs.filter(function (d) { return !UIS.read[d.id]; }).length;
-    var chips = [['all', 'All ' + docs.length], ['unread', 'Unread ' + nUnread], ['traffic', 'Traffic'], ['records', 'Records'], ['hl', 'Highlighted']];
+    var xon = UI.xrefOn();
+    if (f === 'xref' && !xon) f = UIS.filter = 'all';
+    var xmap = xon ? UIA.xrefs() : {};
+    var chips = [['all', 'All ' + docs.length], ['unread', 'Unread ' + nUnread]].concat(xon ? [['xref', 'Cross-refs ' + Object.keys(xmap).length]] : []).concat([['traffic', 'Traffic'], ['records', 'Records'], ['hl', 'Highlighted']]);
     if (nUnread > 3) chips.push(['markall', 'Mark all read']);
     var q = (UI$('#ib-q') && UI$('#ib-q').value || '').trim().toLowerCase();
     UI$('#ib-chips').innerHTML = chips.map(function (c) { return '<button class="chip' + (c[0] === f ? ' on' : '') + '" data-f="' + c[0] + '">' + c[1] + '</button>'; }).join('');
+    if (f === 'xref') { UI$('#ib-list').innerHTML = this.xrefHTML(xmap, q); this._n = docs.length; return; }
     var list = docs.filter(function (d) {
       if (q && (d.title + ' ' + (d.from || '') + ' ' + (d.tokens || []).map(function (t) { return (t.d || '') + ' ' + t.v; }).join(' ')).toLowerCase().indexOf(q) < 0) return false;
       if (f === 'unread') return !UIS.read[d.id];
@@ -4989,6 +5503,23 @@ var UIDesk = UI.views.desk = {
     if (!list.length) html = '<div class="ib-empty">' + (f === 'all' ? 'The desk is empty.' : 'Nothing here.') + '</div>';
     if (f === 'all' && !UIS.queries.length && UIA.day() === 0) html += '<div class="ib-hint">Start with the <b>telex</b>. Every underlined name, number, plate or hotel is a key: tap it to pull records. Each request costs team-hours; you have <b>' + UIA.dayHours() + '</b> a day. The newspaper tells you who will be where — keep it in mind.</div>';
     UI$('#ib-list').innerHTML = html;
+    // new documents can add cross-reference marks to the one on screen
+    if (this._n !== undefined && this._n !== docs.length && UIS.openDoc && UIA.doc(UIS.openDoc)) this.renderViewer(UIA.doc(UIS.openDoc));
+    this._n = docs.length;
+  },
+  /** identifiers that recur across the documents on the desk, most frequent first */
+  xrefHTML: function (xmap, q) {
+    var ORDER = { passport: 0, number: 1, plate: 2, account: 3, company: 4, address: 5 };
+    var list = Object.keys(xmap).map(function (k) { return xmap[k]; }).filter(function (x) { return !q || (x.d + ' ' + x.v).toLowerCase().indexOf(q) >= 0; });
+    // identifiers that turned up on their own (not only in your requests on them) first
+    function ind(x) { return x.docs.length - x.mine.length; }
+    list.sort(function (a, b) { return ind(b) - ind(a) || b.docs.length - a.docs.length || ORDER[a.t] - ORDER[b.t] || (a.d < b.d ? -1 : 1); });
+    if (!list.length) return '<div class="ib-empty">' + (q ? 'No recurring identifier matches.' : 'No identifier has turned up in two documents yet.') + '</div>';
+    return '<div class="ib-hint" style="margin-top:4px">Passports, telephone numbers, plates, accounts, firms and addresses that appear in more than one of your documents. The same number in two places is how a false name comes apart.</div>' +
+      list.map(function (x) {
+        return '<div class="xr-row"><button class="xr-tok" data-t="' + UIesc(x.t) + '" data-v="' + UIesc(x.v) + '" data-d="' + UIesc(x.d) + '"><span class="xr-ty">' + UIesc(UITYPE[x.t] || x.t) + '</span><b>' + UIesc(x.d) + '</b><span class="xr-n">' + x.docs.length + ' docs</span></button>' +
+          x.docs.map(function (id) { var d = UIA.doc(id); return d ? '<button class="xr-doc' + (UIS.openDoc === id ? ' sel' : '') + '" data-id="' + id + '"><span class="xr-sys">' + UIesc(UISYSABBR[d.sys] || '') + '</span><span class="xr-tt">' + UIesc(d.title) + (x.mine.indexOf(id) >= 0 ? ' <i class="xr-mine">your request</i>' : '') + '</span><span class="xr-dt">' + UIesc(UIA.dateLabel(d.day).replace(/^\w+ /, '')) + '</span></button>' : ''; }).join('') + '</div>';
+      }).join('');
   },
   open: function (id, quiet) {
     var d = UIA.doc(id); if (!d) return;
@@ -5022,7 +5553,7 @@ var UIDesk = UI.views.desk = {
     UI$('#vw-pin').textContent = pinned ? 'On the board' : 'Pin to board';
     UI$('#vw-title').textContent = d.title;
     UI$('#vw-sub').textContent = UIDoc.sourceLabel(d) + ' · ' + UIA.dateLabel(d.day) + ' ' + (d.time || '') + (d.hours ? ' · cost ' + d.hours + 'h' : '');
-    UIDoc.setHighlights(UIS.hl);
+    UIDoc.setHighlights(UIS.hl); UIDoc.setXref(UI.xrefOn() ? UIA.xrefs() : null);
     inner.dataset.doc = d.id;
     inner.innerHTML = UIDoc.render(d);
   }
@@ -5122,7 +5653,7 @@ var UIRecords = UI.views.records = {
     UIS.read[id] = 1; UI.badges();
     var el = UI$('#rq-prev');
     el.dataset.doc = id;
-    UIDoc.setHighlights(UIS.hl);
+    UIDoc.setHighlights(UIS.hl); UIDoc.setXref(UI.xrefOn() ? UIA.xrefs() : null);
     el.innerHTML = UIDoc.render(d);
   },
   renderLog: function () {
@@ -5567,6 +6098,8 @@ var UICase = UI.views['case'] = {
       else if (a === 'warrant') self.warrantSheet({});
       else if (a === 'resp') self.respondSheet(x);
       else if (a === 'debrief') UIDebrief.show();
+      else if (a === 'night') UINight.open();
+      else if (a === 'xref') { UIS.xref = !UI.xrefOn(); UI.save(); self.render(); UItoast('Cross-reference marks ' + (UIS.xref ? 'on' : 'off')); if (UI.views.desk.built) UI.views.desk._n = -1; }
     });
   },
   show: function () { this.render(); },
@@ -5579,6 +6112,12 @@ var UICase = UI.views['case'] = {
     var html = '';
     // --- timeline
     html += '<div class="case-sec wide"><h3>The operation</h3>' + this.timelineHTML() + '</div>';
+    // --- the night desk
+    var N = UIA.analyst(), hs = UIA.hintStatus();
+    var lastN = hs.log[hs.log.length - 1];
+    html += '<div class="case-sec"><h3>The night desk</h3><div class="na-mini"><div class="na-mini-hd">' + UINight.portrait() + '<div><b>' + UIesc(N.name) + '</b><small>' + UIesc(N.title) + ' · ' + (hs.total ? 'consulted ' + hs.total + ' time' + (hs.total > 1 ? 's' : '') : 'not yet consulted') + '</small></div></div>' +
+      (lastN ? '<p class="hand na-last">' + UIesc(lastN.text) + '</p>' : '<p class="na-last muted">Stuck? She has read everything on your desk and will say so, for a price: a nudge is free once a night, a pointer costs two team-hours, a straight answer costs credibility.</p>') +
+      (UIA.over() ? '' : '<button class="btn small block" data-c="night">' + UIICON.lamp + ' Ask the night desk' + (hs.nudge.ok ? ' · tonight’s nudge unused' : '') + '</button>') + '</div></div>';
     // --- propositions
     var sr = props.filter(function (p) { return p.type === 'same' || p.type === 'role'; });
     var nConf = sr.filter(function (p) { return p.status === 'confirmed'; }).length;
@@ -5614,6 +6153,10 @@ var UICase = UI.views['case'] = {
       '<button class="opt" data-c="resp" data-x="arrest-only"><b>Arrest only</b><small>Execute your warrants and stand back. The act is stopped only if the operative is in a cell.</small></button>' +
       '<button class="opt" data-c="resp" data-x="protect"><b>Protect the target</b><small>Warn and move the person or object. Stops the act if you chose the right target — and lets everyone walk.</small></button>' +
       '<button class="opt" data-c="resp" data-x="trap"><b>Set a trap</b><small>Let them come, and be waiting. Right place and date catches the team in the act; the money trail decides whether the principal falls too.</small></button></div></div>';
+    // --- settings
+    var on = UI.xrefOn();
+    html += '<div class="case-sec"><h3>Desk settings</h3><div class="set-row"><div><b>Grade</b><small>' + UIesc(UIA.level().label) + ' · ' + UIA.dayHours() + ' team-hours a day. Chosen when the file was opened.</small></div></div>' +
+      '<button class="set-row" data-c="xref" role="switch" aria-checked="' + on + '"><div><b>Cross-reference marks</b><small>Mark passports, numbers, plates, accounts, firms and addresses that already appear in another of your documents.</small></div><span class="sw' + (on ? ' on' : '') + '"><i></i></span></button></div>';
     pad.innerHTML = html;
     if (fresh.length) this.stampAnim(fresh);
   },
@@ -5828,6 +6371,105 @@ var UICase = UI.views['case'] = {
     return h;
   }
 };
+/* CUTOUT UI — 17-night.js: the night desk (hint system). The analyst's
+ * knowledge comes from the engine (08-analyst.js) via UIA.hint(); this file
+ * only presents it and turns her references into buttons. */
+var UINight = {
+  armed: null,
+  /** a portrait sketch in pencil, in keeping with the file cards */
+  portrait: function () {
+    return '<svg class="na-face" viewBox="0 0 64 72" fill="none" stroke="#4a4439" stroke-width="1.4" stroke-linecap="round"><path d="M18 30c0-11 6-18 14-18s14 7 14 18c0 10-6 19-14 19s-14-9-14-19z"/><path d="M17 28c2-12 9-19 17-18 7 1 12 6 13 13-5-3-10-8-12-12-3 6-10 11-18 17z" fill="#6e695f" stroke="none" opacity=".55"/>' +
+      '<circle cx="26" cy="31" r="4"/><circle cx="38" cy="31" r="4"/><path d="M30 31h4M22 31l-4-1M42 31l4-1"/><path d="M29 41c2 1 4 1 6 0"/><path d="M10 72c1-12 10-18 22-18s21 6 22 18"/><path d="M40 43l12 3" stroke-width="2"/><path d="M53 45c2-3 0-6 2-9M55 44c3-4 1-8 4-11" stroke="#8a8474" stroke-width="1"/></svg>';
+  },
+  tierHTML: function () {
+    var st = UIA.hintStatus();
+    var N = UIA.analyst();
+    var arm = this.armed;
+    function item(tier, ic, label, small, cost) {
+      var s = st[tier];
+      var dis = !s.ok;
+      var armed = arm === tier;
+      return '<button class="sh-item na-tier' + (dis ? ' dis' : '') + (armed ? ' armed' : '') + '" data-tier="' + tier + '"' + (dis ? ' disabled' : '') + '><span class="ic">' + ic + '</span><span class="tx"><b>' + UIesc(armed ? 'Tap again to ask — ' + label.toLowerCase() : label) + '</b><small>' + UIesc(dis ? s.why : small) + '</small></span><span class="cost">' + UIesc(cost) + '</span></button>';
+    }
+    return '<div class="sh-list">' +
+      item('nudge', '?', 'A nudge', 'She points at a paper worth reading again. One a night.', st.nudge.ok ? 'free' : 'used') +
+      item('pointer', '→', 'A pointer', 'She names the next record worth pulling, from a key you already hold.', N.costs.pointer + 'h') +
+      item('direct', '!', 'A straight answer', 'One true deduction you have not filed yet. The magistrate hears about it.', '−' + N.costs.direct + ' cred') +
+      '</div>';
+  },
+  noteHTML: function (e, fresh) {
+    var r = e.refs || {};
+    var btns = '';
+    (r.docs || []).forEach(function (id) { var d = UIA.doc(id); if (d) btns += '<button class="btn small" data-na="doc" data-x="' + UIesc(id) + '">Open ' + UIesc(d.title.length > 34 ? d.title.slice(0, 32) + '…' : d.title) + '</button>'; });
+    if (r.pull && !UIA.over()) {
+      var q = UIS.queries.some(function (x) { return x.sys === r.pull.sys && x.day === UIA.day() && x.k === (r.pull.key.t === 'hotel+date' ? 'hotel+date:' + r.pull.key.hotel + '|' + r.pull.key.date : r.pull.key.t + ':' + r.pull.key.v); });
+      if (!q && e.day === UIA.day()) btns += '<button class="btn small primary" data-na="pull" data-x="' + e.n + '"' + (UIA.hoursLeft() < r.pull.cost ? ' disabled' : '') + '>Pull it now — ' + r.pull.cost + 'h</button>';
+    }
+    if (r.prop && !UIA.over() && !this.propFiled(r.prop)) btns += '<button class="btn small primary" data-na="file" data-x="' + e.n + '">File it</button>';
+    return '<div class="na-note' + (fresh ? ' fresh' : '') + '" style="transform:rotate(' + (UIjit('na' + e.n) * 0.7).toFixed(2) + 'deg)"><div class="na-meta">' + UIesc(UIA.dateLabel(e.day)) + ' · ' + UIesc(e.time || '') + ' · ' + UIesc({ nudge: 'nudge', pointer: 'pointer', direct: 'straight answer' }[e.tier] || e.tier) + '</div><p class="hand">' + UIesc(e.text) + '</p><span class="na-sig">— I.K.</span>' + (btns ? '<div class="na-btns">' + btns + '</div>' : '') + '</div>';
+  },
+  propFiled: function (p) {
+    return UIA.props().some(function (q) {
+      if (p.type === 'same') return q.type === 'same' && ((q.a === p.a && q.b === p.b) || (q.a === p.b && q.b === p.a));
+      if (p.type === 'role') return q.type === 'role' && q.name === p.name && q.role === p.role;
+      return q.type === 'plot' && q.field === p.field && String(q.value) === String(p.value);
+    });
+  },
+  body: function (reply) {
+    var N = UIA.analyst();
+    var st = UIA.hintStatus();
+    var h = '<div class="na-card">' + this.portrait() + '<div><b>' + UIesc(N.name) + '</b><small>' + UIesc(N.title) + '</small><p>' + UIesc(N.bio) + '</p></div></div>';
+    if (reply) h += reply.ok ? this.noteHTML(reply.entry, true) : '<div class="na-note na-no"><p class="hand">' + UIesc(reply.text) + '</p><span class="na-sig">— I.K.</span>' + (reply.empty && !UIA.over() ? '<div class="na-btns"><button class="btn small primary" data-na="end">End the day</button></div>' : '') + '</div>';
+    h += '<div class="lbl sh-sec">Ask her for</div><div class="na-tiers">' + this.tierHTML() + '</div>';
+    var log = st.log.slice().reverse().filter(function (e) { return !reply || !reply.ok || e.n !== reply.entry.n; });
+    var self = this;
+    if (log.length) h += '<div class="lbl sh-sec">Her earlier notes · ' + st.total + ' in all</div>' + log.slice(0, 12).map(function (e) { return self.noteHTML(e, false); }).join('');
+    else if (!reply) h += '<p class="muted" style="font-size:12.5px;margin:10px 2px 0">Every note she writes goes in the file, and in your debrief. Nudges cost 2 points at the end, pointers 5, straight answers 10.</p>';
+    return h;
+  },
+  open: function (reply) {
+    if (!UIA.cs) return;
+    var self = this;
+    this.armed = null;
+    UIsheet.open({ title: 'The night desk', sub: UIA.over() ? 'Case closed' : UIA.hoursLeft() + ' team-hours left · credibility ' + UIA.credibility(), html: this.body(reply), mount: function (el) { self.bind(el); } });
+  },
+  rerender: function (el, reply) {
+    el.innerHTML = this.body(reply);
+    var sub = UI$('#sheet .sh-head .sub'); if (sub) sub.textContent = UIA.over() ? 'Case closed' : UIA.hoursLeft() + ' team-hours left · credibility ' + UIA.credibility();
+    el.scrollTop = 0;
+  },
+  entry: function (n) { return UIA.hintStatus().log.filter(function (e) { return String(e.n) === String(n); })[0]; },
+  bind: function (el) {
+    var self = this;
+    el.addEventListener('click', function (e) {
+      var t = e.target.closest('.na-tier');
+      if (t && !t.disabled) {
+        var tier = t.dataset.tier;
+        // a straight answer costs credibility: ask twice
+        if (tier === 'direct' && self.armed !== 'direct') { self.armed = 'direct'; var tl = el.querySelector('.na-tiers'); if (tl) tl.innerHTML = self.tierHTML(); return; }
+        self.armed = null;
+        var r = UIA.hint(tier);
+        UI.save(); UI.topbar();
+        if (r.ok) UIvibe(12);
+        self.rerender(el, r);
+        if (UIS.tab === 'case') UICase.render();
+        return;
+      }
+      var b = e.target.closest('[data-na]'); if (!b || b.disabled) return;
+      var a = b.dataset.na, x = b.dataset.x;
+      if (a === 'doc') { UIsheet.close(); UI.go('desk', { open: x }); }
+      else if (a === 'end') { UIsheet.close(); UI.confirmEndDay(); }
+      else if (a === 'pull') { var en = self.entry(x); if (!en) return; UIsheet.close(); UI.runQuery(en.refs.pull.sys, en.refs.pull.key); }
+      else if (a === 'file') {
+        var en2 = self.entry(x); if (!en2) return;
+        var p = en2.refs.prop;
+        UIsheet.close();
+        if (p.type === 'plot') UICase.filePlot(p.field, p.value, p.label);
+        else UICase.fileProps([p]);
+      }
+    });
+  }
+};
 /* CUTOUT UI — 18-debrief.js: outcome + step-by-step replay of the true operation. */
 var UIDebrief = {
   timer: null,
@@ -5845,7 +6487,8 @@ var UIDebrief = {
       return '<div><small>' + field + '</small><b style="font-size:15px">' + UIesc(disp || truth) + '</b><span style="font:12px var(--f-type);color:' + (ok ? 'var(--ok)' : '#8a3a2a') + '">' + (mine === undefined ? 'you filed nothing' : ok ? '✓ your hypothesis' : '✗ you had ' + UIesc(field === 'date' ? UIA.dateLabel(+mine) : String(mine).split(',')[0])) + '</span></div>';
     }
     var html = '<div class="db-wrap">';
-    html += '<div class="db-hero"><div class="lbl" style="color:#6e6453">Case closed · ' + UIesc(UIA.dateLong(UIA.day())) + '</div><h2>' + (o.prevented ? 'Operation prevented' : 'The act went ahead') + '</h2>' +
+    var lvl = d.level && d.level.label ? d.level.label : UIA.level().label;
+    html += '<div class="db-hero"><div class="lbl" style="color:#6e6453">Case closed · ' + UIesc(UIA.dateLong(UIA.day())) + ' · grade: ' + UIesc(lvl) + '</div><h2>' + (o.prevented ? 'Operation prevented' : 'The act went ahead') + '</h2>' +
       '<div class="stamp' + (o.prevented ? ' green' : '') + '">' + (o.prevented ? 'Prevented' : 'Failed') + '</div>' +
       '<p>' + UIesc(o.summary || o.how || '') + '</p>' +
       '<div class="db-score">' + (o.scoreLines || []).map(function (s) { return '<div><small>' + UIesc(s.label) + '</small><b>' + (s.pts > 0 ? '+' : '') + s.pts + '</b></div>'; }).join('') + '<div><small>Score</small><b>' + (o.score || 0) + '</b></div></div></div>';
@@ -5857,13 +6500,17 @@ var UIDebrief = {
     var bys = [].concat((d.innocents || []).map(function (x) { return x.name + ' (innocent' + (x.kind && x.kind !== 'innocent' ? ', ' + x.kind : '') + ')'; }), (d.herrings || []).map(function (x) { return x.name + ' (unrelated smuggler' + (x.link ? ' — ' + x.link : '') + ')'; }));
     if (bys.length) html += '<p class="muted" style="font-size:13px;margin-top:-10px">Bystanders: ' + bys.map(UIesc).join('; ') + '</p>';
     html += '</div>';
+    var hx = d.hints || { total: 0, log: [], used: {} };
+    html += '<div class="case-sec"><h3>The night desk</h3>' + (hx.total ? '<p class="muted" style="font-size:13px;margin:-2px 0 10px">You asked ' + UIesc(UIA.analyst().name) + ' ' + hx.total + ' time' + (hx.total > 1 ? 's' : '') + ': ' + ['nudge', 'pointer', 'direct'].filter(function (k) { return hx.used[k]; }).map(function (k) { return hx.used[k] + ' ' + (k === 'direct' ? 'straight answer' : k) + (hx.used[k] > 1 ? 's' : ''); }).join(', ') + '.</p>' +
+      hx.log.slice(-6).map(function (e) { return '<div class="na-note" style="margin:0 0 10px"><div class="na-meta">' + UIesc(UIA.dateLabel(e.day)) + ' · ' + UIesc(e.tier === 'direct' ? 'straight answer' : e.tier) + '</div><p class="hand">' + UIesc(e.text) + '</p></div>'; }).join('') + (hx.log.length > 6 ? '<p class="muted" style="font-size:12px">…and ' + (hx.log.length - 6) + ' earlier notes.</p>' : '')
+      : '<p class="muted" style="font-size:13px;margin:-2px 0 0">You never asked the night desk for help.</p>') + '</div>';
     var tl = d.timeline || [];
     var nSeen = tl.filter(function (s) { return s.seen; }).length;
     html += '<div class="case-sec"><h3>Replay · ' + nSeen + ' of ' + tl.length + ' steps left a trace you saw</h3><div id="db-steps">' + tl.map(function (s, i) {
       return '<div class="db-step"><div class="db-day">' + UIesc((s.dateLabel || '').replace(/^\w+ /, '')) + '<small>' + UIesc((s.dateLabel || '').split(' ')[0]) + '</small></div><div class="db-body" data-i="' + i + '"><div class="ph">' + UIesc(s.phase) + ' · ' + UIesc(s.kind) + '</div><div class="what" style="color:' + (s.seen ? 'var(--ui)' : 'var(--ui2)') + '">' + UIesc(s.text) + '</div><div class="db-tr">' +
         (s.traces && s.traces.length ? s.traces.map(function (t) { return '<span class="' + (t.seen ? 'f' : '') + '">' + UIesc(t.sys) + '</span>'; }).join('') : '<span>no trace</span>') + '</div></div></div>';
     }).join('') + '</div></div>';
-    if (d.stats) html += '<p class="muted" style="font-size:12.5px">' + Object.keys(d.stats).map(function (k) { return UIesc(k) + ': ' + UIesc(d.stats[k]); }).join(' · ') + '</p>';
+    if (d.stats) html += '<p class="muted" style="font-size:12.5px">Grade: ' + UIesc(lvl) + ' · ' + Object.keys(d.stats).map(function (k) { return UIesc(k) + ': ' + UIesc(d.stats[k]); }).join(' · ') + ' · hints: ' + (hx.total || 0) + '</p>';
     html += '<div class="db-ctrl"><button class="btn" id="db-skip">Show all</button><button class="btn" id="db-files">Case files</button><button class="btn primary" id="db-new">New case</button></div></div>';
     root.innerHTML = html;
     root.scrollTop = 0;
@@ -5886,14 +6533,30 @@ var UIBoot = {
     UI$('#game').hidden = true; UI$('#debrief').hidden = true; root.hidden = false;
     var sv = UIA.readSave();
     var seed = String(10000 + Math.floor(Math.random() * 89999));
+    var levels = UIA.levels();
+    var lv = UIPREF.get('level', 'officer');
+    if (!levels.some(function (l) { return l.id === lv; })) lv = 'officer';
+    var WORDS = { 16: 'sixteen', 20: 'twenty' };
+    function subText(id) { var L = UIA.levelInfo(id); return 'A partner service passes you a fragment. Somewhere in Europe a small network is preparing something. You have a desk, a telephone, ' + (WORDS[L.dayHours] || L.dayHours) + ' team-hours a day and about two weeks.'; }
     root.innerHTML = '<div class="t-wrap"><div class="t-folder"><div class="t-classif">SECRET</div>' +
       '<div class="lbl" style="color:#5a4526">Liaison desk · Vienna · autumn 1989</div><div class="t-title">CUTOUT</div>' +
-      '<p class="t-sub">A partner service passes you a fragment. Somewhere in Europe a small network is preparing something. You have a desk, a telephone, sixteen team-hours a day and about two weeks.</p>' +
+      '<p class="t-sub" id="t-sub">' + UIesc(subText(lv)) + '</p>' +
       '<div class="t-label"><b>File no.</b><input id="t-seed" inputmode="numeric" value="' + seed + '" aria-label="Case seed" maxlength="12"></div>' +
+      '<div class="t-label t-gradeblk"><b>Grade</b><div class="t-grade-w"><div class="t-grade" role="radiogroup" aria-label="Difficulty">' + levels.map(function (L) {
+        return '<button type="button" role="radio" aria-checked="' + (L.id === lv) + '" data-lv="' + L.id + '" class="' + (L.id === lv ? 'on' : '') + '">' + UIesc(L.label) + '</button>';
+      }).join('') + '</div><span class="t-gblurb" id="t-gblurb">' + UIesc(UIA.levelInfo(lv).blurb) + '</span></div></div>' +
       '<div class="t-label"><b>Handling</b><span>Pull records on every name, number and plate you read. Pin what matters to the board. File what you believe; three right answers get stamped. Stop them before the day.</span></div>' +
-      '<div class="t-actions">' + (sv ? '<button class="btn primary" id="t-cont">Continue — ' + UIesc(sv.label || '') + '</button>' : '') +
+      '<div class="t-actions">' + (sv ? '<button class="btn primary" id="t-cont">Continue — ' + UIesc(sv.label || '') + (sv.level ? ' · ' + UIesc(sv.level) : '') + '</button>' : '') +
       '<button class="btn ' + (sv ? '' : 'primary') + '" id="t-new">Open the case</button></div>' +
       '<p class="t-brief" id="t-msg"></p></div><div class="t-foot">No real persons. All hotels, firms and banks invented.</div></div>';
+    UI$('.t-grade').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-lv]'); if (!b) return;
+      lv = b.dataset.lv; UIPREF.set('level', lv);
+      UI$$('.t-grade button').forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)); });
+      UI$('#t-gblurb').textContent = UIA.levelInfo(lv).blurb;
+      UI$('#t-sub').textContent = subText(lv);
+    });
+    UIBoot.level = function () { return lv; };
     var go = UI$('#t-new');
     go.addEventListener('click', function () {
       if (sv && !UIBoot._armed) { UIBoot._armed = true; go.textContent = 'Discard saved case and open file ' + UI$('#t-seed').value.trim() + '?'; go.classList.add('danger'); return; }
@@ -5910,7 +6573,7 @@ var UIBoot = {
     UI$$('#title button').forEach(function (b) { b.disabled = true; });
     setTimeout(function () {
       try {
-        UIA.create(seed);
+        UIA.create(seed, UIBoot.level ? UIBoot.level() : 'officer');
       } catch (e) {
         msg.textContent = 'The registry could not produce this file (' + e.message + '). Try another number.';
         UI$$('#title button').forEach(function (b) { b.disabled = false; });

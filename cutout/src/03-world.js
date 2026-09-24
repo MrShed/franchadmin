@@ -16,8 +16,11 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
   CX.buildWorld = function (seed, opts) {
     opts = opts || {};
     var R = CX.rng('cutout:' + seed);
+    // difficulty grade. Every branch below keeps the RNG draw sequence of the
+    // standard grade ('officer') unchanged, so its cases stay identical.
+    var LV = CX.level(opts.level);
     var W = {
-      seed: String(seed), opts: opts, R: R,
+      seed: String(seed), opts: opts, R: R, level: LV.id, LV: LV, dayHours: LV.dayHours,
       persons: [], P: {}, nameOwner: {}, oldAliases: {},
       phones: {}, accounts: {}, companies: {}, vehicles: {}, hotels: {}, venues: {},
       events: [], steps: [], herringLinks: [], clues: [], tipSeeds: [],
@@ -29,7 +32,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     // ------------------------------------------------------------ basics
     W.startDom = opts.startDom || R.int(2, 20);
     W.cal = CX.Calendar(W.startDom);
-    W.D = opts.D || R.int(10, 14);
+    W.D = opts.D || (R.int(10, 14) + (LV.extraDays || 0));
     var D = W.D;
     var tKeys = Object.keys(DATA.TEMPLATES);
     W.templateKey = opts.template && DATA.TEMPLATES[opts.template] ? opts.template : R.pick(tKeys);
@@ -176,11 +179,15 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
 
     // network roles
     var roles = ['principal', 'cutout', 'operative'].concat(T.roles);
+    // small network: one specialist fewer (the forger, else the lookout)
+    if (LV.small && T.roles.length >= 3) { var drop = T.roles.indexOf('forger') >= 0 ? 'forger' : T.roles.indexOf('lookout') >= 0 ? 'lookout' : T.roles[T.roles.length - 1]; roles = roles.filter(function (r) { return r !== drop; }); }
     var opt = R.shuffle(T.opt);
     var nOpt = R.weighted([[0, 2], [1, 4], [2, 3]]);
+    if (LV.small) nOpt = 0;
+    if (LV.big) nOpt = Math.min(opt.length, 2 + (R.chance(0.4) ? 1 : 0));
     roles = roles.concat(opt.slice(0, nOpt));
-    if (roles.length >= 7 && R.chance(0.6)) roles.push('cutout');
-    var backup = R.chance(0.3);
+    if (roles.length >= 7 && R.chance(LV.big ? 0.9 : 0.6)) roles.push('cutout');
+    var backup = R.chance(LV.small ? 0 : LV.big ? 0.5 : 0.3);
     if (backup) roles.push('operative');
 
     var homeFor = {
@@ -251,7 +258,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     addPhone(P.officePhone, { kind: 'office', subscriber: frontName, address: frontAddr, city: principalCity, company: frontName });
     var rootAcc = mkAccountNo(principalCity);
     var principalAlias = null;
-    if (R.chance(0.5)) principalAlias = addAlias(P, P.nat);
+    if (R.chance(LV.moreAliases ? 0.8 : 0.5)) principalAlias = addAlias(P, P.nat);
     addAccount(rootAcc, { holder: frontName, holderKind: 'company', address: frontAddr, signatory: (principalAlias || P.idents[0]).name, company: frontName, pid: P.id, root: true });
     W.companies[frontName] = { name: frontName, city: principalCity, address: frontAddr, regNo: regNo(principalCity), founded: -R.int(900, 4000), directors: [(principalAlias || P.idents[0]).name], accounts: [rootAcc.no], notes: 'Foreign-trade enterprise; accounts abroad under licence.', pids: [P.id], front: true };
     W.rootAccount = rootAcc.no;
@@ -289,13 +296,13 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     // aliases for the rest of the network
     var O1 = addAlias(O, R.pick(['AT', 'DE', 'CH', 'NL', 'IT', 'FR', 'GB', 'YU', 'TR', 'PT']));
     var O2 = null;
-    if (net.forger || R.chance(0.6)) O2 = addAlias(O, R.pick(['AT', 'DE', 'CH', 'NL', 'IT', 'FR', 'GB', 'PT']));
+    if (!LV.oneAlias && (net.forger || R.chance(LV.moreAliases ? 1 : 0.6))) O2 = addAlias(O, R.pick(['AT', 'DE', 'CH', 'NL', 'IT', 'FR', 'GB', 'PT']));
     var Ob = net.backup ? addAlias(net.backup, R.pick(['AT', 'DE', 'CH', 'IT', 'FR'])) : null;
-    var Dr = net.driver ? (R.chance(0.65) ? addAlias(net.driver, net.driver.nat) : net.driver.idents[0]) : null;
-    var Cr = net.courier ? (R.chance(0.6) ? addAlias(net.courier, R.pick(['AT', 'DE', 'CH', 'NL', net.courier.nat])) : net.courier.idents[0]) : null;
-    var Lk = net.lookout ? (R.chance(0.3) ? addAlias(net.lookout, net.lookout.nat) : net.lookout.idents[0]) : null;
-    var Ch = net.chemist ? (R.chance(0.35) ? addAlias(net.chemist, net.chemist.nat) : net.chemist.idents[0]) : null;
-    var c2Alias = C2 ? (R.chance(0.6) ? addAlias(C2, C2.nat) : C2.idents[0]) : null;
+    var Dr = net.driver ? (R.chance(LV.moreAliases ? 0.9 : 0.65) ? addAlias(net.driver, net.driver.nat) : net.driver.idents[0]) : null;
+    var Cr = net.courier ? (R.chance(LV.moreAliases ? 0.9 : 0.6) ? addAlias(net.courier, R.pick(['AT', 'DE', 'CH', 'NL', net.courier.nat])) : net.courier.idents[0]) : null;
+    var Lk = net.lookout ? (R.chance(LV.moreAliases ? 0.7 : 0.3) ? addAlias(net.lookout, net.lookout.nat) : net.lookout.idents[0]) : null;
+    var Ch = net.chemist ? (R.chance(LV.moreAliases ? 0.7 : 0.35) ? addAlias(net.chemist, net.chemist.nat) : net.chemist.idents[0]) : null;
+    var c2Alias = C2 ? (R.chance(LV.moreAliases ? 0.9 : 0.6) ? addAlias(C2, C2.nat) : C2.idents[0]) : null;
     W.opIdents = { O1: O1, O2: O2 };
 
     // --------------------------------------------------- identity links
@@ -338,7 +345,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       var prob = { principal: 0.5, cutout: 0.4, operative: 0.5, armourer: 0.7, forger: 0.75, courier: 0.35, chemist: 0.3, driver: 0.25 }[p.role] || 0;
       if (!needs && !R.chance(prob)) return;
       var cardAliases = als.filter(function (a) { return a.links.indexOf('L3') >= 0; }).map(function (a) { return a.name; });
-      if (R.chance(0.5)) cardAliases.push(oldAlias(p));
+      if (R.chance(LV.oneAlias ? 0 : 0.5)) cardAliases.push(oldAlias(p));
       var summ = {
         principal: 'Believed to be an officer of a hostile service under trade cover. Travels rarely; prefers to be visited.',
         cutout: 'Commercial traveller with an unusual number of border crossings. Suspected go-between for ' + R.pick(['a Middle Eastern group', 'an Eastern service', 'arms brokers']) + '.',
@@ -488,6 +495,45 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       }
       return true;
     };
+    // grade: extra decoys (each fails at least one planned clue, so the plot stays separable)
+    for (var xd = 0; xd < (LV.extraDecoys || 0); xd++) {
+      for (var tries = 0; tries < 12; tries++) {
+        var cX = R.pick(W.cities), vX = venuesIn(cX, kindsFor(subjKind), actVenue.key);
+        if (!vX.length) continue;
+        var sX = mkSubject(subjKind, R.chance(0.5) ? targetSubj.trait.cat : otherCat(targetSubj.trait.cat));
+        if (!sX) continue;
+        var cand = { id: 'tmp', subject: sX, venue: R.pick(vX), city: cX, day: R.pick([D - 1, D, D + 1, dayOutsideWindow()]) };
+        cand.city = W.venues[cand.venue].city;
+        if (planned.every(function (c) { return W.eventMatches(cand, c); })) continue;
+        mkEvent(sX, cand.venue, cand.day, false);
+        break;
+      }
+    }
+    // grade: fewer decoys. Keep the subset whose planned clues still need to be combined.
+    if (LV.decoys) {
+      var decoys = W.events.filter(function (e) { return !e.real; });
+      if (decoys.length > LV.decoys) {
+        var need = function (evs) {
+          for (var size = 1; size <= planned.length; size++) {
+            var hit = false;
+            (function rec(start, chosen) {
+              if (hit) return;
+              if (chosen.length === size) { if (evs.filter(function (ev) { return chosen.every(function (c) { return W.eventMatches(ev, c); }); }).length === 1) hit = true; return; }
+              for (var i = start; i < planned.length; i++) rec(i + 1, chosen.concat([planned[i]]));
+            })(0, []);
+            if (hit) return size;
+          }
+          return 99;
+        };
+        var best = null, bestN = -1;
+        for (var i1 = 0; i1 < decoys.length; i1++) for (var i2 = i1 + 1; i2 < decoys.length; i2++) {
+          var keep = [decoys[i1], decoys[i2]];
+          var n = need([realEvent].concat(keep));
+          if (n > bestN) { bestN = n; best = keep; }
+        }
+        W.events = [realEvent].concat(best);
+      }
+    }
     var survivors = W.events.filter(function (ev) { return planned.every(function (c) { return W.eventMatches(ev, c); }); });
     if (survivors.length !== 1) throw new Error('decoys not separable');
     W.events = R.shuffle(W.events);
@@ -734,7 +780,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         var acqTime = T_(10 * 60, 19 * 60);
         if (t && t.stay && d === t.stay.from) acqTime = Math.min(22 * 60, t.stay.time + R.int(60, 180));
         it.buyer = buyer; it.buyerName = bIdent.name;
-        it.step = step('acquire', d, acqTime, 'logistics', { item: it.key, itemName: it.name, mode: 'supplier', city: S.homeCity, informant: R.chance(0.8), namesBuyer: R.chance(0.5) });
+        it.step = step('acquire', d, acqTime, 'logistics', { item: it.key, itemName: it.name, mode: 'supplier', city: S.homeCity, informant: R.chance(LV.informant.supply), namesBuyer: R.chance(LV.informant.namesBuyer) });
         it.step.parts = [part(buyer, bIdent, buyer.role), part(S, S.idents[0], S.role)];
         coPay(d + R.int(0, 1), S.account, { weapon: 12, optics: 4, chemical: 8, device: 5, explosive: 15, tools: 3, 'vehicle-work': 6 }[it.cat] * 1000, R.pick(DATA.ITEMS[it.key].ref).replace('{n}', R.num(4)), S, { item: it.key, purpose: 'supply' });
       } else if (it.mode === 'theft') {
@@ -998,7 +1044,9 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
           if (dest) {
             var d4 = R.int(-6, D - 5);
             var t4 = trip(p, a, p.homeCity, dest, d4, { plate: p.car, nights: 1, role: p.role, phase: 'logistics' });
-            trip(p, a, dest, p.homeCity, d4 + 1, { plate: p.car, noStay: true, role: p.role, bookedDay: d4 });
+            // come back the day after arriving (trip() may have moved the journey to a free slot)
+            var back4 = t4.stay ? t4.stay.to : t4.travel.day + 1;
+            trip(p, a, dest, p.homeCity, back4, { plate: p.car, noStay: true, role: p.role, bookedDay: back4 - 1 });
             var hnd = p.role === 'cutout' ? P : handlerOf(p);
             if (t4.stay) call(d4, { num: hotelLine(t4.stay), p: p, ident: a, stay: t4.stay }, { num: hnd === P ? P.officePhone : hnd.phone, p: hnd, ident: hnd.idents[0] }, { phase: 'logistics' });
           }
@@ -1061,6 +1109,7 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     var goods = R.pick(DATA.FLAVOUR.herringGoods);
     W.herringGoods = goods;
     var hN = R.int(2, 3);
+    if (LV.herrings) hN = LV.herrings;
     var hCities = R.shuffle(W.cities);
     var ring = [];
     for (var hi = 0; hi < hN; hi++) {
@@ -1078,19 +1127,20 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       var hd = R.int(-6, D - 3);
       var ht = trip(h, h.idents[0], h.homeCity, dest, hd, { nights: R.int(1, 2), role: 'herring', phase: 'herring', plate: h.car && landLink(h.homeCity, dest) && cc(h.homeCity) !== cc(dest) ? h.car : null });
       if (ht.stay) call(hd, { num: hotelLine(ht.stay), p: h, ident: h.idents[0], stay: ht.stay }, { num: ring[(i + 1) % ring.length].phone, p: ring[(i + 1) % ring.length], ident: ring[(i + 1) % ring.length].idents[0] }, { phase: 'herring' });
-      if (i === 0) {
+      if (i === 0 && ring.length > 1) {
         call(R.int(0, D - 4), { num: h.phone, p: h, ident: h.idents[0] }, { num: ring[1].phone, p: ring[1], ident: ring[1].idents[0] }, { phase: 'herring', intercept: { service: R.pick(['BfV', 'Staatspolizei', 'Zollfahndung']), lines: [{ spk: 'A', text: goods.code + ' arrive ' + CX.WEEKDAYS[R.int(0, 6)] }, { spk: 'B', text: 'same place as last time?' }, { spk: 'A', text: R.pick(['not on the phone', 'the usual price', 'bring the van, not the car']) }], lag: 1 } });
         var hp2 = pay(R.int(-4, D - 4), h.account, ring[1].account, amt(8000), R.pick([goods.ref.replace('{n}', R.num(4)), 'Darlehen', 'Rückzahlung']), [part(h, h.idents[0], 'herring'), part(ring[1], ring[1].idents[0], 'herring')], { phase: 'herring' });
         hp2.cur = curOf(h.account);
       }
     });
-    step('seizure', R.int(0, D - 4), T_(6 * 60, 23 * 60), 'herring', { goods: goods, city: ring[1].homeCity, plate: ring[1].car || null }).parts = [part(ring[1], ring[1].idents[0], 'herring')];
+    var ringB = ring[ring.length > 1 ? 1 : 0];
+    step('seizure', R.int(0, D - 4), T_(6 * 60, 23 * 60), 'herring', { goods: goods, city: ringB.homeCity, plate: ringB.car || null }).parts = [part(ringB, ringB.idents[0], 'herring')];
 
     // tempting false link 1: same surname, same hotel, overlapping night
     var bait = OA;
     var baitStay = reconStay && reconStay.parts[0].name === OA.name ? reconStay : W.steps.filter(function (s) { return s.kind === 'stay' && s.parts[0].name === bait.name; })[0];
     if (!baitStay) { bait = c1Alias; baitStay = W.steps.filter(function (s) { return s.kind === 'stay' && s.parts[0].name === c1Alias.name; })[0]; }
-    if (baitStay) {
+    if (baitStay && LV.herringTraps) {
       var surname = bait.name.split(' ').slice(1).join(' ');
       var hs0 = ring[0];
       var twin = mkPerson('herring', bait.nat, R.pick(W.cities), { surname: surname.replace(/ová$|á$/, ''), sex: 'm' });
@@ -1104,7 +1154,9 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
       W.herringLinks.push({ type: 'surname', herring: twin.real, herringPid: twin.id, bait: bait.name, baitPid: bait.pid, hotel: baitStay.hotel, night: baitStay.from, stayId: tw.id });
     }
     // tempting false link 2: similar company name at the same bank / or wrong informant
-    if (R.chance(0.5)) {
+    // (none for the easiest grade; both for the hardest)
+    var trap2 = LV.herringTraps ? R.chance(0.5) : null;
+    if (trap2 === true || (trap2 === false && LV.herringTraps > 1)) {
       var cov = W.companies[W.coverCompany];
       var hCo = cov.name.replace(/^(\S+)/, function (m) { return m; }).replace(/Import-Export|Handels|Maschinen-Handel|Consulting|Transport|Trading|Technik-Vertrieb/, function (m) { return R.pick(['Handel', 'Export', 'Spedition', 'Warenhandel', 'Vertrieb'].filter(function (x) { return x !== m; })); });
       if (!used.company[hCo]) {
@@ -1117,7 +1169,8 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         var hp3 = pay(R.int(-3, D - 4), hAcc.no, owner.account, amt(6000), 'Privatentnahme', [part(owner, owner.idents[0], 'herring')], { phase: 'herring' }); hp3.cur = curOf(hAcc.no);
         W.herringLinks.push({ type: 'company', herring: owner.real, herringPid: owner.id, company: hCo, bait: W.coverCompany });
       }
-    } else {
+    }
+    if (trap2 === false || (trap2 === true && LV.herringTraps > 1)) {
       var wrongTarget = ring[R.int(0, ring.length - 1)];
       while (wrongTarget.dob === c1Alias.dob) { wrongTarget.dob = mkDob(1935, 1965); wrongTarget.idents[0].dob = wrongTarget.dob; }
       W.herringLinks.push({ type: 'informant', herring: wrongTarget.real, herringPid: wrongTarget.id, bait: c1Alias.name, day: R.int(2, D - 4) });

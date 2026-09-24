@@ -209,6 +209,12 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
     if (s.wrongful) pts.push({ label: 'Wrongful warrant requests (' + s.wrongful + ')', pts: -20 * s.wrongful });
     if (out.prevented && out.daysToSpare) pts.push({ label: 'Days to spare (' + out.daysToSpare + ')', pts: 5 * out.daysToSpare });
     if (trapQuality) pts.push({ label: 'Trap well briefed (method/target)', pts: trapQuality });
+    var hu = s.hints && s.hints.used;
+    if (hu && (hu.nudge + hu.pointer + hu.direct)) {
+      var pen = CX.ANALYST ? CX.ANALYST.penalty : { nudge: 2, pointer: 5, direct: 10 };
+      var parts = []; ['nudge', 'pointer', 'direct'].forEach(function (k) { if (hu[k]) parts.push(hu[k] + ' ' + k + (hu[k] > 1 ? 's' : '')); });
+      pts.push({ label: 'Help from the night desk (' + parts.join(', ') + ')', pts: -(hu.nudge * pen.nudge + hu.pointer * pen.pointer + hu.direct * pen.direct) });
+    }
     out.scoreLines = pts;
     out.score = pts.reduce(function (a, b) { return a + b.pts; }, 0);
     out.summary = (out.prevented ? 'Prevented. ' : 'Not prevented. ') + out.how;
@@ -274,7 +280,9 @@ var CX = (typeof CX !== 'undefined' && CX) ? CX : {};
         var tr = (entriesByStep[st.id] || []).map(function (e) { return { sys: e._sys, seen: !!s.seen[e._id] }; });
         return { day: st.day, dateLabel: W.cal.nice(st.day), phase: st.phase, kind: st.kind, text: CX.stepText(W, st), traces: tr, seen: tr.some(function (t) { return t.seen; }), blocked: cs._blocked(st.id) };
       }),
-      stats: { docs: s.docs.length, queries: s.queries, hoursUsed: s.hoursUsed }
+      stats: { docs: s.docs.length, queries: s.queries, hoursUsed: s.hoursUsed },
+      level: { id: this.level, label: this.levelLabel },
+      hints: s.hints ? { used: CX.clone(s.hints.used), total: s.hints.used.nudge + s.hints.used.pointer + s.hints.used.direct, log: CX.clone(s.hints.log) } : { used: { nudge: 0, pointer: 0, direct: 0 }, total: 0, log: [] }
     };
   };
 })();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Run the headless solver over many seeds.
-// Usage: node tests/solve.js [from..to | N] [--raw] [--template=rifle] [--verbose]
+// Usage: node tests/solve.js [from..to | N] [--raw] [--template=rifle] [--level=probationer|officer|head] [--verbose]
 //   default: seeds 1..200 through CX.newCase (with generation retries).
 //   --raw: evaluate only generation attempt 0 of each seed (no retries) to see the raw rate.
 var CX = require('./load.js')();
@@ -11,18 +11,22 @@ if (range.length === 1) { from = 1; to = +range[0]; }
 var raw = args.indexOf('--raw') >= 0, verbose = args.indexOf('--verbose') >= 0;
 var tArg = args.filter(function (a) { return /^--template=/.test(a); })[0];
 var template = tArg ? tArg.split('=')[1] : undefined;
+var lArg = args.filter(function (a) { return /^--level=/.test(a); })[0];
+var level = lArg ? lArg.split('=')[1] : undefined;
+var LV = CX.level(level);
+var gopts = { template: template, level: level };
 
 var n = 0, ok = 0, attempts = 0, t0 = Date.now();
-var sum = { ratio: 0, hours: 0, queries: 0, docs: 0, day: 0, D: 0, net: 0, aliases: 0, cities: 0, events: 0, minClues: 0, warrants: 0, methodLead: 0, eventLead: 0, entries: 0, innocents: 0, herrings: 0 };
+var sum = { mh: 0, ratio: 0, hours: 0, queries: 0, docs: 0, day: 0, D: 0, net: 0, aliases: 0, cities: 0, events: 0, minClues: 0, warrants: 0, methodLead: 0, eventLead: 0, entries: 0, innocents: 0, herrings: 0 };
 var byT = {}, failReasons = {}, clueKinds = {}, ratios = [], minH = [];
 for (var s = from; s <= to; s++) {
   n++;
   var rep, W, attempt = 0;
   if (raw) {
-    try { W = CX.buildWorld(String(s), { template: template }); CX.makeTraces(W); } catch (e) { console.log(s, 'GEN ERROR', e.message); failReasons['gen: ' + e.message] = (failReasons['gen: ' + e.message] || 0) + 1; continue; }
+    try { W = CX.buildWorld(String(s), gopts); CX.makeTraces(W); } catch (e) { console.log(s, 'GEN ERROR', e.message); failReasons['gen: ' + e.message] = (failReasons['gen: ' + e.message] || 0) + 1; continue; }
     rep = CX.solveWorld(W);
   } else {
-    var cs = CX.newCase(String(s), { template: template });
+    var cs = CX.newCase(String(s), gopts);
     W = cs._w; rep = cs._verify; attempt = cs.attempt;
     rep = rep || { solved: false, fails: ['no report'] };
   }
@@ -35,9 +39,9 @@ for (var s = from; s <= to; s++) {
   byT[t].n++;
   if (rep.solved) {
     ok++; byT[t].ok++;
-    var ratio = mh.hours / 16; ratios.push(ratio);
+    var ratio = mh.hours / W.dayHours; ratios.push(ratio);
     byT[t].ratio += ratio;
-    sum.ratio += ratio; sum.hours += rep.hours; sum.queries += rep.queries; sum.docs += rep.docs; sum.day += rep.day; sum.D += W.D;
+    sum.mh += mh.hours; sum.ratio += ratio; sum.hours += rep.hours; sum.queries += rep.queries; sum.docs += rep.docs; sum.day += rep.day; sum.D += W.D;
     sum.minClues += rep.minClues; sum.warrants += rep.warrants.length;
     sum.methodLead += (rep.methodDay === null ? rep.day : rep.methodDay); sum.eventLead += (rep.eventDay === null ? rep.day : rep.eventDay);
     rep.clues.forEach(function (k) { clueKinds[k] = (clueKinds[k] || 0) + 1; });
@@ -57,9 +61,9 @@ for (var s = from; s <= to; s++) {
 function avg(x) { return ok ? (x / ok).toFixed(2) : '-'; }
 function avgN(x) { return (x / n).toFixed(2); }
 ratios.sort(function (a, b) { return a - b; });
-console.log('\n==== ' + n + ' seeds' + (raw ? ' (raw attempt 0)' : ' (with retries)') + (template ? ' template ' + template : '') + ' in ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
+console.log('\n==== ' + n + ' seeds' + (raw ? ' (raw attempt 0)' : ' (with retries)') + ' grade ' + LV.label + ' (' + LV.dayHours + 'h/day, accept at ' + LV.acceptCap + 'h' + (LV.easyCap ? ', not at ' + LV.easyCap + 'h' : '') + ')' + (template ? ' template ' + template : '') + ' in ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
 console.log('solvable: ' + ok + '/' + n + ' = ' + (100 * ok / n).toFixed(1) + '%   generation attempts per case: ' + (attempts / n).toFixed(2));
-console.log('ideal analyst needs (min daily team-hours / 16): mean ' + avg(sum.ratio) + '  min ' + (ratios[0] || 0).toFixed(2) + '  median ' + (ratios[Math.floor(ratios.length / 2)] || 0).toFixed(2) + '  max ' + (ratios[ratios.length - 1] || 0).toFixed(2));
+console.log('ideal analyst needs min daily team-hours: mean ' + avg(sum.mh) + ' of ' + LV.dayHours + ';  as a share of the day: mean ' + avg(sum.ratio) + '  min ' + (ratios[0] || 0).toFixed(2) + '  median ' + (ratios[Math.floor(ratios.length / 2)] || 0).toFixed(2) + '  max ' + (ratios[ratios.length - 1] || 0).toFixed(2));
 var hist = {}; minH.forEach(function (h) { hist[h] = (hist[h] || 0) + 1; });
 console.log('  histogram of min daily hours: ' + Object.keys(hist).sort(function (a, b) { return a - b; }).map(function (h) { return h + 'h:' + hist[h]; }).join('  '));
 console.log('at that budget — solver: hours ' + avg(sum.hours) + ', queries ' + avg(sum.queries) + ', docs ' + avg(sum.docs) + ', solved on day ' + avg(sum.day) + ' of D=' + avg(sum.D) + ' (method known day ' + avg(sum.methodLead) + ', event day ' + avg(sum.eventLead) + ')');

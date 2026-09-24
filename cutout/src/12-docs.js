@@ -8,11 +8,17 @@ var UIDoc = (function () {
   var D = {};
   var hlSet = {};
   D.setHighlights = function (h) { hlSet = h || {}; };
+  // cross-reference marks: identifiers already seen in 2+ documents on the desk
+  var xrMap = null, xrDone = {};
+  D.setXref = function (m) { xrMap = m || null; };
 
   // ---------------------------------------------------------------- segments
   function tokHTML(t) {
     var k = t.t + ':' + t.v;
-    return '<span class="tk' + (hlSet[k] ? ' hl' : '') + '" data-t="' + UIesc(t.t) + '" data-v="' + UIesc(t.v) + '" role="button" tabindex="0">' + UIesc(t.d || t.v) + '</span>';
+    var x = xrMap && xrMap[k] && !xrDone[k] ? xrMap[k] : null;
+    if (x) xrDone[k] = 1; // one mark per document
+    return '<span class="tk' + (hlSet[k] ? ' hl' : '') + (x ? ' xk' : '') + '" data-t="' + UIesc(t.t) + '" data-v="' + UIesc(t.v) + '" role="button" tabindex="0">' + UIesc(t.d || t.v) + '</span>' +
+      (x ? '<span class="xr" data-t="' + UIesc(t.t) + '" data-v="' + UIesc(t.v) + '" role="button" tabindex="0" title="Seen in ' + x.docs.length + ' documents" aria-label="Seen in ' + x.docs.length + ' documents">' + x.docs.length + '</span>' : '');
   }
   function segs(x, upper) {
     return (x || []).map(function (s) {
@@ -306,6 +312,7 @@ var UIDoc = (function () {
 
   /** HTML for the whole document (one or more sheets) */
   D.render = function (doc) {
+    xrDone = {};
     var f = R[doc.style] || R.report;
     if (doc.kind === 'statement' || doc.kind === 'police' || doc.kind === 'porter' || doc.kind === 'press') f = R.report;
     if (doc.kind === 'intercept') f = R.telex;
