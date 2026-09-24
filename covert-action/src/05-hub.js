@@ -265,7 +265,7 @@ function ciaFloors() {
   return menuScene({
     menu: Menu([{ label: '1. Data Section', go: () => ride(1, () => go(dataSection(() => go(ciaFloors())))) }, { label: '2. Intelligence Section', go: () => ride(2, () => go(intelSection(() => go(ciaFloors())))) }, { label: '3. Crypto Branch', go: () => ride(3, () => go(cryptoBranch(() => go(ciaFloors())))) }, { label: 'Leave building', go: () => ride(0, () => go(cityScene())) }], 27, 30, 146),
     back: () => go(cityScene()),
-    draw() { rect(0, 0, W, H, P.K); text('You are in the CIA building.', 21, 14, P.W); text('Which floor ?', 21, 22, P.W); this.menu.draw(); statusBox(174); },
+    draw() { rect(0, 0, W, H, P.K); g.save(); g.beginPath(); g.rect(170, 0, 150, 200); g.clip(); g.translate(170, 0); liftArt(0, 0, 150, 200, this.t, game.ciaFloor || 0, 1, 0, [1, 2, 3, 0][this.menu.sel]); g.restore(); text('You are in the CIA building.', 21, 14, P.W); text('Which floor ?', 21, 22, P.W); this.menu.draw(); statusBox(174); },
   });
 }
 function dataSection(back) {

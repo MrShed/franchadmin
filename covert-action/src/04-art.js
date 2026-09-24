@@ -3,49 +3,6 @@
 // ===================================================================
 
 // ---------- dossier photo, 26x32 ----------
-function drawFace(f, x, y, w = 26, h = 32) {
-  const key = 'face' + JSON.stringify(f) + w;
-  const c = sprite(key, 26, 32, () => {
-    dither(0, 0, 26, 32, f.bg, P.K, 5);
-    // shoulders / jacket
-    rect(2, 26, 22, 6, f.jacket); rect(4, 24, 18, 3, f.jacket);
-    rect(10, 24, 6, 8, P.W); rect(12, 25, 2, 7, f.sex === 'm' ? f.tie : P.W);
-    if (f.sex === 'f') { rect(10, 24, 6, 4, f.skin); }
-    // neck
-    rect(10, 20, 6, 5, f.skin); rect(10, 22, 6, 1, P.SK3);
-    // head
-    const jw = [0, 1, -1][f.jaw];
-    rect(7, 6, 12, 14, f.skin); rect(8 + (jw < 0 ? 1 : 0), 20, 10 - (jw < 0 ? 2 : 0), 2, f.skin); rect(6, 10, 1, 6, f.skin); rect(19, 10, 1, 6, f.skin);
-    rect(5, 11, 1, 3, f.skin); rect(20, 11, 1, 3, f.skin); // ears
-    rect(18, 7, 1, 13, P.SK3); rect(8, 21, 10, 1, P.SK3);
-    // hair
-    const hc = f.hair;
-    if (f.hairStyle === 0) { rect(7, 4, 12, 4, hc); rect(6, 6, 2, 5, hc); rect(18, 6, 2, 5, hc); }
-    else if (f.hairStyle === 1) { rect(8, 5, 10, 2, hc); rect(7, 6, 1, 3, hc); rect(18, 6, 1, 3, hc); } // receding
-    else if (f.hairStyle === 2) { rect(6, 3, 14, 5, hc); rect(6, 7, 2, 7, hc); rect(18, 7, 2, 7, hc); rect(9, 7, 4, 1, hc); } // full
-    else if (f.hairStyle === 3) { rect(7, 3, 12, 4, hc); rect(7, 6, 3, 2, hc); rect(12, 6, 2, 1, hc); } // side part
-    else if (f.hairStyle === 4) { rect(5, 3, 16, 5, hc); rect(4, 7, 3, 17, hc); rect(19, 7, 3, 17, hc); } // long
-    else { rect(6, 3, 14, 5, hc); rect(5, 7, 3, 10, hc); rect(18, 7, 3, 10, hc); rect(9, 2, 8, 2, hc); } // bob
-    if (f.hat) { rect(4, 5, 18, 2, P.D2); rect(7, 0, 12, 6, P.D2); rect(7, 4, 12, 1, P.RD); }
-    // eyes & brows
-    rect(9, 11, 3, 1, hc === P.G3 ? P.G2 : P.K); rect(14, 11, 3, 1, hc === P.G3 ? P.G2 : P.K);
-    rect(9, 13, 3, 1, P.W); rect(14, 13, 3, 1, P.W); px(10 + f.eyes, 13, P.K); px(15 + f.eyes, 13, P.K);
-    if (f.glasses === 1) { frame(8, 12, 5, 3, P.K); frame(13, 12, 5, 3, P.K); }
-    if (f.glasses === 2) { rect(8, 12, 10, 3, P.K); px(10, 13, P.G2); px(15, 13, P.G2); }
-    // nose / mouth
-    rect(12, 14, 2, 3, P.SK3); px(13, 14, f.skin);
-    rect(11, 18, 5, 1, f.sex === 'f' ? P.RD : P.SK3);
-    if (f.beard === 1) { rect(10, 17, 7, 1, hc); }
-    if (f.beard === 2) { rect(8, 17, 10, 5, hc); rect(11, 18, 5, 1, P.SK3); }
-    if (f.sex === 'f') { px(8, 15, P.PK); px(17, 15, P.PK); }
-  });
-  g.drawImage(c, x, y, w, h);
-}
-function drawUnknownFace(x, y) {
-  dither(x, y, 26, 32, P.G1, P.K, 6);
-  rect(x + 8, y + 7, 10, 13, P.G2); rect(x + 5, y + 24, 16, 8, P.G2); rect(x + 10, y + 20, 6, 4, P.G2);
-  textC('?', x + 13, y + 9, P.G4);
-}
 
 // ---------- world map ----------
 const LAND = [
