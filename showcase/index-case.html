@@ -6939,8 +6939,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (pc.n >= 6 && pf.n >= 12 && pc.ill >= 2) {
       var rc = pc.ill / pc.n, rf = pf.ill / pf.n, rn = pn.n ? pn.ill / pn.n : rf;
       var ratio = ((rn + rf) / 2) / Math.max(0.001, rc);
-      if ((ratio >= 0.55 && rc >= 0.06) || rf >= 0.12) ev.airborne += 2.2;
-      else if (ratio <= 0.45 && rc >= 0.06) { ev.droplet += 1.4; ev.contact += 0.8; }
+      if (ratio >= 0.58 && rc >= 0.06) ev.airborne += 2.2;
+      else if (ratio <= 0.52 && rc >= 0.04) { ev.droplet += 1.4; ev.contact += 0.8; }
     }
     // health and care workers catching it far more than anyone else: nursing the sick spreads it (body fluids)
     var hcw = 0, occN = 0;
@@ -9618,7 +9618,7 @@ var UICases = UI.views.cases = {
     var died = p.status === 'died';
     function pref(pid2) { var cc = UIA.caseOf(pid2); var nm = cc ? cc.name : UIA.nameOf(pid2); return '<span class="lnk p" data-ref="person" data-id="' + UIesc(pid2) + '">' + UIesc(nm) + '</span>'; }
     var html = '<div class="ps-head"><div class="ps-face">' + UIPortrait.svg(p) + '</div><div class="ps-id"><div class="ps-meta">' + UIfmt.age(p) + (p.occupation ? ' · ' + UIesc(p.occupation) : '') + '</div>' +
-      (d ? '<div class="ps-meta">' + (p.address ? UIesc(p.address) + ', ' : '') + '<span class="lnk dt" data-ref="district" data-id="' + UIesc(d.id) + '">' + UIesc(d.name) + '</span></div>' : '') +
+      (d ? '<div class="ps-meta">' + (p.address ? UIesc(String(p.address).replace(new RegExp(',?\\s*' + String(d.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i'), '')) + ', ' : '') + '<span class="lnk dt" data-ref="district" data-id="' + UIesc(d.id) + '">' + UIesc(d.name) + '</span></div>' : '') +
       '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="pill ' + S.c + '">' + S.l + '</span>' + (c && c.caseStatus !== c.status && c.caseStatus !== 'discarded' ? '<span class="pill st-sus">' + UIesc(UIcap(c.caseStatus)) + '</span>' : '') + '</div>' +
       (c && c.via ? '<div class="ps-via">' + UIesc(this.VIA[c.via] || UIcap(c.via)) + (c.reported !== null ? ' · ' + UIesc(UIA.dateShort(c.reported)) : '') + '</div>' : '') + '</div></div>';
     html += this.timeline(p, c, day);

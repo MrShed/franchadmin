@@ -156,7 +156,7 @@ var UICases = UI.views.cases = {
     var died = p.status === 'died';
     function pref(pid2) { var cc = UIA.caseOf(pid2); var nm = cc ? cc.name : UIA.nameOf(pid2); return '<span class="lnk p" data-ref="person" data-id="' + UIesc(pid2) + '">' + UIesc(nm) + '</span>'; }
     var html = '<div class="ps-head"><div class="ps-face">' + UIPortrait.svg(p) + '</div><div class="ps-id"><div class="ps-meta">' + UIfmt.age(p) + (p.occupation ? ' · ' + UIesc(p.occupation) : '') + '</div>' +
-      (d ? '<div class="ps-meta">' + (p.address ? UIesc(p.address) + ', ' : '') + '<span class="lnk dt" data-ref="district" data-id="' + UIesc(d.id) + '">' + UIesc(d.name) + '</span></div>' : '') +
+      (d ? '<div class="ps-meta">' + (p.address ? UIesc(String(p.address).replace(new RegExp(',?\\s*' + String(d.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i'), '')) + ', ' : '') + '<span class="lnk dt" data-ref="district" data-id="' + UIesc(d.id) + '">' + UIesc(d.name) + '</span></div>' : '') +
       '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="pill ' + S.c + '">' + S.l + '</span>' + (c && c.caseStatus !== c.status && c.caseStatus !== 'discarded' ? '<span class="pill st-sus">' + UIesc(UIcap(c.caseStatus)) + '</span>' : '') + '</div>' +
       (c && c.via ? '<div class="ps-via">' + UIesc(this.VIA[c.via] || UIcap(c.via)) + (c.reported !== null ? ' · ' + UIesc(UIA.dateShort(c.reported)) : '') + '</div>' : '') + '</div></div>';
     html += this.timeline(p, c, day);
