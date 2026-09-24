@@ -624,6 +624,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   };
 
   // ---------------------------------------------------------------- views
+  function xy(p) { return { x: p[0], y: p[1] }; }
   GP.lineList = function () {
     var S = this.S, self = this;
     return S.caseOrder.map(function (pid) { return self.caseView(pid); });
@@ -632,7 +633,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var S = this.S, cs = S.cases[pid], C = this.C, self = this;
     if (!cs) return null;
     var v = { pid: pid, name: this.name(pid), age: C.age[pid], sex: C.sex[pid] ? 'M' : 'F', district: C.districts[C.dist[pid]].id, status: cs.status, onset: cs.onset,
-      reported: cs.reported, outcome: cs.outcome, via: cs.via, interviewed: cs.interviewed, traced: cs.traced, household: cs.household, pos: C.hPos[C.hh[pid]] };
+      reported: cs.reported, outcome: cs.outcome, via: cs.via, interviewed: cs.interviewed, traced: cs.traced, household: cs.household, pos: xy(C.hPos[C.hh[pid]]) };
     if (cs.admitted !== undefined) v.admitted = cs.admitted;
     if (cs.died !== undefined) v.died = cs.died;
     v.tests = cs.tests.map(function (id) { var t = S.tests[id]; var o = { day: t.req, kind: t.kind, result: t.result }; if (t.resultDay !== undefined) o.resultDay = t.resultDay; if (t.sample) o.sample = t.sample; return o; });
@@ -654,7 +655,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var her = D.HERITAGES[C.her[pid]];
     var o = {
       pid: pid, name: this.name(pid), first: C.first[pid], last: C.last[pid], age: C.age[pid], sex: C.sex[pid] ? 'M' : 'F', district: C.districts[C.dist[pid]].id,
-      address: C.hAddr[C.hh[pid]] + ', ' + C.districts[C.dist[pid]].name, pos: C.hPos[C.hh[pid]], heritage: her, portrait: IX.h3(this.keys.misc, pid, 3, 0),
+      address: C.hAddr[C.hh[pid]] + ', ' + C.districts[C.dist[pid]].name, pos: xy(C.hPos[C.hh[pid]]), heritage: her, portrait: IX.h3(this.keys.misc, pid, 3, 0),
       known: IX.clone(kp.known), notes: kp.notes.slice()
     };
     if (S.cases[pid]) o.case = this.caseView(pid);

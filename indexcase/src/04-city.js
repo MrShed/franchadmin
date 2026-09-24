@@ -164,6 +164,13 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var ry = 0.5 + R.range(-0.08, 0.08), rp = [];
     for (i = 0; i <= 12; i++) { var x = 0.02 + i / 12 * 0.96; rp.push(r3([x, ry + 0.06 * Math.sin(i / 12 * Math.PI * 2 + a0) + R.range(-0.012, 0.012)])); }
     C.river = rp; C.boundary = bound.map(r3);
+    // major roads: a ring road through the inner districts and radials out through each outer district
+    var ring = cents.slice(1, 6).map(function (c) { return [c[0], c[1]]; }).sort(function (p, q) { return Math.atan2(p[1] - 0.5, p[0] - 0.5) - Math.atan2(q[1] - 0.5, q[0] - 0.5); });
+    C.roads = [{ kind: 'ring', name: 'Ring Road', line: ring.concat([ring[0]]).map(r3) }];
+    cents.slice(6).forEach(function (c, k) {
+      var ang = Math.atan2(c[1] - 0.5, c[0] - 0.5), end = [0.5 + 0.47 * Math.cos(ang), 0.5 + 0.47 * Math.sin(ang)];
+      C.roads.push({ kind: 'radial', name: ['A' + (600 + k * 7), 'A' + (58 + k)][k % 2] + ' ' + ['Road', 'Road'][0], line: [cents[0], [(cents[0][0] + c[0]) / 2 + R.range(-0.02, 0.02), (cents[0][1] + c[1]) / 2 + R.range(-0.02, 0.02)], c, end].map(r3) });
+    });
 
     function randIn(dist, near) {
       var poly = dist.poly, minx = 1, miny = 1, maxx = 0, maxy = 0;

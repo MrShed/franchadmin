@@ -40,7 +40,7 @@ IX.GRADES                      // [{id, label, blurb}]
 |---|---|
 | `g.seed`, `g.attempt`, `g.grade` | seed string, generation attempt, grade id |
 | `g.day` | current day (0 = the morning of the alert). Days before 0 exist in data (onsets before the alert). |
-| `g.act` | 1 Detect, 2 Characterise, 3 Contain |
+| `g.actNo` | 1 Detect, 2 Characterise, 3 Contain  (**`g.act(id, target, params)` is the action method**, see Actions) |
 | `g.actLabel` | `'Detect'` / `'Characterise'` / `'Contain'` |
 | `g.over`, `g.outcome` | finished? `{kind:'contained'|'vaccine'|'timeout'|'collapse', day, title, text}` |
 | `g.agentName` | `null` until the lab confirms a novel agent, then e.g. `'Agent SA-3'` |
@@ -52,12 +52,16 @@ IX.GRADES                      // [{id, label, blurb}]
 ```js
 g.city -> {
   name: 'Wexmoor', population: 250000, agents: 8000, scale: 31.25,
+  boundary: [[x,y],...],                 // city edge polygon
+  river: [[x,y],...], rivers: [[[x,y],...]],   // polyline(s)
+  roads: [{kind:'ring'|'radial', name, line:[[x,y],...]}],
   districts: [{id:'d0', name:'Eastgate', poly:[[x,y],...], centre:[x,y], pop, deprivation:0..1, blurb}],
   places: [{id:'p12', kind, name, district:'d3', pos:[x,y], size, indoor:bool, blurb}],
   hospitalId: 'p0'
 }
 ```
-Coordinates are on the unit square (0..1, y down). `pop` in residents. Place kinds:
+Coordinates are on the unit square (0..1, y down). Places and polygons use `[x, y]` arrays; person/case
+positions (`pos`) are `{x, y}` objects. `pop` in residents. Person ids (`pid`) are integers; place ids `'p12'`; district ids `'d3'`. Place kinds:
 `hospital, gp, care_home, school, nursery, university, office, factory, shop, supermarket, pub,
 restaurant, gym, church, mosque, temple, gurdwara, choir, stadium, market, meat_plant, farm, lab,
 station, hotel, community_hall`. Households are not places (a person's home is their district).
@@ -94,22 +98,25 @@ Show `ref.d`; tapping a `person` opens `g.person(id)`, a `place` opens the place
 ```js
 g.lineList() -> [case]   // every person on the line list (suspected, probable, confirmed, discarded)
 case = {
-  pid, name, age, sex:'F'|'M', district, status: 'suspected'|'probable'|'confirmed'|'discarded',
-  onset: day|null,       // reported symptom onset (may be off by a day; null = no symptoms reported)
+  pid, name, age, sex:'F'|'M', district, pos: {x, y},   // home position on the unit square (same space as district polys)
+  status: 'suspected'|'probable'|'confirmed'|'discarded',
+  onset: day|null,       // reported symptom onset (may be off by a day or two; null = no symptoms reported)
   reported: day,         // day added to the line list
   outcome: 'unwell'|'well'|'hospital'|'icu'|'recovered'|'died'|'unknown',
   admitted?: day, died?: day,
   tests: [{day, kind:'panel'|'pcr'|'sero', result:'pending'|'pos'|'neg'|'flu'|'other', resultDay?, sample?:id}],
   interviewed: bool, traced: bool, household: bool,   // investigations done
-  exposures?: [{day, place?:ref, person?:ref, setting, note}],   // from the interview (with recall errors)
-  contacts?: [pid],      // named/traced contacts
-  infectorGuess?: pid,   // if the player has linked a source
-  cluster?: [clusterId],
-  seqId?: sampleId,      // sequenced sample (node id in g.tree())
-  via: 'alert'|'hospital'|'gp'|'tracing'|'household'|'testing'|'review'|'serosurvey'|'press'
+  symptoms?: [symptomId],                              // from the interview (IX.DATA.SYM[id].label)
+  exposures?: [{kind:'place'|'person'|'travel'|'animal', place?: ref, persons?: [pid], days:[day...], setting, group?, note}],
+  illContacts?: [{person: ref, onset: day, relation:'household'|'friend'|'colleague'|'classmate'|'care home'}],
+  contacts?: [pid],      // traced contacts
+  infectorGuess?: pid,   // a likely source (tracing / household link)
+  cluster: [clusterId],
+  sample?: sampleId, seqId?: sampleId,   // stored sample; sequenced sample (node id in g.tree())
+  via: 'alert'|'hospital'|'gp'|'tracing'|'household'|'testing'|'review'|'questionnaire'
 }
 g.person(pid) -> {
-  pid, name, age, sex, district, address, heritage, portrait (int seed for the illustrated face),
+  pid, name, first, last, age, sex, district, address, pos: {x, y}, heritage, portrait (int seed for the illustrated face),
   known: {occupation?, workplace?:ref, school?:ref, habits?:[text], household?:[pid]},   // grows with interviews
   case?: case, contactOf?: [pid], followUp?: {from, to, symptomatic?: day},
   notes: [text]

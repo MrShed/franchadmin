@@ -22,6 +22,7 @@ fs.mkdirSync(OUT, { recursive: true });
     await page.fill('#t-seed', SEED);
     await tap('.t-grade[data-g="' + GRADE + '"]');
     await tap('#t-new');
+    await page.waitForSelector('#actcard.on #act-go', { timeout: 180000 });
     await page.waitForTimeout(2600);
     await shot('actcard');
     await tap('#act-go');

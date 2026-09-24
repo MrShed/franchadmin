@@ -14,6 +14,7 @@ var UIA = (function () {
   function str(x) { return x === undefined || x === null ? null : String(x); }
   function call(name) { var g = A.g; if (!g || typeof g[name] !== 'function') return undefined; return g[name].apply(g, Array.prototype.slice.call(arguments, 1)); }
   function cached(key, f) { if (A.cache[key] && A.cache[key].v === A.v) return A.cache[key].x; var x = f(); A.cache[key] = { v: A.v, x: x }; return x; }
+  function pt(p) { if (!p) return null; if (Array.isArray(p) && p.length >= 2) return [+p[0], +p[1]]; if (typeof p === 'object' && 'x' in p) return [+p.x, +p.y]; return null; }
   function refId(r) { return r && typeof r === 'object' ? str(r.id) : str(r); }
   A.bump = function () { A.v++; };
 
@@ -80,7 +81,7 @@ var UIA = (function () {
       ds.forEach(function (d) { dById[d.id] = d; });
       ps.forEach(function (p) { pById[p.id] = p; if (!p.pos && dById[p.district]) p.pos = dById[p.district].centre; });
       var pop = num(c.population, num(c.pop, 250000)), agents = num(c.agents, ds.reduce(function (s, d) { return s + d.pop; }, 0));
-      return { name: c.name || 'the city', pop: pop, agents: agents, scale: num(c.scale, agents ? pop / agents : 1), districts: ds, places: ps, dById: dById, pById: pById, hospitalId: str(c.hospitalId), river: Array.isArray(c.river) && c.river.length > 1 ? c.river : null, boundary: Array.isArray(c.boundary) && c.boundary.length > 2 ? c.boundary : null };
+      return { name: c.name || 'the city', pop: pop, agents: agents, scale: num(c.scale, agents ? pop / agents : 1), districts: ds, places: ps, dById: dById, pById: pById, hospitalId: str(c.hospitalId), river: Array.isArray(c.river) && c.river.length > 1 ? c.river : (Array.isArray(c.rivers) && c.rivers[0] && c.rivers[0].length > 1 ? c.rivers[0] : null), rivers2: Array.isArray(c.rivers) ? c.rivers.slice(1) : [], boundary: Array.isArray(c.boundary) && c.boundary.length > 2 ? c.boundary : null, roads: Array.isArray(c.roads) && c.roads.length ? c.roads.map(function (r) { return Array.isArray(r) ? r : r.line || r.pts || r.points || []; }).filter(function (r) { return r.length > 1; }) : null };
     });
   };
   A.district = function (id) { return A.city().dById[String(id)] || null; };
@@ -152,7 +153,7 @@ var UIA = (function () {
       tests: arr(c.tests).map(testRec), interviewed: !!c.interviewed, traced: !!c.traced, household: !!c.household,
       exposures: c.exposures ? arr(c.exposures) : null, contacts: c.contacts ? arr(c.contacts).map(String) : null,
       cluster: arr(c.cluster).map(String), seqId: str(c.seqId), seq: c.seqId ? (tree[String(c.seqId)] ? 'done' : 'pending') : null,
-      via: c.via || '', pos: null, raw: c
+      via: c.via || '', pos: pt(c.pos || c.home), raw: c
     };
   }
   A.cases = function () { return cached('cases', function () { return arr(call('lineList')).map(normCase); }); };
@@ -180,7 +181,7 @@ var UIA = (function () {
       address: p.address || null, heritage: p.heritage || null, portrait: p.portrait,
       occupation: k.occupation || null, workplace: k.workplace ? part(k.workplace) : null, school: k.school ? part(k.school) : null, habits: arr(k.habits), household: arr(k.household).map(String),
       c: c, known: !!c, status: c ? c.status : fl ? 'contact' : 'contact', contactOf: arr(p.contactOf).map(String), followUp: p.followUp || null, follow: fl,
-      notes: arr(p.notes), raw: p
+      notes: arr(p.notes), pos: pt(p.pos || p.home) || (c ? c.pos : null), raw: p
     };
   };
 

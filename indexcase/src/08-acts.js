@@ -58,7 +58,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
 
   // ---------------------------------------------------------------- read-only props
   Object.defineProperty(GP, 'day', { get: function () { return this.S.day; } });
-  Object.defineProperty(GP, 'act', { get: function () { return this.S.act; } });
+  Object.defineProperty(GP, 'actNo', { get: function () { return this.S.act; } });   // g.act(...) is the action method
   Object.defineProperty(GP, 'actLabel', { get: function () { return ['', 'Detect', 'Characterise', 'Contain'][this.S.act]; } });
   Object.defineProperty(GP, 'over', { get: function () { return this.S.over; } });
   Object.defineProperty(GP, 'outcome', { get: function () { return this.S.outcome; } });
@@ -68,7 +68,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (this._cityView) return this._cityView;
     var C = this.C;
     this._cityView = {
-      name: C.name, population: C.population, agents: C.N, scale: C.scale, hospitalId: C.hospitalId, boundary: C.boundary, river: C.river,
+      name: C.name, population: C.population, agents: C.N, scale: C.scale, hospitalId: C.hospitalId, boundary: C.boundary, river: C.river, rivers: [C.river], roads: C.roads,
       districts: C.districts.map(function (d) { return { id: d.id, name: d.name, type: d.type, poly: d.poly, centre: d.centre, pop: d.pop, deprivation: d.deprivation, blurb: d.blurb }; }),
       places: C.places.map(function (p) { var o = { id: p.id, kind: p.kind, name: p.name, district: p.district, pos: p.pos, size: p.size, indoor: p.indoor, blurb: p.blurb }; if (p.sub) o.sub = p.sub; return o; })
     };

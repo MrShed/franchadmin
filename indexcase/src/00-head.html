@@ -249,8 +249,8 @@ svg{display:block}
 .t-dek{font-size:16.5px;line-height:1.5;color:#c7d3de;max-width:28em;margin:0;text-shadow:0 2px 12px rgba(0,0,0,.8)}
 .t-panel{width:100%;max-width:520px;display:flex;flex-direction:column;gap:12px}
 .t-grades{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.t-grade{position:relative;display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;padding:12px 12px 11px;border-radius:14px;min-height:74px;background:rgba(15,23,31,.72);border:1px solid var(--line2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:all .18s}
-.t-grade b{font:700 clamp(13px,3.9vw,17px)/1.05 var(--f-disp);font-stretch:condensed;text-transform:uppercase;letter-spacing:.01em;overflow-wrap:anywhere}
+.t-grade{position:relative;display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;padding:12px 10px 11px;min-width:0;border-radius:14px;min-height:74px;background:rgba(15,23,31,.72);border:1px solid var(--line2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:all .18s}
+.t-grade b{font:700 clamp(13px,3.6vw,17px)/1.1 var(--f-disp);font-stretch:condensed;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .t-grade i{font:600 9.5px var(--f-mono);font-style:normal;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase}
 .t-grade .lv{display:flex;gap:3px;margin-top:auto}
 .t-grade .lv u{width:14px;height:3px;border-radius:2px;background:var(--line3)}

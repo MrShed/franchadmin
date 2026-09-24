@@ -96,7 +96,7 @@ var UIMapR = (function () {
     dec.contours.forEach(function (c) { ctx.beginPath(); c.forEach(function (p, i) { var q = tx(T, p); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.stroke(); });
     // arterials outside (under districts)
     ctx.strokeStyle = 'rgba(143,203,255,.07)'; ctx.lineWidth = 1.2;
-    dec.art.forEach(function (a) { var p0 = tx(T, [a[0], a[1]]), p1 = tx(T, [a[2], a[3]]), p2 = tx(T, [a[4], a[5]]); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(p1[0], p1[1], p2[0], p2[1]); ctx.stroke(); });
+    if (!city.roads) dec.art.forEach(function (a) { var p0 = tx(T, [a[0], a[1]]), p1 = tx(T, [a[2], a[3]]), p2 = tx(T, [a[4], a[5]]); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(p1[0], p1[1], p2[0], p2[1]); ctx.stroke(); });
     // city edge
     if (city.boundary) { ctx.save(); poly(ctx, T, city.boundary); ctx.fillStyle = 'rgba(14,24,34,.6)'; ctx.fill(); ctx.shadowColor = 'rgba(120,180,240,.35)'; ctx.shadowBlur = 24; ctx.strokeStyle = 'rgba(143,203,255,.12)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
     // district land
@@ -138,9 +138,10 @@ var UIMapR = (function () {
       rv(Math.max(4, T.s * 0.016), 'rgba(4,9,15,.95)'); rv(Math.max(2.5, T.s * 0.011), 'rgba(18,40,62,.95)'); rv(1, 'rgba(120,180,240,.18)');
       ctx.restore();
     }
-    // arterials within the city, brighter
+    // arterials within the city, brighter (engine roads when supplied)
     ctx.strokeStyle = 'rgba(160,210,255,.13)'; ctx.lineWidth = Math.max(1, sw * 1.6);
-    dec.art.forEach(function (a) { var p0 = tx(T, [a[0], a[1]]), p1 = tx(T, [a[2], a[3]]), p2 = tx(T, [a[4], a[5]]); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(p1[0], p1[1], p2[0], p2[1]); ctx.stroke(); });
+    if (city.roads) city.roads.forEach(function (rd) { ctx.beginPath(); rd.forEach(function (p, i) { var q = tx(T, Array.isArray(p) ? p : [p.x, p.y]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.stroke(); });
+    else dec.art.forEach(function (a) { var p0 = tx(T, [a[0], a[1]]), p1 = tx(T, [a[2], a[3]]), p2 = tx(T, [a[4], a[5]]); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(p1[0], p1[1], p2[0], p2[1]); ctx.stroke(); });
     // borders
     ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(143,203,255,.16)';
     D.forEach(function (d) { if (d.poly && d.poly.length > 2) { poly(ctx, T, d.poly); ctx.stroke(); } });
