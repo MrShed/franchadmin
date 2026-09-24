@@ -12,7 +12,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.goto('file://' + PAGE);
   await page.evaluate(function () { try { localStorage.clear(); } catch (e) {} });
   await page.reload(); await page.waitForTimeout(500);
-  await page.locator('#t-tut').tap(); await page.waitForTimeout(2600);
+  await page.locator('#t-tut').tap(); await page.waitForSelector('#actcard.on #act-go', { timeout: 300000 }); await page.waitForTimeout(2600);
   await page.locator('#act-go').tap(); await page.waitForTimeout(600);
   var n = 0;
   async function shot(name) { n++; await page.waitForTimeout(450); await page.screenshot({ path: path.join(OUT, String(n).padStart(2, '0') + '-' + name + '.png') }); }

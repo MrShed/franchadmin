@@ -270,12 +270,16 @@ var UIMap = UI.views.map = {
     UIMapR.labels(ctx, T, city, { sel: this.sel, counts: this.counts });
     // clusters: pulsing rings, labels kept on screen and apart
     if (st.layers.clusters && this.clusters) {
-      var boxes = [];
-      this.clusters.slice().sort(function (a, b) { return b.size - a.size; }).forEach(function (c, i) {
+      var boxes = [], day = UIA.day(), maxLbl = Math.round(UIclamp(w * h / 60000, 4, 14) * Math.min(3, Math.sqrt(st.view.k)));
+      var cls = this.clusters.filter(function (c) { return c.pos; }).sort(function (a, b) { var ra = a.lastOnset !== null && day - a.lastOnset < 14 ? 1 : 0, rb = b.lastOnset !== null && day - b.lastOnset < 14 ? 1 : 0; return rb - ra || b.size - a.size; });
+      cls.forEach(function (c, i) {
+        var stale = c.lastOnset !== null && day - c.lastOnset >= 21;
         if (!c.pos) return; var q = UIMapR.toScreen(T, c.pos), rad = UIclamp(T.s / 60, 10, 30) * (0.8 + Math.sqrt(c.size) * .25), ph = (t * .6 + i * .37) % 1;
         ctx.save();
-        ctx.strokeStyle = 'rgba(255,224,194,' + (0.5 * (1 - ph)).toFixed(3) + ')'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(q[0], q[1], rad * (1 + ph * .7), 0, Math.PI * 2); ctx.stroke();
+        if (stale) ctx.globalAlpha = 0.4;
+        if (!stale) { ctx.strokeStyle = 'rgba(255,224,194,' + (0.5 * (1 - ph)).toFixed(3) + ')'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(q[0], q[1], rad * (1 + ph * .7), 0, Math.PI * 2); ctx.stroke(); }
         ctx.setLineDash([4, 3]); ctx.strokeStyle = 'rgba(255,224,194,.85)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q[0], q[1], rad, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        if (i >= maxLbl || stale) { ctx.fillStyle = 'rgba(20,12,8,.9)'; ctx.beginPath(); ctx.arc(q[0] + rad * .7, q[1] - rad * .7, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#ffe0c2'; ctx.font = '700 9.5px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(c.size), q[0] + rad * .7, q[1] - rad * .7 + .5); ctx.restore(); return; }
         var lbl = (c.name.length > 26 ? c.name.slice(0, 25) + '…' : c.name) + ' · ' + c.size; ctx.font = '600 11px system-ui,sans-serif'; var tw = ctx.measureText(lbl).width, bw = tw + 14, bh = 19;
         var bx = UIclamp(q[0] - bw / 2, 6, w - bw - 6), by = q[1] - rad - 24;
         for (var k = 0; k < 8 && boxes.some(function (b) { return bx < b[0] + b[2] + 4 && bx + bw + 4 > b[0] && by < b[1] + b[3] + 3 && by + bh + 3 > b[1]; }); k++) by -= bh + 4;

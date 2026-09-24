@@ -260,27 +260,78 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
 
   // ================================================================ acceptance
   IX.ACCEPT = { detectBy: { probationer: 10, consultant: 10, director: 12 }, charSlack: 21, needTraits: 5, minGhostDeaths: 6, minGhostHosp: 20, minPeakDay: 14, maxAlertInf: 0.06 };
-  /** is this game fair? Runs the ghost city and (on a copy) the ideal epidemiologist. */
+  var SINGLE_SET = {}; [SET.EVENT, SET.VISIT, SET.PUB, SET.RESTAURANT, SET.CHOIR, SET.FAITH, SET.STADIUM, SET.GYM, SET.MARKET, SET.DOORSTEP, SET.FUNERAL].forEach(function (s) { SINGLE_SET[s] = 1; });
+
+  /** Fast acceptance (used by IX.newGame): the alert, the ghost city, and truth-side proxies for
+   *  what an ideal epidemiologist could observe in time. tests/solve.js --full checks these
+   *  proxies against the full headless solver (IX.acceptFull).
+   *  Returns {ok, fails, level:'pathogen'|'draw'} — level says whether to change the pathogen or just the draws. */
   IX.accept = function (g, opts) {
     opts = opts || {};
-    var A = IX.ACCEPT, v = { ok: false, fails: [] };
-    var sim = g.sim, C = g.C;
-    // detectable early: the alert comes before it is everywhere
-    var infAtAlert = sim.n;
-    v.infAtAlert = infAtAlert;
-    if (infAtAlert > A.maxAlertInf * C.N) v.fails.push('alert late (' + infAtAlert + ' infected)');
-    // dangerous but not hopeless: the ghost city
+    var A = IX.ACCEPT, v = { ok: false, fails: [], level: 'draw' };
+    var sim = g.sim, C = g.C, S = g.S, P = g.P;
+    // detectable: the alert comes early, and it contains enough real cases to declare
+    v.infAtAlert = sim.n;
+    if (sim.n > A.maxAlertInf * C.N) v.fails.push('alert late (' + sim.n + ' infected)');
+    var sdA = g.sdOf(0) - 1, real = 0;
+    S.caseOrder.forEach(function (pid) { if (g.infBy(pid, sdA) >= 0) real++; });
+    v.realAtAlert = real;
+    if (real < 3) v.fails.push('alert has ' + real + ' real cases');
+    if (v.fails.length) return v;
+    // the ghost city (runs to the day limit; reused by the debrief)
     var gh = g.ghost(g.sdOf(IX.DAY_LIMIT)).sim;
-    var deaths = 0, hosp = 0, peak = 0, peakSd = 0;
-    for (var x = 0; x < gh.n; x++) { if (gh.xdeath[x] >= 0) deaths++; if (gh.xhosp[x] >= 0) hosp++; }
-    gh.daily.forEach(function (d) { if (d.newInf > peak) { peak = d.newInf; peakSd = d.sd; } });
+    var deaths = 0, hosp = 0, peak = 0, peakSd = 0, x;
+    for (x = 0; x < gh.n; x++) { if (gh.xdeath[x] >= 0) deaths++; if (gh.xhosp[x] >= 0) hosp++; }
+    gh.daily.forEach(function (d) { var w = 0; if (d.newInf > peak) { peak = d.newInf; peakSd = d.sd; } });
     v.ghost = { infections: gh.n, deaths: deaths, hosp: hosp, peakDay: g.gd(peakSd), attack: IX.round(gh.n / C.N, 2) };
-    if (deaths < A.minGhostDeaths && hosp < A.minGhostHosp) v.fails.push('not dangerous (' + deaths + ' deaths, ' + hosp + ' admissions)');
+    if (deaths < A.minGhostDeaths && hosp < A.minGhostHosp) { v.fails.push('not dangerous (' + deaths + ' deaths, ' + hosp + ' admissions)'); v.level = 'pathogen'; }
     if (gh.n < 0.08 * C.N) v.fails.push('fizzles (' + gh.n + ' infections)');
-    if (g.gd(peakSd) < A.minPeakDay) v.fails.push('peaks too soon (day ' + g.gd(peakSd) + ')');
-    if (v.fails.length && !opts.full) return v;
-    // characterisable: the ideal epidemiologist on a copy of the game
-    if (opts.skipSolver) { v.ok = !v.fails.length; return v; }
+    if (g.gd(peakSd) < A.minPeakDay) { v.fails.push('peaks too soon (day ' + g.gd(peakSd) + ')'); }
+    if (v.fails.length) return v;
+    // observability proxies over the characterisation window: from the alert to ~3 weeks after community spread
+    var cum = 0, commSd = -1;
+    for (x = 0; x < gh.n; x++) { if (gh.xday[x] >= g.sdOf(0) && ++cum >= 0.03 * C.N) { commSd = gh.xday[x]; break; } }
+    if (commSd < 0) commSd = g.sdOf(40);
+    var w0 = g.sdOf(0) - 7, w1 = Math.min(commSd + A.charSlack, g.sdOf(70));
+    var single = 0, nonHH = 0, adm = 0, dth = 0, venue = {}, food = 0, spill = 0, hhIdx = 0, infW = 0;
+    for (x = 0; x < gh.n; x++) {
+      var d = gh.xday[x];
+      if (gh.xhosp[x] >= w0 && gh.xhosp[x] <= w1) adm++;
+      if (gh.xdeath[x] >= w0 && gh.xdeath[x] <= w1 + 21) dth++;
+      if (d < w0 || d > w1) continue;
+      infW++;
+      var set = gh.xset[x], sym = gh.xonset[x] >= 0;
+      if (sym && SINGLE_SET[set]) single++;
+      var b = gh.xby[x];
+      if (b >= 0 && set !== SET.HOME && gh.xonset[b] >= 0 && sym) nonHH++;
+      if (set === SET.HOME) hhIdx++;
+      if (gh.xmode[x] === 2) food++;
+      if (gh.xset[x] === SET.ANIMAL) spill++;
+      if (gh.xplace[x] >= 0 && set !== SET.HOME && set !== SET.WORK) { var k2 = gh.xplace[x] + ':' + d; venue[k2] = (venue[k2] || 0) + 1; }
+    }
+    var bigEvent = 0; Object.keys(venue).forEach(function (k) { if (venue[k] >= 4) bigEvent++; });
+    v.proxy = { single: single, nonHH: nonHH, hh: hhIdx, adm: adm, deaths: dth, bigEvents: bigEvent, food: food, spill: spill, infW: infW, window: [g.gd(w0), g.gd(w1)] };
+    var miss = [];
+    if (single < 10) miss.push('incubation');
+    if (nonHH < 12) miss.push('presym');
+    if (hhIdx < 10) miss.push('asym');
+    if (adm < 8) miss.push('ageRisk');
+    if (dth < 3 || infW < 0.01 * C.N) miss.push('ifr');
+    var rt = P.humanRoute;
+    if ((rt === 'airborne' || rt === 'droplet') && bigEvent < 1) miss.push('route');
+    if (rt === 'gut' && food < 3 && bigEvent < 1) miss.push('route');
+    v.missing = miss;
+    if (IX.KEY_TRAITS.length - miss.length < A.needTraits + 1) v.fails.push('hard to characterise (missing ' + miss.join(',') + ')');
+    v.ok = !v.fails.length;
+    return v;
+  };
+
+  /** Full acceptance: the fast checks plus the ideal epidemiologist playing a copy of the game. */
+  IX.acceptFull = function (g, opts) {
+    opts = opts || {};
+    var A = IX.ACCEPT;
+    var v = IX.accept(g);
+    if (!v.ghost) return v;
     var copy = IX.load(g.save());
     copy._ghost = g._ghost;
     var rep = IX.solve(copy, { until: opts.until || 75 });
@@ -292,7 +343,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     v.charTraits = inTime;
     v.charRef = ref;
     if (inTime.length < A.needTraits) v.fails.push('characterised ' + inTime.length + '/' + IX.KEY_TRAITS.length + ' by day ' + (ref + A.charSlack) + ' (missing ' + IX.KEY_TRAITS.filter(function (k) { return inTime.indexOf(k) < 0; }).join(',') + ')');
-    v.ok = !v.fails.length;
+    v.solverOk = !v.fails.length;
+    v.ok = v.solverOk;
     return v;
   };
 

@@ -159,3 +159,85 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     return new Ctor(bytes.buffer);
   };
 })();
+
+/* Save compression: UTF-8 -> LZW (codes up to 16 bits) -> packed into 15-bit units stored as
+ * UTF-16 chars (+32, never surrogates), so the result is safe for localStorage. */
+(function () {
+  'use strict';
+  function utf8(str) {
+    var out = [], i, c;
+    for (i = 0; i < str.length; i++) {
+      c = str.charCodeAt(i);
+      if (c >= 0xD800 && c < 0xDC00 && i + 1 < str.length) { var d = str.charCodeAt(i + 1); if (d >= 0xDC00 && d < 0xE000) { c = 0x10000 + ((c - 0xD800) << 10) + (d - 0xDC00); i++; } }
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xC0 | (c >> 6), 0x80 | (c & 63));
+      else if (c < 0x10000) out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      else out.push(0xF0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    }
+    return out;
+  }
+  function fromUtf8(b) {
+    var s = [], i = 0, CH = [];
+    while (i < b.length) {
+      var c = b[i++];
+      if (c >= 0xF0) c = ((c & 7) << 18) | ((b[i++] & 63) << 12) | ((b[i++] & 63) << 6) | (b[i++] & 63);
+      else if (c >= 0xE0) c = ((c & 15) << 12) | ((b[i++] & 63) << 6) | (b[i++] & 63);
+      else if (c >= 0xC0) c = ((c & 31) << 6) | (b[i++] & 63);
+      if (c >= 0x10000) { c -= 0x10000; CH.push(0xD800 + (c >> 10), 0xDC00 + (c & 1023)); } else CH.push(c);
+      if (CH.length > 8000) { s.push(String.fromCharCode.apply(null, CH)); CH = []; }
+    }
+    s.push(String.fromCharCode.apply(null, CH));
+    return s.join('');
+  }
+  var MAXW = 16, MAXC = 1 << MAXW, HB = 18, HSIZE = 1 << HB, HMASK = HSIZE - 1;
+  IX.pack = function (str) {
+    var bytes = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(str) : utf8(str);
+    var n = bytes.length;
+    if (!n) return 'IXZ1:';
+    // open-addressing hash: key = prefix*256 + byte  ->  code
+    var hk = new Int32Array(HSIZE).fill(-1), hv = new Int32Array(HSIZE);
+    var next = 256, width = 9, out = new Uint16Array(Math.ceil(n * 16 / 15) + 8), o = 0, acc = 0, nb = 0;
+    function emit(code) {
+      acc = (acc << width) | code; nb += width;
+      while (nb >= 15) { nb -= 15; out[o++] = ((acc >>> nb) & 0x7FFF) + 32; }
+      acc &= (1 << nb) - 1;
+    }
+    var w = bytes[0];
+    for (var i = 1; i < n; i++) {
+      var k = bytes[i], key = w * 256 + k, h = (Math.imul(key, 0x9E3779B1) >>> (32 - HB)), found = -1;
+      while (hk[h] !== -1) { if (hk[h] === key) { found = hv[h]; break; } h = (h + 1) & HMASK; }
+      if (found >= 0) { w = found; continue; }
+      emit(w);
+      if (next < MAXC) { hk[h] = key; hv[h] = next++; if (next > (1 << width) && width < MAXW) width++; }
+      w = k;
+    }
+    emit(w);
+    if (nb > 0) out[o++] = ((acc << (15 - nb)) & 0x7FFF) + 32;
+    var parts = [];
+    for (var p = 0; p < o; p += 8192) parts.push(String.fromCharCode.apply(null, out.subarray(p, Math.min(o, p + 8192))));
+    return 'IXZ1:' + n + ':' + parts.join('');
+  };
+  IX.unpack = function (s) {
+    if (s.slice(0, 5) !== 'IXZ1:') return s;
+    var rest = s.slice(5), c1 = rest.indexOf(':'), total = +rest.slice(0, c1), data = rest.slice(c1 + 1);
+    if (!total) return '';
+    var pos = 0, acc = 0, nb = 0;
+    function read(width) {
+      while (nb < width) { acc = ((acc << 15) | (data.charCodeAt(pos++) - 32)) >>> 0; nb += 15; }
+      nb -= width; var code = (acc >>> nb) & ((1 << width) - 1); acc &= (1 << nb) - 1; return code;
+    }
+    var pre = new Int32Array(MAXC), last = new Uint8Array(MAXC), len = new Int32Array(MAXC), first = new Uint8Array(MAXC);
+    for (var i = 0; i < 256; i++) { pre[i] = -1; last[i] = i; len[i] = 1; first[i] = i; }
+    var out = new Uint8Array(total), o = 0, next = 256, width = 9;
+    function write(code) { var L = len[code], e = o + L - 1, c = code; while (c >= 0) { out[e--] = last[c]; c = pre[c]; } o += L; }
+    var prev = read(width); write(prev);
+    while (o < total) {
+      var code = read(width), fc;
+      if (code < next) { fc = first[code]; write(code); }
+      else { fc = first[prev]; write(prev); out[o++] = fc; }
+      if (next < MAXC) { pre[next] = prev; last[next] = fc; len[next] = len[prev] + 1; first[next] = first[prev]; next++; if (next + 1 > (1 << width) && width < MAXW) width++; }
+      prev = code;
+    }
+    return typeof TextDecoder !== 'undefined' ? new TextDecoder().decode(out) : fromUtf8(out);
+  };
+})();

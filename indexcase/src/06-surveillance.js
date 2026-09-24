@@ -124,6 +124,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     // do not duplicate a pending test of the same kind
     for (var i = 0; i < S.testQueue.length; i++) { var q = S.tests[S.testQueue[i]]; if (q.pid === pid && q.kind === kind) return q; }
     var t = { id: S.tests.length, pid: pid, kind: kind, req: S.day, prio: prio, why: why || '', result: 'pending' };
+    if (why === 'stored sample re-tested') { var sid = this.sampleOf(pid); if (sid && S.samples[sid]) t.sampleDay = S.samples[sid].day; }
     S.tests.push(t); S.testQueue.push(t.id);
     var cs = S.cases[pid]; if (cs) cs.tests.push(t.id);
     return t;
@@ -139,7 +140,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (cap <= 0) { keep.push(id); return; }
       cap--;
       t.day = S.day; t.due = S.day + (t.kind === 'pcr' ? 1 : 2) + (S.lagBonus || 0);
-      t.res = self.testResult(t.pid, sd, t.kind, id);
+      t.res = self.testResult(t.pid, t.sampleDay !== undefined ? self.sdOf(t.sampleDay) : sd, t.kind, id);
       S.pendingResults.push(id);
       done.push(t);
     });
@@ -898,7 +899,10 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (L.length > 3 && u(K.recall, pid, 51, 0) < 0.25) L.splice(1 + Math.floor(u(K.recall, pid, 52, 0) * (L.length - 1)), 1);
       cs.symptoms = L;
       if (cs.onset === null) this.reportOnset(pid, cs);
-      lines.push({ k: 'q', who: this.pref(pid), x: [IX.pickText(this, 'onset', pid, { date: cs.onset !== null ? this.dateLabel(cs.onset) : 'a few days ago', sym: L.map(function (id) { return D.SYM[id].label; }).join(', ') })] });
+      var symS = L.map(function (id) { return D.SYM[id].label; });
+      symS = symS.length > 1 ? symS.slice(0, -1).join(', ') + ' and ' + symS[symS.length - 1] : symS[0];
+      symS = symS.charAt(0).toUpperCase() + symS.slice(1);
+      lines.push({ k: 'q', who: this.pref(pid), x: [IX.pickText(this, 'onset', pid, { date: cs.onset !== null ? this.dateLabel(cs.onset) : 'a few days ago', sym: symS })] });
     } else {
       cs.symptoms = [];
       lines.push({ k: 'q', who: this.pref(pid), x: ['I feel absolutely fine. I only had the test because I was told to.'] });
@@ -1074,7 +1078,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       if (S.quarList.indexOf(q) < 0) S.quarList.push(q);
       // already ill at the first call?
       var on = self.illOnsetOf(q, sdNow);
-      var st = on >= 0 && self.gd(on) >= c.exposure - 1 ? 'ill since ' + self.shortDate(self.gd(on)) : 'well';
+      var st = on >= 0 && on >= sdNow - 14 ? 'ill since ' + self.shortDate(self.gd(on)) : 'well';
       rows.push([self.pref(q), String(C.age[q]), e.setting, e.place >= 0 ? self.plref(e.place) : '', self.shortDate(self.gd(e.sd)), st]);
     });
     var lines = [{ k: 'n', x: ['Window: ' + back + ' days before ' + (cs.onset !== null ? 'onset' : 'the test') + ' (' + this.shortDate(this.gd(from)) + ') to ' + this.shortDate(this.gd(to)) + '. ' + list.length + ' contacts identified' + (quar ? '; all asked to quarantine for 10 days from their last exposure.' : '; no quarantine order is in force, so they have been given advice only.')] }];
@@ -1158,7 +1162,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var lines = [];
     lines.push(IX.pickText(this, 'site_' + (IX.SITE_KINDS[p.kind] || 'generic'), pi, { place: p.name }));
     lines.push({ k: 'm', x: [p.indoor ? 'CO2 (peak, occupied): ' + IX.fmt(co2) + ' ppm' + (co2 >= 1500 ? '  — poor: people are breathing each other\'s air' : co2 >= 1000 ? '  — mediocre' : '  — good') : 'Mostly outdoors.'] });
-    lines.push({ k: 'm', x: ['Estimated air changes per hour: ' + (p.indoor ? p.ach : 'n/a (outdoors)') + '. Typical attendance: ' + Math.round(ppl.length / Math.max(1, 2)) + ' different people a week.'] });
+    lines.push({ k: 'm', x: ['Estimated air changes per hour: ' + (p.indoor ? p.ach : 'n/a (outdoors)') + '. ' + ppl.length + ' different people here in the last 14 days.'] });
     // food businesses: hygiene and ill staff
     if (p.food) {
       var sick = [];
@@ -1179,7 +1183,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     return { ok: true, msgs: [m] };
   };
   function joinRefs(g, pids) { var out = []; pids.forEach(function (q, i) { if (i) out.push(', '); out.push(g.pref(q)); }); return out; }
-  IX.SITE_KINDS = { choir: 'choir', pub: 'pub', restaurant: 'restaurant', school: 'school', nursery: 'school', care_home: 'care', hospital: 'hospital', church: 'faith', mosque: 'faith', temple: 'faith', gurdwara: 'faith',
+  IX.SITE_KINDS = { choir: 'choir', pub: 'pub', restaurant: 'restaurant', school: 'school', nursery: 'nursery', care_home: 'care', hospital: 'hospital', church: 'faith', mosque: 'faith', temple: 'faith', gurdwara: 'faith',
     gym: 'gym', meat_plant: 'meat', factory: 'work', office: 'work', market: 'market', farm: 'farm', hotel: 'hall', community_hall: 'hall', stadium: 'stadium', supermarket: 'shop', lab: 'lab', university: 'uni', gp: 'gp', station: 'shop' };
 
   // ============================================================== questionnaire (cluster attack rates)

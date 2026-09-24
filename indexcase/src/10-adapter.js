@@ -171,6 +171,12 @@ var UIA = (function () {
     var panel = t.kind === 'panel';
     return { pending: 'Awaiting result', pos: 'Positive', neg: panel ? 'Panel negative — no known pathogen' : 'Negative', flu: 'Influenza — a known virus', other: 'Another known pathogen' }[t.result] || UIcap(t.result);
   };
+  A.nameOf = function (pid) {
+    var c = A.caseOf(pid); if (c) return c.name;
+    A._names = A._names || {}; if (A._names[pid]) return A._names[pid];
+    var p = null; try { p = call('person', String(pid)); } catch (e) { /* ignore */ }
+    return (A._names[pid] = p && p.name ? p.name : String(pid));
+  };
   A.contacts = function () { return cached('contacts', function () { return arr(call('contacts')).map(function (c) { return { pid: String(c.pid), name: c.name, of: arr(c.of).map(String), exposure: num(c.exposure, null), setting: c.setting || '', followUntil: num(c.followUntil, null), status: c.status || 'monitoring', tested: c.tested }; }); }); };
   A.person = function (pid) {
     var p = call('person', String(pid)) || {};
@@ -393,6 +399,6 @@ var UIA = (function () {
     };
   };
   A.trials = function () { return []; };
-  A.standDown = function () { var g = A.g; if (typeof g.resign === 'function') g.resign(); else { g.over = true; if (!g.outcome) g.outcome = { kind: 'resigned', day: A.day(), title: 'Stood down', text: 'You stepped away before the end. Here is what happened.' }; } A.bump(); };
+  A.standDown = function () { var g = A.g; if (typeof g.resign === 'function') g.resign(); else { var tgt = g.S && Object.getOwnPropertyDescriptor(Object.getPrototypeOf(g), 'over') ? g.S : g; tgt.over = true; if (!tgt.outcome) tgt.outcome = { kind: 'resigned', day: A.day(), title: 'Stood down', text: 'You stepped away before the end. Here is what happened.' }; } A.bump(); };
   return A;
 })();

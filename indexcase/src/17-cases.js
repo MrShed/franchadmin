@@ -136,7 +136,7 @@ var UICases = UI.views.cases = {
     o = o || {};
     var self = this, p = UIA.person(pid), c = p.c, day = UIA.day(), d = UIA.district(p.district), S = UIstatus(p.status);
     var died = p.status === 'died';
-    function pref(pid2) { var cc = UIA.caseOf(pid2); var nm = cc ? cc.name : (UIA.contacts().filter(function (x) { return x.pid === pid2; })[0] || {}).name || pid2; return '<span class="lnk p" data-ref="person" data-id="' + UIesc(pid2) + '">' + UIesc(nm) + '</span>'; }
+    function pref(pid2) { var cc = UIA.caseOf(pid2); var nm = cc ? cc.name : UIA.nameOf(pid2); return '<span class="lnk p" data-ref="person" data-id="' + UIesc(pid2) + '">' + UIesc(nm) + '</span>'; }
     var html = '<div class="ps-head"><div class="ps-face">' + UIPortrait.svg(p) + '</div><div class="ps-id"><div class="ps-meta">' + UIfmt.age(p) + (p.occupation ? ' · ' + UIesc(p.occupation) : '') + '</div>' +
       (d ? '<div class="ps-meta">' + (p.address ? UIesc(p.address) + ', ' : '') + '<span class="lnk dt" data-ref="district" data-id="' + UIesc(d.id) + '">' + UIesc(d.name) + '</span></div>' : '') +
       '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="pill ' + S.c + '">' + S.l + '</span>' + (c && c.caseStatus !== c.status && c.caseStatus !== 'discarded' ? '<span class="pill st-sus">' + UIesc(UIcap(c.caseStatus)) + '</span>' : '') + '</div>' +
@@ -156,7 +156,7 @@ var UICases = UI.views.cases = {
       var pl = e.place ? (typeof e.place === 'object' ? e.place : { t: 'place', id: e.place, d: (UIA.place(e.place) || {}).name || e.place }) : null, pe = e.person && typeof e.person === 'object' ? e.person : null;
       var attrs = pl ? 'data-ref="place" data-id="' + UIesc(pl.id) + '"' : pe ? 'data-ref="person" data-id="' + UIesc(pe.id) + '"' : '';
       var lbl = pl ? (pl.d || pl.text) : pe ? (pe.d || pe.text) : UIcap(e.setting || 'Somewhere');
-      return UIli({ attrs: attrs, ic: pe ? UIICON.person : UIICON.pin, icStyle: pe ? '' : 'color:var(--teal2);background:rgba(63,208,170,.1)', label: UIesc(lbl), small: (e.day !== null && e.day !== undefined ? UIesc(UIA.dateLabel(e.day)) : '') + (e.setting && (pl || pe) ? ' · ' + UIesc(UIplaceKind(e.setting)[0]) : '') + (e.note ? ' · ' + UIesc(e.note) : ''), right: attrs ? undefined : '' });
+      return UIli({ attrs: attrs, ic: pe ? UIICON.person : UIICON.pin, icStyle: pe ? '' : 'color:var(--teal2);background:rgba(63,208,170,.1)', label: UIesc(lbl), small: [e.day !== null && e.day !== undefined ? UIesc(UIA.dateLabel(e.day)) : '', e.setting && (pl || pe) ? UIesc(UIplaceKind(e.setting)[0]) : '', e.note ? UIesc(e.note) : ''].filter(Boolean).join(' · '), right: attrs ? undefined : '' });
     }).join('') + '</div>' : '<p class="note">Could not recall anywhere in particular.</p>') + '</div>';
     var docs = UIA.msgsAbout(pid).slice().reverse();
     var iv = docs.filter(function (m) { return m.kind === 'interview'; })[0];
@@ -164,7 +164,7 @@ var UICases = UI.views.cases = {
     if (c && c.contacts) know += '<div class="kn"><span class="eyebrow">Named contacts · ' + c.contacts.length + '</span>' + (c.contacts.length ? '<div class="list">' + c.contacts.map(function (cp) {
       var cc = UIA.caseOf(cp), fl = UIA.contacts().filter(function (x) { return x.pid === cp; })[0];
       var st = cc ? UIstatus(cc.status) : { l: UIcap(fl ? fl.status : 'contact'), c: fl && fl.status === 'ill' ? 'st-prob' : 'st-con' };
-      return UIli({ attrs: 'data-ref="person" data-id="' + UIesc(cp) + '"', ic: '<span class="mini-face">' + UIPortrait.svg({ pid: cp, age: cc ? cc.age : null, sex: cc ? cc.sex : '' }) + '</span>', icStyle: 'background:none;padding:0;overflow:hidden', label: UIesc(cc ? cc.name : fl ? fl.name : cp), small: (fl ? UIesc(UIcap(fl.setting)) + ' · ' : '') + '<span class="pill ' + st.c + '">' + st.l + '</span>' });
+      return UIli({ attrs: 'data-ref="person" data-id="' + UIesc(cp) + '"', ic: '<span class="mini-face">' + UIPortrait.svg({ pid: cp, age: cc ? cc.age : null, sex: cc ? cc.sex : '' }) + '</span>', icStyle: 'background:none;padding:0;overflow:hidden', label: UIesc(cc ? cc.name : fl ? fl.name : UIA.nameOf(cp)), small: (fl ? UIesc(UIcap(fl.setting)) + ' · ' : '') + '<span class="pill ' + st.c + '">' + st.l + '</span>' });
     }).join('') + '</div>' : '<p class="note">No contacts found.</p>') + '</div>';
     if (c && c.tests.length) know += '<div class="kn"><span class="eyebrow">Tests</span><div class="tests">' + c.tests.map(function (t) {
       var cls = t.result === 'pos' ? 'pos' : t.result === 'pending' ? 'pend' : t.result === 'neg' && t.kind === 'panel' ? 'pneg' : 'neg';

@@ -236,6 +236,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   T.site_pub = ['{place}: low ceilings, one front room and a back room with a dartboard. On a Friday it is standing room only. The landlord props the door open "when it gets fuggy".'];
   T.site_restaurant = ['{place}: thirty covers, an open kitchen, one toilet shared by staff and customers.'];
   T.site_school = ['{place}: classrooms of 28-30 pupils, windows that open a crack, a shared dining hall and one very busy set of toilets.'];
+  T.site_nursery = ['{place}: three rooms of toddlers who share everything, especially what they should not. Nappy changing next to the snack table; staff move between rooms at lunchtime.'];
   T.site_care = ['{place}: residents share a lounge and dining room; carers move between rooms all shift. Agency staff cover gaps and also work at other homes.'];
   T.site_hospital = ['{place}: bays of six beds on the medical wards, side rooms full, staff moving between wards to cover shortages. Hand gel at every door; used at most of them.'];
   T.site_faith = ['{place}: the main hall holds a few hundred; worshippers stand or sit close. Refreshments afterwards in a side room.'];

@@ -277,10 +277,23 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   };
 
   // ---------------------------------------------------------------- acts and the end
+  /** community spread: many recent cases that nobody can link to a known case or cluster (observable) */
   GP.communitySpread = function () {
-    var S = this.S, sim = this.sim, C = this.C, known = 0;
-    S.caseOrder.forEach(function (pid) { var s = S.cases[pid].status; if (s === 'confirmed' || s === 'probable') known++; });
-    return sim.active.length >= Math.max(150, 0.02 * C.N) || known >= 80;
+    var S = this.S, C = this.C, self = this, known = 0, recent = 0, unlinked = 0, dists = {};
+    if (!S.recognized || S.day - S.recognizedDay < 7) return false;
+    var cl = null;
+    S.caseOrder.forEach(function (pid) {
+      var cs = S.cases[pid]; if (cs.status !== 'confirmed' && cs.status !== 'probable') return;
+      known++;
+      if (cs.reported < S.day - 10) return;
+      recent++; dists[C.dist[pid]] = 1;
+      if (cs.epiLinked || cs.infectorGuess !== undefined || S.contacts[pid]) return;
+      if (!cl) cl = self.clusters();
+      if (cl.some(function (k) { return k.cases.indexOf(pid) >= 0; })) return;
+      unlinked++;
+    });
+    var scale = C.N / 8000;
+    return (recent >= 40 * scale && unlinked >= 0.5 * recent && Object.keys(dists).length >= 5) || known >= 150 * scale;
   };
   GP.checkActs = function () {
     var S = this.S, self = this;
@@ -509,18 +522,50 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
 
   // ---------------------------------------------------------------- save / load
   GP.save = function () {
-    var S = this.S;
+    var S = this.S, C = this.C, self = this;
     var s2 = {};
     Object.keys(S).forEach(function (k) { s2[k] = S[k]; });
     s2.rumours = S.rumours.map(function (r) { var o = {}; Object.keys(r).forEach(function (k) { o[k] = r[k]; }); o.bel = IX.b64enc(r.bel); return o; });
-    return JSON.stringify({ v: 1, seed: this.seed, opts: this.opts, attempt: this.attempt, P: this.P, simBase: this.simBase, S: s2, sim: this.sim.snapshot() });
+    s2.msgs = S.msgs.map(function (m) { var o = {}; Object.keys(m).forEach(function (k) { if (k !== 'refs') o[k] = m[k]; }); return o; });
+    // refs whose display text is derivable are stored as short tokens
+    var json = JSON.stringify({ v: 2, seed: this.seed, opts: this.opts, attempt: this.attempt, P: this.P, simBase: this.simBase, S: s2, sim: this.sim.snapshot() }, function (k, v) {
+      if (v && typeof v === 'object' && v.t && v.id !== undefined && Object.keys(v).length === 3) {
+        if (v.t === 'person' && v.d === self.name(v.id)) return '\u0001P' + v.id;
+        if (v.t === 'place' && C.places[self.placeIdx(v.id)] && v.d === C.places[self.placeIdx(v.id)].name) return '\u0001L' + self.placeIdx(v.id);
+        if (v.t === 'district' && C.districts[self.distIdx(v.id)] && v.d === C.districts[self.distIdx(v.id)].name) return '\u0001D' + self.distIdx(v.id);
+      }
+      return v;
+    });
+    return IX.pack(json);
   };
-  IX.load = function (json) {
-    var o = typeof json === 'string' ? JSON.parse(json) : json;
+  IX.load = function (data) {
+    var json = typeof data === 'string' ? IX.unpack(data) : null;
+    var o = json !== null ? JSON.parse(json) : data;
     var C = IX.cityFor(o.P.citySeed || o.seed, o.opts);
     var g = new Game(o.seed, o.opts, o.attempt, C, o.P);
+    function revive(v) {
+      if (typeof v === 'string') {
+        if (v.charCodeAt(0) !== 1) return v;
+        var t = v.charAt(1), id = +v.slice(2);
+        if (t === 'P') return { t: 'person', id: id, d: g.name(id) };
+        if (t === 'L') return { t: 'place', id: C.places[id].id, d: C.places[id].name };
+        if (t === 'D') return { t: 'district', id: C.districts[id].id, d: C.districts[id].name };
+        return v;
+      }
+      if (Array.isArray(v)) { for (var i = 0; i < v.length; i++) v[i] = revive(v[i]); return v; }
+      if (v && typeof v === 'object') { for (var k in v) v[k] = revive(v[k]); return v; }
+      return v;
+    }
     g.simBase = o.simBase;
     g.S = o.S;
+    if (o.v >= 2) { revive(g.S.msgs); revive(g.S.cases); revive(g.S.people); revive(g.S.orders); }
+    g.S.msgs.forEach(function (m) {
+      if (m.refs) return;
+      var refs = [], seen = {};
+      function scan(seg) { if (seg && typeof seg === 'object' && seg.t) { var k = seg.t + ':' + seg.id; if (!seen[k]) { seen[k] = 1; refs.push(seg); } } }
+      m.body.forEach(function (l) { (l.x || []).forEach(scan); if (l.rows) l.rows.forEach(function (r) { r.forEach(scan); }); if (l.who) scan(l.who); });
+      m.refs = refs;
+    });
     g.S.rumours = o.S.rumours.map(function (r) { r.bel = IX.b64dec(r.bel, Uint8Array); return r; });
     g.sim.restore(o.sim);
     g.cal = IX.Calendar(g.simBase + g.S.sd0 * 86400000);
@@ -547,27 +592,51 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var ok = g.prerun();
     return ok ? g : null;
   };
-  IX.newGame = function (seed, opts) {
+  /** generation: pathogen k (a few draws each) until the acceptance check passes */
+  function genOpts(seed, opts) {
     opts = IX.clone(opts || {});
     if (opts.tutorial) { seed = IX.TUTORIAL.seed; opts.grade = IX.TUTORIAL.grade; opts.fixed = IX.TUTORIAL.fixed; }
     if (!opts.grade) opts.grade = 'consultant';
-    seed = String(seed === undefined ? Math.floor(Math.random() * 1e9) : seed);
-    var last = null, lastP = null, P = null;
-    for (var attempt = 0; attempt < 40; attempt++) {
-      var g = IX.buildAttemptCached(seed, opts, attempt);
-      if (!g) continue;
-      last = g;
-      var v = IX.accept ? IX.accept(g) : { ok: true };
-      g._verify = v;
-      if (v.ok) return g;
-    }
-    return last;
+    seed = String(seed === undefined || seed === null ? Math.floor(Math.random() * 1e9) : seed);
+    return { seed: seed, opts: opts };
+  }
+  var MAX_ATTEMPTS = 36, DRAWS_PER_PATHOGEN = 3;
+  /** one generation step; state {pk, draw, attempt, last, done, g} */
+  IX.genStep = function (seed, opts, st) {
+    if (st.done) return st;
+    var attempt = st.pk * DRAWS_PER_PATHOGEN + st.draw;
+    st.attempt = attempt;
+    var g = IX.buildAttemptCached(seed, opts, attempt);
+    var v = g ? (IX.accept ? IX.accept(g) : { ok: true }) : { ok: false, fails: ['fizzled before anyone noticed'], level: 'draw' };
+    if (g) { g._verify = v; st.last = g; }
+    st.tries = (st.tries || 0) + 1;
+    if (g && v.ok) { st.done = true; st.g = g; return st; }
+    if (v.level === 'pathogen' || st.draw + 1 >= DRAWS_PER_PATHOGEN) { st.pk++; st.draw = 0; } else st.draw++;
+    if (st.tries >= MAX_ATTEMPTS) { st.done = true; st.g = st.last; }
+    return st;
+  };
+  IX.newGame = function (seed, opts) {
+    var o = genOpts(seed, opts), st = { pk: 0, draw: 0 };
+    while (!st.done) IX.genStep(o.seed, o.opts, st);
+    return st.g;
+  };
+  /** the same, yielding to the browser between attempts: onProgress({tries, fraction}) */
+  IX.newGameAsync = function (seed, opts, onProgress) {
+    var o = genOpts(seed, opts), st = { pk: 0, draw: 0 };
+    return new Promise(function (resolve, reject) {
+      function step() {
+        try { IX.genStep(o.seed, o.opts, st); } catch (e) { reject(e); return; }
+        if (onProgress) try { onProgress({ tries: st.tries, fraction: st.done ? 1 : Math.min(0.95, st.tries / 6) }); } catch (e2) { }
+        if (st.done) resolve(st.g); else setTimeout(step, 0);
+      }
+      setTimeout(step, 0);
+    });
   };
   // pathogen calibration is shared by the three attempts that use the same pathogen
   var calCache = {};
   IX.buildAttemptCached = function (seed, opts, attempt) {
     var C = IX.cityFor(seed, opts);
-    var pk = String(seed) + (attempt >= 3 ? '~' + Math.floor(attempt / 3) : '') + '/' + (opts.grade || 'consultant');
+    var pk = String(seed) + (attempt >= DRAWS_PER_PATHOGEN ? '~' + Math.floor(attempt / DRAWS_PER_PATHOGEN) : '') + '/' + (opts.grade || 'consultant');
     var P = calCache[pk];
     if (!P) {
       P = IX.makePathogen(pk.replace(/\/.*$/, ''), { grade: opts.grade || 'consultant', fixed: opts.fixed });

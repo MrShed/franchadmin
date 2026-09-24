@@ -192,7 +192,7 @@ function UImeter(frac, cls) { frac = UIclamp(frac || 0, 0, 1); return '<span cla
 UI.topbar = function () {
   if (!UIA.g) return;
   var d = UIA.day(), act = UIA.actNo(), A = UIA.ACTS[act] || ['Act ' + act, ''];
-  UI$('#tb-day').innerHTML = '<b><small>DAY</small>' + (d + 1) + '</b><span class="sub"><i>' + UIesc(A[1]) + '</i><span>' + UIesc(UIA.dateLabel(d)) + ' · act ' + act + '</span></span>';
+  UI$('#tb-day').innerHTML = '<b><small>DAY</small>' + (d + 1) + '</b><span class="sub"><i>' + UIesc(A[1]) + '</i><span>' + UIesc(UIA.dateLabel(d)) + '</span></span>';
   var r = UIA.res(), H = r.hours;
   var hl = H.tracers.left + H.field.left + H.analysts.left, hm = H.tracers.max + H.field.max + H.analysts.max;
   var beds = r.beds.max ? r.beds.used / r.beds.max : 0;

@@ -764,12 +764,13 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   /** expected offspring per infection, using the real transmission code (expected-value mode) */
   function expectedOffspring(sim, idx, pol) {
     var P = sim.P, C = sim.C;
-    var acc = { byTarget: {}, byPre: {}, add: function (j, l) { if (this.phase === 1) this.byPre[j] = (this.byPre[j] || 0) + l; this.byTarget[j] = (this.byTarget[j] || 0) + l; } };
+    var N = sim.C.N;
+    var acc = { tot: new Float64Array(N), pre: new Float64Array(N), touched: [], add: function (j, l) { if (this.tot[j] === 0) this.touched.push(j); this.tot[j] += l; if (this.phase === 1) this.pre[j] += l; } };
     sim.expect = acc;
     var res = [];
     for (var q = 0; q < idx.length; q++) {
       var j = idx[q];
-      acc.byTarget = {}; acc.byPre = {};
+      acc.touched = [];
       var sdInf = 100 + (q % 7);
       // temporary infection record
       sim.n = 0; sim.active = []; sim.st[j] = 0; sim.nInf[j] = 0;
@@ -789,8 +790,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       sim.away[j] = 0; sim.st[j] = 0;
       // per target: P(infected) = 1-exp(-total hazard); the presymptomatic phase comes first,
       // so it claims 1-exp(-presymptomatic hazard) of it (household saturation)
-      var tot = 0, pre = 0, tg = acc.byTarget, bp = acc.byPre, ks = Object.keys(tg);
-      for (var kq = 0; kq < ks.length; kq++) { var kk = ks[kq], pj = 1 - Math.exp(-tg[kk]); pre += 1 - Math.exp(-(bp[kk] || 0)); tg[kk] = pj; tot += pj; }
+      var tot = 0, pre = 0, tl = acc.touched, tg = [];
+      for (var kq = 0; kq < tl.length; kq++) { var kk = tl[kq], pj = 1 - Math.exp(-acc.tot[kk]); pre += 1 - Math.exp(-acc.pre[kk]); tg.push(kk, pj); tot += pj; acc.tot[kk] = 0; acc.pre[kk] = 0; }
       res.push({ j: j, tot: tot, pre: pre, sym: tot - pre, asym: on < 0, targets: tg });
     }
     sim.expect = null; sim.n = 0; sim.active = [];
@@ -806,16 +807,16 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     sim.deadList = []; sim.baseBeds = 999; sim.baseIcu = 999;
     var R = IX.rng(key + '/cal');
     var pool = []; for (var a = 0; a < C.N; a++) pool.push(a);
-    var n1 = 300, n2 = 400;
+    var n1 = 220, n2 = 320;
     var idx = R.sample(pool, n1);
     var targetS = P.presym;
-    for (var it = 0; it < 4; it++) {
+    for (var it = 0; it < 3; it++) {
       var r1 = expectedOffspring(sim, idx, EMPTY_POL);
       // second generation: sample targets in proportion to how likely they are to be infected
-      var tw = {}, tot = 0;
-      r1.forEach(function (r) { Object.keys(r.targets).forEach(function (t) { tw[t] = (tw[t] || 0) + r.targets[t]; tot += r.targets[t]; }); });
-      var keys = Object.keys(tw), cum = [], c = 0;
-      keys.forEach(function (k) { c += tw[k]; cum.push(c); });
+      var tw = new Float64Array(C.N), tot = 0;
+      r1.forEach(function (r) { var T = r.targets; for (var q2 = 0; q2 < T.length; q2 += 2) { tw[T[q2]] += T[q2 + 1]; tot += T[q2 + 1]; } });
+      var keys = [], cum = [], c = 0;
+      for (var a2 = 0; a2 < C.N; a2++) if (tw[a2] > 0) { keys.push(a2); c += tw[a2]; cum.push(c); }
       var idx2 = [];
       for (var q = 0; q < n2 && keys.length; q++) {
         var xx = R.next() * c, lo = 0, hi = cum.length - 1;
