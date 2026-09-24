@@ -5,7 +5,7 @@
 // ===================================================================
 const TS = 8;
 const T_OUT = 0, T_FLOOR = 1, T_WALL = 2, T_DOOR = 3;
-const ROOM_NAMES = { office: 'Office', file: 'File Room', computer: 'Computer Room', lounge: 'Lounge', bath: 'Bathroom', cipher: 'Cipher Room', hall: 'Hallway', exec: 'Office' };
+const ROOM_NAMES = { office: 'Office', file: 'File Room', computer: 'Computer Room', lounge: 'Lounge', bath: 'Bathroom', cipher: 'Cipher Room', hall: 'Hallway', exec: 'Office', street: 'Street' };
 const FURN = {
   desk: { w: 2, h: 1, name: 'Desk', open: 1.2 }, chair: { w: 1, h: 1, name: 'Chair' }, file: { w: 1, h: 1, name: 'File cabinet', open: 1.5, hide: true },
   wallsafe: { w: 1, h: 1, name: 'Wall safe', open: 4, kit: true }, floorsafe: { w: 1, h: 1, name: 'Floor safe', open: 5, kit: true, flat: true },
@@ -13,6 +13,7 @@ const FURN = {
   picture: { w: 1, h: 1, name: 'Picture', bug: true, flat: true }, computer: { w: 2, h: 1, name: 'Mainframe computer', bug: true, hide: true },
   terminal: { w: 1, h: 1, name: 'Computer terminal' }, table: { w: 2, h: 2, name: 'Table' }, toilet: { w: 1, h: 1, name: 'Toilet' }, sink: { w: 1, h: 1, name: 'Sink' },
   evidence: { w: 1, h: 1, name: 'Crate', flat: true },
+  car: { w: 3, h: 2, name: 'Parked car', hide: true }, bin: { w: 1, h: 1, name: 'Trash can', hide: true }, lamp: { w: 1, h: 1, name: 'Street lamp' },
 };
 const GREN = { frag: { name: 'Frag', col: P.RD2 }, stun: { name: 'Stun', col: P.W }, gas: { name: 'Gas', col: P.GR2 } };
 
@@ -61,6 +62,27 @@ function genBuilding(level) {
   const kinds = shuffle(['file', 'computer', 'lounge', 'bath', 'cipher', 'office', 'office', 'file', 'office', 'computer', 'office']);
   order.slice(1).forEach((r, i) => { r.kind = (r.w <= 4 || r.h <= 3) ? 'hall' : kinds[i % kinds.length]; });
   return { T, R, MW, MH, rooms, doors, outer, exec: order[0], bx, by, bw, bh };
+}
+// a city street for ambushes: sidewalks, building fronts, the road running off both ends
+function genStreet() {
+  const MW = 24, MH = 18, T = [], R = [];
+  for (let y = 0; y < MH; y++) { T.push(new Array(MW).fill(T_WALL)); R.push(new Array(MW).fill(-1)); }
+  for (let y = 1; y < MH - 1; y++) for (let x = 1; x < MW - 1; x++) { T[y][x] = T_FLOOR; R[y][x] = 0; }
+  for (let y = 5; y < MH - 5; y++) { T[y][0] = T_OUT; T[y][MW - 1] = T_OUT; }
+  const room = { id: 0, kind: 'street', x: 1, y: 1, w: MW - 2, h: MH - 2, seen: true, doors: [] };
+  return { T, R, MW, MH, rooms: [room], doors: [], outer: [], exec: room, bx: 0, by: 0, bw: MW, bh: MH, street: true };
+}
+function furnishStreet(B) {
+  const F = [], occ = B.T.map(r => r.map(() => -1));
+  const put = (type, x, y) => {
+    const f = FURN[type]; for (let yy = y; yy < y + f.h; yy++) for (let xx = x; xx < x + f.w; xx++) if (!B.T[yy] || B.T[yy][xx] !== T_FLOOR || occ[yy][xx] >= 0) return null;
+    const id = F.length; F.push({ type, x, y, w: f.w, h: f.h, room: 0, opened: false, content: null, col: pick([P.RD, P.BL2, P.BL, P.BR, P.TL, P.MG]) });
+    for (let yy = y; yy < y + f.h; yy++) for (let xx = x; xx < x + f.w; xx++) occ[yy][xx] = id; return F[id];
+  };
+  for (const y of [3, B.MH - 6]) for (let x = ri(2, 4); x < B.MW - 5; x += ri(4, 7)) if (rnd() < 0.75) put('car', x, y);
+  for (let i = 0; i < 2; i++) put('car', ri(5, B.MW - 9), ri(6, B.MH - 9));
+  for (const y of [1, B.MH - 2]) for (let x = ri(2, 4); x < B.MW - 2; x += ri(4, 6)) put(rnd() < 0.5 ? 'lamp' : 'bin', x, y);
+  return { F, occ };
 }
 function bfsRooms(rooms, start) { const dd = rooms.map(() => 99); dd[start] = 0; const q = [start]; while (q.length) { const r = q.shift(); for (const d of rooms[r].doors) { const o = d.a === r ? d.b : d.a; if (o >= 0 && dd[o] > dd[r] + 1) { dd[o] = dd[r] + 1; q.push(o); } } } return dd; }
 
@@ -112,22 +134,23 @@ function furnish(B, opts) {
 // ------------------------------------------------------------------
 function breakinScene(opts, done) {
   const level = opts.level || 0, occupant = opts.occupant || null, org = opts.org || ORGS[0];
+  const mode = opts.mode || 'breakin'; // 'defend' = guard a jailed suspect, 'street' = ambush gunfight
   const kit = opts.kit || { uzi: false, camera: true, bugs: 0, gasmask: false, detector: false, kevlar: false, safekit: false, frag: 0, stun: 4, gas: 0 };
   const sk = skillLevel('combat');
   // persistent layout: the same seed builds the same building
   const saved = seed; if (opts.building && opts.building.seed) seed = opts.building.seed;
-  const B = genBuilding(level); const { F, occ } = furnish(B, { occupant, level });
+  const B = mode === 'street' ? genStreet() : genBuilding(level); const { F, occ } = mode === 'street' ? furnishStreet(B) : furnish(B, { occupant, level });
   seed = saved;
   const PWORDS = ['CONDOR', 'SPHINX', 'ORCHID', 'JACKAL', 'VORTEX', 'ZENITH', 'COBALT', 'PHOENIX', 'MIDNIGHT', 'TANGO', 'OMEGA', 'SCIMITAR', 'GRANITE', 'MONSOON', 'LANTERN'];
   const bld = opts.building || {};
   if (!bld.pw) { bld.pw = PWORDS[(bld.seed || ri(0, 999)) % PWORDS.length]; bld.pwKnown = bld.pw.split('').map(() => false); }
   const terminals = F.filter(f => f.type === 'terminal'); terminals.forEach((f, i) => f.letter = i % bld.pw.length);
   let comp = null; // the mainframe session overlay
-  const people = [], bullets = [], grenades = [], clouds = [], fx = [];
+  const people = [], bullets = [], grenades = [], clouds = [], fx = [], traps = [];
   const out = { clues: [], messages: 0, plan: false, personnel: false, evidence: null, alarm: false, bugged: false };
-  let msg = 'Select the door to enter by.', t = 0, clock = hourOf(game.t || 0) * 3600 + ri(0, 3599), alarm = false, alarmT = 0, over = null, entryDoor = null, pauseMenu = null;
+  let msg = 'Select the door to enter by.', t = 0, clock = hourOf(game.t || 0) * 3600 + ri(0, 3599), alarm = false, alarmT = 0, over = null, entryDoor = null, pauseMenu = null, pauseTitle = '';
   const say = m => { msg = m; };
-  const max = { kind: 'max', x: 0, y: 0, dir: 0, walk: 0, hits: 0, maxHits: kit.kevlar ? 4 : 2, gun: kit.uzi ? 'uzi' : 'pistol', clip: 6, clips: 3, cool: 0, gren: { frag: kit.frag, stun: kit.stun, gas: kit.gas }, gtype: 'stun', film: kit.camera ? 36 : 0, bugs: kit.bugs,
+  const max = { kind: 'max', x: 0, y: 0, dir: 0, walk: 0, hits: 0, maxHits: opts.maxHits || (kit.kevlar ? 4 : 2), gun: kit.uzi ? 'uzi' : 'pistol', clip: 6, clips: 3, cool: 0, gren: { frag: kit.frag, stun: kit.stun, gas: kit.gas }, gtype: 'stun', film: kit.camera ? 36 : 0, bugs: kit.bugs,
     crouch: false, disguised: false, stun: 0, gassed: 0, prisoner: null, busy: null };
   if (!max.gren.stun) max.gtype = max.gren.gas ? 'gas' : max.gren.frag ? 'frag' : 'stun';
 
@@ -151,14 +174,33 @@ function breakinScene(opts, done) {
   // ---------- people ----------
   function addGuard(room, st = 'patrol') { const [x, y] = spot(room); const g2 = { kind: 'guard', x, y, dir: rnd() * 7, walk: 0, state: st, out: false, stun: 0, cool: 1 + rnd(), home: room.id, path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.15 * level, gren: rnd() < 0.3 ? 1 : 0, col: P.YE }; people.push(g2); return g2; }
   const important = B.rooms.filter(r => ['file', 'computer', 'cipher', 'exec'].includes(r.kind));
-  const nGuards = Math.min(12, 3 + level * 2 + (opts.alert || 0) * 2 + Math.floor(B.rooms.length / 6));
+  const nGuards = mode !== 'breakin' ? 0 : Math.min(12, 3 + level * 2 + (opts.alert || 0) * 2 + Math.floor(B.rooms.length / 6));
   for (let i = 0; i < nGuards; i++) addGuard(rnd() < 0.5 && important.length ? pick(important) : pick(B.rooms), rnd() < 0.7 ? 'patrol' : 'idle');
   let target = null;
   if (occupant) { const seat = F.find(f => f.seat); const [x, y] = seat ? [seat.x * TS + 4, seat.y * TS + 4] : spot(B.exec); target = { kind: 'suspect', x, y, dir: -Math.PI / 2, walk: 0, state: 'seated', out: false, stun: 0, col: pick([P.W, P.MG, P.BL2]), path: null, pathT: 0, seeT: 0 }; people.push(target); }
 
   // ---------- entry ----------
   function enterAt(d) { entryDoor = d; d.open = true; const dx = d.side === 'W' ? 1 : d.side === 'E' ? -1 : 0, dy = d.side === 'N' ? 1 : d.side === 'S' ? -1 : 0; max.x = (d.x + dx) * TS + 4; max.y = (d.y + dy) * TS + 4; max.dir = Math.atan2(dy, dx); B.rooms[d.a].seen = true; say('Inside. Close the door behind you (E): guards notice open doors.'); sfx.select(); }
-  if (B.outer.length === 1) enterAt(B.outer[0]);
+  if (mode === 'breakin' && B.outer.length === 1) enterAt(B.outer[0]);
+  // ---------- prison defence and street ambush ----------
+  let ward = null, raidLeft = 0, raidT = 0;
+  function spawnRaider() {
+    let x, y;
+    if (mode === 'defend') { const d = pick(B.outer); d.open = true; x = (d.x + (d.side === 'W' ? 1 : d.side === 'E' ? -1 : 0)) * TS + 4; y = (d.y + (d.side === 'N' ? 1 : d.side === 'S' ? -1 : 0)) * TS + 4; }
+    else { x = (rnd() < 0.5 ? 1 : B.MW - 2) * TS + 4; y = ri(5, B.MH - 7) * TS + 4; }
+    people.push({ kind: 'guard', raider: true, x, y, dir: Math.atan2(max.y - y, max.x - x), walk: 0, state: mode === 'defend' ? 'raid' : 'hunt', out: false, stun: 0, cool: 1.2 + rnd(), home: Math.max(0, roomOf(x, y)), path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.2 * level, gren: rnd() < 0.3 ? 1 : 0, col: P.RD2 });
+    raidLeft--; sfx.tone(300, 0.15, 'square', 0.04, -100);
+  }
+  if (mode === 'defend') {
+    const [wx, wy] = spot(B.exec); ward = { kind: 'ward', x: wx, y: wy, dir: Math.PI / 2, walk: 0, state: 'seated', out: false, stun: 0, col: P.W, path: null, pathT: 0, seeT: 0 }; people.push(ward);
+    const [mx, my] = spot(B.exec); max.x = mx; max.y = my; entryDoor = { a: B.exec.id, dummy: true }; B.exec.seen = true;
+    alarm = true; raidLeft = 4 + level * 2; raidT = 5; msg = 'Hold this room! Nobody reaches the prisoner.';
+  }
+  if (mode === 'street') {
+    entryDoor = { a: 0, dummy: true }; alarm = true; raidLeft = 3 + level * 2; raidT = 1.5;
+    let best = null; for (let k = 0; k < 60; k++) { const x = ri(8, B.MW - 9), y = ri(6, B.MH - 8); if (occ[y][x] < 0 && (!best || Math.abs(x - B.MW / 2) + Math.abs(y - B.MH / 2) < Math.abs(best[0] - B.MW / 2) + Math.abs(best[1] - B.MH / 2))) best = [x, y]; }
+    max.x = best[0] * TS + 4; max.y = best[1] * TS + 4; msg = 'Ambush! Take cover behind the cars (C to crouch).';
+  }
 
   // ---------- noise / alarm / sight ----------
   function noise(x, y, r) { for (const p of people) if (p.kind === 'guard' && !p.out && p.stun <= 0 && dist(p.x, p.y, x, y) < r && p.state !== 'attack') { p.state = 'investigate'; p.target = [x, y]; p.path = null; } }
@@ -189,16 +231,31 @@ function breakinScene(opts, done) {
   function stunP(p, s) { if (!p.out) p.stun = Math.max(p.stun, s); }
   function hurtMax() { if (over) return; max.hits++; hitFlash = 3; sfx.tone(120, 0.2, 'sawtooth', 0.08, -60); say('You are hit!'); if (max.hits >= max.maxHits) finish('captured'); }
   function explode(gr) {
-    if (gr.type === 'gas') { clouds.push({ x: gr.x, y: gr.y, r: 3, t: 12, room: roomOf(gr.x, gr.y) }); sfx.hiss(); return; }
+    if (gr.type === 'gas') { clouds.push({ x: gr.x, y: gr.y, r: 3, t: 12, room: roomOf(gr.x, gr.y), trap: gr.trap }); sfx.hiss(); return; }
     fx.push({ k: 'boom', x: gr.x, y: gr.y, t: 0.5, type: gr.type }); sfx.boom(); if (gr.type === 'frag') { noise(gr.x, gr.y, 300); raiseAlarm('The explosion was heard.'); }
-    for (const p of people) { const d = dist(p.x, p.y, gr.x, gr.y); if (d < 26 && los(gr.x, gr.y, p.x, p.y)) { if (gr.type === 'frag') knockOut(p); else stunP(p, 25 + rnd() * 20); } }
-    const d = dist(max.x, max.y, gr.x, gr.y); if (d < 26 && los(gr.x, gr.y, max.x, max.y) && !(max.crouch && coverNear())) { if (gr.type === 'frag') hurtMax(); else max.stun = 6; }
+    for (const p of people) { if (p === ward) continue; const d = dist(p.x, p.y, gr.x, gr.y); if (d < 26 && los(gr.x, gr.y, p.x, p.y)) { if (gr.type === 'frag') knockOut(p); else stunP(p, 25 + rnd() * 20); } }
+    const d = dist(max.x, max.y, gr.x, gr.y); if (!gr.trap && d < 26 && los(gr.x, gr.y, max.x, max.y) && !(max.crouch && coverNear())) { if (gr.type === 'frag') hurtMax(); else max.stun = 6; }
   }
   function throwG(range) {
     if (max.gren[max.gtype] <= 0) { say('No ' + GREN[max.gtype].name.toLowerCase() + ' grenades.'); sfx.deny(); return; }
     max.gren[max.gtype]--; const d = [24, 48, 72][range];
     grenades.push({ x: max.x, y: max.y, sx: max.x, sy: max.y, tx: max.x + Math.cos(max.dir) * d, ty: max.y + Math.sin(max.dir) * d, t: 0, z: 0, type: max.gtype }); sfx.tone(500, 0.1, 'triangle', 0.05, -200);
   }
+
+  // ---------- traps: booby-trapped and remote-control grenades (F9 set, F8 detonate) ----------
+  function setTrap(kind) {
+    if (max.gren[max.gtype] <= 0) { say('No ' + GREN[max.gtype].name.toLowerCase() + ' grenades to rig.'); sfx.deny(); return; }
+    const x = max.x + Math.cos(max.dir) * 7, y = max.y + Math.sin(max.dir) * 7;
+    if (solid(Math.floor(x / TS), Math.floor(y / TS))) { say('No room to set a trap there.'); sfx.deny(); return; }
+    max.gren[max.gtype]--; traps.push({ x, y, type: max.gtype, kind, arm: 1.2 }); sfx.tone(900, 0.05, 'square', 0.04);
+    say(kind === 'booby' ? GREN[max.gtype].name + ' booby trap set. Mind your step - it only knows you.' : 'Remote-control ' + GREN[max.gtype].name.toLowerCase() + ' grenade set. Detonate with F8 (R).');
+  }
+  function detonate() {
+    const rs = traps.filter(tr => tr.kind === 'remote' && !tr.done); if (!rs.length) { say('No remote-control grenades are set.'); sfx.deny(); return; }
+    rs.forEach(tr => { tr.done = true; explode({ x: tr.x, y: tr.y, type: tr.type, trap: true }); }); say(rs.length > 1 ? 'You press the button. ' + rs.length + ' charges go off.' : 'You press the button.');
+  }
+  function openMenu(title, items) { pauseTitle = title; pauseMenu = Menu(items, 44, 52, 118); }
+  const trapMenu = () => openMenu('Set Trap', [{ label: 'Booby Trap', go: () => { pauseMenu = null; setTrap('booby'); } }, { label: 'Remote Control', go: () => { pauseMenu = null; setTrap('remote'); } }, { label: 'Cancel', go: () => { pauseMenu = null; } }]);
 
   // ---------- examine / photograph / bug ----------
   function facing() {
@@ -214,6 +271,7 @@ function breakinScene(opts, done) {
     if (max.busy || max.stun > 0) return;
     const { door, f, p } = facing();
     if (p === target && target && !target.out) { if (target.state === 'seated' || target.state === 'cower') { say('"Freeze," Max hissed. "Do what I say or I\'ll kill you. Understand?"'); target.state = 'captive'; max.prisoner = target; sfx.select(); target.alarmIn = 8; } return; }
+    if (p && p === ward) { say('"Sit tight," Max tells the prisoner. "Your friends are not getting in."'); return; }
     if (p && p.out) { say('Out cold.'); return; }
     if (door) { door.open = !door.open; sfx.tone(door.open ? 220 : 180, 0.06); say(door.open ? 'Door opened.' : 'Door closed.'); return; }
     if (!f) { say('Nothing there.'); return; }
@@ -292,12 +350,13 @@ function breakinScene(opts, done) {
     const r = B.rooms[f.room]; if (r.bugged) { say('One bug per room is enough.'); return; }
     max.bugs--; r.bugged = true; f.bugged = true; out.bugged = true; say('Bug planted in the ' + FURN[f.type].name.toLowerCase() + '.'); sfx.select();
   }
-  function finish(kind) { if (over) return; over = { kind, t: 0 }; kind === 'escaped' ? sfx.success() : sfx.fail(); }
+  function finish(kind) { if (over) return; over = { kind, t: 0 }; ['escaped', 'held', 'won'].includes(kind) ? sfx.success() : sfx.fail(); }
 
   // ---------- AI ----------
   function ai(p, dt) {
-    if (p.out || p === max.prisoner) return;
-    if (p.stun > 0) { p.stun -= dt; if (p.stun <= 0 && p.kind === 'guard') { p.state = alarm ? 'hunt' : 'investigate'; p.target = [max.x, max.y]; } return; }
+    if (p.out || p === max.prisoner || p === ward) return;
+    const resume = () => p.raider && ward ? 'raid' : alarm ? 'hunt' : 'investigate';
+    if (p.stun > 0) { p.stun -= dt; if (p.stun <= 0 && p.kind === 'guard') { p.state = resume(); p.target = [max.x, max.y]; } return; }
     const sees = canSee(p, p.kind === 'suspect' ? 90 : 76);
     const walkTo = (tx, ty, sp) => { p.pathT -= dt; if (!p.path || p.pathT <= 0) { p.path = pathTo(p.x, p.y, tx, ty); p.pathT = 0.7; } if (!p.path || !p.path.length) return true; const [nx, ny] = p.path[0]; if (dist(p.x, p.y, nx, ny) < 2) { p.path.shift(); return !p.path.length; } p.dir = Math.atan2(ny - p.y, nx - p.x); moveEnt(p, Math.cos(p.dir) * sp, Math.sin(p.dir) * sp, dt); p.walk += dt; return false; };
     if (p.kind === 'suspect') { if (sees && !max.disguised && p.state === 'seated') { p.state = 'cower'; raiseAlarm((occupant.known.name ? occupant.name : 'The suspect') + ' sees you and hits a button.'); } return; }
@@ -312,13 +371,14 @@ function breakinScene(opts, done) {
       case 'patrol': if (!p.wp) { const r = rnd() < 0.6 ? B.rooms[p.home] : (important.length && rnd() < 0.5 ? pick(important) : pick(B.rooms)); p.wp = spot(r); p.path = null; } if (walkTo(p.wp[0], p.wp[1], sp * 0.8)) { p.wp = null; if (rnd() < 0.4) { p.state = 'idle'; p.idleT = 2 + rnd() * 4; } } break;
       case 'investigate': if (!p.target || walkTo(p.target[0], p.target[1], sp)) { p.state = 'patrol'; p.target = null; } break;
       case 'hunt': if (walkTo(max.x, max.y, sp)) p.path = null; break;
+      case 'raid': if (walkTo(ward.x, ward.y, sp)) p.path = null; break;
       case 'attack':
         p.alertT += dt; if (p.alertT > 2 && !alarm) raiseAlarm('A guard sounds the alarm.');
         if (sees) {
           p.dir = Math.atan2(max.y - p.y, max.x - p.x); p.cool -= dt;
           if (dist(p.x, p.y, max.x, max.y) > 36) { moveEnt(p, Math.cos(p.dir) * sp, Math.sin(p.dir) * sp, dt); p.walk += dt; }
           if (p.cool <= 0) { p.cool = 1.4 - level * 0.15 + rnd() * 0.8; if (p.gren && rnd() < 0.2 && dist(p.x, p.y, max.x, max.y) > 30) { p.gren--; grenades.push({ x: p.x, y: p.y, sx: p.x, sy: p.y, tx: max.x, ty: max.y, t: 0, z: 0, type: 'stun' }); } else { const a = p.dir + (rnd() - 0.5) * (0.3 - level * 0.04 + (max.crouch ? 0.15 : 0)); bullets.push({ x: p.x, y: p.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, mine: false, life: 0.8 }); sfx.tone(160, 0.05, 'square', 0.04, -60); } }
-        } else if (p.last) { if (walkTo(p.last[0], p.last[1], sp)) { p.state = alarm ? 'hunt' : 'investigate'; p.target = [max.x, max.y]; } }
+        } else if (p.last) { if (walkTo(p.last[0], p.last[1], sp)) { p.state = resume(); p.target = [max.x, max.y]; } }
         break;
     }
     if (!p.out && dist(p.x, p.y, max.x, max.y) < 5 && (p.state === 'attack' || p.state === 'hunt') && !max.disguised) { knockOut(p); if (rnd() < 0.5) hurtMax(); say('Hand to hand! The guard goes down.'); sfx.noise(0.1, 0.12, 300); }
@@ -344,16 +404,16 @@ function breakinScene(opts, done) {
         p.hidden = true; if (p.gren) { max.gren.stun += p.gren; p.gren = 0; } if (!alarm && !max.disguised) { max.disguised = true; say('You put on the guard\'s uniform. Disguised.'); } else say('You search the guard and hide the body.');
       }
       const rid = roomOf(max.x, max.y); if (rid >= 0) B.rooms[rid].seen = true;
-      if (!inside(max.x, max.y)) finish('escaped');
+      if (!inside(max.x, max.y)) finish(mode === 'defend' ? 'freed' : 'escaped');
       for (const gr of grenades) { gr.t += dt / 0.6; const k = Math.min(1, gr.t); const nx = gr.sx + (gr.tx - gr.sx) * k, ny = gr.sy + (gr.ty - gr.sy) * k; if (opaque(Math.floor(nx / TS), Math.floor(ny / TS))) gr.t = Math.max(gr.t, 1); else { gr.x = nx; gr.y = ny; } gr.z = Math.sin(k * Math.PI) * 10; if (gr.t >= 1.4) { gr.done = true; explode(gr); } }
       for (let i = grenades.length - 1; i >= 0; i--) if (grenades[i].done) grenades.splice(i, 1);
-      for (const c of clouds) { c.t -= dt; c.r = Math.min(30, c.r + dt * 12); for (const p of people) if (dist(p.x, p.y, c.x, c.y) < c.r && !p.gasmask) stunP(p, 20); if (dist(max.x, max.y, c.x, c.y) < c.r && !kit.gasmask) { max.gassed += dt * 2; if (max.gassed > 2.5) { max.stun = 5; max.gassed = 0; say('You breathed the gas!'); } } }
+      for (const c of clouds) { c.t -= dt; c.r = Math.min(30, c.r + dt * 12); for (const p of people) if (dist(p.x, p.y, c.x, c.y) < c.r && !p.gasmask) stunP(p, 20); if (!c.trap && dist(max.x, max.y, c.x, c.y) < c.r && !kit.gasmask) { max.gassed += dt * 2; if (max.gassed > 2.5) { max.stun = 5; max.gassed = 0; say('You breathed the gas!'); } } }
       for (let i = clouds.length - 1; i >= 0; i--) if (clouds[i].t <= 0) clouds.splice(i, 1);
       for (const b of bullets) {
         for (let s = 0; s < 4 && !b.dead; s++) {
           b.x += b.vx * dt / 4; b.y += b.vy * dt / 4;
           if (solid(Math.floor(b.x / TS), Math.floor(b.y / TS), true)) { b.dead = true; fx.push({ k: 'spark', x: b.x, y: b.y, t: 0.1 }); break; }
-          if (b.mine) { for (const p of people) { if (p.out || p === max.prisoner) continue; if (dist(p.x, p.y, b.x, b.y) < 3.5) { b.dead = true; knockOut(p); fx.push({ k: 'hit', x: b.x, y: b.y, t: 0.15 }); break; } } }
+          if (b.mine) { for (const p of people) { if (p.out || p === max.prisoner || p === ward) continue; if (dist(p.x, p.y, b.x, b.y) < 3.5) { b.dead = true; knockOut(p); fx.push({ k: 'hit', x: b.x, y: b.y, t: 0.15 }); break; } } }
           else if (dist(max.x, max.y, b.x, b.y) < 3.5) { b.dead = true; if (!(max.crouch && coverNear() && rnd() < 0.5)) hurtMax(); }
         }
         b.life -= dt; if (b.life <= 0) b.dead = true;
@@ -361,7 +421,15 @@ function breakinScene(opts, done) {
       for (let i = bullets.length - 1; i >= 0; i--) if (bullets[i].dead) bullets.splice(i, 1);
       for (const f of fx) f.t -= dt; for (let i = fx.length - 1; i >= 0; i--) if (fx[i].t <= 0) fx.splice(i, 1);
       for (const p of people) ai(p, dt);
-      if (alarm) { alarmT += dt; if ((alarmT % 3) < dt) sfx.tone(1000, 0.3, 'square', 0.04); if (alarmT > 50 && !people.some(p => p.kind === 'guard' && !p.out && p.state === 'attack')) { alarm = false; say('The alarm has been switched off.'); for (const p of people) if (p.state === 'hunt') p.state = 'patrol'; } }
+      for (const tr of traps) { if (tr.done) continue; if (tr.arm > 0) { tr.arm -= dt; continue; } if (tr.kind === 'booby' && people.some(p => p.kind === 'guard' && !p.out && dist(p.x, p.y, tr.x, tr.y) < 7)) { tr.done = true; explode({ x: tr.x, y: tr.y, type: tr.type, trap: true }); } }
+      for (let i = traps.length - 1; i >= 0; i--) if (traps[i].done) traps.splice(i, 1);
+      if (mode !== 'breakin') {
+        if (raidLeft > 0) { raidT -= dt; if (raidT <= 0) { spawnRaider(); raidT = mode === 'street' ? 2.5 + rnd() * 3 : 5 + rnd() * 3; if (mode === 'defend') say('Footsteps! Someone is in the building.'); } }
+        const alive = people.filter(p => p.raider && !p.out);
+        if (ward) { const wr = roomOf(ward.x, ward.y), mr = roomOf(max.x, max.y); if (alive.some(p => p.stun <= 0 && (dist(p.x, p.y, ward.x, ward.y) < 7 || (roomOf(p.x, p.y) === wr && mr !== wr)))) finish('freed'); }
+        if (!raidLeft && !alive.length) finish(mode === 'street' ? 'won' : 'held');
+      }
+      if (alarm && mode === 'breakin') { alarmT += dt; if ((alarmT % 3) < dt) sfx.tone(1000, 0.3, 'square', 0.04); if (alarmT > 50 && !people.some(p => p.kind === 'guard' && !p.out && p.state === 'attack')) { alarm = false; say('The alarm has been switched off.'); for (const p of people) if (p.state === 'hunt') p.state = 'patrol'; } }
     },
   };
 
@@ -376,6 +444,7 @@ function breakinScene(opts, done) {
   }
   function drawRoom(v) {
     const { r, S, ox, oy } = v; const X0 = ox + r.x * S, Y0 = oy + r.y * S, w = r.w * S, h = r.h * S;
+    if (r.kind === 'street') { drawStreet(v, X0, Y0, w, h); return; }
     // light cyan outline, 3-px light gray wall with mitred dark corners
     rect(X0 - 4, Y0 - 4, w + 8, h + 8, P.CY); rect(X0 - 3, Y0 - 3, w + 6, h + 6, P.G3);
     for (const [cx, cy, dx, dy] of [[X0 - 3, Y0 - 3, 1, 1], [X0 + w + 2, Y0 - 3, -1, 1], [X0 - 3, Y0 + h + 2, 1, -1], [X0 + w + 2, Y0 + h + 2, -1, -1]]) for (let k = 0; k < 3; k++) px(cx + dx * k, cy + dy * k, P.G1);
@@ -387,6 +456,15 @@ function breakinScene(opts, done) {
       rect(dx, dy - (horizWall ? 1 : 0), dw, dh + (horizWall ? 2 : 0), d.open ? P.BL : d.outside ? P.GR2 : P.G1);
       if (d.open) dither(dx, dy, dw, dh, P.BL, P.BL2, 8); else px(dx + dw / 2, dy + dh / 2, P.W);
     }
+  }
+  function drawStreet(v, X0, Y0, w, h) {
+    const S = v.S; rect(X0 - 4, Y0 - 4, w + 8, h + 8, P.BR); for (let x = X0 - 4; x < X0 + w + 4; x += 6) { rect(x, Y0 - 4, 1, 3, P.RD); rect(x + 3, Y0 + h + 1, 1, 3, P.RD); }
+    for (let x = X0 + 8; x < X0 + w - 8; x += 28) { rect(x, Y0 - 4, 7, 4, P.K); rect(x + 12, Y0 + h, 7, 4, P.K); }
+    rect(X0, Y0, w, h, P.G3); for (let i = 0, q = 7; i < 140; i++) { q = (q * 1103515245 + 12345) & 0x7fffffff; px(X0 + q % w, Y0 + (q >> 8) % h, i % 4 ? P.G1 : P.W); }
+    rect(X0, Y0, w, 2 * S, P.BR); rect(X0, Y0 + h - 2 * S, w, 2 * S, P.BR); for (let x = X0; x < X0 + w; x += S * 2) { rect(x, Y0, 1, 2 * S, P.RD); rect(x, Y0 + h - 2 * S, 1, 2 * S, P.RD); }
+    rect(X0, Y0 + 2 * S, w, 1, P.K); rect(X0, Y0 + h - 2 * S - 1, w, 1, P.K);
+    const cy = v.oy + (B.MH / 2) * S; for (let x = X0 + 2; x < X0 + w; x += 8) rect(x, cy, 4, 1, P.YE);
+    for (const ex of [X0 - 4, X0 + w]) rect(ex, v.oy + 5 * S, 4, (B.MH - 10) * S, P.G3);
   }
   function drawFurn(f, v) {
     const S = v.S, X = v.ox + f.x * S, Y = v.oy + f.y * S, w = f.w * S, h = f.h * S, q = Math.max(1, S / 8);
@@ -406,6 +484,9 @@ function breakinScene(opts, done) {
       case 'table': { rect(X + 2, Y + 1, w - 4, h - 2, P.BR); rect(X + 1, Y + 2, w - 2, h - 4, P.BR); rect(X + w / 2 - 2, Y + h / 2 - 1, 4, 3, P.YE); break; }
       case 'toilet': box(X + 2, Y + 1, w - 4, h - 2, P.W); break;
       case 'sink': box(X + 1, Y + 1, w - 2, h - 3, P.W); rect(X + w / 2 - 1, Y + 3, 2, 2, P.CY); break;
+      case 'car': { const vert = false; rect(X, Y + 1, w, h - 2, P.K); rect(X + 1, Y + 2, w - 2, h - 4, f.col); rect(X + w * 0.3, Y + 3, w * 0.4, h - 6, P.TL); rect(X + w * 0.3 + 1, Y + 3, 2, h - 6, P.CY); for (const wx of [X + 2, X + w - 5]) { rect(wx, Y, 3, 2, P.K); rect(wx, Y + h - 2, 3, 2, P.K); } rect(X + w - 2, Y + 3, 1, 2, P.YE); rect(X + 1, Y + 3, 1, 2, P.RD2); break; }
+      case 'bin': disc(X + w / 2, Y + h / 2, Math.max(2, w / 2 - 1), P.K); disc(X + w / 2, Y + h / 2, Math.max(1, w / 2 - 2), P.G3); px(X + w / 2, Y + h / 2, P.G1); break;
+      case 'lamp': disc(X + w / 2, Y + h / 2, 2, P.K); px(X + w / 2, Y + h / 2, P.YE); break;
       case 'evidence': if (f.content) { box(X + 1, Y + 1, w - 2, h - 2, P.BR); line(X + 2, Y + 2, X + w - 3, Y + h - 3, P.K); } break;
     }
   }
@@ -435,6 +516,7 @@ function breakinScene(opts, done) {
     const v = roomView(), r = v.r;
     drawRoom(v);
     for (const f of F) if (f.room === r.id) drawFurn(f, v);
+    for (const tr of traps) if (roomOf(tr.x, tr.y) === r.id) { const X = v.sx(tr.x), Y = v.sy(tr.y); rect(X - 1, Y - 1, 3, 3, P.K); px(X, Y, GREN[tr.type].col); if ((t * 3 | 0) % 2) px(X, Y - 2, tr.kind === 'booby' ? P.RD2 : P.CY); }
     for (const c of clouds) if (c.room === r.id) { const cr = c.r / TS * v.S; dither(v.sx(c.x) - cr, v.sy(c.y) - cr, cr * 2, cr * 2, 'rgba(0,0,0,0)', P.GR2, 6); }
     const here = people.filter(p => roomOf(p.x, p.y) === r.id || p === max.prisoner).concat([max]).sort((a, b) => a.y - b.y);
     for (const p of here) drawGuy(p, v.sx(p.x), v.sy(p.y));
@@ -454,10 +536,10 @@ function breakinScene(opts, done) {
     textR([hh, mm, ss].map(v2 => String(v2).padStart(2, '0')).join(':'), 167, 2, P.W);
     textC(fitText(msg, 138), 98, 10, P.W);
     if (msgLong()) { const ls = wrap(msg, 146); msgBox(12, 20, 150, ls.length * 8 + 6); ls.forEach((l, i) => text(l, 16, 23 + i * 8, P.W)); }
-    if (alarm && (t * 4 | 0) % 2) { frame(v.ox + r.x * v.S - 5, v.oy + r.y * v.S - 5, r.w * v.S + 10, r.h * v.S + 10, P.RD2); }
+    if (alarm && mode === 'breakin' && (t * 4 | 0) % 2) { frame(v.ox + r.x * v.S - 5, v.oy + r.y * v.S - 5, r.w * v.S + 10, r.h * v.S + 10, P.RD2); }
     if (comp) drawComputer();
     if (over) drawOver();
-    if (pauseMenu) { msgBox(30, 50, 136, 70); text('Do you want to...', 36, 53, P.W); pauseMenu.draw(); }
+    if (pauseMenu) { msgBox(30, 40, 136, 18 + pauseMenu.items.length * 8); text(pauseTitle, 36, 43, P.W); pauseMenu.draw(); }
     postFlash();
   };
   let lastMsg = '', msgT0 = 0;
@@ -504,7 +586,7 @@ function breakinScene(opts, done) {
     for (const p of people) { if (p.out || p.kind !== 'guard') continue; const near = kit.detector && dist(p.x, p.y, max.x, max.y) < 110; const rr = B.rooms[roomOf(p.x, p.y)]; if (near || (rr && rr.bugged)) rect(ox + p.x / TS * sc, oy + p.y / TS * sc, 2, 1, P.YE); }
     if (entryDoor && (t * 3 | 0) % 2) rect(ox + max.x / TS * sc - 1, oy + max.y / TS * sc - 1, 2, 2, P.K);
   }
-  const doorMenu = Menu(B.outer.map((d, i) => ({ label: 'Door #' + (i + 1), go: () => enterAt(d) })), 46, 70, 80);
+  const doorMenu = B.outer.length && Menu(B.outer.map((d, i) => ({ label: 'Door #' + (i + 1), go: () => enterAt(d) })), 46, 70, 80);
   function drawDoorMenu() { msgBox(28, 58, 110, 16 + B.outer.length * 8); text('Which door?', 34, 61, P.W); doorMenu.draw(); const sc = Math.min(116 / B.bw, 92 / B.bh), ox = 182 - B.bx * sc + (116 - B.bw * sc) / 2, oy = 102 - B.by * sc; B.outer.forEach((d, i) => text(String(i + 1), ox + d.x * sc - 2, oy + d.y * sc - 4, P.YE, P.K)); }
   function drawComputer() {
     rect(VX0, VY0 - 20, VX1 - VX0, VY1 - VY0 + 26, P.K); frame(VX0, VY0 - 20, VX1 - VX0, VY1 - VY0 + 26, P.CY);
@@ -516,7 +598,8 @@ function breakinScene(opts, done) {
     for (let i = 0; i < 29; i++) { const x = 10 + (i % 13) * 12, yy = 148 + Math.floor(i / 13) * 12; rect(x, yy, 11, 11, i < 26 ? P.GR : P.G1); textC(i < 26 ? K[i] : ['_', '<', 'OK'][i - 26], x + 5, yy + 2, i < 26 ? P.K : P.W); }
   }
   function drawOver() {
-    const k = over.kind; const lines = [{ escaped: 'You quickly slip out of the building.', captured: 'You slump to the ground, overcome by your wounds.', abort: 'You abandon the mission.' }[k]];
+    const k = over.kind; const lines = [{ escaped: mode === 'street' ? 'You sprint off down the street and lose them.' : 'You quickly slip out of the building.', captured: 'You slump to the ground, overcome by your wounds.', abort: mode === 'breakin' ? 'You abandon the mission.' : 'You run for it.', held: 'The last raider goes down. The prisoner stays behind bars.', freed: 'The raiders reach the cell and spirit the prisoner away.', won: 'The hit squad is down. The street goes quiet.' }[k]];
+    if (mode !== 'breakin') { if (k === 'captured' && ward) lines.push('The prisoner is freed.'); const ls = lines.flatMap(l => wrap(l, 136)); msgBox(14, 60, 144, ls.length * 8 + 20); ls.forEach((l, i) => text(l, 18, 64 + i * 8, P.W)); if (over.t > 0.8) text('Press a key', 18, 66 + ls.length * 8, P.G3); return; }
     if (max.prisoner && k === 'escaped') lines.push('Your prisoner comes with you: ' + (occupant.known.name ? occupant.name : 'the suspect') + '.');
     if (k === 'captured' && max.prisoner) lines.push('Your prisoner escapes.');
     lines.push('Clues photographed: ' + out.clues.length + (out.messages ? '. Coded messages: ' + out.messages : '.'));
@@ -535,7 +618,7 @@ function breakinScene(opts, done) {
     if (!entryDoor) { if (k === 'menu') { over = { kind: 'abort', t: 1 }; end(); return; } doorMenu.key(k); return; }
     if (over) { if (over.t > 0.8 && (k === 'select' || k === 'fire' || k === 'action' || k === 'menu')) end(); return; }
     if (pauseMenu) { if (k === 'menu') pauseMenu = null; else pauseMenu.key(k); return; }
-    if (k === 'menu') { pauseMenu = Menu([{ label: 'Continue', go: () => { pauseMenu = null; } }, { label: 'Photograph (P)', go: () => { pauseMenu = null; photo(); } }, { label: 'Plant a bug (B)', go: () => { pauseMenu = null; bug(); } }, { label: 'Crouch/stand (C)', go: () => { pauseMenu = null; max.crouch = !max.crouch; } }, { label: 'Long throw (F7)', go: () => { pauseMenu = null; throwG(2); } }, { label: 'Abort mission', go: () => { pauseMenu = null; finish('abort'); } }], 44, 62, 118); return; }
+    if (k === 'menu') { openMenu('Do you want to...', [{ label: 'Continue', go: () => { pauseMenu = null; } }, { label: 'Photograph (P)', go: () => { pauseMenu = null; photo(); } }, { label: 'Plant a bug (B)', go: () => { pauseMenu = null; bug(); } }, { label: 'Crouch/stand (C)', go: () => { pauseMenu = null; max.crouch = !max.crouch; } }, { label: 'Long throw (F7)', go: () => { pauseMenu = null; throwG(2); } }, { label: 'Set trap (F9)', go: trapMenu }, { label: 'Detonate (F8)', go: () => { pauseMenu = null; detonate(); } }, { label: mode === 'breakin' ? 'Abort mission' : 'Run for it', go: () => { pauseMenu = null; finish(mode === 'defend' ? 'freed' : 'abort'); } }]); return; }
     if (max.stun > 0) return;
     if (k === 'action' || k === 'select') examine();
     if (k === 'alt') throwG(1);
@@ -557,10 +640,11 @@ function breakinScene(opts, done) {
     if (c === 'KeyP' || c === 'F2') { photo(); return true; } if (c === 'KeyB' || c === 'F3') { bug(); return true; }
     if (c === 'KeyC' || c === 'Numpad5') { max.crouch = !max.crouch; say(max.crouch ? 'Crouching.' : 'Standing.'); return true; }
     if (c === 'F1') { examine(); return true; } if (c === 'F4') { const { f } = facing(); if (f && f.type === 'computer') openComputer(); else say('Face the mainframe to use it.'); return true; } if (c === 'F5' || c === 'Digit1') { throwG(0); return true; } if (c === 'F6' || c === 'Digit2') { throwG(1); return true; } if (c === 'F7' || c === 'Digit3') { throwG(2); return true; }
+    if (c === 'F9' || c === 'KeyT') { trapMenu(); return true; } if (c === 'F8' || c === 'KeyR') { detonate(); return true; }
     if (c === 'F10') { const ks = ['frag', 'stun', 'gas']; max.gtype = ks[(ks.indexOf(max.gtype) + 1) % 3]; return true; }
     return false;
   };
-  scene.dbg = { max, people, B, F, raiseAlarm, enterAt };
+  scene.dbg = { max, people, B, F, traps, raiseAlarm, enterAt, setTrap, detonate, get ward() { return ward; }, get over() { return over; } };
   return scene;
 }
 

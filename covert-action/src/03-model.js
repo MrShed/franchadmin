@@ -168,7 +168,9 @@ function newCrime() {
   const crimeDay = D.days - ri(0, 2) + Math.floor(n / 4);
   // spread the plan across the days before the crime, keeping its order
   const maxDay = Math.max(1, ...steps.map(s => s.day)); steps.forEach(s => { s.day = 1 + Math.round((s.day - 1) / Math.max(1, maxDay - 1) * (crimeDay - 3)); });
-  game.crime = { ...crime, region, orgs, mastermind: mm.id, organizer: org1.id, executor: exec.id, people, steps, crimeDay, buildings, over: false, prevented: false, delay: 0, target: pick(cities).id, evidenceTaken: 0 };
+  // a double agent inside one CIA station feeds us false locations (manual p.40)
+  const double = rnd() < [0.3, 0.6, 0.8, 1][game.diff] ? { city: pick(cities).id, caught: false } : null;
+  game.crime = { ...crime, region, orgs, mastermind: mm.id, organizer: org1.id, executor: exec.id, people, steps, crimeDay, buildings, over: false, prevented: false, delay: 0, target: pick(cities).id, evidenceTaken: 0, double };
   game.buildings = buildings;
   return game.crime;
 }
@@ -200,16 +202,28 @@ function clueAbout(p, method = 'Covert Surveillance', forceFacet) {
   const opts = FACET_ORDER.filter(f => !p.known[f] && f !== 'role');
   const f = forceFacet || (opts.length ? pick(opts) : pick(['face', 'name', 'org', 'city', 'hideout']));
   const he = p.sex === 'f' ? 'This woman' : 'This man';
+  // the double agent's station reports the suspect somewhere else
+  const dbl = game.crime && game.crime.double;
+  if (dbl && !dbl.caught && f === 'city' && !forceFacet && rnd() < 0.5) {
+    const fake = pick(regionCities(game.region).filter(x => x.id !== p.city)); p.shownCity = fake.id;
+    return addClue(p, fake.name, (p.known.name ? p.name : 'A suspect known to the ' + o.name) + ' is active in ' + fake.name + '.', method, ['city'], { source: 'CIA/' + cityById(dbl.city).name, cityClaim: fake.id, lie: true });
+  }
+  if (f === 'city' || f === 'name' || f === 'hideout') p.shownCity = null;
   switch (f) {
     case 'face': return addClue(p, b.address, he + ' was identified by tenants at ' + b.address + '.', method, ['face']);
     case 'name': return addClue(p, p.name, p.name + ' was seen ' + pick(['boarding a flight to ' + c.name, 'meeting known criminals in ' + c.name, 'renting a car in ' + c.name, 'withdrawing large sums in ' + c.name]) + '.', method, ['name', 'city']);
     case 'org': return addClue(p, o.name, 'An informant says the ' + o.name + ' has brought in ' + (p.known.name ? p.name : 'a ' + RANKS[p.rank].toLowerCase()) + ' for a special job.', method, ['org']);
-    case 'city': return addClue(p, c.name, (p.known.name ? p.name : 'A suspect known to the ' + o.name) + ' is active in ' + c.name + '.', method, ['city']);
+    case 'city': return addClue(p, c.name, (p.known.name ? p.name : 'A suspect known to the ' + o.name) + ' is active in ' + c.name + '.', method, ['city'], { cityClaim: c.id });
     case 'hideout': return addClue(p, b.address, 'The ' + o.name + ' is using a building at ' + b.address + ', ' + c.name + '.', method, ['hideout', 'org']);
     case 'role': return addClue(p, p.role, (p.known.name ? p.name : 'A ' + o.name + ' member') + ' is the ' + p.role + ' in this operation.', method, ['role']);
   }
 }
 function canArrestHere(p) { return p.status === 'free'; }
+// the city our files show: the double agent's lie, until a true report corrects it
+const shownCity = p => cityById(p.shownCity || p.city);
+// the double agent tips off his friends in his own town: guards are readier there
+function leak(city) { const d = game.crime && game.crime.double; return d && !d.caught && d.city === city ? 1 : 0; }
+function addHeat(city, n) { game.heatBy = game.heatBy || {}; game.heatBy[city] = (game.heatBy[city] || 0) + n; }
 
 // ---------- messages (coded traffic) ----------
 const MSG_TEXT = {
@@ -248,6 +262,12 @@ function plotDay(d) {
     const p = b.suspect !== null && b.suspect !== undefined ? cr.people[b.suspect] : null;
     if (p && p.status === 'free' && rnd() < 0.7) { const st = cr.steps.find(s => (s.from === p.id || s.to === p.id) && s.kind !== 'item' && !s.tapped); if (st) { st.tapped = true; game.messages.push(Object.assign(makeMessage(st), { src: 'Wiretap, ' + b.address })); } else if (rnd() < 0.5) clueAbout(p, 'Telephone Tap'); }
   }
+  // jailed lieutenants: their friends may try to break them out
+  if (!cr.prisonBreak || cr.prisonBreak.handled) for (const p of cr.people) {
+    if (p.status !== 'arrested' || p.breakTried || p.rank < 3 || p.role === 'Mastermind') continue;
+    if (!cr.people.some(q => q.org === p.org && q.status === 'free')) continue;
+    if (rnd() < 0.2) { p.breakTried = true; cr.prisonBreak = { pid: p.id, city: p.jailCity || game.city, day: d }; break; }
+  }
   // blocked plans: critical links broken means the conspiracy falls apart
   const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length;
   if (blocked / total > 0.34 || cr.people[cr.mastermind].status !== 'free' || cr.people[cr.organizer].status !== 'free' && blocked > 0) { cr.over = true; cr.prevented = true; cr.endDay = d; }
@@ -264,6 +284,7 @@ function efficiency() {
     if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
   }
   cr.items.forEach((it, i) => { const ok = i < cr.evidenceTaken; rows.push({ status: ok ? 'Captured' : 'Not Found', label: it.replace(/\b\w/g, c => c.toUpperCase()), ep: ok ? 50 : 0, max: 50 }); got += ok ? 50 : 0; max += 50; });
+  if (cr.double) { const ok = cr.double.caught; rows.push({ status: ok ? 'Exposed' : 'Undetected', label: 'Double Agent', ep: ok ? 100 : 0, max: 100 }); got += ok ? 100 : 0; max += 100; }
   rows.push({ status: '', label: cr.kind, ep: cr.prevented ? 120 : 0, max: 120, crime: true }); got += cr.prevented ? 120 : 0; max += 120;
   return { rows, got, max, pts: Math.round(got / max * 1000) };
 }

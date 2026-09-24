@@ -497,7 +497,9 @@ function newCrime() {
   const crimeDay = D.days - ri(0, 2) + Math.floor(n / 4);
   // spread the plan across the days before the crime, keeping its order
   const maxDay = Math.max(1, ...steps.map(s => s.day)); steps.forEach(s => { s.day = 1 + Math.round((s.day - 1) / Math.max(1, maxDay - 1) * (crimeDay - 3)); });
-  game.crime = { ...crime, region, orgs, mastermind: mm.id, organizer: org1.id, executor: exec.id, people, steps, crimeDay, buildings, over: false, prevented: false, delay: 0, target: pick(cities).id, evidenceTaken: 0 };
+  // a double agent inside one CIA station feeds us false locations (manual p.40)
+  const double = rnd() < [0.3, 0.6, 0.8, 1][game.diff] ? { city: pick(cities).id, caught: false } : null;
+  game.crime = { ...crime, region, orgs, mastermind: mm.id, organizer: org1.id, executor: exec.id, people, steps, crimeDay, buildings, over: false, prevented: false, delay: 0, target: pick(cities).id, evidenceTaken: 0, double };
   game.buildings = buildings;
   return game.crime;
 }
@@ -529,16 +531,28 @@ function clueAbout(p, method = 'Covert Surveillance', forceFacet) {
   const opts = FACET_ORDER.filter(f => !p.known[f] && f !== 'role');
   const f = forceFacet || (opts.length ? pick(opts) : pick(['face', 'name', 'org', 'city', 'hideout']));
   const he = p.sex === 'f' ? 'This woman' : 'This man';
+  // the double agent's station reports the suspect somewhere else
+  const dbl = game.crime && game.crime.double;
+  if (dbl && !dbl.caught && f === 'city' && !forceFacet && rnd() < 0.5) {
+    const fake = pick(regionCities(game.region).filter(x => x.id !== p.city)); p.shownCity = fake.id;
+    return addClue(p, fake.name, (p.known.name ? p.name : 'A suspect known to the ' + o.name) + ' is active in ' + fake.name + '.', method, ['city'], { source: 'CIA/' + cityById(dbl.city).name, cityClaim: fake.id, lie: true });
+  }
+  if (f === 'city' || f === 'name' || f === 'hideout') p.shownCity = null;
   switch (f) {
     case 'face': return addClue(p, b.address, he + ' was identified by tenants at ' + b.address + '.', method, ['face']);
     case 'name': return addClue(p, p.name, p.name + ' was seen ' + pick(['boarding a flight to ' + c.name, 'meeting known criminals in ' + c.name, 'renting a car in ' + c.name, 'withdrawing large sums in ' + c.name]) + '.', method, ['name', 'city']);
     case 'org': return addClue(p, o.name, 'An informant says the ' + o.name + ' has brought in ' + (p.known.name ? p.name : 'a ' + RANKS[p.rank].toLowerCase()) + ' for a special job.', method, ['org']);
-    case 'city': return addClue(p, c.name, (p.known.name ? p.name : 'A suspect known to the ' + o.name) + ' is active in ' + c.name + '.', method, ['city']);
+    case 'city': return addClue(p, c.name, (p.known.name ? p.name : 'A suspect known to the ' + o.name) + ' is active in ' + c.name + '.', method, ['city'], { cityClaim: c.id });
     case 'hideout': return addClue(p, b.address, 'The ' + o.name + ' is using a building at ' + b.address + ', ' + c.name + '.', method, ['hideout', 'org']);
     case 'role': return addClue(p, p.role, (p.known.name ? p.name : 'A ' + o.name + ' member') + ' is the ' + p.role + ' in this operation.', method, ['role']);
   }
 }
 function canArrestHere(p) { return p.status === 'free'; }
+// the city our files show: the double agent's lie, until a true report corrects it
+const shownCity = p => cityById(p.shownCity || p.city);
+// the double agent tips off his friends in his own town: guards are readier there
+function leak(city) { const d = game.crime && game.crime.double; return d && !d.caught && d.city === city ? 1 : 0; }
+function addHeat(city, n) { game.heatBy = game.heatBy || {}; game.heatBy[city] = (game.heatBy[city] || 0) + n; }
 
 // ---------- messages (coded traffic) ----------
 const MSG_TEXT = {
@@ -577,6 +591,12 @@ function plotDay(d) {
     const p = b.suspect !== null && b.suspect !== undefined ? cr.people[b.suspect] : null;
     if (p && p.status === 'free' && rnd() < 0.7) { const st = cr.steps.find(s => (s.from === p.id || s.to === p.id) && s.kind !== 'item' && !s.tapped); if (st) { st.tapped = true; game.messages.push(Object.assign(makeMessage(st), { src: 'Wiretap, ' + b.address })); } else if (rnd() < 0.5) clueAbout(p, 'Telephone Tap'); }
   }
+  // jailed lieutenants: their friends may try to break them out
+  if (!cr.prisonBreak || cr.prisonBreak.handled) for (const p of cr.people) {
+    if (p.status !== 'arrested' || p.breakTried || p.rank < 3 || p.role === 'Mastermind') continue;
+    if (!cr.people.some(q => q.org === p.org && q.status === 'free')) continue;
+    if (rnd() < 0.2) { p.breakTried = true; cr.prisonBreak = { pid: p.id, city: p.jailCity || game.city, day: d }; break; }
+  }
   // blocked plans: critical links broken means the conspiracy falls apart
   const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length;
   if (blocked / total > 0.34 || cr.people[cr.mastermind].status !== 'free' || cr.people[cr.organizer].status !== 'free' && blocked > 0) { cr.over = true; cr.prevented = true; cr.endDay = d; }
@@ -593,6 +613,7 @@ function efficiency() {
     if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
   }
   cr.items.forEach((it, i) => { const ok = i < cr.evidenceTaken; rows.push({ status: ok ? 'Captured' : 'Not Found', label: it.replace(/\b\w/g, c => c.toUpperCase()), ep: ok ? 50 : 0, max: 50 }); got += ok ? 50 : 0; max += 50; });
+  if (cr.double) { const ok = cr.double.caught; rows.push({ status: ok ? 'Exposed' : 'Undetected', label: 'Double Agent', ep: ok ? 100 : 0, max: 100 }); got += ok ? 100 : 0; max += 100; }
   rows.push({ status: '', label: cr.kind, ep: cr.prevented ? 120 : 0, max: 120, crime: true }); got += cr.prevented ? 120 : 0; max += 120;
   return { rows, got, max, pts: Math.round(got / max * 1000) };
 }
@@ -1072,7 +1093,7 @@ function titleScene() {
 function practiceScene() {
   let s, diff = 0;
   const m1 = () => Menu(DIFFICULTY.map((d, i) => ({ label: d.name, go: () => { diff = i; s.menu = m2(); s.step = 1; } })), 118, 90, 130);
-  const m2 = () => Menu(['Combat', 'Driving', 'Cryptography', 'Electronics'].map((l, i) => ({ label: l, go: () => practice(['breakin', 'chase', 'crypto', 'wiretap'][i], diff) })), 118, 90, 130);
+  const m2 = () => Menu(['Combat', 'Driving', 'Cryptography', 'Electronics', 'Street ambush', 'Hit squad', 'Jail defence'].map((l, i) => ({ label: l, go: () => practice(['breakin', 'chase', 'crypto', 'wiretap', 'street', 'evade', 'defend'][i], diff) })), 118, 90, 130);
   s = menuScene({ menu: m1(), step: 0, back: () => { if (s.step) { s.step = 0; s.menu = m1(); } else go(titleScene()); },
     draw() { rect(0, 0, W, H, P.K); text(s.step ? 'Practice which skill?' : 'Which difficulty level?', 110, 78, P.W); this.menu.draw(); } });
   return s;
@@ -1081,7 +1102,7 @@ function helpScene(back) {
   const pages = [
     ['THE JOB', 'You are Max Remington, the only freelance secret agent in the western world. Each case is a crime being planned by 6 to 10 people from several organizations. Identify them, prove their roles, and arrest them before the crime is committed.\n\nArrests only stick if you know the suspect\'s ROLE: decoded messages, enemy computers and interrogations reveal roles.'],
     ['GETTING AROUND', 'Each city has the Airport, your Hotel, the CIA office (Data, Intelligence and Crypto floors) and any hideouts you have found. At an enemy building you can Place Wiretap, Break into building or Watch the building to follow people who leave.\n\nSuspects can only be arrested in their car or inside their own organization\'s building. Masterminds never leave their building.'],
-    ['CONTROLS', 'Menus: arrows + Enter, Esc to leave.\nBuilding: arrows move, Space fires, E examines/opens (F1), P photographs (F2), B bugs (F3), G throws (F5-F7), Tab changes grenade (F10), C crouches. Terminals show password letters; type the password at the mainframe (F4) and search.\nCar: arrows order the next turn, + and - speed, Tab swaps cars, F follows, F1/E arrests when prompted.\nCrypto: pick a code letter and type the plain letter. Electronics: Enter swaps chips.'],
+    ['CONTROLS', 'Menus: arrows + Enter, Esc to leave.\nBuilding: arrows move, Space fires, E examines/opens (F1), P photographs (F2), B bugs (F3), G throws (F5-F7), Tab changes grenade (F10), C crouches, T sets a booby or remote trap (F9), R detonates remotes (F8). Terminals show password letters; type the password at the mainframe (F4) and search.\nCar: arrows order the next turn, + and - speed, Tab swaps cars, F follows, F1/E arrests when prompted.\nCrypto: pick a code letter and type the plain letter. Electronics: Enter swaps chips.'],
   ];
   let i = 0;
   return pageScene(() => { folder(P.G3, 'Manual'); const [h, b] = pages[i]; text(h, 16, 22, P.RD); textR((i + 1) + '/' + pages.length, 300, 22, P.G1); para(b, 16, 36, 288, P.K, 8); textC('Press a key', W / 2, 188, P.G1); }, () => { i++; if (i >= pages.length) back(); });
@@ -1146,7 +1167,7 @@ function chiefScene() {
   return chiefTalk('Welcome back, ' + game.agent.short + '. It looks like the bad guys are preparing for action and the President is worried. He insists that you\'re the agent for this job. Things seem to be heating up in ' + REGIONS[cr.region].name + '. We\'ve picked up a few clues already - check them at any CIA office. Good luck ' + game.agent.short + ', you are our best hope.', () => { game.city = 'WAS'; go(cityScene()); });
 }
 function newCase() {
-  Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [], caseStart: Date.now(), ciaVisited: {} });
+  Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [], caseStart: Date.now(), ciaVisited: {}, heatBy: {}, ciaBlocked: {} });
   game.startDate = new Date(1990 + Math.floor(game.cases.length / 4), ri(0, 11), ri(1, 25), 8, 0, 0);
   newCrime();
   const cr = game.crime;
@@ -1164,12 +1185,21 @@ function locationsHere() {
 }
 function cityScene() {
   if (game.crime && game.crime.over && !game.crime.reported) return synopsisScene();
+  if (game.crime && game.crime.prisonBreak && !game.crime.prisonBreak.handled && !practiceMode) return prisonBreakScene();
   const city = cityById(game.city);
   const items = locationsHere().map(l => ({ label: fitText(l.label, 120), go: () => goLocation(l) }));
   items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });
   return cityLayout({ header: ['You are in ' + city.name, 'Do you go to ...'], items, pic: (x, y, w, h, t) => cityPic(x, y, w, h, city), caption: city.name + ', ' + (city.hq ? 'D.C.' : city.country), back: () => go(pauseScene(() => go(cityScene()))) });
 }
-function goLocation(l) { advance(20); if (l.kind === 'cia') go(ciaArrive()); else if (l.kind === 'airport') go(airportScene()); else if (l.kind === 'hotel') go(hotelScene()); else go(buildingScene(l.b)); }
+function goLocation(l) {
+  advance(20); if (checkCaseEnd()) return;
+  const arrive = () => goLocation2(l);
+  // word gets around: the more noise Max makes in a city, the likelier an ambush on the street
+  const heat = (game.heatBy && game.heatBy[game.city]) || 0, locals = game.crime.people.some(p => p.status === 'free' && p.city === game.city);
+  if (locals && heat > 0 && l.kind !== 'airport' && rnd() < Math.min(0.45, heat * 0.07)) { game.heatBy[game.city] = Math.max(0, heat - 2); ambush(arrive); return; }
+  arrive();
+}
+function goLocation2(l) { if (l.kind === 'cia') go(game.ciaBlocked[game.city] ? pageScene(() => { rect(0, 0, W, H, P.K); ciaLobbyArt(170, 0, 150, 200, 0); para('The station chief meets you at the door. After your accusation, nobody in this office will work with you. Try the CIA in another city.', 15, 20, 140, P.W, 8); statusBox(174); }, () => go(cityScene())) : ciaArrive()); else if (l.kind === 'airport') go(airportScene()); else if (l.kind === 'hotel') go(hotelScene()); else go(buildingScene(l.b)); }
 function pauseScene(back) {
   return menuScene({
     menu: Menu([{ label: 'Continue', go: back }, { label: 'Sound on / off', go: () => { sfx.toggle(); } }, { label: 'How to play', go: () => go(helpScene(() => go(pauseScene(back)))) }, { label: 'Save Game', go: () => { writeSave(); toast('Game saved'); } }, { label: 'Quit to title', go: () => go(titleScene()) }], 118, 76, 110),
@@ -1223,19 +1253,20 @@ function clueScreen(c, back) {
     if (c.face) { rect(262, 18, 40, 46, P.W); frame(262, 18, 40, 46, P.G3); drawFace(p.face, 266, 22, 32, 38); rect(300, 16, 3, 14, P.G3); rect(301, 17, 1, 12, P.W); } else methodIcon(c.method, 274, 20);
     text('Related Clues:', 12, 92, P.RD2);
     if (!related.length) text('...none', 12, 100, P.K);
+    if (c.lie && game.crime.double && game.crime.double.caught) { g.save(); g.translate(200, 70); g.rotate(-0.2); frame(-50, -8, 100, 16, P.RD); textC('DISINFORMATION', 0, -4, P.RD); g.restore(); }
     related.forEach((r, i) => { const yy = 102 + i * 36; rect(10, yy, 298, 34, P.W); frame(10, yy, 298, 34, P.G3); text('Source: ' + r.source, 14, yy + 3, P.G3); para(r.text, 14, yy + 11, 288, P.K, 8); });
   }, back);
 }
 function reviewSuspects(back) {
   const ps = game.crime.people.filter(isSuspect);
-  return folderList('Suspect Files', FOLDER.docs, ps.map(p => ({ label: p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id), right: p.status !== 'free' ? p.status : p.known.city ? cityById(p.city).name : '', rcol: p.status !== 'free' ? P.RD : P.BL, open: () => go(suspectFile(p, () => go(reviewSuspects(back)))) })), back, { empty: '...no suspects identified' });
+  return folderList('Suspect Files', FOLDER.docs, ps.map(p => ({ label: p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id), right: p.status !== 'free' ? p.status : p.known.city ? shownCity(p).name : '', rcol: p.status !== 'free' ? P.RD : P.BL, open: () => go(suspectFile(p, () => go(reviewSuspects(back)))) })), back, { empty: '...no suspects identified' });
 }
 function suspectFile(p, back) {
   const steps = game.crime.steps.filter(s => (s.from === p.id || s.to === p.id) && s.known);
   return pageScene(() => {
     folder(FOLDER.suspect, 'Suspect File');
     rect(14, 22, 52, 62, P.W); frame(14, 22, 52, 62, P.G3); if (p.known.face) drawFace(p.face, 18, 26, 44, 54); else { rect(18, 26, 44, 54, P.TL); g.save(); g.translate(18, 26); g.scale(44 / 26, 54 / 32); drawUnknownFace(0, 0); g.restore(); }
-    const rows = [['Name:', p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id)], ['Org:', p.known.org ? p.org.name : 'unknown'], ['City:', p.known.city ? cityById(p.city).name : 'unknown'], ['Hideout:', p.known.hideout ? game.buildings[p.building].address : 'unknown'], ['Rank:', p.known.org ? RANKS[p.rank] : 'unknown'], ['Role:', p.known.role ? p.role : 'unknown']];
+    const rows = [['Name:', p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id)], ['Org:', p.known.org ? p.org.name : 'unknown'], ['City:', p.known.city ? shownCity(p).name : 'unknown'], ['Hideout:', p.known.hideout ? game.buildings[p.building].address : 'unknown'], ['Rank:', p.known.org ? RANKS[p.rank] : 'unknown'], ['Role:', p.known.role ? p.role : 'unknown']];
     rows.forEach(([k, v], i) => { text(k, 74, 22 + i * 10, P.K); text(v, 120, 22 + i * 10, v === 'unknown' ? P.G1 : P.K); rect(120, 30 + i * 10, 180, 1, P.RD2); });
     if (p.status !== 'free') { rect(200, 84, 100, 12, P.RD); textC(p.status.toUpperCase(), 250, 86, P.W); }
     rect(16, 100, 264, 60, P.TL); frame(16, 100, 264, 60, P.CY);
@@ -1263,7 +1294,7 @@ function citySummary(back) {
   return folderList('Cities', FOLDER.city, regionCities(game.region).map(c => ({ label: c.name, open: () => go(pageScene(() => {
     folder(FOLDER.city, c.name); textC(c.name + ', ' + c.country, 160, 22, P.K);
     const orgs = [...new Set(Object.values(game.buildings).filter(b => b.city === c.id && b.known && (b.orgKnown || b.agency)).map(b => b.agency || b.org.name))];
-    const sus = game.crime.people.filter(p => p.known.city && p.city === c.id);
+    const sus = game.crime.people.filter(p => p.known.city && shownCity(p) === c);
     text('Organizations:', 16, 40, P.K); para(orgs.join(', ') || 'none known', 110, 40, 190, P.G1, 8);
     text('Suspects:', 16, 76, P.K); para(sus.map(p => p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id)).join(', ') || 'none known', 110, 76, 190, P.G1, 8);
     text('Clues:', 16, 112, P.K); text(String(game.clues.filter(k => k.source.includes(c.name)).length), 110, 112, P.G1);
@@ -1286,11 +1317,27 @@ function intelSection(back) {
     { label: 'Local Scan', go: () => scan(2, true) },
     { label: 'International Scan', go: () => scan(6, false) },
     { label: 'Active Wire Taps', go: () => go(folderList('Wire Taps', FOLDER.docs, game.taps.filter(tp => tp.until >= dayOf(game.t)).map(tp => { const b = game.buildings[tp.key]; return { label: cityById(b.city).name + ': ' + (b.agency || (b.orgKnown ? b.org.name : 'unknown building')) + ', ' + b.address }; }), me, { empty: '...no active taps' })) },
-    { label: 'Check with Sam', go: () => go(pageScene(() => { rect(0, 0, W, H, P.K); intelArt(170, 0, 150, 200, 0); text('Sam says:', 15, 20, P.YE); para(samHint(), 15, 30, 140, P.W, 8); statusBox(174); }, me)) },
+    { label: 'Accuse Double Agent', off: !!(game.crime.double && game.crime.double.caught), go: () => go(accuseScene(me)) },
+    { label: 'Check with Sam', go: () => { const hint = samHint(); go(pageScene(() => { rect(0, 0, W, H, P.K); intelArt(170, 0, 150, 200, 0); text('Sam says:', 15, 20, P.YE); para(hint, 15, 30, 140, P.W, 8); statusBox(174); }, me)); } },
   ] });
+}
+function accuseScene(back) {
+  const city = cityById(game.city);
+  return menuScene({
+    menu: Menu([{ label: 'No, not yet.', go: back }, { label: 'Yes. Arrest the mole.', go: () => {
+      const d = game.crime.double; advance(120);
+      if (d && d.city === game.city) {
+        d.caught = true; game.crime.people.forEach(p => { if (p.shownCity) p.shownCity = null; });
+        go(report('Double Agent', ['Security takes the station\'s senior analyst into custody. Under questioning he admits he has been feeding false locations to Langley for the ' + game.crime.orgs[0].name + '.', 'Clues from ' + city.name + ' are now marked as disinformation, and our files show the true locations again.'], back));
+      } else { game.ciaBlocked[game.city] = true; go(report('Double Agent', ['The accusation is false. Internal Security clears everyone in the ' + city.name + ' station, and the staff are furious.', 'The CIA office in ' + city.name + ' will not work with you for the rest of this case.'], () => go(cityScene()))); }
+    } }], 23, 90, 200),
+    back,
+    draw() { rect(0, 0, W, H, P.K); intelArt(170, 0, 150, 200, 0); text('Accuse Double Agent', 15, 14, P.YE); para('Do you accuse someone in the ' + city.name + ' station of working for the other side? If you are wrong, this office will refuse to deal with you.', 15, 30, 150, P.W, 8); this.menu.draw(); statusBox(174); },
+  });
 }
 function samHint() {
   const cr = game.crime;
+  if (cr.double && !cr.double.caught && game.clues.some(c => c.lie) && rnd() < 0.6) return 'Some of our reports put the same suspect in two cities. Look at where the bad ones come from - if one CIA station keeps getting it wrong, we have a mole there. Accuse him from the Intelligence Section of that station.';
   const arrestable = cr.people.find(p => p.status === 'free' && p.known.role && p.known.hideout);
   if (arrestable) return 'We have the goods on ' + who(arrestable) + '. The ' + arrestable.org.name + ' building at ' + game.buildings[arrestable.building].address + ', ' + cityById(arrestable.city).name + ' is where to grab him - or catch him in his car.';
   if (game.messages.some(m => !m.decoded)) return 'There are coded messages waiting up in the Crypto Branch. Decoded messages give us the roles we need for arrests.';
@@ -1332,7 +1379,7 @@ function airportScene() {
 function hotelScene() {
   return boxLayout({ header: ['You are at your', 'hotel. Do you...'], art: (x, y, w, h, t) => hotelLobbyArt(t), back: () => go(cityScene()), items: [
     { label: 'Leave Hotel', go: () => go(cityScene()) },
-    { label: 'Visit the lounge', go: () => { advance(180); const pool = game.crime.people.filter(p => p.status === 'free' && p.city === game.city); const c = pool.length && rnd() < 0.6 ? clueAbout(pick(pool), 'Local Gossip') : null; game.heat = (game.heat || 0) + 1; go(c ? clueScreen(c, () => go(hotelScene())) : pageScene(() => { hotelLobbyArt(0); popup(['Nothing but tourists and piano music.', 'Somebody at the bar is watching you, though.']); }, () => go(hotelScene()))); } },
+    { label: 'Visit the lounge', go: () => { advance(180); const pool = game.crime.people.filter(p => p.status === 'free' && p.city === game.city); const c = pool.length && rnd() < 0.6 ? clueAbout(pick(pool), 'Local Gossip') : null; addHeat(game.city, 1); go(c ? clueScreen(c, () => go(hotelScene())) : pageScene(() => { hotelLobbyArt(0); popup(['Nothing but tourists and piano music.', 'Somebody at the bar is watching you, though.']); }, () => go(hotelScene()))); } },
     { label: 'Sleep through case', go: () => go(sleepScene()) },
     { label: 'Save Game', go: () => { writeSave(); toast('Saved as "' + game.agent.codename + '"'); } },
     { label: 'Load Game', off: !loadSave(), go: () => { restoreSave(loadSave()); go(cityScene()); } },
@@ -1361,7 +1408,7 @@ function hallOfFame(back) {
 function arrestResult(p, how) {
   const cr = game.crime;
   if (!p.known.role) { p.exists = true; learn(p, 'face'); learn(p, 'name'); return splitLayout({ header: [], text: p.name + ' was taken to local headquarters for questioning, but had to be released for lack of evidence. Without proof of a role in the crime, an arrest will not stick.', art: (x, y, w, h) => interrogationArt(x, y, w, h, p), back: () => go(cityScene()), items: [{ label: 'Continue', go: () => go(cityScene()) }] }); }
-  p.status = 'arrested'; FACET_ORDER.forEach(f => learn(p, f));
+  p.status = 'arrested'; p.jailCity = game.city; p.shownCity = null; addHeat(game.city, 2); FACET_ORDER.forEach(f => learn(p, f));
   if (p.role === 'Mastermind') p.org.mastermindFree = false;
   const told = [];
   const contacts = cr.steps.filter(s => s.to !== undefined && (s.from === p.id || s.to === p.id)).map(s => cr.people[s.from === p.id ? s.to : s.from]).filter(Boolean);
@@ -1435,7 +1482,7 @@ function careerScene() {
 // ===================================================================
 const TS = 8;
 const T_OUT = 0, T_FLOOR = 1, T_WALL = 2, T_DOOR = 3;
-const ROOM_NAMES = { office: 'Office', file: 'File Room', computer: 'Computer Room', lounge: 'Lounge', bath: 'Bathroom', cipher: 'Cipher Room', hall: 'Hallway', exec: 'Office' };
+const ROOM_NAMES = { office: 'Office', file: 'File Room', computer: 'Computer Room', lounge: 'Lounge', bath: 'Bathroom', cipher: 'Cipher Room', hall: 'Hallway', exec: 'Office', street: 'Street' };
 const FURN = {
   desk: { w: 2, h: 1, name: 'Desk', open: 1.2 }, chair: { w: 1, h: 1, name: 'Chair' }, file: { w: 1, h: 1, name: 'File cabinet', open: 1.5, hide: true },
   wallsafe: { w: 1, h: 1, name: 'Wall safe', open: 4, kit: true }, floorsafe: { w: 1, h: 1, name: 'Floor safe', open: 5, kit: true, flat: true },
@@ -1443,6 +1490,7 @@ const FURN = {
   picture: { w: 1, h: 1, name: 'Picture', bug: true, flat: true }, computer: { w: 2, h: 1, name: 'Mainframe computer', bug: true, hide: true },
   terminal: { w: 1, h: 1, name: 'Computer terminal' }, table: { w: 2, h: 2, name: 'Table' }, toilet: { w: 1, h: 1, name: 'Toilet' }, sink: { w: 1, h: 1, name: 'Sink' },
   evidence: { w: 1, h: 1, name: 'Crate', flat: true },
+  car: { w: 3, h: 2, name: 'Parked car', hide: true }, bin: { w: 1, h: 1, name: 'Trash can', hide: true }, lamp: { w: 1, h: 1, name: 'Street lamp' },
 };
 const GREN = { frag: { name: 'Frag', col: P.RD2 }, stun: { name: 'Stun', col: P.W }, gas: { name: 'Gas', col: P.GR2 } };
 
@@ -1491,6 +1539,27 @@ function genBuilding(level) {
   const kinds = shuffle(['file', 'computer', 'lounge', 'bath', 'cipher', 'office', 'office', 'file', 'office', 'computer', 'office']);
   order.slice(1).forEach((r, i) => { r.kind = (r.w <= 4 || r.h <= 3) ? 'hall' : kinds[i % kinds.length]; });
   return { T, R, MW, MH, rooms, doors, outer, exec: order[0], bx, by, bw, bh };
+}
+// a city street for ambushes: sidewalks, building fronts, the road running off both ends
+function genStreet() {
+  const MW = 24, MH = 18, T = [], R = [];
+  for (let y = 0; y < MH; y++) { T.push(new Array(MW).fill(T_WALL)); R.push(new Array(MW).fill(-1)); }
+  for (let y = 1; y < MH - 1; y++) for (let x = 1; x < MW - 1; x++) { T[y][x] = T_FLOOR; R[y][x] = 0; }
+  for (let y = 5; y < MH - 5; y++) { T[y][0] = T_OUT; T[y][MW - 1] = T_OUT; }
+  const room = { id: 0, kind: 'street', x: 1, y: 1, w: MW - 2, h: MH - 2, seen: true, doors: [] };
+  return { T, R, MW, MH, rooms: [room], doors: [], outer: [], exec: room, bx: 0, by: 0, bw: MW, bh: MH, street: true };
+}
+function furnishStreet(B) {
+  const F = [], occ = B.T.map(r => r.map(() => -1));
+  const put = (type, x, y) => {
+    const f = FURN[type]; for (let yy = y; yy < y + f.h; yy++) for (let xx = x; xx < x + f.w; xx++) if (!B.T[yy] || B.T[yy][xx] !== T_FLOOR || occ[yy][xx] >= 0) return null;
+    const id = F.length; F.push({ type, x, y, w: f.w, h: f.h, room: 0, opened: false, content: null, col: pick([P.RD, P.BL2, P.BL, P.BR, P.TL, P.MG]) });
+    for (let yy = y; yy < y + f.h; yy++) for (let xx = x; xx < x + f.w; xx++) occ[yy][xx] = id; return F[id];
+  };
+  for (const y of [3, B.MH - 6]) for (let x = ri(2, 4); x < B.MW - 5; x += ri(4, 7)) if (rnd() < 0.75) put('car', x, y);
+  for (let i = 0; i < 2; i++) put('car', ri(5, B.MW - 9), ri(6, B.MH - 9));
+  for (const y of [1, B.MH - 2]) for (let x = ri(2, 4); x < B.MW - 2; x += ri(4, 6)) put(rnd() < 0.5 ? 'lamp' : 'bin', x, y);
+  return { F, occ };
 }
 function bfsRooms(rooms, start) { const dd = rooms.map(() => 99); dd[start] = 0; const q = [start]; while (q.length) { const r = q.shift(); for (const d of rooms[r].doors) { const o = d.a === r ? d.b : d.a; if (o >= 0 && dd[o] > dd[r] + 1) { dd[o] = dd[r] + 1; q.push(o); } } } return dd; }
 
@@ -1542,22 +1611,23 @@ function furnish(B, opts) {
 // ------------------------------------------------------------------
 function breakinScene(opts, done) {
   const level = opts.level || 0, occupant = opts.occupant || null, org = opts.org || ORGS[0];
+  const mode = opts.mode || 'breakin'; // 'defend' = guard a jailed suspect, 'street' = ambush gunfight
   const kit = opts.kit || { uzi: false, camera: true, bugs: 0, gasmask: false, detector: false, kevlar: false, safekit: false, frag: 0, stun: 4, gas: 0 };
   const sk = skillLevel('combat');
   // persistent layout: the same seed builds the same building
   const saved = seed; if (opts.building && opts.building.seed) seed = opts.building.seed;
-  const B = genBuilding(level); const { F, occ } = furnish(B, { occupant, level });
+  const B = mode === 'street' ? genStreet() : genBuilding(level); const { F, occ } = mode === 'street' ? furnishStreet(B) : furnish(B, { occupant, level });
   seed = saved;
   const PWORDS = ['CONDOR', 'SPHINX', 'ORCHID', 'JACKAL', 'VORTEX', 'ZENITH', 'COBALT', 'PHOENIX', 'MIDNIGHT', 'TANGO', 'OMEGA', 'SCIMITAR', 'GRANITE', 'MONSOON', 'LANTERN'];
   const bld = opts.building || {};
   if (!bld.pw) { bld.pw = PWORDS[(bld.seed || ri(0, 999)) % PWORDS.length]; bld.pwKnown = bld.pw.split('').map(() => false); }
   const terminals = F.filter(f => f.type === 'terminal'); terminals.forEach((f, i) => f.letter = i % bld.pw.length);
   let comp = null; // the mainframe session overlay
-  const people = [], bullets = [], grenades = [], clouds = [], fx = [];
+  const people = [], bullets = [], grenades = [], clouds = [], fx = [], traps = [];
   const out = { clues: [], messages: 0, plan: false, personnel: false, evidence: null, alarm: false, bugged: false };
-  let msg = 'Select the door to enter by.', t = 0, clock = hourOf(game.t || 0) * 3600 + ri(0, 3599), alarm = false, alarmT = 0, over = null, entryDoor = null, pauseMenu = null;
+  let msg = 'Select the door to enter by.', t = 0, clock = hourOf(game.t || 0) * 3600 + ri(0, 3599), alarm = false, alarmT = 0, over = null, entryDoor = null, pauseMenu = null, pauseTitle = '';
   const say = m => { msg = m; };
-  const max = { kind: 'max', x: 0, y: 0, dir: 0, walk: 0, hits: 0, maxHits: kit.kevlar ? 4 : 2, gun: kit.uzi ? 'uzi' : 'pistol', clip: 6, clips: 3, cool: 0, gren: { frag: kit.frag, stun: kit.stun, gas: kit.gas }, gtype: 'stun', film: kit.camera ? 36 : 0, bugs: kit.bugs,
+  const max = { kind: 'max', x: 0, y: 0, dir: 0, walk: 0, hits: 0, maxHits: opts.maxHits || (kit.kevlar ? 4 : 2), gun: kit.uzi ? 'uzi' : 'pistol', clip: 6, clips: 3, cool: 0, gren: { frag: kit.frag, stun: kit.stun, gas: kit.gas }, gtype: 'stun', film: kit.camera ? 36 : 0, bugs: kit.bugs,
     crouch: false, disguised: false, stun: 0, gassed: 0, prisoner: null, busy: null };
   if (!max.gren.stun) max.gtype = max.gren.gas ? 'gas' : max.gren.frag ? 'frag' : 'stun';
 
@@ -1581,14 +1651,33 @@ function breakinScene(opts, done) {
   // ---------- people ----------
   function addGuard(room, st = 'patrol') { const [x, y] = spot(room); const g2 = { kind: 'guard', x, y, dir: rnd() * 7, walk: 0, state: st, out: false, stun: 0, cool: 1 + rnd(), home: room.id, path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.15 * level, gren: rnd() < 0.3 ? 1 : 0, col: P.YE }; people.push(g2); return g2; }
   const important = B.rooms.filter(r => ['file', 'computer', 'cipher', 'exec'].includes(r.kind));
-  const nGuards = Math.min(12, 3 + level * 2 + (opts.alert || 0) * 2 + Math.floor(B.rooms.length / 6));
+  const nGuards = mode !== 'breakin' ? 0 : Math.min(12, 3 + level * 2 + (opts.alert || 0) * 2 + Math.floor(B.rooms.length / 6));
   for (let i = 0; i < nGuards; i++) addGuard(rnd() < 0.5 && important.length ? pick(important) : pick(B.rooms), rnd() < 0.7 ? 'patrol' : 'idle');
   let target = null;
   if (occupant) { const seat = F.find(f => f.seat); const [x, y] = seat ? [seat.x * TS + 4, seat.y * TS + 4] : spot(B.exec); target = { kind: 'suspect', x, y, dir: -Math.PI / 2, walk: 0, state: 'seated', out: false, stun: 0, col: pick([P.W, P.MG, P.BL2]), path: null, pathT: 0, seeT: 0 }; people.push(target); }
 
   // ---------- entry ----------
   function enterAt(d) { entryDoor = d; d.open = true; const dx = d.side === 'W' ? 1 : d.side === 'E' ? -1 : 0, dy = d.side === 'N' ? 1 : d.side === 'S' ? -1 : 0; max.x = (d.x + dx) * TS + 4; max.y = (d.y + dy) * TS + 4; max.dir = Math.atan2(dy, dx); B.rooms[d.a].seen = true; say('Inside. Close the door behind you (E): guards notice open doors.'); sfx.select(); }
-  if (B.outer.length === 1) enterAt(B.outer[0]);
+  if (mode === 'breakin' && B.outer.length === 1) enterAt(B.outer[0]);
+  // ---------- prison defence and street ambush ----------
+  let ward = null, raidLeft = 0, raidT = 0;
+  function spawnRaider() {
+    let x, y;
+    if (mode === 'defend') { const d = pick(B.outer); d.open = true; x = (d.x + (d.side === 'W' ? 1 : d.side === 'E' ? -1 : 0)) * TS + 4; y = (d.y + (d.side === 'N' ? 1 : d.side === 'S' ? -1 : 0)) * TS + 4; }
+    else { x = (rnd() < 0.5 ? 1 : B.MW - 2) * TS + 4; y = ri(5, B.MH - 7) * TS + 4; }
+    people.push({ kind: 'guard', raider: true, x, y, dir: Math.atan2(max.y - y, max.x - x), walk: 0, state: mode === 'defend' ? 'raid' : 'hunt', out: false, stun: 0, cool: 1.2 + rnd(), home: Math.max(0, roomOf(x, y)), path: null, pathT: 0, seeT: 0, gasmask: rnd() < 0.2 * level, gren: rnd() < 0.3 ? 1 : 0, col: P.RD2 });
+    raidLeft--; sfx.tone(300, 0.15, 'square', 0.04, -100);
+  }
+  if (mode === 'defend') {
+    const [wx, wy] = spot(B.exec); ward = { kind: 'ward', x: wx, y: wy, dir: Math.PI / 2, walk: 0, state: 'seated', out: false, stun: 0, col: P.W, path: null, pathT: 0, seeT: 0 }; people.push(ward);
+    const [mx, my] = spot(B.exec); max.x = mx; max.y = my; entryDoor = { a: B.exec.id, dummy: true }; B.exec.seen = true;
+    alarm = true; raidLeft = 4 + level * 2; raidT = 5; msg = 'Hold this room! Nobody reaches the prisoner.';
+  }
+  if (mode === 'street') {
+    entryDoor = { a: 0, dummy: true }; alarm = true; raidLeft = 3 + level * 2; raidT = 1.5;
+    let best = null; for (let k = 0; k < 60; k++) { const x = ri(8, B.MW - 9), y = ri(6, B.MH - 8); if (occ[y][x] < 0 && (!best || Math.abs(x - B.MW / 2) + Math.abs(y - B.MH / 2) < Math.abs(best[0] - B.MW / 2) + Math.abs(best[1] - B.MH / 2))) best = [x, y]; }
+    max.x = best[0] * TS + 4; max.y = best[1] * TS + 4; msg = 'Ambush! Take cover behind the cars (C to crouch).';
+  }
 
   // ---------- noise / alarm / sight ----------
   function noise(x, y, r) { for (const p of people) if (p.kind === 'guard' && !p.out && p.stun <= 0 && dist(p.x, p.y, x, y) < r && p.state !== 'attack') { p.state = 'investigate'; p.target = [x, y]; p.path = null; } }
@@ -1619,16 +1708,31 @@ function breakinScene(opts, done) {
   function stunP(p, s) { if (!p.out) p.stun = Math.max(p.stun, s); }
   function hurtMax() { if (over) return; max.hits++; hitFlash = 3; sfx.tone(120, 0.2, 'sawtooth', 0.08, -60); say('You are hit!'); if (max.hits >= max.maxHits) finish('captured'); }
   function explode(gr) {
-    if (gr.type === 'gas') { clouds.push({ x: gr.x, y: gr.y, r: 3, t: 12, room: roomOf(gr.x, gr.y) }); sfx.hiss(); return; }
+    if (gr.type === 'gas') { clouds.push({ x: gr.x, y: gr.y, r: 3, t: 12, room: roomOf(gr.x, gr.y), trap: gr.trap }); sfx.hiss(); return; }
     fx.push({ k: 'boom', x: gr.x, y: gr.y, t: 0.5, type: gr.type }); sfx.boom(); if (gr.type === 'frag') { noise(gr.x, gr.y, 300); raiseAlarm('The explosion was heard.'); }
-    for (const p of people) { const d = dist(p.x, p.y, gr.x, gr.y); if (d < 26 && los(gr.x, gr.y, p.x, p.y)) { if (gr.type === 'frag') knockOut(p); else stunP(p, 25 + rnd() * 20); } }
-    const d = dist(max.x, max.y, gr.x, gr.y); if (d < 26 && los(gr.x, gr.y, max.x, max.y) && !(max.crouch && coverNear())) { if (gr.type === 'frag') hurtMax(); else max.stun = 6; }
+    for (const p of people) { if (p === ward) continue; const d = dist(p.x, p.y, gr.x, gr.y); if (d < 26 && los(gr.x, gr.y, p.x, p.y)) { if (gr.type === 'frag') knockOut(p); else stunP(p, 25 + rnd() * 20); } }
+    const d = dist(max.x, max.y, gr.x, gr.y); if (!gr.trap && d < 26 && los(gr.x, gr.y, max.x, max.y) && !(max.crouch && coverNear())) { if (gr.type === 'frag') hurtMax(); else max.stun = 6; }
   }
   function throwG(range) {
     if (max.gren[max.gtype] <= 0) { say('No ' + GREN[max.gtype].name.toLowerCase() + ' grenades.'); sfx.deny(); return; }
     max.gren[max.gtype]--; const d = [24, 48, 72][range];
     grenades.push({ x: max.x, y: max.y, sx: max.x, sy: max.y, tx: max.x + Math.cos(max.dir) * d, ty: max.y + Math.sin(max.dir) * d, t: 0, z: 0, type: max.gtype }); sfx.tone(500, 0.1, 'triangle', 0.05, -200);
   }
+
+  // ---------- traps: booby-trapped and remote-control grenades (F9 set, F8 detonate) ----------
+  function setTrap(kind) {
+    if (max.gren[max.gtype] <= 0) { say('No ' + GREN[max.gtype].name.toLowerCase() + ' grenades to rig.'); sfx.deny(); return; }
+    const x = max.x + Math.cos(max.dir) * 7, y = max.y + Math.sin(max.dir) * 7;
+    if (solid(Math.floor(x / TS), Math.floor(y / TS))) { say('No room to set a trap there.'); sfx.deny(); return; }
+    max.gren[max.gtype]--; traps.push({ x, y, type: max.gtype, kind, arm: 1.2 }); sfx.tone(900, 0.05, 'square', 0.04);
+    say(kind === 'booby' ? GREN[max.gtype].name + ' booby trap set. Mind your step - it only knows you.' : 'Remote-control ' + GREN[max.gtype].name.toLowerCase() + ' grenade set. Detonate with F8 (R).');
+  }
+  function detonate() {
+    const rs = traps.filter(tr => tr.kind === 'remote' && !tr.done); if (!rs.length) { say('No remote-control grenades are set.'); sfx.deny(); return; }
+    rs.forEach(tr => { tr.done = true; explode({ x: tr.x, y: tr.y, type: tr.type, trap: true }); }); say(rs.length > 1 ? 'You press the button. ' + rs.length + ' charges go off.' : 'You press the button.');
+  }
+  function openMenu(title, items) { pauseTitle = title; pauseMenu = Menu(items, 44, 52, 118); }
+  const trapMenu = () => openMenu('Set Trap', [{ label: 'Booby Trap', go: () => { pauseMenu = null; setTrap('booby'); } }, { label: 'Remote Control', go: () => { pauseMenu = null; setTrap('remote'); } }, { label: 'Cancel', go: () => { pauseMenu = null; } }]);
 
   // ---------- examine / photograph / bug ----------
   function facing() {
@@ -1644,6 +1748,7 @@ function breakinScene(opts, done) {
     if (max.busy || max.stun > 0) return;
     const { door, f, p } = facing();
     if (p === target && target && !target.out) { if (target.state === 'seated' || target.state === 'cower') { say('"Freeze," Max hissed. "Do what I say or I\'ll kill you. Understand?"'); target.state = 'captive'; max.prisoner = target; sfx.select(); target.alarmIn = 8; } return; }
+    if (p && p === ward) { say('"Sit tight," Max tells the prisoner. "Your friends are not getting in."'); return; }
     if (p && p.out) { say('Out cold.'); return; }
     if (door) { door.open = !door.open; sfx.tone(door.open ? 220 : 180, 0.06); say(door.open ? 'Door opened.' : 'Door closed.'); return; }
     if (!f) { say('Nothing there.'); return; }
@@ -1722,12 +1827,13 @@ function breakinScene(opts, done) {
     const r = B.rooms[f.room]; if (r.bugged) { say('One bug per room is enough.'); return; }
     max.bugs--; r.bugged = true; f.bugged = true; out.bugged = true; say('Bug planted in the ' + FURN[f.type].name.toLowerCase() + '.'); sfx.select();
   }
-  function finish(kind) { if (over) return; over = { kind, t: 0 }; kind === 'escaped' ? sfx.success() : sfx.fail(); }
+  function finish(kind) { if (over) return; over = { kind, t: 0 }; ['escaped', 'held', 'won'].includes(kind) ? sfx.success() : sfx.fail(); }
 
   // ---------- AI ----------
   function ai(p, dt) {
-    if (p.out || p === max.prisoner) return;
-    if (p.stun > 0) { p.stun -= dt; if (p.stun <= 0 && p.kind === 'guard') { p.state = alarm ? 'hunt' : 'investigate'; p.target = [max.x, max.y]; } return; }
+    if (p.out || p === max.prisoner || p === ward) return;
+    const resume = () => p.raider && ward ? 'raid' : alarm ? 'hunt' : 'investigate';
+    if (p.stun > 0) { p.stun -= dt; if (p.stun <= 0 && p.kind === 'guard') { p.state = resume(); p.target = [max.x, max.y]; } return; }
     const sees = canSee(p, p.kind === 'suspect' ? 90 : 76);
     const walkTo = (tx, ty, sp) => { p.pathT -= dt; if (!p.path || p.pathT <= 0) { p.path = pathTo(p.x, p.y, tx, ty); p.pathT = 0.7; } if (!p.path || !p.path.length) return true; const [nx, ny] = p.path[0]; if (dist(p.x, p.y, nx, ny) < 2) { p.path.shift(); return !p.path.length; } p.dir = Math.atan2(ny - p.y, nx - p.x); moveEnt(p, Math.cos(p.dir) * sp, Math.sin(p.dir) * sp, dt); p.walk += dt; return false; };
     if (p.kind === 'suspect') { if (sees && !max.disguised && p.state === 'seated') { p.state = 'cower'; raiseAlarm((occupant.known.name ? occupant.name : 'The suspect') + ' sees you and hits a button.'); } return; }
@@ -1742,13 +1848,14 @@ function breakinScene(opts, done) {
       case 'patrol': if (!p.wp) { const r = rnd() < 0.6 ? B.rooms[p.home] : (important.length && rnd() < 0.5 ? pick(important) : pick(B.rooms)); p.wp = spot(r); p.path = null; } if (walkTo(p.wp[0], p.wp[1], sp * 0.8)) { p.wp = null; if (rnd() < 0.4) { p.state = 'idle'; p.idleT = 2 + rnd() * 4; } } break;
       case 'investigate': if (!p.target || walkTo(p.target[0], p.target[1], sp)) { p.state = 'patrol'; p.target = null; } break;
       case 'hunt': if (walkTo(max.x, max.y, sp)) p.path = null; break;
+      case 'raid': if (walkTo(ward.x, ward.y, sp)) p.path = null; break;
       case 'attack':
         p.alertT += dt; if (p.alertT > 2 && !alarm) raiseAlarm('A guard sounds the alarm.');
         if (sees) {
           p.dir = Math.atan2(max.y - p.y, max.x - p.x); p.cool -= dt;
           if (dist(p.x, p.y, max.x, max.y) > 36) { moveEnt(p, Math.cos(p.dir) * sp, Math.sin(p.dir) * sp, dt); p.walk += dt; }
           if (p.cool <= 0) { p.cool = 1.4 - level * 0.15 + rnd() * 0.8; if (p.gren && rnd() < 0.2 && dist(p.x, p.y, max.x, max.y) > 30) { p.gren--; grenades.push({ x: p.x, y: p.y, sx: p.x, sy: p.y, tx: max.x, ty: max.y, t: 0, z: 0, type: 'stun' }); } else { const a = p.dir + (rnd() - 0.5) * (0.3 - level * 0.04 + (max.crouch ? 0.15 : 0)); bullets.push({ x: p.x, y: p.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, mine: false, life: 0.8 }); sfx.tone(160, 0.05, 'square', 0.04, -60); } }
-        } else if (p.last) { if (walkTo(p.last[0], p.last[1], sp)) { p.state = alarm ? 'hunt' : 'investigate'; p.target = [max.x, max.y]; } }
+        } else if (p.last) { if (walkTo(p.last[0], p.last[1], sp)) { p.state = resume(); p.target = [max.x, max.y]; } }
         break;
     }
     if (!p.out && dist(p.x, p.y, max.x, max.y) < 5 && (p.state === 'attack' || p.state === 'hunt') && !max.disguised) { knockOut(p); if (rnd() < 0.5) hurtMax(); say('Hand to hand! The guard goes down.'); sfx.noise(0.1, 0.12, 300); }
@@ -1774,16 +1881,16 @@ function breakinScene(opts, done) {
         p.hidden = true; if (p.gren) { max.gren.stun += p.gren; p.gren = 0; } if (!alarm && !max.disguised) { max.disguised = true; say('You put on the guard\'s uniform. Disguised.'); } else say('You search the guard and hide the body.');
       }
       const rid = roomOf(max.x, max.y); if (rid >= 0) B.rooms[rid].seen = true;
-      if (!inside(max.x, max.y)) finish('escaped');
+      if (!inside(max.x, max.y)) finish(mode === 'defend' ? 'freed' : 'escaped');
       for (const gr of grenades) { gr.t += dt / 0.6; const k = Math.min(1, gr.t); const nx = gr.sx + (gr.tx - gr.sx) * k, ny = gr.sy + (gr.ty - gr.sy) * k; if (opaque(Math.floor(nx / TS), Math.floor(ny / TS))) gr.t = Math.max(gr.t, 1); else { gr.x = nx; gr.y = ny; } gr.z = Math.sin(k * Math.PI) * 10; if (gr.t >= 1.4) { gr.done = true; explode(gr); } }
       for (let i = grenades.length - 1; i >= 0; i--) if (grenades[i].done) grenades.splice(i, 1);
-      for (const c of clouds) { c.t -= dt; c.r = Math.min(30, c.r + dt * 12); for (const p of people) if (dist(p.x, p.y, c.x, c.y) < c.r && !p.gasmask) stunP(p, 20); if (dist(max.x, max.y, c.x, c.y) < c.r && !kit.gasmask) { max.gassed += dt * 2; if (max.gassed > 2.5) { max.stun = 5; max.gassed = 0; say('You breathed the gas!'); } } }
+      for (const c of clouds) { c.t -= dt; c.r = Math.min(30, c.r + dt * 12); for (const p of people) if (dist(p.x, p.y, c.x, c.y) < c.r && !p.gasmask) stunP(p, 20); if (!c.trap && dist(max.x, max.y, c.x, c.y) < c.r && !kit.gasmask) { max.gassed += dt * 2; if (max.gassed > 2.5) { max.stun = 5; max.gassed = 0; say('You breathed the gas!'); } } }
       for (let i = clouds.length - 1; i >= 0; i--) if (clouds[i].t <= 0) clouds.splice(i, 1);
       for (const b of bullets) {
         for (let s = 0; s < 4 && !b.dead; s++) {
           b.x += b.vx * dt / 4; b.y += b.vy * dt / 4;
           if (solid(Math.floor(b.x / TS), Math.floor(b.y / TS), true)) { b.dead = true; fx.push({ k: 'spark', x: b.x, y: b.y, t: 0.1 }); break; }
-          if (b.mine) { for (const p of people) { if (p.out || p === max.prisoner) continue; if (dist(p.x, p.y, b.x, b.y) < 3.5) { b.dead = true; knockOut(p); fx.push({ k: 'hit', x: b.x, y: b.y, t: 0.15 }); break; } } }
+          if (b.mine) { for (const p of people) { if (p.out || p === max.prisoner || p === ward) continue; if (dist(p.x, p.y, b.x, b.y) < 3.5) { b.dead = true; knockOut(p); fx.push({ k: 'hit', x: b.x, y: b.y, t: 0.15 }); break; } } }
           else if (dist(max.x, max.y, b.x, b.y) < 3.5) { b.dead = true; if (!(max.crouch && coverNear() && rnd() < 0.5)) hurtMax(); }
         }
         b.life -= dt; if (b.life <= 0) b.dead = true;
@@ -1791,7 +1898,15 @@ function breakinScene(opts, done) {
       for (let i = bullets.length - 1; i >= 0; i--) if (bullets[i].dead) bullets.splice(i, 1);
       for (const f of fx) f.t -= dt; for (let i = fx.length - 1; i >= 0; i--) if (fx[i].t <= 0) fx.splice(i, 1);
       for (const p of people) ai(p, dt);
-      if (alarm) { alarmT += dt; if ((alarmT % 3) < dt) sfx.tone(1000, 0.3, 'square', 0.04); if (alarmT > 50 && !people.some(p => p.kind === 'guard' && !p.out && p.state === 'attack')) { alarm = false; say('The alarm has been switched off.'); for (const p of people) if (p.state === 'hunt') p.state = 'patrol'; } }
+      for (const tr of traps) { if (tr.done) continue; if (tr.arm > 0) { tr.arm -= dt; continue; } if (tr.kind === 'booby' && people.some(p => p.kind === 'guard' && !p.out && dist(p.x, p.y, tr.x, tr.y) < 7)) { tr.done = true; explode({ x: tr.x, y: tr.y, type: tr.type, trap: true }); } }
+      for (let i = traps.length - 1; i >= 0; i--) if (traps[i].done) traps.splice(i, 1);
+      if (mode !== 'breakin') {
+        if (raidLeft > 0) { raidT -= dt; if (raidT <= 0) { spawnRaider(); raidT = mode === 'street' ? 2.5 + rnd() * 3 : 5 + rnd() * 3; if (mode === 'defend') say('Footsteps! Someone is in the building.'); } }
+        const alive = people.filter(p => p.raider && !p.out);
+        if (ward) { const wr = roomOf(ward.x, ward.y), mr = roomOf(max.x, max.y); if (alive.some(p => p.stun <= 0 && (dist(p.x, p.y, ward.x, ward.y) < 7 || (roomOf(p.x, p.y) === wr && mr !== wr)))) finish('freed'); }
+        if (!raidLeft && !alive.length) finish(mode === 'street' ? 'won' : 'held');
+      }
+      if (alarm && mode === 'breakin') { alarmT += dt; if ((alarmT % 3) < dt) sfx.tone(1000, 0.3, 'square', 0.04); if (alarmT > 50 && !people.some(p => p.kind === 'guard' && !p.out && p.state === 'attack')) { alarm = false; say('The alarm has been switched off.'); for (const p of people) if (p.state === 'hunt') p.state = 'patrol'; } }
     },
   };
 
@@ -1806,6 +1921,7 @@ function breakinScene(opts, done) {
   }
   function drawRoom(v) {
     const { r, S, ox, oy } = v; const X0 = ox + r.x * S, Y0 = oy + r.y * S, w = r.w * S, h = r.h * S;
+    if (r.kind === 'street') { drawStreet(v, X0, Y0, w, h); return; }
     // light cyan outline, 3-px light gray wall with mitred dark corners
     rect(X0 - 4, Y0 - 4, w + 8, h + 8, P.CY); rect(X0 - 3, Y0 - 3, w + 6, h + 6, P.G3);
     for (const [cx, cy, dx, dy] of [[X0 - 3, Y0 - 3, 1, 1], [X0 + w + 2, Y0 - 3, -1, 1], [X0 - 3, Y0 + h + 2, 1, -1], [X0 + w + 2, Y0 + h + 2, -1, -1]]) for (let k = 0; k < 3; k++) px(cx + dx * k, cy + dy * k, P.G1);
@@ -1817,6 +1933,15 @@ function breakinScene(opts, done) {
       rect(dx, dy - (horizWall ? 1 : 0), dw, dh + (horizWall ? 2 : 0), d.open ? P.BL : d.outside ? P.GR2 : P.G1);
       if (d.open) dither(dx, dy, dw, dh, P.BL, P.BL2, 8); else px(dx + dw / 2, dy + dh / 2, P.W);
     }
+  }
+  function drawStreet(v, X0, Y0, w, h) {
+    const S = v.S; rect(X0 - 4, Y0 - 4, w + 8, h + 8, P.BR); for (let x = X0 - 4; x < X0 + w + 4; x += 6) { rect(x, Y0 - 4, 1, 3, P.RD); rect(x + 3, Y0 + h + 1, 1, 3, P.RD); }
+    for (let x = X0 + 8; x < X0 + w - 8; x += 28) { rect(x, Y0 - 4, 7, 4, P.K); rect(x + 12, Y0 + h, 7, 4, P.K); }
+    rect(X0, Y0, w, h, P.G3); for (let i = 0, q = 7; i < 140; i++) { q = (q * 1103515245 + 12345) & 0x7fffffff; px(X0 + q % w, Y0 + (q >> 8) % h, i % 4 ? P.G1 : P.W); }
+    rect(X0, Y0, w, 2 * S, P.BR); rect(X0, Y0 + h - 2 * S, w, 2 * S, P.BR); for (let x = X0; x < X0 + w; x += S * 2) { rect(x, Y0, 1, 2 * S, P.RD); rect(x, Y0 + h - 2 * S, 1, 2 * S, P.RD); }
+    rect(X0, Y0 + 2 * S, w, 1, P.K); rect(X0, Y0 + h - 2 * S - 1, w, 1, P.K);
+    const cy = v.oy + (B.MH / 2) * S; for (let x = X0 + 2; x < X0 + w; x += 8) rect(x, cy, 4, 1, P.YE);
+    for (const ex of [X0 - 4, X0 + w]) rect(ex, v.oy + 5 * S, 4, (B.MH - 10) * S, P.G3);
   }
   function drawFurn(f, v) {
     const S = v.S, X = v.ox + f.x * S, Y = v.oy + f.y * S, w = f.w * S, h = f.h * S, q = Math.max(1, S / 8);
@@ -1836,6 +1961,9 @@ function breakinScene(opts, done) {
       case 'table': { rect(X + 2, Y + 1, w - 4, h - 2, P.BR); rect(X + 1, Y + 2, w - 2, h - 4, P.BR); rect(X + w / 2 - 2, Y + h / 2 - 1, 4, 3, P.YE); break; }
       case 'toilet': box(X + 2, Y + 1, w - 4, h - 2, P.W); break;
       case 'sink': box(X + 1, Y + 1, w - 2, h - 3, P.W); rect(X + w / 2 - 1, Y + 3, 2, 2, P.CY); break;
+      case 'car': { const vert = false; rect(X, Y + 1, w, h - 2, P.K); rect(X + 1, Y + 2, w - 2, h - 4, f.col); rect(X + w * 0.3, Y + 3, w * 0.4, h - 6, P.TL); rect(X + w * 0.3 + 1, Y + 3, 2, h - 6, P.CY); for (const wx of [X + 2, X + w - 5]) { rect(wx, Y, 3, 2, P.K); rect(wx, Y + h - 2, 3, 2, P.K); } rect(X + w - 2, Y + 3, 1, 2, P.YE); rect(X + 1, Y + 3, 1, 2, P.RD2); break; }
+      case 'bin': disc(X + w / 2, Y + h / 2, Math.max(2, w / 2 - 1), P.K); disc(X + w / 2, Y + h / 2, Math.max(1, w / 2 - 2), P.G3); px(X + w / 2, Y + h / 2, P.G1); break;
+      case 'lamp': disc(X + w / 2, Y + h / 2, 2, P.K); px(X + w / 2, Y + h / 2, P.YE); break;
       case 'evidence': if (f.content) { box(X + 1, Y + 1, w - 2, h - 2, P.BR); line(X + 2, Y + 2, X + w - 3, Y + h - 3, P.K); } break;
     }
   }
@@ -1865,6 +1993,7 @@ function breakinScene(opts, done) {
     const v = roomView(), r = v.r;
     drawRoom(v);
     for (const f of F) if (f.room === r.id) drawFurn(f, v);
+    for (const tr of traps) if (roomOf(tr.x, tr.y) === r.id) { const X = v.sx(tr.x), Y = v.sy(tr.y); rect(X - 1, Y - 1, 3, 3, P.K); px(X, Y, GREN[tr.type].col); if ((t * 3 | 0) % 2) px(X, Y - 2, tr.kind === 'booby' ? P.RD2 : P.CY); }
     for (const c of clouds) if (c.room === r.id) { const cr = c.r / TS * v.S; dither(v.sx(c.x) - cr, v.sy(c.y) - cr, cr * 2, cr * 2, 'rgba(0,0,0,0)', P.GR2, 6); }
     const here = people.filter(p => roomOf(p.x, p.y) === r.id || p === max.prisoner).concat([max]).sort((a, b) => a.y - b.y);
     for (const p of here) drawGuy(p, v.sx(p.x), v.sy(p.y));
@@ -1884,10 +2013,10 @@ function breakinScene(opts, done) {
     textR([hh, mm, ss].map(v2 => String(v2).padStart(2, '0')).join(':'), 167, 2, P.W);
     textC(fitText(msg, 138), 98, 10, P.W);
     if (msgLong()) { const ls = wrap(msg, 146); msgBox(12, 20, 150, ls.length * 8 + 6); ls.forEach((l, i) => text(l, 16, 23 + i * 8, P.W)); }
-    if (alarm && (t * 4 | 0) % 2) { frame(v.ox + r.x * v.S - 5, v.oy + r.y * v.S - 5, r.w * v.S + 10, r.h * v.S + 10, P.RD2); }
+    if (alarm && mode === 'breakin' && (t * 4 | 0) % 2) { frame(v.ox + r.x * v.S - 5, v.oy + r.y * v.S - 5, r.w * v.S + 10, r.h * v.S + 10, P.RD2); }
     if (comp) drawComputer();
     if (over) drawOver();
-    if (pauseMenu) { msgBox(30, 50, 136, 70); text('Do you want to...', 36, 53, P.W); pauseMenu.draw(); }
+    if (pauseMenu) { msgBox(30, 40, 136, 18 + pauseMenu.items.length * 8); text(pauseTitle, 36, 43, P.W); pauseMenu.draw(); }
     postFlash();
   };
   let lastMsg = '', msgT0 = 0;
@@ -1934,7 +2063,7 @@ function breakinScene(opts, done) {
     for (const p of people) { if (p.out || p.kind !== 'guard') continue; const near = kit.detector && dist(p.x, p.y, max.x, max.y) < 110; const rr = B.rooms[roomOf(p.x, p.y)]; if (near || (rr && rr.bugged)) rect(ox + p.x / TS * sc, oy + p.y / TS * sc, 2, 1, P.YE); }
     if (entryDoor && (t * 3 | 0) % 2) rect(ox + max.x / TS * sc - 1, oy + max.y / TS * sc - 1, 2, 2, P.K);
   }
-  const doorMenu = Menu(B.outer.map((d, i) => ({ label: 'Door #' + (i + 1), go: () => enterAt(d) })), 46, 70, 80);
+  const doorMenu = B.outer.length && Menu(B.outer.map((d, i) => ({ label: 'Door #' + (i + 1), go: () => enterAt(d) })), 46, 70, 80);
   function drawDoorMenu() { msgBox(28, 58, 110, 16 + B.outer.length * 8); text('Which door?', 34, 61, P.W); doorMenu.draw(); const sc = Math.min(116 / B.bw, 92 / B.bh), ox = 182 - B.bx * sc + (116 - B.bw * sc) / 2, oy = 102 - B.by * sc; B.outer.forEach((d, i) => text(String(i + 1), ox + d.x * sc - 2, oy + d.y * sc - 4, P.YE, P.K)); }
   function drawComputer() {
     rect(VX0, VY0 - 20, VX1 - VX0, VY1 - VY0 + 26, P.K); frame(VX0, VY0 - 20, VX1 - VX0, VY1 - VY0 + 26, P.CY);
@@ -1946,7 +2075,8 @@ function breakinScene(opts, done) {
     for (let i = 0; i < 29; i++) { const x = 10 + (i % 13) * 12, yy = 148 + Math.floor(i / 13) * 12; rect(x, yy, 11, 11, i < 26 ? P.GR : P.G1); textC(i < 26 ? K[i] : ['_', '<', 'OK'][i - 26], x + 5, yy + 2, i < 26 ? P.K : P.W); }
   }
   function drawOver() {
-    const k = over.kind; const lines = [{ escaped: 'You quickly slip out of the building.', captured: 'You slump to the ground, overcome by your wounds.', abort: 'You abandon the mission.' }[k]];
+    const k = over.kind; const lines = [{ escaped: mode === 'street' ? 'You sprint off down the street and lose them.' : 'You quickly slip out of the building.', captured: 'You slump to the ground, overcome by your wounds.', abort: mode === 'breakin' ? 'You abandon the mission.' : 'You run for it.', held: 'The last raider goes down. The prisoner stays behind bars.', freed: 'The raiders reach the cell and spirit the prisoner away.', won: 'The hit squad is down. The street goes quiet.' }[k]];
+    if (mode !== 'breakin') { if (k === 'captured' && ward) lines.push('The prisoner is freed.'); const ls = lines.flatMap(l => wrap(l, 136)); msgBox(14, 60, 144, ls.length * 8 + 20); ls.forEach((l, i) => text(l, 18, 64 + i * 8, P.W)); if (over.t > 0.8) text('Press a key', 18, 66 + ls.length * 8, P.G3); return; }
     if (max.prisoner && k === 'escaped') lines.push('Your prisoner comes with you: ' + (occupant.known.name ? occupant.name : 'the suspect') + '.');
     if (k === 'captured' && max.prisoner) lines.push('Your prisoner escapes.');
     lines.push('Clues photographed: ' + out.clues.length + (out.messages ? '. Coded messages: ' + out.messages : '.'));
@@ -1965,7 +2095,7 @@ function breakinScene(opts, done) {
     if (!entryDoor) { if (k === 'menu') { over = { kind: 'abort', t: 1 }; end(); return; } doorMenu.key(k); return; }
     if (over) { if (over.t > 0.8 && (k === 'select' || k === 'fire' || k === 'action' || k === 'menu')) end(); return; }
     if (pauseMenu) { if (k === 'menu') pauseMenu = null; else pauseMenu.key(k); return; }
-    if (k === 'menu') { pauseMenu = Menu([{ label: 'Continue', go: () => { pauseMenu = null; } }, { label: 'Photograph (P)', go: () => { pauseMenu = null; photo(); } }, { label: 'Plant a bug (B)', go: () => { pauseMenu = null; bug(); } }, { label: 'Crouch/stand (C)', go: () => { pauseMenu = null; max.crouch = !max.crouch; } }, { label: 'Long throw (F7)', go: () => { pauseMenu = null; throwG(2); } }, { label: 'Abort mission', go: () => { pauseMenu = null; finish('abort'); } }], 44, 62, 118); return; }
+    if (k === 'menu') { openMenu('Do you want to...', [{ label: 'Continue', go: () => { pauseMenu = null; } }, { label: 'Photograph (P)', go: () => { pauseMenu = null; photo(); } }, { label: 'Plant a bug (B)', go: () => { pauseMenu = null; bug(); } }, { label: 'Crouch/stand (C)', go: () => { pauseMenu = null; max.crouch = !max.crouch; } }, { label: 'Long throw (F7)', go: () => { pauseMenu = null; throwG(2); } }, { label: 'Set trap (F9)', go: trapMenu }, { label: 'Detonate (F8)', go: () => { pauseMenu = null; detonate(); } }, { label: mode === 'breakin' ? 'Abort mission' : 'Run for it', go: () => { pauseMenu = null; finish(mode === 'defend' ? 'freed' : 'abort'); } }]); return; }
     if (max.stun > 0) return;
     if (k === 'action' || k === 'select') examine();
     if (k === 'alt') throwG(1);
@@ -1987,10 +2117,11 @@ function breakinScene(opts, done) {
     if (c === 'KeyP' || c === 'F2') { photo(); return true; } if (c === 'KeyB' || c === 'F3') { bug(); return true; }
     if (c === 'KeyC' || c === 'Numpad5') { max.crouch = !max.crouch; say(max.crouch ? 'Crouching.' : 'Standing.'); return true; }
     if (c === 'F1') { examine(); return true; } if (c === 'F4') { const { f } = facing(); if (f && f.type === 'computer') openComputer(); else say('Face the mainframe to use it.'); return true; } if (c === 'F5' || c === 'Digit1') { throwG(0); return true; } if (c === 'F6' || c === 'Digit2') { throwG(1); return true; } if (c === 'F7' || c === 'Digit3') { throwG(2); return true; }
+    if (c === 'F9' || c === 'KeyT') { trapMenu(); return true; } if (c === 'F8' || c === 'KeyR') { detonate(); return true; }
     if (c === 'F10') { const ks = ['frag', 'stun', 'gas']; max.gtype = ks[(ks.indexOf(max.gtype) + 1) % 3]; return true; }
     return false;
   };
-  scene.dbg = { max, people, B, F, raiseAlarm, enterAt };
+  scene.dbg = { max, people, B, F, traps, raiseAlarm, enterAt, setTrap, detonate, get ward() { return ward; }, get over() { return over; } };
   return scene;
 }
 
@@ -2345,7 +2476,7 @@ function carSelectScene(start) {
 }
 
 function chaseScene(opts, done) {
-  const sk = skillLevel('driving'), level = opts.level || 0;
+  const sk = skillLevel('driving'), level = opts.level || 0, evade = opts.mode === 'evade'; // evade: a hit squad is after you
   const N = 25, SP = 8, MX = 5, MY = 5; // streets every 8 px, 2 px wide, 6-px blocks
   const nodeXY = (i, j) => [MX + i * SP, MY + j * SP];
   const edge = new Set(); const ek = (i, j, d) => i + ',' + j + ',' + d;
@@ -2372,8 +2503,13 @@ function chaseScene(opts, done) {
   labels.push({ name: '', i: dest[0], j: dest[1], dest: true });
   const sus = mk(start[0], start[1], 'suspect', P.PK, 40 + level * 5); sus.route = route(start, dest); sus.b = sus.route.shift(); sus.a = start.slice(); sus.path = [start.slice()];
   const mine = opts.cars.map((cd, n) => { const c = mk(start[0], start[1], 'agent', P.GR2, cd.speed); c.def = cd; c.n = n + 1; c.follow = true; c.a = start.slice(); c.b = sus.b.slice(); c.s = 0; c.wait = 2 + n * 2; c.target = mph2px(40); return c; });
+  const hunters = []; let evadeT = 0;
+  if (evade) {
+    sus.wait = 1e9; mine.forEach(c => { c.follow = false; c.wait = 0; c.b = pick(nbrs(...c.a)); });
+    for (let n = 0; n < 2 + Math.min(2, level); n++) { let h; do { h = [ri(0, N - 1), ri(0, N - 1)]; } while (Math.abs(h[0] - start[0]) + Math.abs(h[1] - start[1]) < 12); const c = mk(h[0], h[1], 'hunter', P.RD2, 50 + level * 6); c.wait = n * 3; hunters.push(c); }
+  }
   for (let n = 0; n < 14; n++) mk(ri(0, N - 1), ri(0, N - 1), 'civ', pick([P.G3, P.W, P.BR, P.YE, P.RD, P.BL2]), 30 + rnd() * 20).target = mph2px(25 + rnd() * 20);
-  let ctrl = 0, t = 0, over = null, aware = false, arrivedT = -1, lostT = 0, prompt = 0, msg = 'The suspect pulls away. Both your cars are following (F).', msgT = 4, lastSeen = null;
+  let ctrl = 0, t = 0, over = null, aware = false, arrivedT = -1, lostT = 0, prompt = 0, msg = evade ? 'A hit squad is on your tail! Shake them for 60 seconds, or reach the CIA building and press F1.' : 'The suspect pulls away. Both your cars are following (F).', msgT = evade ? 5 : 4, lastSeen = null;
   const me = () => mine[ctrl];
   const inSight = c => { const [sx, sy] = pos(sus), [cx, cy] = pos(c); const sameRow = Math.abs(sy - cy) < 2.5 && Math.abs(sx - cx) <= sight * SP; const sameCol = Math.abs(sx - cx) < 2.5 && Math.abs(sy - cy) <= sight * SP; if (!sameRow && !sameCol) return dist(sx, sy, cx, cy) < 5; // check the street is continuous
     const [ai, aj] = [Math.round((cx - MX) / SP), Math.round((cy - MY) / SP)], [bi, bj] = [Math.round((sx - MX) / SP), Math.round((sy - MY) / SP)];
@@ -2386,7 +2522,8 @@ function chaseScene(opts, done) {
       if (aware) { const ahead = opts2.filter(n => !(n[0] === back[0] && n[1] === back[1])); next = pick(ahead.length ? ahead : opts2); }
       else if (c.route.length) next = c.route.shift();
       else { c.stopped = true; c.v = 0; if (arrivedT < 0) arrivedT = t; return; }
-    } else if (c.kind === 'civ') { const ahead = opts2.filter(n => !(n[0] === back[0] && n[1] === back[1])); next = pick(ahead.length ? ahead : opts2); }
+    } else if (c.kind === 'hunter') { const r = route(here, me().b); next = r.length ? r[0] : pick(opts2); }
+    else if (c.kind === 'civ') { const ahead = opts2.filter(n => !(n[0] === back[0] && n[1] === back[1])); next = pick(ahead.length ? ahead : opts2); }
     else {
       if (c.order) { const n = [here[0] + c.order[0], here[1] + c.order[1]]; if (opts2.some(o => o[0] === n[0] && o[1] === n[1])) { next = n; c.order = null; } }
       if (!next && c.follow && c.lastSusTurn && c.lastSusTurn.at[0] === here[0] && c.lastSusTurn.at[1] === here[1]) next = c.lastSusTurn.to;
@@ -2399,7 +2536,7 @@ function chaseScene(opts, done) {
   function uturn(c) { if (c.def && c.def.handling !== 'Excellent') { msg = 'This car cannot make a U-turn.'; msgT = 2; sfx.deny(); return; } [c.a, c.b] = [c.b, c.a]; c.s = SP - c.s; sfx.tone(200, 0.2, 'sawtooth', 0.04); }
   function ahead(c) { let best = null, bd = 1e9; for (const o of cars) { if (o === c) continue; if (o.a[0] === c.a[0] && o.a[1] === c.a[1] && o.b[0] === c.b[0] && o.b[1] === c.b[1] && o.s > c.s) { const d = o.s - c.s; if (d < bd) { bd = d; best = o; } } } return best ? [best, bd] : null; }
   function headOn(c) { return sus.a[0] === c.b[0] && sus.a[1] === c.b[1] && sus.b[0] === c.a[0] && sus.b[1] === c.a[1] && Math.abs((SP - sus.s) - c.s) < 3; }
-  function finish(kind) { if (over) return; over = { kind, t: 0 }; (kind === 'followed' || kind === 'arrest') ? sfx.success() : sfx.fail(); }
+  function finish(kind) { if (over) return; over = { kind, t: 0 }; ['followed', 'arrest', 'evaded', 'safe'].includes(kind) ? sfx.success() : sfx.fail(); }
   const scene = {
     update(dt) {
       t += dt; if (msgT > 0) msgT -= dt; if (over) { over.t += dt; return; }
@@ -2407,8 +2544,13 @@ function chaseScene(opts, done) {
         if (c.wait) { c.wait -= dt; if (c.wait <= 0) c.wait = 0; else continue; }
         if (c.stopped) { if (c.kind === 'agent' && (c.order || c.follow)) atNode(c); continue; }
         let tg = c.target; if (c === sus && aware) tg = mph2px(70);
-        const a = ahead(c); if (a) { const [o, d] = a; if (d < 6) tg = Math.min(tg, o.v); if (d < 3.5) tg = 0; }
+        const a = c.kind === 'hunter' ? null : ahead(c); if (a) { const [o, d] = a; if (d < 6) tg = Math.min(tg, o.v); if (d < 3.5) tg = 0; }
         c.v += (tg - c.v) * Math.min(1, dt * 2.5); c.s += c.v * dt; if (c.s >= SP) { c.s = SP; atNode(c); }
+      }
+      if (evade) {
+        evadeT += dt; const [mx, my] = pos(me());
+        for (const h of hunters) { if (h.wait) continue; for (const m of mine) { const [hx, hy] = pos(h), [ax, ay] = pos(m); if (dist(hx, hy, ax, ay) < 3) finish('caught'); } }
+        if (evadeT >= 60) finish('evaded'); prompt = dist(mx, my, ...nodeXY(labels[0].i, labels[0].j)) < SP * 1.3 ? 0.5 : 0; return;
       }
       // seeing and suspicion
       let anySeen = false;
@@ -2430,8 +2572,9 @@ function chaseScene(opts, done) {
       const dirs = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
       if (dirs[k]) { const d = dirs[k]; c.follow = false; if (d[0] === -dx && d[1] === -dy) uturn(c); else { c.order = d; if (c.stopped) atNode(c); } sfx.tick(); }
       if (k === 'alt2' || k === 'fire') { ctrl = (ctrl + 1) % mine.length; msg = 'Now controlling car #' + (ctrl + 1) + '.'; msgT = 1.5; sfx.select(); }
+      if (evade && (k === 'action' || k === 'select')) { if (prompt > 0) finish('safe'); else { msg = 'Get to the CIA building first.'; msgT = 1.5; sfx.deny(); } return; }
       if (k === 'action' || k === 'select') { if (prompt > 0 && headOn(c)) finish('arrest'); else if (prompt > 0 && mine.some(headOn)) finish('arrest'); else { aware = aware || rnd() < 0.5; msg = 'Nothing to grab. That probably tipped him off.'; msgT = 2; } }
-      if (k === 'alt') { c.follow = true; c.order = null; msg = 'Car #' + c.n + ' resumes following.'; msgT = 1.5; sfx.tick(); }
+      if (k === 'alt' && !evade) { c.follow = true; c.order = null; msg = 'Car #' + c.n + ' resumes following.'; msgT = 1.5; sfx.tick(); }
       if (k === 'menu') finish('abort');
     },
     rawKey(e) { if (over) return false; const c = me(); if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') { c.target = Math.min(mph2px(c.def.speed), c.target + mph2px(20)); sfx.tick(); return true; } if (e.key === '-' || e.code === 'NumpadSubtract') { c.target = Math.max(0, c.target - mph2px(20)); sfx.tick(); return true; } if (e.code === 'KeyF' || e.code === 'F10') { c.follow = true; c.order = null; return true; } if (e.code === 'F1') { scene.onKey('action'); return true; } return false; },
@@ -2447,8 +2590,8 @@ function chaseScene(opts, done) {
       // ---- city map: light gray blocks by day, dark gray at night, 2-px black streets ----
       rect(0, 0, 200, 200, P.BL); rect(1, 1, 199, 199, night ? P.G1 : P.G3);
       for (const k of edge) { const [i, j, d] = k.split(',').map(Number); const [x, y] = nodeXY(i, j); if (d === 0) rect(x - 1, y - 1, SP + 2, 2, P.K); else rect(x - 1, y - 1, 2, SP + 2, P.K); }
-      for (const l of labels) { if (l.dest && !over && arrivedT < 0) continue; const [x, y] = nodeXY(l.i, l.j); rect(x, y, 2, 2, l.dest ? P.YE : P.W); if (l.name) text(l.name, x + 3, y - 3, P.BL2); }
-      for (const c of cars) { if (c === sus || c.wait) continue; const [x, y, dx] = pos(c); const hor = dx !== 0; if (c.kind === 'agent') { if (c !== me() || (t * 4 | 0) % 2) rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, c.col); } else rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, night ? P.G3 : P.G1); }
+      for (const l of labels) { if (l.dest && (evade || (!over && arrivedT < 0))) continue; const [x, y] = nodeXY(l.i, l.j); rect(x, y, 2, 2, l.dest ? P.YE : P.W); if (l.name) text(l.name, x + 3, y - 3, P.BL2); }
+      for (const c of cars) { if (c === sus || c.wait) continue; const [x, y, dx] = pos(c); const hor = dx !== 0; if (c.kind === 'agent') { if (c !== me() || (t * 4 | 0) % 2) rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, c.col); } else rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, c.kind === 'hunter' ? P.RD2 : night ? P.G3 : P.G1); }
       const seenNow = mine.some(m => m.seen);
       if (seenNow) { const [x, y, dx] = pos(sus); rect(x - 0.5, y - 0.5, dx ? 2 : 1, dx ? 1 : 2, P.PK); } else if (lastSeen) rect(lastSeen[0] - 0.5, lastSeen[1] - 0.5, 1, 1, P.MG);
       rect(200, 0, 1, 200, P.W); rect(319, 0, 1, 200, P.W); rect(200, 98, 120, 1, P.W); rect(200, 99, 120, 1, P.YE);
@@ -2457,8 +2600,9 @@ function chaseScene(opts, done) {
       // ---- close-up ----
       drawCloseUp(201, 100, 118, 100);
       if (msgT > 0 && !over) { const ls = wrap(msg, 180); msgBox(6, 4, 188, ls.length * 8 + 6); ls.forEach((l, i) => text(l, 10, 7 + i * 8, P.W)); }
-      if (prompt > 0 && !over && (t * 6 | 0) % 2) { msgBox(10, 86, 180, 16); textC('Press F1 now to make arrest', 100, 90, P.W); }
-      if (over) { msgBox(12, 60, 176, 70); rect(12, 60, 176, 70, P.K); frame(12, 60, 176, 70, P.W); const [h, c] = { followed: ['DESTINATION FOUND', P.GR2], arrest: ['ARREST!', P.GR2], lost: ['YOU LOST HIM', P.RD2], late: ['TOO LATE', P.RD2], abort: ['CHASE ABANDONED', P.YE] }[over.kind]; textC(h, 100, 68, c); para({ followed: 'He parks and goes inside. You note the address.', arrest: 'You cut him off head-on and drag him out of the car.', lost: 'The car disappears into the city.', late: 'By the time you get there the car is empty.', abort: 'You give up the chase.' }[over.kind], 22, 82, 156, P.W, 9); if (over.t > 0.6) textC('Press a key', 100, 118, P.G3); }
+      if (prompt > 0 && !over && (t * 6 | 0) % 2) { msgBox(10, 86, 180, 16); textC(evade ? 'Press F1 to duck into the CIA' : 'Press F1 now to make arrest', 100, 90, P.W); }
+      if (evade && !over) { msgBox(4, 184, 110, 13); text('Shake them: ' + Math.max(0, Math.ceil(60 - evadeT)) + ' sec', 8, 187, P.YE); }
+      if (over) { msgBox(12, 60, 176, 70); rect(12, 60, 176, 70, P.K); frame(12, 60, 176, 70, P.W); const [h, c] = { followed: ['DESTINATION FOUND', P.GR2], arrest: ['ARREST!', P.GR2], lost: ['YOU LOST HIM', P.RD2], late: ['TOO LATE', P.RD2], abort: [evade ? 'YOU STOP THE CAR' : 'CHASE ABANDONED', P.YE], evaded: ['YOU SHOOK THEM', P.GR2], safe: ['SAFE AT THE CIA', P.GR2], caught: ['CUT OFF!', P.RD2] }[over.kind]; textC(h, 100, 68, c); para({ followed: 'He parks and goes inside. You note the address.', arrest: 'You cut him off head-on and drag him out of the car.', lost: 'The car disappears into the city.', late: 'By the time you get there the car is empty.', abort: evade ? 'You jump out and face them on foot.' : 'You give up the chase.', evaded: 'The hit squad loses you in traffic.', safe: 'You screech into the CIA garage. The hit squad drives on.', caught: 'Their car slams into yours. Doors fly open - guns come out.' }[over.kind], 22, 82, 156, P.W, 9); if (over.t > 0.6) textC('Press a key', 100, 118, P.G3); }
     },
   };
   function drawWindshield(x, y, w, h) {
@@ -2478,7 +2622,7 @@ function chaseScene(opts, done) {
     const susLights = Math.min(5, Math.floor(c.susp / 20)); for (let i = 0; i < 5; i++) rect(x + 72 + i * 8, y + 60, 6, 4, i < susLights ? ((c.susp > 80 && (t * 6 | 0) % 2) ? P.K : P.RD2) : P.G1);
     if (c.follow && (t * 2 | 0) % 2) text('F', x + 72, y + 68, P.YE);
     if (c.order) text({ '0,-1': '▲', '0,1': '▼', '-1,0': '◀', '1,0': '▶' }[c.order.join(',')], x + 84, y + 68, P.GR2);
-    if (c.def.tracking) { const [sx, sy] = pos(sus); const a = Math.atan2(sy - my, sx - mx); if ((t * 3 | 0) % 2) text(Math.abs(Math.cos(a)) > Math.abs(Math.sin(a)) ? (Math.cos(a) > 0 ? '▶' : '◀') : (Math.sin(a) > 0 ? '▼' : '▲'), x + 96, y + 68, P.YE); }
+    if (c.def.tracking && !evade) { const [sx, sy] = pos(sus); const a = Math.atan2(sy - my, sx - mx); if ((t * 3 | 0) % 2) text(Math.abs(Math.cos(a)) > Math.abs(Math.sin(a)) ? (Math.cos(a) > 0 ? '▶' : '◀') : (Math.sin(a) > 0 ? '▼' : '▲'), x + 96, y + 68, P.YE); }
     const hh = hourOf(game.t || 0); rect(x + 72, y + 80, 44, 11, P.K); text((hh % 12 || 12) + ':' + String(Math.floor(t / 60 * 5) % 60).padStart(2, '0') + ':' + String(Math.floor(t * 5) % 60).padStart(2, '0'), x + 74, y + 82, P.G3);
     text('#' + c.n, x + 2, y + 58, P.W); text('- +', x + 44, y + 58, P.G3);
     g.restore();
@@ -2551,9 +2695,9 @@ function watchScene(b) {
 // ---------- WIRETAP & CAR TRACER ----------
 function startWiretap(b) {
   advance(30);
-  go(wiretapScene({ level: game.diff, mode: 'tap', alert: b.alert || 0, label: b.address }, res => {
+  go(wiretapScene({ level: game.diff, mode: 'tap', alert: (b.alert || 0) + leak(b.city), label: b.address }, res => {
     const out = [];
-    if (res.alarm) { b.alert = (b.alert || 0) + 1; out.push('An alarm went off. The building\'s guards are on alert now.'); }
+    if (res.alarm) { b.alert = (b.alert || 0) + 1; addHeat(b.city, 1); out.push('An alarm went off. The building\'s guards are on alert now.'); }
     if (res.tapped > 0) {
       game.taps.push({ key: b.key, until: dayOf(game.t) + 2 + res.tapped });
       out.push(res.tapped + ' phone' + (res.tapped > 1 ? 's' : '') + ' tapped.');
@@ -2567,7 +2711,7 @@ function startWiretap(b) {
   }));
 }
 function startTracer(b, target) {
-  go(wiretapScene({ level: game.diff, mode: 'tracer', alert: b.alert || 0, label: 'car tracer' }, res => {
+  go(wiretapScene({ level: game.diff, mode: 'tracer', alert: (b.alert || 0) + leak(b.city), label: 'car tracer' }, res => {
     if (!res.success) { if (res.alarm) b.alert = (b.alert || 0) + 1; afterMission(20, () => go(report('Car Tracer', [res.alarm ? 'The alarm spooks the driver. The car roars off.' : 'The car pulls away before the tracer is ready.'], () => go(watchScene(b))))); return; }
     afterMission(60, () => go(report('Car Tracer', followResult(target), () => go(buildingScene(b)))));
   }));
@@ -2590,7 +2734,7 @@ function startChase(b, target, face) {
     if (res.arrest && target) { afterMission(90, () => go(arrestResult(target, 'car'))); return; }
     if (res.arrest && !target) { afterMission(90, () => go(report('Car Chase', ['You run the car off the road. The driver is a frightened accountant. Sorry, sir.'], () => go(cityScene())))); return; }
     const out = res.success ? followResult(target) : [res.how === 'abort' ? 'You break off the chase.' : 'You lost the car in traffic.'];
-    if (res.spotted && target) b.alert = (b.alert || 0) + 1;
+    if (res.spotted && target) { b.alert = (b.alert || 0) + 1; addHeat(b.city, 1); }
     afterMission(90, () => go(report('Car Chase', out, () => go(cityScene()))));
   }))));
 }
@@ -2601,8 +2745,8 @@ function startBreakin(b) {
   const words = ['Guards are lax.', 'Guards are alert.', 'Guards are very alert.', 'Guards expect trouble.'][Math.min(3, (b.alert || 0) + (game.diff > 1 ? 1 : 0))];
   go(pageScene(() => { rect(0, 0, W, H, P.K); buildingArt(150, 30, 170, 170, b); msgBox(8, 60, 136, 60); text('Breaking in...', 16, 68, P.YE); para(words + ' You will have to find your own way around.', 16, 80, 120, P.W); }, () => go(armoryScene(kit => {
     if (!b.seed) b.seed = (rnd() * 1e9) >>> 0;
-    go(breakinScene(Object.assign({ level: game.diff, occupant: p, building: b, org: b.org, alert: b.alert || 0 }, kit), res => {
-      const out = res.clues.slice();
+    go(breakinScene(Object.assign({ level: game.diff, occupant: p, building: b, org: b.org, alert: (b.alert || 0) + leak(b.city) }, kit), res => {
+      const out = res.clues.slice(); addHeat(b.city, res.alarm ? 2 : 1);
       b.alert = (b.alert || 0) + (res.alarm ? 1 : 0);
       if (res.evidence) { game.crime.delay += 2; game.crime.evidenceTaken++; out.push('You made off with the ' + res.evidence + '. That will set their plans back.'); }
       if (res.plan) { game.inside.push(masterPlan()); out.push('A master plan of the whole operation! See Inside Information.'); }
@@ -2656,10 +2800,74 @@ function capturedScene(out) {
   const held = game.crime.people.filter(p => p.status === 'arrested' && p.role !== 'Mastermind');
   const escape = () => go(pageScene(() => { rect(0, 0, W, H, P.K); rect(225, 0, 95, 200, P.RD); dither(225, 0, 95, 200, P.RD, P.K, 4); rect(240, 70, 60, 20, P.G3); disc(250, 80, 10, P.G3); disc(290, 80, 10, P.G3); disc(250, 80, 6, P.RD); disc(290, 80, 6, P.RD); rect(230, 110, 90, 40, P.K); para('After hours of effort, you manage to work your hands free of the cuffs. You slip out past a sleeping guard and make your way back to the CIA office.', 15, 20, 200, P.W, 8); statusBox(174); }, () => go(report('Break-in', out.length ? out : ['You lost everything you were carrying.'], () => go(cityScene())))));
   return menuScene({
-    menu: Menu([{ label: 'No thanks, Squinty.', go: () => { advance(18 * 60); escape(); } }, { label: 'Agree to exchange.', off: !held.length, go: () => { const p = pick(held); p.status = 'free'; go(report('Exchange', ['You are traded for ' + p.name + ', who walks free and rejoins the plot.'], () => go(ciaFloors()))); } }], 23, 120, 200),
+    menu: Menu([{ label: 'No thanks, Squinty.', go: () => { advance(18 * 60); escape(); } }, { label: 'Agree to exchange.', go: () => {
+      if (held.length) { const p = pick(held); p.status = 'free'; p.jailCity = null; go(report('Exchange', ['You are traded for ' + p.name + ', who walks free and rejoins the plot.'], () => go(ciaFloors()))); return; }
+      // nobody of theirs to trade: the price is a mole inside the Agency
+      const cr = game.crime; if (!cr.double || cr.double.caught) cr.double = { city: pick(regionCities(game.region)).id, caught: false };
+      go(report('Exchange', ['We hold none of their people, so the price of your release is paid quietly: somebody at the Agency now works for them.', 'Watch your clues. One CIA station may no longer be telling the truth.'], () => go(cityScene())));
+    } }], 23, 120, 200),
     draw() { rect(0, 0, W, H, P.K); captureArt(225, 0, 95, 200); para('Your captors question you, but you refuse to talk. "So you are the famous CIA agent Max Remington." "We have lots of time, soon you will tell us what you know." "Perhaps we should exchange you for one of our agents?"', 15, 20, 200, P.W, 8); this.menu.draw(); statusBox(174); },
   });
 }
+// ---------- PRISON BREAK: defend the jail room against a rescue team ----------
+function prisonBreakScene() {
+  const cr = game.crime, pb = cr.prisonBreak, p = cr.people[pb.pid], city = cityById(pb.city), far = pb.city !== game.city;
+  const lose = (lines, mins) => { p.status = 'free'; p.escaped = true; p.jailCity = null; afterMission(mins, () => go(report('Prison Break', lines.concat([p.name + ' is back at large and rejoins the plot.']), () => go(cityScene())))); };
+  const defend = () => {
+    pb.handled = true;
+    if (far) { const here = cityById(game.city); advance(Math.round(2 + dist(here.lon, here.lat, city.lon, city.lat) / 8) * 60); game.city = pb.city; }
+    const kit = { uzi: false, camera: false, bugs: 0, gasmask: false, detector: true, kevlar: false, safekit: false, frag: 2, stun: 3, gas: 0 };
+    go(breakinScene({ mode: 'defend', level: game.diff, kit, maxHits: 4, org: p.org }, res => {
+      const mins = 30 + Math.round(res.seconds / 2);
+      if (res.kind === 'held') {
+        const out = ['The rescue team is down. ' + p.name + ' stays behind bars.'];
+        const q = cr.people.filter(o => o.org === p.org && o.status === 'free'); if (q.length) { const c = clueAbout(pick(q), 'Interrogation'); if (c) out.push('One of the raiders talks: ' + c.text); }
+        afterMission(mins, () => go(report('Prison Break', out, () => go(cityScene())))); return;
+      }
+      lose(res.kind === 'captured' ? ['You wake up in the prison infirmary. The raiders got what they came for.'] : ['The raiders reach the cell and get away with their man.'], res.kind === 'captured' ? mins + 8 * 60 : mins);
+    }));
+  };
+  const police = () => { pb.handled = true; advance(60); if (rnd() < 0.5) afterMission(0, () => go(report('Prison Break', ['The local police beat off the attack. ' + p.name + ' stays in custody.'], () => go(cityScene())))); else lose(['The police were outgunned.'], 0); };
+  return menuScene({
+    menu: Menu([{ label: far ? 'Fly to ' + city.name + ' and defend' : 'Rush to the jail', go: defend }, { label: 'Leave it to the police', go: police }], 23, 120, 200),
+    draw() {
+      rect(0, 0, W, H, P.K); captureArt(225, 0, 95, 200); rect(0, 0, 222, 12, P.RD); textC('URGENT', 111, 2, P.W);
+      para('Our people in ' + city.name + ' report that the ' + p.org.name + ' are planning to break ' + p.name + ' (' + p.role + ') out of jail. The attack could come at any moment.', 15, 22, 200, P.W, 8);
+      para('Defend the cell yourself: nobody may reach the prisoner. You will have a pistol, a few grenades and a motion detector.', 15, 70, 200, P.G3, 8);
+      this.menu.draw(); statusBox(174);
+    },
+  });
+}
+
+// ---------- AMBUSHES: gunmen on the street, or a hit squad on your tail ----------
+function ambush(next) {
+  const city = cityById(game.city), locals = game.crime.people.filter(p => p.status === 'free' && p.city === game.city);
+  const org = (pick(locals) || game.crime.people[0]).org, street = rnd() < 0.5;
+  go(pageScene(t => {
+    rect(0, 0, W, H, P.K); cityPic(150, 20, 160, 150, city); if ((t * 4 | 0) % 2) frame(148, 18, 164, 154, P.RD2);
+    text(street ? 'AMBUSH!' : 'HIT SQUAD!', 15, 20, P.RD2);
+    para(street ? 'As you step out onto the street in ' + city.name + ', a car screeches to a halt. Men with guns pile out. You have been asking too many questions here.' : 'A black sedan has been following you since the hotel. When you speed up, so do they. It is a hit squad.', 15, 34, 128, P.W, 8);
+    statusBox(174);
+  }, () => street ? streetFight(org, next) : hitSquad(org, next)));
+}
+function streetFight(org, next) {
+  const kit = { uzi: false, camera: false, bugs: 0, gasmask: false, detector: false, kevlar: false, safekit: false, frag: 1, stun: 1, gas: 0 };
+  go(breakinScene({ mode: 'street', level: game.diff, kit, maxHits: 3, org }, res => {
+    if (res.kind === 'captured') { afterMission(6 * 60, () => go(capturedScene([]))); return; }
+    const out = [];
+    if (res.kind === 'won') { out.push('You search the gunmen. They carry ' + org.name + ' papers.'); const q = game.crime.people.filter(p => p.org === org && p.status === 'free'); if (q.length) { const c = clueAbout(pick(q), 'Documents on the gunmen'); if (c) out.push(c.text); } }
+    else out.push('You got away from the gunmen.');
+    afterMission(30 + Math.round(res.seconds / 2), () => go(report('Ambush', out, next)));
+  }));
+}
+function hitSquad(org, next) {
+  go(chaseScene({ mode: 'evade', level: game.diff, cars: [CARS[1]], night: isNight(), label: 'the hit squad' }, res => {
+    if (res.how === 'caught' || res.how === 'abort') { streetFight(org, next); return; }
+    if (res.how === 'safe') { afterMission(40, () => go(report('Hit Squad', ['You wait in the CIA garage until the ' + org.name + ' car gives up and drives away.'], () => goLocation2({ kind: 'cia' })))); return; }
+    afterMission(30, () => go(report('Hit Squad', ['You lose the ' + org.name + ' hit squad in traffic.'], next)));
+  }));
+}
+
 function practice(kind, diff) {
   practiceMode = true; game.diff = diff;
   if (!game.agent) game.agent = newAgent('m', 'Trainee');
@@ -2667,6 +2875,9 @@ function practice(kind, diff) {
   const back = () => { practiceMode = false; go(optionsScene()); };
   const cr = game.crime, p = cr.people[1], b = game.buildings[p.building];
   if (kind === 'breakin') go(armoryScene(kit => go(breakinScene(Object.assign({ level: diff, occupant: p, building: b, org: b.org, alert: 0 }, kit), back))));
+  const bare = { uzi: false, camera: false, bugs: 0, gasmask: false, detector: kind === 'defend', kevlar: false, safekit: false, frag: kind === 'defend' ? 2 : 1, stun: kind === 'defend' ? 3 : 1, gas: 0 };
+  if (kind === 'street' || kind === 'defend') go(breakinScene({ mode: kind, level: diff, kit: bare, maxHits: kind === 'defend' ? 4 : 3, org: p.org }, back));
+  if (kind === 'evade') go(chaseScene({ mode: 'evade', level: diff, cars: [CARS[1]], night: false, label: 'the instructors' }, back));
   if (kind === 'crypto') go(cryptoScene(makeMessage(cr.steps[0]).text, { msgNo: 'M001', level: diff }, back));
   if (kind === 'wiretap') go(wiretapScene({ level: diff, mode: 'tap', alert: 0, label: 'training board' }, back));
   if (kind === 'chase') go(carSelectScene(cars => go(chaseScene({ level: diff, cars, night: false, target: p, label: 'the instructor', start: b }, back))));

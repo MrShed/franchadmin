@@ -39,7 +39,7 @@ function carSelectScene(start) {
 }
 
 function chaseScene(opts, done) {
-  const sk = skillLevel('driving'), level = opts.level || 0;
+  const sk = skillLevel('driving'), level = opts.level || 0, evade = opts.mode === 'evade'; // evade: a hit squad is after you
   const N = 25, SP = 8, MX = 5, MY = 5; // streets every 8 px, 2 px wide, 6-px blocks
   const nodeXY = (i, j) => [MX + i * SP, MY + j * SP];
   const edge = new Set(); const ek = (i, j, d) => i + ',' + j + ',' + d;
@@ -66,8 +66,13 @@ function chaseScene(opts, done) {
   labels.push({ name: '', i: dest[0], j: dest[1], dest: true });
   const sus = mk(start[0], start[1], 'suspect', P.PK, 40 + level * 5); sus.route = route(start, dest); sus.b = sus.route.shift(); sus.a = start.slice(); sus.path = [start.slice()];
   const mine = opts.cars.map((cd, n) => { const c = mk(start[0], start[1], 'agent', P.GR2, cd.speed); c.def = cd; c.n = n + 1; c.follow = true; c.a = start.slice(); c.b = sus.b.slice(); c.s = 0; c.wait = 2 + n * 2; c.target = mph2px(40); return c; });
+  const hunters = []; let evadeT = 0;
+  if (evade) {
+    sus.wait = 1e9; mine.forEach(c => { c.follow = false; c.wait = 0; c.b = pick(nbrs(...c.a)); });
+    for (let n = 0; n < 2 + Math.min(2, level); n++) { let h; do { h = [ri(0, N - 1), ri(0, N - 1)]; } while (Math.abs(h[0] - start[0]) + Math.abs(h[1] - start[1]) < 12); const c = mk(h[0], h[1], 'hunter', P.RD2, 50 + level * 6); c.wait = n * 3; hunters.push(c); }
+  }
   for (let n = 0; n < 14; n++) mk(ri(0, N - 1), ri(0, N - 1), 'civ', pick([P.G3, P.W, P.BR, P.YE, P.RD, P.BL2]), 30 + rnd() * 20).target = mph2px(25 + rnd() * 20);
-  let ctrl = 0, t = 0, over = null, aware = false, arrivedT = -1, lostT = 0, prompt = 0, msg = 'The suspect pulls away. Both your cars are following (F).', msgT = 4, lastSeen = null;
+  let ctrl = 0, t = 0, over = null, aware = false, arrivedT = -1, lostT = 0, prompt = 0, msg = evade ? 'A hit squad is on your tail! Shake them for 60 seconds, or reach the CIA building and press F1.' : 'The suspect pulls away. Both your cars are following (F).', msgT = evade ? 5 : 4, lastSeen = null;
   const me = () => mine[ctrl];
   const inSight = c => { const [sx, sy] = pos(sus), [cx, cy] = pos(c); const sameRow = Math.abs(sy - cy) < 2.5 && Math.abs(sx - cx) <= sight * SP; const sameCol = Math.abs(sx - cx) < 2.5 && Math.abs(sy - cy) <= sight * SP; if (!sameRow && !sameCol) return dist(sx, sy, cx, cy) < 5; // check the street is continuous
     const [ai, aj] = [Math.round((cx - MX) / SP), Math.round((cy - MY) / SP)], [bi, bj] = [Math.round((sx - MX) / SP), Math.round((sy - MY) / SP)];
@@ -80,7 +85,8 @@ function chaseScene(opts, done) {
       if (aware) { const ahead = opts2.filter(n => !(n[0] === back[0] && n[1] === back[1])); next = pick(ahead.length ? ahead : opts2); }
       else if (c.route.length) next = c.route.shift();
       else { c.stopped = true; c.v = 0; if (arrivedT < 0) arrivedT = t; return; }
-    } else if (c.kind === 'civ') { const ahead = opts2.filter(n => !(n[0] === back[0] && n[1] === back[1])); next = pick(ahead.length ? ahead : opts2); }
+    } else if (c.kind === 'hunter') { const r = route(here, me().b); next = r.length ? r[0] : pick(opts2); }
+    else if (c.kind === 'civ') { const ahead = opts2.filter(n => !(n[0] === back[0] && n[1] === back[1])); next = pick(ahead.length ? ahead : opts2); }
     else {
       if (c.order) { const n = [here[0] + c.order[0], here[1] + c.order[1]]; if (opts2.some(o => o[0] === n[0] && o[1] === n[1])) { next = n; c.order = null; } }
       if (!next && c.follow && c.lastSusTurn && c.lastSusTurn.at[0] === here[0] && c.lastSusTurn.at[1] === here[1]) next = c.lastSusTurn.to;
@@ -93,7 +99,7 @@ function chaseScene(opts, done) {
   function uturn(c) { if (c.def && c.def.handling !== 'Excellent') { msg = 'This car cannot make a U-turn.'; msgT = 2; sfx.deny(); return; } [c.a, c.b] = [c.b, c.a]; c.s = SP - c.s; sfx.tone(200, 0.2, 'sawtooth', 0.04); }
   function ahead(c) { let best = null, bd = 1e9; for (const o of cars) { if (o === c) continue; if (o.a[0] === c.a[0] && o.a[1] === c.a[1] && o.b[0] === c.b[0] && o.b[1] === c.b[1] && o.s > c.s) { const d = o.s - c.s; if (d < bd) { bd = d; best = o; } } } return best ? [best, bd] : null; }
   function headOn(c) { return sus.a[0] === c.b[0] && sus.a[1] === c.b[1] && sus.b[0] === c.a[0] && sus.b[1] === c.a[1] && Math.abs((SP - sus.s) - c.s) < 3; }
-  function finish(kind) { if (over) return; over = { kind, t: 0 }; (kind === 'followed' || kind === 'arrest') ? sfx.success() : sfx.fail(); }
+  function finish(kind) { if (over) return; over = { kind, t: 0 }; ['followed', 'arrest', 'evaded', 'safe'].includes(kind) ? sfx.success() : sfx.fail(); }
   const scene = {
     update(dt) {
       t += dt; if (msgT > 0) msgT -= dt; if (over) { over.t += dt; return; }
@@ -101,8 +107,13 @@ function chaseScene(opts, done) {
         if (c.wait) { c.wait -= dt; if (c.wait <= 0) c.wait = 0; else continue; }
         if (c.stopped) { if (c.kind === 'agent' && (c.order || c.follow)) atNode(c); continue; }
         let tg = c.target; if (c === sus && aware) tg = mph2px(70);
-        const a = ahead(c); if (a) { const [o, d] = a; if (d < 6) tg = Math.min(tg, o.v); if (d < 3.5) tg = 0; }
+        const a = c.kind === 'hunter' ? null : ahead(c); if (a) { const [o, d] = a; if (d < 6) tg = Math.min(tg, o.v); if (d < 3.5) tg = 0; }
         c.v += (tg - c.v) * Math.min(1, dt * 2.5); c.s += c.v * dt; if (c.s >= SP) { c.s = SP; atNode(c); }
+      }
+      if (evade) {
+        evadeT += dt; const [mx, my] = pos(me());
+        for (const h of hunters) { if (h.wait) continue; for (const m of mine) { const [hx, hy] = pos(h), [ax, ay] = pos(m); if (dist(hx, hy, ax, ay) < 3) finish('caught'); } }
+        if (evadeT >= 60) finish('evaded'); prompt = dist(mx, my, ...nodeXY(labels[0].i, labels[0].j)) < SP * 1.3 ? 0.5 : 0; return;
       }
       // seeing and suspicion
       let anySeen = false;
@@ -124,8 +135,9 @@ function chaseScene(opts, done) {
       const dirs = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
       if (dirs[k]) { const d = dirs[k]; c.follow = false; if (d[0] === -dx && d[1] === -dy) uturn(c); else { c.order = d; if (c.stopped) atNode(c); } sfx.tick(); }
       if (k === 'alt2' || k === 'fire') { ctrl = (ctrl + 1) % mine.length; msg = 'Now controlling car #' + (ctrl + 1) + '.'; msgT = 1.5; sfx.select(); }
+      if (evade && (k === 'action' || k === 'select')) { if (prompt > 0) finish('safe'); else { msg = 'Get to the CIA building first.'; msgT = 1.5; sfx.deny(); } return; }
       if (k === 'action' || k === 'select') { if (prompt > 0 && headOn(c)) finish('arrest'); else if (prompt > 0 && mine.some(headOn)) finish('arrest'); else { aware = aware || rnd() < 0.5; msg = 'Nothing to grab. That probably tipped him off.'; msgT = 2; } }
-      if (k === 'alt') { c.follow = true; c.order = null; msg = 'Car #' + c.n + ' resumes following.'; msgT = 1.5; sfx.tick(); }
+      if (k === 'alt' && !evade) { c.follow = true; c.order = null; msg = 'Car #' + c.n + ' resumes following.'; msgT = 1.5; sfx.tick(); }
       if (k === 'menu') finish('abort');
     },
     rawKey(e) { if (over) return false; const c = me(); if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') { c.target = Math.min(mph2px(c.def.speed), c.target + mph2px(20)); sfx.tick(); return true; } if (e.key === '-' || e.code === 'NumpadSubtract') { c.target = Math.max(0, c.target - mph2px(20)); sfx.tick(); return true; } if (e.code === 'KeyF' || e.code === 'F10') { c.follow = true; c.order = null; return true; } if (e.code === 'F1') { scene.onKey('action'); return true; } return false; },
@@ -141,8 +153,8 @@ function chaseScene(opts, done) {
       // ---- city map: light gray blocks by day, dark gray at night, 2-px black streets ----
       rect(0, 0, 200, 200, P.BL); rect(1, 1, 199, 199, night ? P.G1 : P.G3);
       for (const k of edge) { const [i, j, d] = k.split(',').map(Number); const [x, y] = nodeXY(i, j); if (d === 0) rect(x - 1, y - 1, SP + 2, 2, P.K); else rect(x - 1, y - 1, 2, SP + 2, P.K); }
-      for (const l of labels) { if (l.dest && !over && arrivedT < 0) continue; const [x, y] = nodeXY(l.i, l.j); rect(x, y, 2, 2, l.dest ? P.YE : P.W); if (l.name) text(l.name, x + 3, y - 3, P.BL2); }
-      for (const c of cars) { if (c === sus || c.wait) continue; const [x, y, dx] = pos(c); const hor = dx !== 0; if (c.kind === 'agent') { if (c !== me() || (t * 4 | 0) % 2) rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, c.col); } else rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, night ? P.G3 : P.G1); }
+      for (const l of labels) { if (l.dest && (evade || (!over && arrivedT < 0))) continue; const [x, y] = nodeXY(l.i, l.j); rect(x, y, 2, 2, l.dest ? P.YE : P.W); if (l.name) text(l.name, x + 3, y - 3, P.BL2); }
+      for (const c of cars) { if (c === sus || c.wait) continue; const [x, y, dx] = pos(c); const hor = dx !== 0; if (c.kind === 'agent') { if (c !== me() || (t * 4 | 0) % 2) rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, c.col); } else rect(x - 0.5, y - 0.5, hor ? 2 : 1, hor ? 1 : 2, c.kind === 'hunter' ? P.RD2 : night ? P.G3 : P.G1); }
       const seenNow = mine.some(m => m.seen);
       if (seenNow) { const [x, y, dx] = pos(sus); rect(x - 0.5, y - 0.5, dx ? 2 : 1, dx ? 1 : 2, P.PK); } else if (lastSeen) rect(lastSeen[0] - 0.5, lastSeen[1] - 0.5, 1, 1, P.MG);
       rect(200, 0, 1, 200, P.W); rect(319, 0, 1, 200, P.W); rect(200, 98, 120, 1, P.W); rect(200, 99, 120, 1, P.YE);
@@ -151,8 +163,9 @@ function chaseScene(opts, done) {
       // ---- close-up ----
       drawCloseUp(201, 100, 118, 100);
       if (msgT > 0 && !over) { const ls = wrap(msg, 180); msgBox(6, 4, 188, ls.length * 8 + 6); ls.forEach((l, i) => text(l, 10, 7 + i * 8, P.W)); }
-      if (prompt > 0 && !over && (t * 6 | 0) % 2) { msgBox(10, 86, 180, 16); textC('Press F1 now to make arrest', 100, 90, P.W); }
-      if (over) { msgBox(12, 60, 176, 70); rect(12, 60, 176, 70, P.K); frame(12, 60, 176, 70, P.W); const [h, c] = { followed: ['DESTINATION FOUND', P.GR2], arrest: ['ARREST!', P.GR2], lost: ['YOU LOST HIM', P.RD2], late: ['TOO LATE', P.RD2], abort: ['CHASE ABANDONED', P.YE] }[over.kind]; textC(h, 100, 68, c); para({ followed: 'He parks and goes inside. You note the address.', arrest: 'You cut him off head-on and drag him out of the car.', lost: 'The car disappears into the city.', late: 'By the time you get there the car is empty.', abort: 'You give up the chase.' }[over.kind], 22, 82, 156, P.W, 9); if (over.t > 0.6) textC('Press a key', 100, 118, P.G3); }
+      if (prompt > 0 && !over && (t * 6 | 0) % 2) { msgBox(10, 86, 180, 16); textC(evade ? 'Press F1 to duck into the CIA' : 'Press F1 now to make arrest', 100, 90, P.W); }
+      if (evade && !over) { msgBox(4, 184, 110, 13); text('Shake them: ' + Math.max(0, Math.ceil(60 - evadeT)) + ' sec', 8, 187, P.YE); }
+      if (over) { msgBox(12, 60, 176, 70); rect(12, 60, 176, 70, P.K); frame(12, 60, 176, 70, P.W); const [h, c] = { followed: ['DESTINATION FOUND', P.GR2], arrest: ['ARREST!', P.GR2], lost: ['YOU LOST HIM', P.RD2], late: ['TOO LATE', P.RD2], abort: [evade ? 'YOU STOP THE CAR' : 'CHASE ABANDONED', P.YE], evaded: ['YOU SHOOK THEM', P.GR2], safe: ['SAFE AT THE CIA', P.GR2], caught: ['CUT OFF!', P.RD2] }[over.kind]; textC(h, 100, 68, c); para({ followed: 'He parks and goes inside. You note the address.', arrest: 'You cut him off head-on and drag him out of the car.', lost: 'The car disappears into the city.', late: 'By the time you get there the car is empty.', abort: evade ? 'You jump out and face them on foot.' : 'You give up the chase.', evaded: 'The hit squad loses you in traffic.', safe: 'You screech into the CIA garage. The hit squad drives on.', caught: 'Their car slams into yours. Doors fly open - guns come out.' }[over.kind], 22, 82, 156, P.W, 9); if (over.t > 0.6) textC('Press a key', 100, 118, P.G3); }
     },
   };
   function drawWindshield(x, y, w, h) {
@@ -172,7 +185,7 @@ function chaseScene(opts, done) {
     const susLights = Math.min(5, Math.floor(c.susp / 20)); for (let i = 0; i < 5; i++) rect(x + 72 + i * 8, y + 60, 6, 4, i < susLights ? ((c.susp > 80 && (t * 6 | 0) % 2) ? P.K : P.RD2) : P.G1);
     if (c.follow && (t * 2 | 0) % 2) text('F', x + 72, y + 68, P.YE);
     if (c.order) text({ '0,-1': '▲', '0,1': '▼', '-1,0': '◀', '1,0': '▶' }[c.order.join(',')], x + 84, y + 68, P.GR2);
-    if (c.def.tracking) { const [sx, sy] = pos(sus); const a = Math.atan2(sy - my, sx - mx); if ((t * 3 | 0) % 2) text(Math.abs(Math.cos(a)) > Math.abs(Math.sin(a)) ? (Math.cos(a) > 0 ? '▶' : '◀') : (Math.sin(a) > 0 ? '▼' : '▲'), x + 96, y + 68, P.YE); }
+    if (c.def.tracking && !evade) { const [sx, sy] = pos(sus); const a = Math.atan2(sy - my, sx - mx); if ((t * 3 | 0) % 2) text(Math.abs(Math.cos(a)) > Math.abs(Math.sin(a)) ? (Math.cos(a) > 0 ? '▶' : '◀') : (Math.sin(a) > 0 ? '▼' : '▲'), x + 96, y + 68, P.YE); }
     const hh = hourOf(game.t || 0); rect(x + 72, y + 80, 44, 11, P.K); text((hh % 12 || 12) + ':' + String(Math.floor(t / 60 * 5) % 60).padStart(2, '0') + ':' + String(Math.floor(t * 5) % 60).padStart(2, '0'), x + 74, y + 82, P.G3);
     text('#' + c.n, x + 2, y + 58, P.W); text('- +', x + 44, y + 58, P.G3);
     g.restore();

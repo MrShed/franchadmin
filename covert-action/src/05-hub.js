@@ -150,7 +150,7 @@ function titleScene() {
 function practiceScene() {
   let s, diff = 0;
   const m1 = () => Menu(DIFFICULTY.map((d, i) => ({ label: d.name, go: () => { diff = i; s.menu = m2(); s.step = 1; } })), 118, 90, 130);
-  const m2 = () => Menu(['Combat', 'Driving', 'Cryptography', 'Electronics'].map((l, i) => ({ label: l, go: () => practice(['breakin', 'chase', 'crypto', 'wiretap'][i], diff) })), 118, 90, 130);
+  const m2 = () => Menu(['Combat', 'Driving', 'Cryptography', 'Electronics', 'Street ambush', 'Hit squad', 'Jail defence'].map((l, i) => ({ label: l, go: () => practice(['breakin', 'chase', 'crypto', 'wiretap', 'street', 'evade', 'defend'][i], diff) })), 118, 90, 130);
   s = menuScene({ menu: m1(), step: 0, back: () => { if (s.step) { s.step = 0; s.menu = m1(); } else go(titleScene()); },
     draw() { rect(0, 0, W, H, P.K); text(s.step ? 'Practice which skill?' : 'Which difficulty level?', 110, 78, P.W); this.menu.draw(); } });
   return s;
@@ -159,7 +159,7 @@ function helpScene(back) {
   const pages = [
     ['THE JOB', 'You are Max Remington, the only freelance secret agent in the western world. Each case is a crime being planned by 6 to 10 people from several organizations. Identify them, prove their roles, and arrest them before the crime is committed.\n\nArrests only stick if you know the suspect\'s ROLE: decoded messages, enemy computers and interrogations reveal roles.'],
     ['GETTING AROUND', 'Each city has the Airport, your Hotel, the CIA office (Data, Intelligence and Crypto floors) and any hideouts you have found. At an enemy building you can Place Wiretap, Break into building or Watch the building to follow people who leave.\n\nSuspects can only be arrested in their car or inside their own organization\'s building. Masterminds never leave their building.'],
-    ['CONTROLS', 'Menus: arrows + Enter, Esc to leave.\nBuilding: arrows move, Space fires, E examines/opens (F1), P photographs (F2), B bugs (F3), G throws (F5-F7), Tab changes grenade (F10), C crouches. Terminals show password letters; type the password at the mainframe (F4) and search.\nCar: arrows order the next turn, + and - speed, Tab swaps cars, F follows, F1/E arrests when prompted.\nCrypto: pick a code letter and type the plain letter. Electronics: Enter swaps chips.'],
+    ['CONTROLS', 'Menus: arrows + Enter, Esc to leave.\nBuilding: arrows move, Space fires, E examines/opens (F1), P photographs (F2), B bugs (F3), G throws (F5-F7), Tab changes grenade (F10), C crouches, T sets a booby or remote trap (F9), R detonates remotes (F8). Terminals show password letters; type the password at the mainframe (F4) and search.\nCar: arrows order the next turn, + and - speed, Tab swaps cars, F follows, F1/E arrests when prompted.\nCrypto: pick a code letter and type the plain letter. Electronics: Enter swaps chips.'],
   ];
   let i = 0;
   return pageScene(() => { folder(P.G3, 'Manual'); const [h, b] = pages[i]; text(h, 16, 22, P.RD); textR((i + 1) + '/' + pages.length, 300, 22, P.G1); para(b, 16, 36, 288, P.K, 8); textC('Press a key', W / 2, 188, P.G1); }, () => { i++; if (i >= pages.length) back(); });
@@ -224,7 +224,7 @@ function chiefScene() {
   return chiefTalk('Welcome back, ' + game.agent.short + '. It looks like the bad guys are preparing for action and the President is worried. He insists that you\'re the agent for this job. Things seem to be heating up in ' + REGIONS[cr.region].name + '. We\'ve picked up a few clues already - check them at any CIA office. Good luck ' + game.agent.short + ', you are our best hope.', () => { game.city = 'WAS'; go(cityScene()); });
 }
 function newCase() {
-  Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [], caseStart: Date.now(), ciaVisited: {} });
+  Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [], caseStart: Date.now(), ciaVisited: {}, heatBy: {}, ciaBlocked: {} });
   game.startDate = new Date(1990 + Math.floor(game.cases.length / 4), ri(0, 11), ri(1, 25), 8, 0, 0);
   newCrime();
   const cr = game.crime;
@@ -242,12 +242,21 @@ function locationsHere() {
 }
 function cityScene() {
   if (game.crime && game.crime.over && !game.crime.reported) return synopsisScene();
+  if (game.crime && game.crime.prisonBreak && !game.crime.prisonBreak.handled && !practiceMode) return prisonBreakScene();
   const city = cityById(game.city);
   const items = locationsHere().map(l => ({ label: fitText(l.label, 120), go: () => goLocation(l) }));
   items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });
   return cityLayout({ header: ['You are in ' + city.name, 'Do you go to ...'], items, pic: (x, y, w, h, t) => cityPic(x, y, w, h, city), caption: city.name + ', ' + (city.hq ? 'D.C.' : city.country), back: () => go(pauseScene(() => go(cityScene()))) });
 }
-function goLocation(l) { advance(20); if (l.kind === 'cia') go(ciaArrive()); else if (l.kind === 'airport') go(airportScene()); else if (l.kind === 'hotel') go(hotelScene()); else go(buildingScene(l.b)); }
+function goLocation(l) {
+  advance(20); if (checkCaseEnd()) return;
+  const arrive = () => goLocation2(l);
+  // word gets around: the more noise Max makes in a city, the likelier an ambush on the street
+  const heat = (game.heatBy && game.heatBy[game.city]) || 0, locals = game.crime.people.some(p => p.status === 'free' && p.city === game.city);
+  if (locals && heat > 0 && l.kind !== 'airport' && rnd() < Math.min(0.45, heat * 0.07)) { game.heatBy[game.city] = Math.max(0, heat - 2); ambush(arrive); return; }
+  arrive();
+}
+function goLocation2(l) { if (l.kind === 'cia') go(game.ciaBlocked[game.city] ? pageScene(() => { rect(0, 0, W, H, P.K); ciaLobbyArt(170, 0, 150, 200, 0); para('The station chief meets you at the door. After your accusation, nobody in this office will work with you. Try the CIA in another city.', 15, 20, 140, P.W, 8); statusBox(174); }, () => go(cityScene())) : ciaArrive()); else if (l.kind === 'airport') go(airportScene()); else if (l.kind === 'hotel') go(hotelScene()); else go(buildingScene(l.b)); }
 function pauseScene(back) {
   return menuScene({
     menu: Menu([{ label: 'Continue', go: back }, { label: 'Sound on / off', go: () => { sfx.toggle(); } }, { label: 'How to play', go: () => go(helpScene(() => go(pauseScene(back)))) }, { label: 'Save Game', go: () => { writeSave(); toast('Game saved'); } }, { label: 'Quit to title', go: () => go(titleScene()) }], 118, 76, 110),
@@ -301,19 +310,20 @@ function clueScreen(c, back) {
     if (c.face) { rect(262, 18, 40, 46, P.W); frame(262, 18, 40, 46, P.G3); drawFace(p.face, 266, 22, 32, 38); rect(300, 16, 3, 14, P.G3); rect(301, 17, 1, 12, P.W); } else methodIcon(c.method, 274, 20);
     text('Related Clues:', 12, 92, P.RD2);
     if (!related.length) text('...none', 12, 100, P.K);
+    if (c.lie && game.crime.double && game.crime.double.caught) { g.save(); g.translate(200, 70); g.rotate(-0.2); frame(-50, -8, 100, 16, P.RD); textC('DISINFORMATION', 0, -4, P.RD); g.restore(); }
     related.forEach((r, i) => { const yy = 102 + i * 36; rect(10, yy, 298, 34, P.W); frame(10, yy, 298, 34, P.G3); text('Source: ' + r.source, 14, yy + 3, P.G3); para(r.text, 14, yy + 11, 288, P.K, 8); });
   }, back);
 }
 function reviewSuspects(back) {
   const ps = game.crime.people.filter(isSuspect);
-  return folderList('Suspect Files', FOLDER.docs, ps.map(p => ({ label: p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id), right: p.status !== 'free' ? p.status : p.known.city ? cityById(p.city).name : '', rcol: p.status !== 'free' ? P.RD : P.BL, open: () => go(suspectFile(p, () => go(reviewSuspects(back)))) })), back, { empty: '...no suspects identified' });
+  return folderList('Suspect Files', FOLDER.docs, ps.map(p => ({ label: p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id), right: p.status !== 'free' ? p.status : p.known.city ? shownCity(p).name : '', rcol: p.status !== 'free' ? P.RD : P.BL, open: () => go(suspectFile(p, () => go(reviewSuspects(back)))) })), back, { empty: '...no suspects identified' });
 }
 function suspectFile(p, back) {
   const steps = game.crime.steps.filter(s => (s.from === p.id || s.to === p.id) && s.known);
   return pageScene(() => {
     folder(FOLDER.suspect, 'Suspect File');
     rect(14, 22, 52, 62, P.W); frame(14, 22, 52, 62, P.G3); if (p.known.face) drawFace(p.face, 18, 26, 44, 54); else { rect(18, 26, 44, 54, P.TL); g.save(); g.translate(18, 26); g.scale(44 / 26, 54 / 32); drawUnknownFace(0, 0); g.restore(); }
-    const rows = [['Name:', p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id)], ['Org:', p.known.org ? p.org.name : 'unknown'], ['City:', p.known.city ? cityById(p.city).name : 'unknown'], ['Hideout:', p.known.hideout ? game.buildings[p.building].address : 'unknown'], ['Rank:', p.known.org ? RANKS[p.rank] : 'unknown'], ['Role:', p.known.role ? p.role : 'unknown']];
+    const rows = [['Name:', p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id)], ['Org:', p.known.org ? p.org.name : 'unknown'], ['City:', p.known.city ? shownCity(p).name : 'unknown'], ['Hideout:', p.known.hideout ? game.buildings[p.building].address : 'unknown'], ['Rank:', p.known.org ? RANKS[p.rank] : 'unknown'], ['Role:', p.known.role ? p.role : 'unknown']];
     rows.forEach(([k, v], i) => { text(k, 74, 22 + i * 10, P.K); text(v, 120, 22 + i * 10, v === 'unknown' ? P.G1 : P.K); rect(120, 30 + i * 10, 180, 1, P.RD2); });
     if (p.status !== 'free') { rect(200, 84, 100, 12, P.RD); textC(p.status.toUpperCase(), 250, 86, P.W); }
     rect(16, 100, 264, 60, P.TL); frame(16, 100, 264, 60, P.CY);
@@ -341,7 +351,7 @@ function citySummary(back) {
   return folderList('Cities', FOLDER.city, regionCities(game.region).map(c => ({ label: c.name, open: () => go(pageScene(() => {
     folder(FOLDER.city, c.name); textC(c.name + ', ' + c.country, 160, 22, P.K);
     const orgs = [...new Set(Object.values(game.buildings).filter(b => b.city === c.id && b.known && (b.orgKnown || b.agency)).map(b => b.agency || b.org.name))];
-    const sus = game.crime.people.filter(p => p.known.city && p.city === c.id);
+    const sus = game.crime.people.filter(p => p.known.city && shownCity(p) === c);
     text('Organizations:', 16, 40, P.K); para(orgs.join(', ') || 'none known', 110, 40, 190, P.G1, 8);
     text('Suspects:', 16, 76, P.K); para(sus.map(p => p.known.name ? p.name : 'Agent ' + String.fromCharCode(65 + p.id)).join(', ') || 'none known', 110, 76, 190, P.G1, 8);
     text('Clues:', 16, 112, P.K); text(String(game.clues.filter(k => k.source.includes(c.name)).length), 110, 112, P.G1);
@@ -364,11 +374,27 @@ function intelSection(back) {
     { label: 'Local Scan', go: () => scan(2, true) },
     { label: 'International Scan', go: () => scan(6, false) },
     { label: 'Active Wire Taps', go: () => go(folderList('Wire Taps', FOLDER.docs, game.taps.filter(tp => tp.until >= dayOf(game.t)).map(tp => { const b = game.buildings[tp.key]; return { label: cityById(b.city).name + ': ' + (b.agency || (b.orgKnown ? b.org.name : 'unknown building')) + ', ' + b.address }; }), me, { empty: '...no active taps' })) },
-    { label: 'Check with Sam', go: () => go(pageScene(() => { rect(0, 0, W, H, P.K); intelArt(170, 0, 150, 200, 0); text('Sam says:', 15, 20, P.YE); para(samHint(), 15, 30, 140, P.W, 8); statusBox(174); }, me)) },
+    { label: 'Accuse Double Agent', off: !!(game.crime.double && game.crime.double.caught), go: () => go(accuseScene(me)) },
+    { label: 'Check with Sam', go: () => { const hint = samHint(); go(pageScene(() => { rect(0, 0, W, H, P.K); intelArt(170, 0, 150, 200, 0); text('Sam says:', 15, 20, P.YE); para(hint, 15, 30, 140, P.W, 8); statusBox(174); }, me)); } },
   ] });
+}
+function accuseScene(back) {
+  const city = cityById(game.city);
+  return menuScene({
+    menu: Menu([{ label: 'No, not yet.', go: back }, { label: 'Yes. Arrest the mole.', go: () => {
+      const d = game.crime.double; advance(120);
+      if (d && d.city === game.city) {
+        d.caught = true; game.crime.people.forEach(p => { if (p.shownCity) p.shownCity = null; });
+        go(report('Double Agent', ['Security takes the station\'s senior analyst into custody. Under questioning he admits he has been feeding false locations to Langley for the ' + game.crime.orgs[0].name + '.', 'Clues from ' + city.name + ' are now marked as disinformation, and our files show the true locations again.'], back));
+      } else { game.ciaBlocked[game.city] = true; go(report('Double Agent', ['The accusation is false. Internal Security clears everyone in the ' + city.name + ' station, and the staff are furious.', 'The CIA office in ' + city.name + ' will not work with you for the rest of this case.'], () => go(cityScene()))); }
+    } }], 23, 90, 200),
+    back,
+    draw() { rect(0, 0, W, H, P.K); intelArt(170, 0, 150, 200, 0); text('Accuse Double Agent', 15, 14, P.YE); para('Do you accuse someone in the ' + city.name + ' station of working for the other side? If you are wrong, this office will refuse to deal with you.', 15, 30, 150, P.W, 8); this.menu.draw(); statusBox(174); },
+  });
 }
 function samHint() {
   const cr = game.crime;
+  if (cr.double && !cr.double.caught && game.clues.some(c => c.lie) && rnd() < 0.6) return 'Some of our reports put the same suspect in two cities. Look at where the bad ones come from - if one CIA station keeps getting it wrong, we have a mole there. Accuse him from the Intelligence Section of that station.';
   const arrestable = cr.people.find(p => p.status === 'free' && p.known.role && p.known.hideout);
   if (arrestable) return 'We have the goods on ' + who(arrestable) + '. The ' + arrestable.org.name + ' building at ' + game.buildings[arrestable.building].address + ', ' + cityById(arrestable.city).name + ' is where to grab him - or catch him in his car.';
   if (game.messages.some(m => !m.decoded)) return 'There are coded messages waiting up in the Crypto Branch. Decoded messages give us the roles we need for arrests.';
@@ -410,7 +436,7 @@ function airportScene() {
 function hotelScene() {
   return boxLayout({ header: ['You are at your', 'hotel. Do you...'], art: (x, y, w, h, t) => hotelLobbyArt(t), back: () => go(cityScene()), items: [
     { label: 'Leave Hotel', go: () => go(cityScene()) },
-    { label: 'Visit the lounge', go: () => { advance(180); const pool = game.crime.people.filter(p => p.status === 'free' && p.city === game.city); const c = pool.length && rnd() < 0.6 ? clueAbout(pick(pool), 'Local Gossip') : null; game.heat = (game.heat || 0) + 1; go(c ? clueScreen(c, () => go(hotelScene())) : pageScene(() => { hotelLobbyArt(0); popup(['Nothing but tourists and piano music.', 'Somebody at the bar is watching you, though.']); }, () => go(hotelScene()))); } },
+    { label: 'Visit the lounge', go: () => { advance(180); const pool = game.crime.people.filter(p => p.status === 'free' && p.city === game.city); const c = pool.length && rnd() < 0.6 ? clueAbout(pick(pool), 'Local Gossip') : null; addHeat(game.city, 1); go(c ? clueScreen(c, () => go(hotelScene())) : pageScene(() => { hotelLobbyArt(0); popup(['Nothing but tourists and piano music.', 'Somebody at the bar is watching you, though.']); }, () => go(hotelScene()))); } },
     { label: 'Sleep through case', go: () => go(sleepScene()) },
     { label: 'Save Game', go: () => { writeSave(); toast('Saved as "' + game.agent.codename + '"'); } },
     { label: 'Load Game', off: !loadSave(), go: () => { restoreSave(loadSave()); go(cityScene()); } },
@@ -439,7 +465,7 @@ function hallOfFame(back) {
 function arrestResult(p, how) {
   const cr = game.crime;
   if (!p.known.role) { p.exists = true; learn(p, 'face'); learn(p, 'name'); return splitLayout({ header: [], text: p.name + ' was taken to local headquarters for questioning, but had to be released for lack of evidence. Without proof of a role in the crime, an arrest will not stick.', art: (x, y, w, h) => interrogationArt(x, y, w, h, p), back: () => go(cityScene()), items: [{ label: 'Continue', go: () => go(cityScene()) }] }); }
-  p.status = 'arrested'; FACET_ORDER.forEach(f => learn(p, f));
+  p.status = 'arrested'; p.jailCity = game.city; p.shownCity = null; addHeat(game.city, 2); FACET_ORDER.forEach(f => learn(p, f));
   if (p.role === 'Mastermind') p.org.mastermindFree = false;
   const told = [];
   const contacts = cr.steps.filter(s => s.to !== undefined && (s.from === p.id || s.to === p.id)).map(s => cr.people[s.from === p.id ? s.to : s.from]).filter(Boolean);
