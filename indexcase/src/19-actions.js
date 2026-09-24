@@ -22,10 +22,10 @@ var UIActions = UI.views.actions = {
     var html = '';
     if (ords.length) {
       html += '<div class="card"><div class="card-h"><div class="t"><div class="eyebrow">' + UIfmt.plural(ords.length, 'order') + ' in force</div><h3>Active orders</h3></div><div class="aside">' + UIfmt.money(UIsum(ords.map(function (o) { return o.costPerDay; }))) + '/day</div></div><div class="card-b"><div class="ords">' + ords.map(function (o) {
-        var live = day - o.since, lag = o.lag || 0, f = lag ? UIclamp(live / lag, 0, 1) : 1, tgt = o.target ? (UIA.place(o.target) || UIA.district(o.target) || { name: o.target }).name : '';
+        var live = day - o.since, lag = Math.max(0, o.effectFrom - o.since), f = lag ? UIclamp(live / lag, 0, 1) : 1, tgt = o.target ? (UIA.place(o.target) || UIA.district(o.target) || { name: o.target }).name : '';
         return '<div class="ord"><div class="ord-t"><b>' + UIesc(o.label) + '</b>' + (tgt ? '<span>' + UIesc(tgt) + '</span>' : '') + '</div>' +
-          '<div class="ord-m"><span class="bar"><i style="width:' + (f * 100).toFixed(0) + '%;background:' + (f >= 1 ? 'var(--teal)' : 'var(--ice)') + '"></i></span><em>' + (f >= 1 ? 'In effect' : 'Takes hold in ~' + Math.max(1, lag - live) + 'd') + '</em></div>' +
-          '<div class="ord-f"><span>Since ' + UIesc(UIA.dateShort(o.since)) + '</span>' + (o.compliance !== null ? '<span>Compliance <b>' + Math.round(o.compliance * 100) + '%</b></span>' : '') + (o.costPerDay ? '<span>' + UIfmt.money(o.costPerDay) + '/day</span>' : '') + '<button class="btn xs danger" data-revoke="' + UIesc(o.id) + '">Revoke</button></div></div>';
+          '<div class="ord-m"><span class="bar"><i style="width:' + (f * 100).toFixed(0) + '%;background:' + (f >= 1 ? 'var(--teal)' : 'var(--ice)') + '"></i></span><em>' + (f >= 1 ? 'In effect' : 'Takes hold in ~' + Math.max(1, o.effectFrom - day) + 'd') + '</em></div>' +
+          '<div class="ord-f"><span>Since ' + UIesc(UIA.dateShort(o.since)) + '</span>' + (o.compliance !== null ? '<span>Compliance <b>' + Math.round(o.compliance * 100) + '%</b></span>' : '') + (o.costPerDay ? '<span>' + UIfmt.money(o.costPerDay) + '/day</span>' : '') + (o.economyPerDay ? '<span class="eco">Economy ' + UIfmt.money(o.economyPerDay) + '/day</span>' : '') + '<button class="btn xs danger" data-revoke="' + UIesc(o.id) + '">Revoke</button></div></div>';
       }).join('') + '</div></div></div>';
     }
     UIAREAS.forEach(function (ar) {
@@ -63,7 +63,7 @@ var UIActions = UI.views.actions = {
       items.sort(function (x, y) { return (x.done ? 1 : 0) - (y.done ? 1 : 0); });
     } else if (t === 'place' || t === 'venue') {
       var cl = {}; UIA.clusters().forEach(function (c) { if (c.place) cl[c.place] = c.size; });
-      items = UIA.city().places.map(function (p) { return { id: p.id, label: p.name, small: UIplaceKind(p.kind)[0] + ' · ' + (UIA.district(p.district) || { name: '' }).name + (cl[p.id] ? ' · cluster of ' + cl[p.id] : ''), glyph: UIplaceKind(p.kind)[1], hot: cl[p.id] || 0, q: p.name + ' ' + p.kind }; }).sort(function (x, y) { return y.hot - x.hot || x.label.localeCompare(y.label); });
+      items = UIA.city().places.filter(function (p) { return !a.targetKinds || a.targetKinds.indexOf(p.kind) >= 0; }).map(function (p) { return { id: p.id, label: p.name, small: UIplaceKind(p.kind)[0] + ' · ' + (UIA.district(p.district) || { name: '' }).name + (cl[p.id] ? ' · cluster of ' + cl[p.id] : ''), glyph: UIplaceKind(p.kind)[1], hot: cl[p.id] || 0, q: p.name + ' ' + p.kind }; }).sort(function (x, y) { return y.hot - x.hot || x.label.localeCompare(y.label); });
     } else if (t === 'district') {
       var cnt = {}; UIA.cases().forEach(function (c) { cnt[c.district] = (cnt[c.district] || 0) + 1; });
       items = UIA.city().districts.map(function (d) { return { id: d.id, label: d.name, small: UIfmt.n(d.pop) + ' people · ' + (cnt[d.id] || 0) + ' cases', hot: cnt[d.id] || 0, q: d.name }; }).sort(function (x, y) { return y.hot - x.hot; });
@@ -74,7 +74,8 @@ var UIActions = UI.views.actions = {
       if (!f.length) return '<div class="empty">' + (items.length ? 'No match.' : 'Nothing to choose from yet.') + '</div>';
       return '<div class="list">' + f.map(function (it) {
         var ic = it.face ? '<span class="mini-face">' + UIPortrait.svg(it.face) + '</span>' : it.glyph ? '<b style="font:700 13px var(--f-mono)">' + UIesc(it.glyph) + '</b>' : UIICON.map;
-        return UIli({ attrs: 'data-pick="' + UIesc(it.id) + '"', ic: ic, icStyle: it.face ? 'background:none;padding:0;overflow:hidden' : it.glyph ? 'color:var(--teal2);background:rgba(63,208,170,.1)' : '', label: UIesc(it.label), small: UIesc(it.small), dis: false });
+        var why = UIA.canAct(a.id, it.id);
+        return UIli({ attrs: 'data-pick="' + UIesc(it.id) + '"', ic: ic, icStyle: it.face ? 'background:none;padding:0;overflow:hidden' : it.glyph ? 'color:var(--teal2);background:rgba(63,208,170,.1)' : '', label: UIesc(it.label), small: UIesc(it.small) + (why ? ' · <span style="color:var(--amber)">' + UIesc(why) + '</span>' : ''), dis: !!why });
       }).join('') + '</div>';
     }
     UIsheet.open({ eyebrow: UIesc(a.label), title: this.TGT[t] || 'Choose', tag: 'picker', html: '<div style="margin-bottom:6px">' + UIcosts(a, { lag: true }) + '</div>' + (items.length > 6 ? '<div class="cs-search" style="margin:10px 0">' + UIICON.search + '<input id="pk-q" type="search" placeholder="Search" autocomplete="off"></div>' : '') + '<div id="pk-list">' + rowsHTML('') + '</div>',
@@ -95,7 +96,7 @@ var UIActions = UI.views.actions = {
     var out = {};
     UI$$('[data-prm]', b).forEach(function (el) {
       var k = el.dataset.prm;
-      if (el.classList.contains('seg')) { var on = el.querySelector('.on'); out[k] = on ? on.dataset.v : null; }
+      if (el.classList.contains('seg')) { var on = el.querySelector('.on'); out[k] = on ? (/^-?\d+(\.\d+)?$/.test(on.dataset.v) ? +on.dataset.v : on.dataset.v) : null; }
       else if (el.classList.contains('ordl')) out[k] = UI$$('.ordl-i', el).map(function (x) { return x.dataset.v; });
       else if (el.type === 'checkbox') out[k] = el.checked;
       else out[k] = +el.value;
@@ -131,6 +132,7 @@ var UIActions = UI.views.actions = {
   targetActionsHTML: function (acts, target, title) {
     if (!acts.length) return '';
     return '<div class="eyebrow sh-sec">' + UIesc(title || 'Actions here') + '</div><div class="list">' + acts.map(function (a) {
+      var why = a.available ? UIA.canAct(a.id, target) : a.why; if (why) a = Object.assign({}, a, { available: false, why: why });
       var ic = /interview/.test(a.id) ? UIICON.mic : /trace|house/.test(a.id) ? UIICON.people : /seq/.test(a.id) ? UIICON.dna : /test/.test(a.id) ? UIICON.test : /visit|site/.test(a.id) ? UIICON.pin : /question/.test(a.id) ? UIICON.report : /close|shut/.test(a.id) ? UIICON.shield : UIICON.spark;
       return UIli({ attrs: 'data-ta="' + UIesc(a.id) + '"', ic: ic, label: UIesc(a.label), small: a.available ? UIesc(a.desc || '') : '<span style="color:var(--amber)">' + UIesc(a.why) + '</span>', right: UIcosts(a), dis: !a.available });
     }).join('') + '</div>';

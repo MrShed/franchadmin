@@ -62,6 +62,7 @@ var UICoach = (function () {
     var el = s.el ? s.el() : null, W = window.innerWidth, H = window.innerHeight;
     if (el) {
       var r = el.getBoundingClientRect(), p = 6;
+      if (r.width && (r.bottom > H - 40 || r.top < 60) && C._scrolled !== st.i) { C._scrolled = st.i; try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { el.scrollIntoView(); } setTimeout(C.place, 450); }
       if (r.width === 0 && r.height === 0) el = null;
       else {
         spot.style.cssText = 'left:' + (r.left - p) + 'px;top:' + (r.top - p) + 'px;width:' + (r.width + p * 2) + 'px;height:' + (r.height + p * 2) + 'px;opacity:1';

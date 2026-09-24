@@ -177,3 +177,87 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
 
   D.TEXT = {};
 })();
+
+/* ---------------------------------------------------------------------------------------
+ * Text templates. {var} placeholders. IX.pickText(g, key, salt, vars) picks one
+ * deterministically (by salt) and fills it. Tone: procedural, humane, British, dry.
+ * --------------------------------------------------------------------------------------- */
+(function () {
+  'use strict';
+  var T = IX.DATA.TEXT;
+  T.refuse = [
+    'I\'ve told the hospital everything already. I\'m not going through it again with a stranger on the phone.',
+    'Who did you say you were? No. My son says not to give details to anyone who rings.',
+    'I don\'t want to get anyone into trouble. I\'ll not be naming names.',
+    'Not now, love. I can barely lift my head.',
+    'I\'m not being funny, but last time someone from the council rang it was about the bins and I ended up with a fine.'
+  ];
+  T.onset = [
+    'It started on {date}. {sym}. I thought it was just the usual winter thing.',
+    'I first felt rough on {date}: {sym}. By the next day I couldn\'t get out of bed.',
+    '{date}, I think. Maybe the day before. {sym}. My wife says I was grumpy before that, but that\'s not a symptom.',
+    'It came on {date}. {sym}. I kept going to work for a day because I thought it was a cold.',
+    'Round about {date}. {sym}. I\'d have said flu, if you\'d asked me then.'
+  ];
+  T.event = [
+    'We were at a {what} on {date}, at {where}. Lovely do. Everybody hugging everybody.',
+    'There was a {what} on {date} at {where}. Packed. I was only there a couple of hours.',
+    'I went to a {what}, {date}, {where}. You don\'t say no to a {what}, do you.'
+  ];
+  T.travel = [
+    'I flew back in on {date}, after two weeks away. I felt fine on the plane. Honestly.',
+    'I got back from abroad on {date}. Work trip. Conference, hotel, the usual.',
+    'Back on {date} from visiting family overseas. Half the village had a cold, but they always do.'
+  ];
+  T.animal = [
+    'I\'m in and out of {place} most days. Animals don\'t bother me, it\'s the paperwork I can\'t stand.',
+    'I work at {place}. We had a few birds go off their feed a while back, but that happens.',
+    'I go to {place} every week. Have done for thirty years.'
+  ];
+  T.illcontact = [
+    '{who} was poorly before me, from about {date}. That\'s my {rel}.',
+    'Now you mention it, {who} had it first. From {date}, I think.',
+    '{who} was off sick from {date}. We\'re in and out of each other\'s pockets.'
+  ];
+  T.carer = [
+    'We\'ve had people poorly on the unit for a while. We thought it was the usual winter thing. We gloved and aproned, but you can\'t do personal care at arm\'s length.',
+    'I did three double shifts that week because we were short. Everyone\'s short.',
+    'Half the residents had a cough. We just got on with it.'
+  ];
+  T.aside = [
+    'Will this be on my record? I\'ve got a job interview next month.',
+    'Is it true it\'s in the water? My neighbour said.',
+    'I\'m sorry, I\'m not much help, am I. I can\'t remember what I had for lunch yesterday, never mind a fortnight ago.',
+    'You sound tired. Are you all right?',
+    'My daughter says I should have got the flu jab. I did get the flu jab.'
+  ];
+  T.drug = ['favipiravir', 'nitazoxanide', 'baricitinib', 'high-dose dexamethasone', 'camostat', 'interferon beta', 'molnupiravir'];
+  T.site_choir = ['{place}: forty-odd singers in a church hall, rows of chairs a foot apart, windows painted shut decades ago. Rehearsal runs two and a half hours with a tea break round one urn.'];
+  T.site_pub = ['{place}: low ceilings, one front room and a back room with a dartboard. On a Friday it is standing room only. The landlord props the door open "when it gets fuggy".'];
+  T.site_restaurant = ['{place}: thirty covers, an open kitchen, one toilet shared by staff and customers.'];
+  T.site_school = ['{place}: classrooms of 28-30 pupils, windows that open a crack, a shared dining hall and one very busy set of toilets.'];
+  T.site_care = ['{place}: residents share a lounge and dining room; carers move between rooms all shift. Agency staff cover gaps and also work at other homes.'];
+  T.site_hospital = ['{place}: bays of six beds on the medical wards, side rooms full, staff moving between wards to cover shortages. Hand gel at every door; used at most of them.'];
+  T.site_faith = ['{place}: the main hall holds a few hundred; worshippers stand or sit close. Refreshments afterwards in a side room.'];
+  T.site_gym = ['{place}: spin studio in a basement with one extractor fan; the weights floor is better ventilated.'];
+  T.site_meat = ['{place}: the cutting hall is kept at four degrees; workers stand shoulder to shoulder on the line and shout over the machinery. Many share cars and houses.'];
+  T.site_work = ['{place}: open-plan floors, hot-desking, a kitchen everyone uses at eleven and at one.'];
+  T.site_market = ['{place}: stalls close together under one roof; the doors at each end stay open.'];
+  T.site_farm = ['{place}: sheds, a yard, a farmhouse kitchen where everyone has their tea.'];
+  T.site_hall = ['{place}: function room for 120, a bar, a buffet table, a dance floor, a car park that doubles as the smoking area.'];
+  T.site_stadium = ['{place}: open terraces; the concourse and the bars under the stand are where people crowd at half-time.'];
+  T.site_shop = ['{place}: busy aisles, short contacts.'];
+  T.site_lab = ['{place}: containment suites with logged entry; staff describe a recent spill that was "dealt with".'];
+  T.site_uni = ['{place}: lecture theatres, labs, halls of residence and a students\' union that never quite closes.'];
+  T.site_gp = ['{place}: a small waiting room with twenty chairs and a queue out of the door at 8am.'];
+  T.site_generic = ['{place}: nothing remarkable on inspection.'];
+  T.press_names = ['{city} Echo', '{city} Evening Post', '{city} Gazette'];
+
+  IX.pickText = function (g, key, salt, vars) {
+    var L = T[key];
+    if (!L || !L.length) return '';
+    var s = L[IX.h3(g.keys.text, IX.hash(key), salt | 0, g.S ? g.S.day : 0) % L.length];
+    vars = vars || {};
+    return s.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] !== undefined ? vars[k] : m; });
+  };
+})();

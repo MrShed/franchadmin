@@ -7,17 +7,20 @@ var UIDebrief = {
     var root = UI$('#debrief'), D = UIA.debriefN();
     UI$('#game').hidden = true; UI$('#title').hidden = true; root.hidden = false;
     var city = UIA.city(), day = UIA.day();
-    var OUT = { contained: ['Contained', 'The chains of transmission broke. The city never knew how close it came.'], extinct: ['Contained', 'Three weeks without a new case. It is over.'], vaccine: ['The vaccine arrived', 'You held on until the city could be protected.'], dayLimit: ['Six months on', 'The outbreak outlasted the emergency. Here is what it cost.'], collapse: ['Overwhelmed', 'The hospital could not hold. What follows is what happened.'], resigned: ['Stood down', 'You stepped away before the end. Here is what happened.'] };
-    var o = OUT[D.outcome] || [UIcap(D.outcome || 'The end'), ''];
+    var OUT = { contained: ['Contained', 'The chains of transmission broke. The city never knew how close it came.'], vaccine: ['The vaccine arrived', 'You held on until the city could be protected.'], timeout: ['Six months on', 'The outbreak outlasted the emergency. Here is what it cost.'], collapse: ['Overwhelmed', 'The hospital could not hold. What follows is what happened.'], resigned: ['Stood down', 'You stepped away before the end. Here is what happened.'] };
+    var oc = D.outcome || { kind: 'resigned' }, o = OUT[oc.kind] || [UIcap(oc.kind || 'The end'), ''];
+    if (oc.title) o = [oc.title, oc.text || o[1]];
+    var sc = Math.round(D.scale || 1);
     var html = '<div class="db"><canvas class="db-bg" id="db-bg"></canvas><div class="db-in">' +
       '<header class="db-hero"><div class="eyebrow em">' + UIesc(city.name) + ' · ' + (day + 1) + ' days · ' + UIesc((UIA.grades().filter(function (g) { return g.id === UIA.grade; })[0] || { label: '' }).label) + '</div><h1>' + UIesc(o[0]) + '</h1><p>' + UIesc(o[1]) + '</p>' +
-      '<div class="db-big"><div><b style="color:var(--bone)">' + UIfmt.n(D.totals.deaths) + '</b><span>died</span></div><div><b style="color:var(--ghost)">' + UIfmt.n(D.totals.ghostDeaths) + '</b><span>in the ghost city</span></div><div><b style="color:var(--ember)">' + UIfmt.n(D.totals.infections) + '</b><span>infected</span></div>' + (D.score && D.score.overall !== undefined ? '<div><b>' + UIesc(D.score.grade || D.score.overall) + '</b><span>assessment</span></div>' : '') + '</div>' +
-      (D.totals.ghostDeaths > D.totals.deaths ? '<p class="db-saved">' + UIfmt.n(D.totals.ghostDeaths - D.totals.deaths) + ' fewer deaths than if nobody had acted.</p>' : '') + '</header>';
+      '<div class="db-big"><div><b style="color:var(--bone)">' + UIfmt.n(D.totals.deaths) + '</b><span>died</span></div><div><b style="color:var(--ghost)">' + UIfmt.n(D.totals.ghostDeaths) + '</b><span>would have died in the ghost city</span></div><div><b style="color:var(--ember)">' + UIfmt.n(D.totals.infections) + '</b><span>infected · ≈' + UIfmt.n(D.totals.infections * sc) + ' city-wide</span></div>' + (D.score && (D.score.grade || D.score.total !== null) ? '<div><b>' + UIesc(D.score.grade || D.score.total) + '</b><span>assessment' + (D.score.total !== null && D.score.grade ? ' · ' + UIfmt.n(D.score.total) + ' pts' : '') + '</span></div>' : '') + '</div>' +
+      (D.totals.ghostDeaths > D.totals.deaths ? '<p class="db-saved">' + UIfmt.n(D.totals.ghostDeaths - D.totals.deaths) + ' fewer deaths than if nobody had acted.</p>' : '') +
+      (D.score && D.score.lines && D.score.lines.length ? '<div class="db-score">' + D.score.lines.map(function (l) { return '<div><span>' + UIesc(l.label) + '</span><b>' + UIesc(l.pts !== undefined ? l.pts : l.value) + '</b></div>'; }).join('') + '</div>' : '') + '</header>';
     // pathogen card
-    html += '<section class="db-sec"><div class="eyebrow">The truth</div><h2>' + UIesc(D.agentName) + '</h2><div class="pc" id="pc">' + D.traits.map(function (t, i) {
+    html += '<section class="db-sec"><div class="eyebrow">The truth</div><h2>' + UIesc(D.agentName) + '</h2><div class="pc" id="pc"><div class="pc-head"><span>The truth</span><span>You published</span><span></span></div>' + D.traits.map(function (t, i) {
       var v = t.verdict;
       return '<div class="pc-r" style="--i:' + i + '"><span class="pc-l">' + UIesc(t.label) + '</span><span class="pc-t">' + UIesc(t.truth) + '</span><span class="pc-y ' + v + '">' + (t.yours !== null ? UIesc(t.yours) + (t.day !== null ? '<small>' + UIesc(UIA.dateShort(t.day)) + '</small>' : '') : '<em>not published</em>') + '</span><span class="pc-m ' + v + '">' + (v === 'good' ? UIICON.check : v === 'near' ? '~' : v === 'off' ? UIICON.close : '—') + '</span></div>';
-    }).join('') + '</div>' + (D.symptoms.length ? '<div class="pc-sym"><span class="eyebrow">Symptoms</span>' + D.symptoms.map(function (s) { return '<span>' + UIesc(s[0]) + (s[1] !== undefined ? ' <b>' + UIfmt.pct(s[1]) + '</b>' : '') + '</span>'; }).join('') + '</div>' : '') + '</section>';
+    }).join('') + '</div>' + (D.symptoms.length ? '<div class="pc-sym"><span class="eyebrow">Symptoms' + (D.tell ? ' · the tell: ' + UIesc(String(D.tell).replace(/_/g, ' ')) : '') + '</span>' + D.symptoms.map(function (s) { return '<span>' + UIesc(String(s[0]).replace(/_/g, ' ')) + (s[1] !== undefined && s[1] !== null ? ' <b>' + UIfmt.pct(s[1] > 1 ? s[1] / 100 : s[1]) + '</b>' : '') + '</span>'; }).join('') + '</div>' : '') + '</section>';
     // curves
     html += '<section class="db-sec"><div class="eyebrow">Lives</div><h2>You and the ghost city</h2><p class="dim">The ghost city is the same city, the same disease, the same first infections — and nobody acting at all.</p>' +
       '<div class="card chart-card"><div class="card-h"><div class="t"><div class="eyebrow">New infections per day</div><h3>Infections</h3></div></div><div class="card-b"><div class="ch-host" id="db-c1"></div><div class="legend"><span><i style="background:#ff7a45"></i>Your city</span><span><i style="background:#7d93aa"></i>Ghost city</span></div></div></div>' +
@@ -33,7 +36,7 @@ var UIDebrief = {
     // the dead
     html += '<section class="db-sec db-mem"><div class="mem-h"><span></span><div class="eyebrow">In memory</div><span></span></div>' + (D.deaths.length ? '<p class="mem-d">' + UIfmt.plural(D.deaths.length, 'person', 'people') + ' in ' + UIesc(city.name) + ' died of the disease.</p><div class="mem">' + D.deaths.map(function (p) {
       var dd = UIA.district(p.district);
-      return '<div class="mem-p"><b>' + UIesc(p.name) + '</b><span>' + (p.age !== null && p.age !== undefined ? UIesc(p.age) : '') + (p.job ? ', ' + UIesc(p.job) : '') + (dd ? ' · ' + UIesc(dd.name) : '') + (p.day !== null && p.day !== undefined ? ' · ' + UIesc(UIA.dateShort(p.day)) : '') + '</span></div>';
+      return '<div class="mem-p"><b>' + UIesc(p.name) + '</b><span>' + (p.age !== null && p.age !== undefined ? UIesc(p.age) : '') + (p.note ? ', ' + UIesc(p.note) : '') + (dd ? ' · ' + UIesc(dd.name) : '') + (p.day !== null && p.day !== undefined ? ' · ' + UIesc(UIA.dateShort(p.day)) : '') + '</span></div>';
     }).join('') + '</div>' : '<p class="mem-d">No one in ' + UIesc(city.name) + ' died of the disease.</p>') + '</section>';
     html += '<footer class="db-foot"><button class="btn pri" id="db-new">A new outbreak</button><button class="btn" id="db-again">Replay this city</button><p class="note">Seed ' + UIesc(UIA.seed) + '</p></footer></div></div>';
     root.innerHTML = html;
@@ -73,7 +76,7 @@ var UIDebrief = {
       UIMapR.dots(ctx, T, pts, { scale: .8 });
     });
     UIgesture(host, view, { min: 0.8, max: 8, onChange: function () { cv.frame(); } });
-    function set(d) { cur = d; sl.value = d; UI$('#rp-day').innerHTML = '<b>Day ' + (d + 1) + '</b><span>' + UIesc(UIA.dateLabel(d)) + '</span>'; var n = fr.filter(function (f) { return f.day <= d; }).length; UI$('#rp-n').textContent = UIfmt.n(n); cv.frame(); }
+    function set(d) { cur = d; sl.value = d; UI$('#rp-day').innerHTML = '<b>' + (d >= 0 ? 'Day ' + (d + 1) : (-d) + (d === -1 ? ' day' : ' days') + ' before') + '</b><span>' + UIesc(UIA.dateLabel(d)) + (d < 0 ? ' · before the alert' : '') + '</span>'; var n = fr.filter(function (f) { return f.day <= d; }).length; UI$('#rp-n').textContent = UIfmt.n(n); cv.frame(); }
     sl.addEventListener('input', function () { stop(); set(+sl.value); });
     var timer = null, btn = UI$('#rp-play');
     function stop() { clearInterval(timer); timer = null; btn.innerHTML = UIICON.play; }

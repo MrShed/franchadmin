@@ -18,12 +18,12 @@ var UIChart = (function () {
   /** time axis labels: dates every ~week */
   function xTicks(n, start, x, bw, H, every) {
     var out = '', last = -99;
-    every = every || (n > 90 ? 28 : n > 45 ? 14 : 7);
+    every = every || (n > 90 ? 28 : n > 45 ? 14 : n > 20 ? 7 : n > 10 ? 3 : 2);
     for (var i = 0; i < n; i++) {
       var d = start + i;
       if (((d % every) + every) % every !== 0) continue;
       var cx = x(i) + bw / 2;
-      if (cx - last < 44) continue; last = cx;
+      if (cx - last < 46) continue; last = cx;
       out += '<line x1="' + cx.toFixed(1) + '" x2="' + cx.toFixed(1) + '" y1="' + H + '" y2="' + (H + 4) + '" class="ax"/><text x="' + cx.toFixed(1) + '" y="' + (H + 16) + '" text-anchor="middle" class="tk">' + UIesc(UIA.dateShort(d)) + '</text>';
     }
     return out;

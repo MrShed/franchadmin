@@ -49,11 +49,11 @@ var UIMapR = (function () {
     for (var k = 0; k < 6; k++) { var a = k / 6 * Math.PI * 2 + r(); art.push([ctr[0], ctr[1], ctr[0] + Math.cos(a) * .3, ctr[1] + Math.sin(a) * .3, ctr[0] + Math.cos(a + (r() - .5) * .3) * .75, ctr[1] + Math.sin(a + (r() - .5) * .3) * .75]); }
     // river: a meander through the city
     var river = null;
-    if (!city.rivers) {
+    if (!city.river) {
       var ra = r() * Math.PI, pts = [];
       for (var t = -0.75; t <= 0.75; t += 0.05) { var off = Math.sin(t * 7 + r() * .4) * .035 + Math.sin(t * 3.1) * .05; pts.push([ctr[0] + Math.cos(ra) * t - Math.sin(ra) * off, ctr[1] + Math.sin(ra) * t + Math.cos(ra) * off]); }
       river = pts;
-    } else river = city.rivers[0] || city.rivers;
+    } else river = city.river;
     var contours = []; for (var c = 0; c < 9; c++) { var rad = 0.5 + c * 0.07, pts2 = []; for (var q = 0; q <= 64; q++) { var aa = q / 64 * Math.PI * 2; var rr = rad + Math.sin(aa * 3 + c) * 0.02 + Math.sin(aa * 7 + c * 2) * 0.01; pts2.push([ctr[0] + Math.cos(aa) * rr, ctr[1] + Math.sin(aa) * rr * .95]); } contours.push(pts2); }
     city._decor = { streets: streets, art: art, river: river, contours: contours, ctr: ctr };
     return city._decor;
@@ -97,6 +97,8 @@ var UIMapR = (function () {
     // arterials outside (under districts)
     ctx.strokeStyle = 'rgba(143,203,255,.07)'; ctx.lineWidth = 1.2;
     dec.art.forEach(function (a) { var p0 = tx(T, [a[0], a[1]]), p1 = tx(T, [a[2], a[3]]), p2 = tx(T, [a[4], a[5]]); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(p1[0], p1[1], p2[0], p2[1]); ctx.stroke(); });
+    // city edge
+    if (city.boundary) { ctx.save(); poly(ctx, T, city.boundary); ctx.fillStyle = 'rgba(14,24,34,.6)'; ctx.fill(); ctx.shadowColor = 'rgba(120,180,240,.35)'; ctx.shadowBlur = 24; ctx.strokeStyle = 'rgba(143,203,255,.12)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
     // district land
     D.forEach(function (d) {
       if (!d.poly || d.poly.length < 3) return;
@@ -247,32 +249,40 @@ var UIMap = UI.views.map = {
     var T = UIMapR.base(ctx, w, h, { city: city, view: st.view, sel: this.sel, ww: st.layers.ww ? this.wv : null });
     this.T = T;
     var t = (performance.now() / 1000);
-    // venues
+    // venues: pinpoints at city scale, labelled diamonds when zoomed in; cluster venues always stand out
     if (st.layers.venues) {
       ctx.save();
-      var vs = UIclamp(T.s / 70, 7, 13);
+      var near = T.s > 900, vs = UIclamp(T.s / 85, 6, 12), hot = {};
+      (this.clusters || []).forEach(function (c) { if (c.place) hot[c.place] = 1; });
       city.places.forEach(function (p) {
         if (!p.pos) return; var q = UIMapR.toScreen(T, p.pos);
-        ctx.fillStyle = 'rgba(8,20,22,.85)'; ctx.strokeStyle = 'rgba(63,208,170,.75)'; ctx.lineWidth = 1.2;
+        if (q[0] < -20 || q[1] < -20 || q[0] > w + 20 || q[1] > h + 20) return;
+        if (!near && !hot[p.id]) { ctx.fillStyle = 'rgba(92,224,190,.55)'; ctx.beginPath(); ctx.arc(q[0], q[1], 1.6, 0, Math.PI * 2); ctx.fill(); return; }
+        ctx.fillStyle = 'rgba(6,18,20,.9)'; ctx.strokeStyle = hot[p.id] ? 'rgba(140,232,207,1)' : 'rgba(63,208,170,.7)'; ctx.lineWidth = hot[p.id] ? 1.6 : 1.1;
         ctx.beginPath(); ctx.moveTo(q[0], q[1] - vs); ctx.lineTo(q[0] + vs, q[1]); ctx.lineTo(q[0], q[1] + vs); ctx.lineTo(q[0] - vs, q[1]); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#8ce8cf'; ctx.font = '700 ' + (vs * .9).toFixed(1) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#8ce8cf'; ctx.font = '700 ' + (vs * .85).toFixed(1) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(UIplaceKind(p.kind)[1].charAt(0), q[0], q[1] + .5);
-        if (T.s > 1100) { ctx.font = '600 10px system-ui,sans-serif'; ctx.fillStyle = 'rgba(140,232,207,.75)'; ctx.textAlign = 'left'; ctx.fillText(p.name, q[0] + vs + 4, q[1]); }
+        if (T.s > 1500) { ctx.font = '600 10.5px system-ui,sans-serif'; ctx.fillStyle = 'rgba(140,232,207,.8)'; ctx.textAlign = 'left'; ctx.fillText(p.name, q[0] + vs + 4, q[1]); }
       });
       ctx.restore();
     }
     UIMapR.labels(ctx, T, city, { sel: this.sel, counts: this.counts });
-    // clusters
+    // clusters: pulsing rings, labels kept on screen and apart
     if (st.layers.clusters && this.clusters) {
-      this.clusters.forEach(function (c, i) {
+      var boxes = [];
+      this.clusters.slice().sort(function (a, b) { return b.size - a.size; }).forEach(function (c, i) {
         if (!c.pos) return; var q = UIMapR.toScreen(T, c.pos), rad = UIclamp(T.s / 60, 10, 30) * (0.8 + Math.sqrt(c.size) * .25), ph = (t * .6 + i * .37) % 1;
         ctx.save();
         ctx.strokeStyle = 'rgba(255,224,194,' + (0.5 * (1 - ph)).toFixed(3) + ')'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(q[0], q[1], rad * (1 + ph * .7), 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([4, 3]); ctx.strokeStyle = 'rgba(255,224,194,.85)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q[0], q[1], rad, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-        var lbl = c.name + ' · ' + c.size; ctx.font = '600 11px system-ui,sans-serif'; var tw = ctx.measureText(lbl).width;
-        ctx.fillStyle = 'rgba(20,12,8,.85)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(q[0] - tw / 2 - 7, q[1] - rad - 24, tw + 14, 19, 9.5); else ctx.rect(q[0] - tw / 2 - 7, q[1] - rad - 24, tw + 14, 19); ctx.fill();
+        var lbl = (c.name.length > 26 ? c.name.slice(0, 25) + '…' : c.name) + ' · ' + c.size; ctx.font = '600 11px system-ui,sans-serif'; var tw = ctx.measureText(lbl).width, bw = tw + 14, bh = 19;
+        var bx = UIclamp(q[0] - bw / 2, 6, w - bw - 6), by = q[1] - rad - 24;
+        for (var k = 0; k < 8 && boxes.some(function (b) { return bx < b[0] + b[2] + 4 && bx + bw + 4 > b[0] && by < b[1] + b[3] + 3 && by + bh + 3 > b[1]; }); k++) by -= bh + 4;
+        boxes.push([bx, by, bw, bh]);
+        if (by + bh < q[1] - rad - 6) { ctx.strokeStyle = 'rgba(255,164,119,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(q[0], q[1] - rad); ctx.lineTo(UIclamp(q[0], bx + 6, bx + bw - 6), by + bh); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(20,12,8,.88)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 9.5); else ctx.rect(bx, by, bw, bh); ctx.fill();
         ctx.strokeStyle = 'rgba(255,164,119,.5)'; ctx.lineWidth = 1; ctx.stroke();
-        ctx.fillStyle = '#ffe0c2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(lbl, q[0], q[1] - rad - 14.5);
+        ctx.fillStyle = '#ffe0c2'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(lbl, bx + 7, by + bh / 2 + .5);
         ctx.restore();
       });
     }

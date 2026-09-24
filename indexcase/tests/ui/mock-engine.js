@@ -23,11 +23,11 @@ var IX = typeof IX !== 'undefined' ? IX : {};
       places: C.places.map(function (p) { return { id: p.id, kind: p.kind, name: p.name, district: p.district, pos: p.pos, size: p.size, indoor: p.indoor, blurb: p.blurb }; }), hospitalId: C.hospitalId, river: C.river, boundary: C.boundary };
     var P = this.path = IX.makePathogen(this.seed, {});
     this.people = [];
-    for (var i = 0; i < C.N; i++) this.people.push({ pid: 'a' + i, i: i, name: C.first[i] + ' ' + C.last[i], age: C.age[i], sex: C.sex[i] ? 'F' : 'M', district: 'd' + C.dist[i], hh: C.hh[i], pos: C.hPos[C.hh[i]], haunts: [] });
+    for (var i = 0; i < C.N; i++) this.people.push({ pid: 'a' + i, i: i, name: C.first[i] + ' ' + C.last[i], age: C.age[i], sex: C.sex[i] ? 'M' : 'F', district: 'd' + C.dist[i], hh: C.hh[i], pos: C.hPos[C.hh[i]], haunts: [] });
     var self = this;
     this.people.forEach(function (p) { var w = C.work[p.i]; if (w >= 0 && C.places[w]) p.haunts.push(C.places[w].id); if (r() < .3) p.haunts.push(C.places[Math.floor(r() * C.places.length)].id); });
     this.hhOf = {}; this.people.forEach(function (p) { (self.hhOf[p.hh] = self.hhOf[p.hh] || []).push(p.pid); });
-    this.day = 0; this.act = 1; this.actLabel = 'Detect'; this.over = false; this.outcome = null; this.agentName = null; this.credibility = 70;
+    this.day = 0; this.actNo = 1; this.actLabel = 'Detect'; this.over = false; this.outcome = null; this.agentName = null; this.credibility = 70;
     this.inf = {}; this.events = []; this.msgs = []; this.known = {}; this.tests = []; this.seqs = []; this._ord = []; this.pub = {}; this.draft = {}; this.hist = []; this.nextId = 1; this.mUsed = {};
     this.res = { staffMax: { tracers: 30, field: 15, analysts: 15 }, testsCap: 40, seqCap: 4, funding: 500, spent: 0, economy: 0, trust: 62, byDistrict: {} };
     this.city.districts.forEach(function (d) { self.res.byDistrict[d.id] = 45 + Math.round(r() * 35); });
@@ -36,7 +36,7 @@ var IX = typeof IX !== 'undefined' ? IX : {};
     var idx = this.people.filter(function (p) { return p.age > 30 && p.age < 60; })[7]; idx.haunts.push(src.id);
     this.infect(idx, null, -18, src.id);
     for (var d = -18; d < 0; d++) this.spread(d);
-    var early = this.events.filter(function (e) { return e.onset !== null && e.onset < -1; }).slice(0, 4);
+    var early = this.events.filter(function (e) { return e.onset !== null && e.onset < -1; }).slice(0, 4); if (early.length < 3) early = this.events.slice(0, 4); early.forEach(function (e) { if (e.onset === null || e.onset > -1) e.onset = -2 - Math.floor(r() * 4); });
     early.forEach(function (e) { self.know(e.pid, 0, 'alert'); });
     this.msg('alert', 'Unexplained pneumonia on Ward 4', [{ k: 'p', x: ['Dr Rachel Amos, consultant physician at ', { t: 'place', id: C.hospitalId, d: "St Anne's Hospital" }, ': ' + early.length + ' adults admitted in five days with severe atypical pneumonia. Routine respiratory panels are negative so far.'] }, { k: 'table', head: ['Patient', 'Age', 'Onset'], rows: early.map(function (e) { var p = self.P(e.pid); return [[self.ref(e.pid)], [String(p.age)], [self.dateLabel(e.onset)]]; }) }, { k: 'n', x: ['Would public health like to take a look?'] }], "St Anne's Hospital", true);
     this.msg('mentor', 'A note from Dr Okonjo', [{ k: 'p', x: ['Morning. Four odd pneumonias is either nothing or everything. Interview them, test them for the usual suspects, and look at where they have been.'] }], 'Dr Ife Okonjo');
@@ -172,7 +172,7 @@ var IX = typeof IX !== 'undefined' ? IX : {};
       if (costs.hours) Object.keys(costs.hours).forEach(function (k) { if (self.left[k] < costs.hours[k]) { ok = false; why = 'Not enough ' + k + ' hours left today'; } });
       if (costs.tests && self.tLeft < costs.tests) { ok = false; why = 'No tests left today'; }
       if (costs.seq && self.sLeft < costs.seq) { ok = false; why = 'No sequencing slots left today'; }
-      if (c[0] === 'declare_novel' && self.act > 1) { ok = false; why = 'The agent is already confirmed'; }
+      if (c[0] === 'declare_novel' && (self.actNo > 1 || self.pendingDeclare)) { ok = false; why = self.actNo > 1 ? 'The agent is already confirmed' : 'Samples are at the reference lab'; }
       if (c[0] === 'vaccinate') { ok = false; why = 'No vaccine yet'; }
       if (c[8] && self._ord.some(function (o) { return o.type === c[0] && c[4] === 'none'; })) { ok = false; why = 'Already in force'; }
       return { id: c[0], label: c[1], area: c[2], order: !!c[8], costs: costs, target: c[4], params: c[7] || undefined, lag: c[6], available: ok, why: why, desc: c[5], economy: c[8] ? (costs.money || 0) / 100 : undefined, targetKinds: c[0] === 'close_place' ? ['school', 'pub', 'gym', 'choir', 'market', 'office', 'factory', 'restaurant'] : undefined };
@@ -190,10 +190,10 @@ var IX = typeof IX !== 'undefined' ? IX : {};
     var k = this.known[target], msgs = [], self = this, P = target && String(target).charAt(0) === 'a' ? this.P(target) : null;
     if (id === 'interview' && k) { k.interviewed = true; var e = this.inf[target]; msgs.push(this.msg('interview', 'Interview: ' + P.name, [{ k: 'q', who: this.ref(target), x: ['I started feeling rough ' + (e && e.onset !== null ? 'on ' + this.dateLabel(e.onset) : 'a few days ago') + '. Temperature, a cough that would not stop, and I couldn\'t taste my tea.'] }, { k: 'p', x: ['Places in the 14 days before onset: '].concat(P.haunts.map(function (h, i) { return i ? [', ', self.pref(h)] : [self.pref(h)]; }).reduce(function (a, b) { return a.concat(b); }, [])).concat(['.']) }, { k: 'n', x: ['Recall is patchy for the first week.'] }], 'Contact tracing team')); }
     else if (id === 'trace' && k) { k.traced = true; msgs.push(this.msg('result', 'Contacts traced: ' + P.name, [{ k: 'p', x: [String(this.hhOf[P.hh].length - 1) + ' household contacts listed and under follow-up.'] }], 'Contact tracing team')); }
-    else if (id === 'test') { this.know(target, this.day, 'testing'); var due = this.day + 1 + Math.floor(this.r() * 2); this.tests.push({ pid: target, day: this.day, due: due }); this.known[target].tests.push({ day: this.day, kind: this.act > 1 ? 'pcr' : 'panel', result: 'pending' }); }
+    else if (id === 'test') { this.know(target, this.day, 'testing'); var due = this.day + 1 + Math.floor(this.r() * 2); this.tests.push({ pid: target, day: this.day, due: due }); this.known[target].tests.push({ day: this.day, kind: this.actNo > 1 ? 'pcr' : 'panel', result: 'pending' }); }
     else if (id === 'sequence') { this.seqs.push({ pid: target, day: this.day, due: this.day + 3 }); if (k) k.seq = 'S' + target; }
-    else if (id === 'household' && k) { k.household = true; this.hhOf[P.hh].forEach(function (q) { if (q === target) return; self.know(q, self.day, 'household'); self.tests.push({ pid: q, day: self.day, due: self.day + 1 }); self.known[q].tests.push({ day: self.day, kind: self.act > 1 ? 'pcr' : 'panel', result: 'pending' }); }); }
-    else if (id === 'declare_novel') { this.pendingDeclare = this.day + 2; }
+    else if (id === 'household' && k) { k.household = true; this.hhOf[P.hh].forEach(function (q) { if (q === target) return; self.know(q, self.day, 'household'); self.tests.push({ pid: q, day: self.day, due: self.day + 1 }); self.known[q].tests.push({ day: self.day, kind: self.actNo > 1 ? 'pcr' : 'panel', result: 'pending' }); }); }
+    else if (id === 'declare_novel') { if (!this.pendingDeclare) this.pendingDeclare = this.day + 2; }
     else if (id === 'site_visit') msgs.push(this.msg('result', 'Site visit: ' + this.pref(target).d, [{ k: 'p', x: ['Our field team visited ', this.pref(target), '. CO2 peaked at 1,900 ppm during Thursday evening sessions: poorly ventilated.'] }, { k: 'table', head: ['Day', 'Attendance'], rows: [[['Mon'], ['42']], [['Thu'], ['118']], [['Sat'], ['240']]] }], 'Field team'));
     else if (id === 'briefing') this.res.trust += 2;
     return { ok: true, msgs: msgs };
@@ -231,7 +231,7 @@ var IX = typeof IX !== 'undefined' ? IX : {};
     this.log.push(['publish', v]);
     var self = this; Object.keys(v).forEach(function (k) { var p = self.pub[k]; self.pub[k] = { value: v[k], day: self.day, revisions: p ? p.revisions + 1 : 0 }; self.hist.push({ day: self.day, trait: k, value: v[k] }); delete self.draft[k]; });
     var m = this.msg('press', 'Health chief sets out what we know', [{ k: 'p', x: ['The public health team has published its first estimates about the illness. "We will update these as we learn more," a spokesperson said.'] }], this.city.name + ' Courier');
-    if (this.act === 2 && TRAITS.filter(function (t) { return t.key; }).every(function (t) { return self.pub[t.id]; })) { this.act = 3; this.actLabel = 'Contain'; }
+    if (this.actNo === 2 && TRAITS.filter(function (t) { return t.key; }).every(function (t) { return self.pub[t.id]; })) { this.actNo = 3; this.actLabel = 'Contain'; }
     return { ok: true, msgs: [m], trust: this.res.trust };
   };
   G.endDay = function () {
@@ -239,17 +239,17 @@ var IX = typeof IX !== 'undefined' ? IX : {};
     var self = this, before = this.msgs.length, events = [];
     this.spread(this.day);
     this.day++;
-    this.events.forEach(function (e) { if (self.known[e.pid]) return; if (e.onset !== null && self.day - e.onset === 3 && R(hs(e.pid))() < (self.act > 1 ? .7 : .35)) self.know(e.pid, self.day, 'gp'); if (e.hosp === self.day) self.know(e.pid, self.day, 'hospital'); });
+    this.events.forEach(function (e) { if (self.known[e.pid]) return; if (e.onset !== null && self.day - e.onset === 3 && R(hs(e.pid))() < (self.actNo > 1 ? .7 : .35)) self.know(e.pid, self.day, 'gp'); if (e.hosp === self.day) self.know(e.pid, self.day, 'hospital'); });
     this.tests.forEach(function (t) {
       if (t.due !== self.day) return;
       var e = self.inf[t.pid], inf = e && self.day - e.day >= 1 && self.day - e.day < 14;
       var rec = self.known[t.pid].tests.filter(function (x) { return x.result === 'pending'; })[0];
-      var res = inf ? (self.act > 1 ? 'pos' : 'neg') : (R(hs(t.pid + 'f'))() < .5 ? 'flu' : 'neg');
+      var res = inf ? (self.actNo > 1 ? 'pos' : 'neg') : (R(hs(t.pid + 'f'))() < .5 ? 'flu' : 'neg');
       if (rec) { rec.result = res; rec.resultDay = self.day; }
       self.msg('lab', (res === 'pos' ? 'Positive: ' : res === 'flu' ? 'Influenza A: ' : 'Panel negative: ') + self.P(t.pid).name, [{ k: 'p', x: ['Sample from ', self.ref(t.pid), ' taken ' + self.dateLabel(t.day) + '.'] }, { k: 'm', x: [res === 'neg' ? 'FluA neg  FluB neg  RSV neg  hMPV neg  AdV neg  SARS-CoV-2 neg' : res === 'flu' ? 'FluA POS  FluB neg  RSV neg' : 'Target 1 POS  Ct 24.1'] }], 'Public Health Laboratory');
     });
     this.seqs.forEach(function (s) { if (s.due === self.day) self.msg('lab', 'Genome ready: ' + self.P(s.pid).name, [{ k: 'p', x: ['Sequence for ', self.ref(s.pid), ' has been added to the tree.'] }], 'Sequencing unit'); });
-    if (this.pendingDeclare === this.day && this.act === 1) { this.act = 2; this.actLabel = 'Characterise'; this.agentName = 'Agent ' + this.city.name.slice(0, 2).toUpperCase() + '-1'; events.push({ kind: 'act', act: 2, text: 'Novel agent confirmed', day: this.day }); this.msg('lab', 'Novel agent confirmed: ' + this.agentName, [{ k: 'p', x: ['The reference laboratory confirms a previously undescribed virus in samples from ' + this.city.name + '.'] }], 'Reference Laboratory', true); }
+    if (this.pendingDeclare === this.day && this.actNo === 1) { this.actNo = 2; this.actLabel = 'Characterise'; this.agentName = 'Agent ' + this.city.name.slice(0, 2).toUpperCase() + '-1'; events.push({ kind: 'act', act: 2, text: 'Novel agent confirmed', day: this.day }); this.msg('lab', 'Novel agent confirmed: ' + this.agentName, [{ k: 'p', x: ['The reference laboratory confirms a previously undescribed virus in samples from ' + this.city.name + '.'] }], 'Reference Laboratory', true); }
     if (this.day % 7 === 3) this.msg('council', 'Emergency committee — minutes', [{ k: 'h', x: ['Item 1: the market'] }, { k: 'p', x: ['Cllr Pauline Grey (Leader) asked whether the market could stay open for the weekend trade.'] }, { k: 'q', x: ['We cannot shut the city on the strength of four pneumonias.'] }, { k: 'h', x: ['Item 2: funding'] }, { k: 'p', x: ['The committee will consider a request for additional tracers at its next meeting.'] }], this.city.name + ' City Council', false, { choices: [{ id: 'keep', label: 'Recommend the market stays open', hint: 'Council happy; risk continues' }, { id: 'close', label: 'Recommend closing the market', hint: 'Costs trust with traders' }] });
     if (this.day === 2) this.msg('mayor', 'The Mayor is on the line', [{ k: 'q', x: ['I have the Courier asking about a mystery bug at St Anne\'s. What do I tell them? And please — not the word plague.'] }], 'Mayor Colin Hart', true, { choices: [{ id: 'reassure', label: '"There is no cause for alarm."', hint: 'Calms things now; costly if wrong' }, { id: 'honest', label: '"We are investigating. We will say more when we know more."', hint: 'Honest; some anxiety' }] });
     if (this.day === 4) this.msg('rumour', 'Rumour: "it\'s in the water"', [{ k: 'p', x: ['A post claiming the reservoir is contaminated has been shared 2,300 times in ', { t: 'district', id: 'd3', d: this.city.districts[3].name }, '. Bottled water is selling out.'] }], 'Social listening');

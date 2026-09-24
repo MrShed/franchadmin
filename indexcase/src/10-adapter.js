@@ -80,7 +80,7 @@ var UIA = (function () {
       ds.forEach(function (d) { dById[d.id] = d; });
       ps.forEach(function (p) { pById[p.id] = p; if (!p.pos && dById[p.district]) p.pos = dById[p.district].centre; });
       var pop = num(c.population, num(c.pop, 250000)), agents = num(c.agents, ds.reduce(function (s, d) { return s + d.pop; }, 0));
-      return { name: c.name || 'the city', pop: pop, agents: agents, scale: num(c.scale, agents ? pop / agents : 1), districts: ds, places: ps, dById: dById, pById: pById, hospitalId: str(c.hospitalId), rivers: c.rivers || c.river || null };
+      return { name: c.name || 'the city', pop: pop, agents: agents, scale: num(c.scale, agents ? pop / agents : 1), districts: ds, places: ps, dById: dById, pById: pById, hospitalId: str(c.hospitalId), river: Array.isArray(c.river) && c.river.length > 1 ? c.river : null, boundary: Array.isArray(c.boundary) && c.boundary.length > 2 ? c.boundary : null };
     });
   };
   A.district = function (id) { return A.city().dById[String(id)] || null; };
@@ -370,5 +370,6 @@ var UIA = (function () {
     };
   };
   A.trials = function () { return []; };
+  A.standDown = function () { var g = A.g; if (typeof g.resign === 'function') g.resign(); else { g.over = true; if (!g.outcome) g.outcome = { kind: 'resigned', day: A.day(), title: 'Stood down', text: 'You stepped away before the end. Here is what happened.' }; } A.bump(); };
   return A;
 })();

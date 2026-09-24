@@ -10,7 +10,12 @@ var UITree = (function () {
     var root;
     if (byParent) {
       // engine supplied the topology
-      var map = {}; nodes.forEach(function (n) { map[n.id] = { id: n.id, pid: n.pid, len: Math.max(0, n.muts.length - (n.parent && nodes.filter(function (x) { return x.id === n.parent; })[0] ? nodes.filter(function (x) { return x.id === n.parent; })[0].muts.length : 0)), kids: [], variant: n.variant, day: n.day }; });
+      var byId = {}; nodes.forEach(function (n) { byId[n.id] = n; });
+      var map = {}; nodes.forEach(function (n) {
+        var par = n.parent ? byId[n.parent] : null, len = n.muts.length;
+        if (par) { var ps = {}; par.muts.forEach(function (m) { ps[m] = 1; }); var cum = par.muts.length && par.muts.every(function (m) { return n.muts.indexOf(m) >= 0; }); if (cum) len = n.muts.length - par.muts.length; }
+        map[n.id] = { id: n.id, pid: n.pid, len: Math.max(0, len), kids: [], variant: n.variant || (n.lineage && n.lineage !== 'A' ? n.lineage : null), day: n.day };
+      });
       root = { id: 'root', kids: [], len: 0 };
       nodes.forEach(function (n) { var m = map[n.id]; (n.parent && map[n.parent] ? map[n.parent].kids : root.kids).push(m); });
     } else {
@@ -101,7 +106,8 @@ var UILab = UI.views.lab = {
       var r = e.target.closest('[data-pid]'); if (r) { UICases.personSheet(r.dataset.pid); return; }
       var d = e.target.closest('[data-ww]'); if (d) { UIMap.districtSheet(d.dataset.ww); return; }
       var a = e.target.closest('[data-run]'); if (a) { self.runAction(a.dataset.run); return; }
-      var tr = e.target.closest('#tr-go'); if (tr) { self.runTrial(); return; }
+      var m = e.target.closest('[data-msg]'); if (m) { UIBrief.openMsg(m.dataset.msg); return; }
+      var wo = e.target.closest('[data-wwstart]'); if (wo) { var wa = UIA.action('wastewater'); if (wa) UIActions.confirm(wa, null); return; }
     });
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (UIS && UIS.tab === 'lab') self.render(); }, 150); });
   },
@@ -109,7 +115,7 @@ var UILab = UI.views.lab = {
   refresh: function () { this.render(); },
   runAction: function (id) {
     var a = UIA.action(id); if (!a) return;
-    if (a.target === 'none') { UIActions.confirm(a, null); return; }
+    if (a.target === 'none' || !a.target) { UIActions.confirm(a, null); return; }
     UIActions.start(a);
   },
   render: function () {
@@ -138,7 +144,11 @@ var UILab = UI.views.lab = {
     html += '<div class="card"><div class="card-h"><div class="t"><div class="eyebrow">Sequenced samples · ' + tree.nodes.filter(function (n) { return n.pid; }).length + '</div><h3>Genome tree</h3></div>' + (L ? '<button class="btn sm" data-tree-open>Open</button>' : '') + '</div><div class="card-b">' +
       (L ? '<button class="tree-prev" data-tree-open aria-label="Open the genome tree"><canvas id="tree-prev"></canvas></button><p class="note">Each branch point is a mutation. Samples on the same twig are closely linked; separate branches mean separate introductions.</p>' : '<div class="empty" style="padding:18px 8px"><b>No genomes yet</b>Send samples from confirmed cases for sequencing. The tree grows as genomes come back, usually in about three days.</div>') + '</div></div>';
     // wastewater
-    var ww = UIA.ww(), ds = UIA.city().districts, keys = Object.keys(ww.byDistrict);
+    var ww = UIA.ww(), ds = UIA.city().districts, keys = Object.keys(ww.byDistrict).filter(function (k) { return ww.byDistrict[k].some(function (v) { return v !== null; }); });
+    if (!keys.length) {
+      var wa = UIA.action('wastewater');
+      html += '<div class="card"><div class="card-h"><div class="t"><div class="eyebrow">Sewage sampling</div><h3>Wastewater</h3></div></div><div class="card-b"><p class="dim" style="margin:0 0 12px">Not sampling yet. Virus in sewage rises days before people come forward, district by district — an early warning you do not have to test anyone for.</p>' + (wa ? '<button class="btn block" data-wwstart' + (wa.available ? '' : ' disabled') + '>' + UIICON.ww + 'Start wastewater sampling</button><div style="margin-top:8px">' + UIcosts(wa, { lag: true }) + '</div>' : '') + '</div></div>';
+    }
     if (keys.length) {
       var gmx = 1; keys.forEach(function (k) { ww.byDistrict[k].slice(-21).forEach(function (v) { gmx = Math.max(gmx, v || 0); }); });
       var rows = ds.filter(function (d) { return ww.byDistrict[d.id]; }).map(function (d) {
@@ -146,33 +156,24 @@ var UILab = UI.views.lab = {
         var ch = prev > 0 ? (last - prev) / prev : 0;
         return { d: d, a: a, last: last, ch: ch };
       }).sort(function (a, b) { return b.last - a.last; });
-      html += '<div class="card"><div class="card-h"><div class="t"><div class="eyebrow">Sewage sampling · last 3 weeks · same scale</div><h3>Wastewater by district</h3></div></div><div class="card-b"><div class="ww-grid">' + rows.map(function (x) {
+      html += '<div class="card"><div class="card-h"><div class="t"><div class="eyebrow">Last 3 weeks · same scale</div><h3>Wastewater by district</h3></div></div><div class="card-b"><div class="ww-grid">' + rows.map(function (x) {
         return '<button class="ww-c" data-ww="' + UIesc(x.d.id) + '"><span class="ww-n">' + UIesc(x.d.name) + '</span>' + UIChart.spark(x.a, 140, 34, '#a592ff', { max: gmx, id: x.d.id }) + '<span class="ww-v"><b>' + UIfmt.n(x.last) + '</b><em class="' + (x.ch > .25 ? 'up' : x.ch < -.2 ? 'dn' : '') + '">' + (x.ch > .25 ? '▲' : x.ch < -.2 ? '▼' : '•') + ' ' + (isFinite(x.ch) ? Math.round(x.ch * 100) + '%' : '') + '</em></span></button>';
       }).join('') + '</div><p class="note">The virus is shed into sewage before people feel ill, so a district that rises here usually shows cases a few days later.</p></div></div>';
     }
-    // trial
-    var trial = UIA.actions().filter(function (a) { return /trial/i.test(a.id); })[0];
-    if (trial) {
-      var tr = UIA.trials ? UIA.trials() : [];
-      html += '<div class="card"><div class="card-h"><div class="t"><div class="eyebrow">Randomised · existing drug</div><h3>Treatment trial</h3></div></div><div class="card-b">';
-      tr.forEach(function (t) { html += '<div class="trial-r"><div class="eyebrow">' + UIesc(t.label || 'Result') + (t.day !== undefined ? ' · ' + UIesc(UIA.dateShort(t.day)) : '') + '</div>' + (t.est !== undefined ? '<div class="ch-host" data-ci="' + t.est + ',' + t.lo + ',' + t.hi + '"></div>' : '<p class="dim">' + UIesc(t.text || 'Running…') + '</p>') + '</div>'; });
-      html += '<p class="dim" style="margin:0 0 10px">' + UIesc(trial.desc || 'Randomise admitted patients to the drug or usual care, and compare outcomes.') + ' Larger trials give narrower answers and cost more.</p>' +
-        '<div class="field"><label class="eyebrow" for="tr-n">Patients enrolled: <b id="tr-nv" style="color:var(--ink)">120</b></label><input type="range" id="tr-n" min="40" max="400" step="20" value="120"></div>' +
-        '<button class="btn block" id="tr-go"' + (trial.available ? '' : ' disabled') + '>' + UIICON.flask + 'Start the trial</button><div style="margin-top:8px">' + UIcosts(trial) + '</div>' + (trial.available ? '' : '<p class="note">' + UIesc(trial.why) + '</p>') + '</div></div>';
+    // studies: trial, serosurvey, animal sampling and friends
+    var studies = UIA.actions().filter(function (a) { return a.area === 'lab' && !a.order && a.target === 'none' && !/declare|novel/.test(a.id); });
+    if (studies.length) {
+      var res = UIA.inbox().filter(function (m) { return /trial|serosurvey|antibod|animal|swab/i.test(m.title); }).slice(-3).reverse();
+      html += '<div class="card"><div class="card-h"><div class="t"><div class="eyebrow">Randomised trials · surveys · sampling</div><h3>Studies</h3></div></div><div class="card-b">' +
+        (res.length ? '<div class="list" style="margin-bottom:12px">' + res.map(function (m) { return UIli({ attrs: 'data-msg="' + UIesc(m.id) + '"', ic: UIICON.report, label: UIesc(m.title), small: UIesc(UIA.dateShort(m.day)) }); }).join('') + '</div>' : '') +
+        '<div class="list">' + studies.map(function (a) { return UIli({ attrs: 'data-run="' + UIesc(a.id) + '"', ic: /trial/.test(a.id) ? UIICON.heart : /sero/.test(a.id) ? UIICON.people : UIICON.flask, label: UIesc(a.label), small: UIesc(a.available ? a.desc : a.why), right: UIcosts(a), dis: !a.available }); }).join('') + '</div></div></div>';
     }
     UI$('#lb-body').innerHTML = html;
-    var rng = UI$('#tr-n'); if (rng) rng.addEventListener('input', function () { UI$('#tr-nv').textContent = rng.value; });
-    UI$$('[data-ci]').forEach(function (h) { var v = h.dataset.ci.split(',').map(Number); UIChart.ci(h, v[0], v[1], v[2], { label: 'Risk of death, drug vs usual care, with 95% interval' }); });
     if (L) {
       var cv = UI$('#tree-prev'), host = cv.parentNode, w = host.clientWidth || 320, h = Math.min(220, Math.max(120, L.leaves.length * 9)), dpr = Math.min(2, window.devicePixelRatio || 1);
       cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px';
       var ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); UITree.draw(ctx, w, h, L, { labels: false });
     }
-  },
-  runTrial: function () {
-    var trial = UIA.actions().filter(function (a) { return /trial/i.test(a.id); })[0]; if (!trial) return;
-    var n = +(UI$('#tr-n') || { value: 120 }).value;
-    UI.run(trial.id, null, { n: n, size: n });
   },
   /** full-screen tree viewer */
   openTree: function (focusPid) {

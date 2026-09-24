@@ -126,6 +126,7 @@ function UIcosts(a, opt) {
   if (c.seq) h += '<span class="cst s' + (r.seq.left < c.seq ? ' no' : '') + '">' + c.seq + ' seq</span>';
   if (c.money) h += '<span class="cst m">' + UIfmt.money(c.money) + '</span>';
   if (c.perDay) h += '<span class="cst m">' + UIfmt.money(c.perDay) + '/day</span>';
+  if (c.economy) h += '<span class="cst eco" title="Cost to the local economy">econ ' + UIfmt.money(c.economy) + '/day</span>';
   if (opt.lag && a.lag) h += '<span class="cst lag">~' + a.lag + 'd lag</span>';
   if (!h) h = '<span class="cst">free</span>';
   return '<span class="costs">' + h + '</span>';
@@ -191,7 +192,7 @@ function UImeter(frac, cls) { frac = UIclamp(frac || 0, 0, 1); return '<span cla
 UI.topbar = function () {
   if (!UIA.g) return;
   var d = UIA.day(), act = UIA.actNo(), A = UIA.ACTS[act] || ['Act ' + act, ''];
-  UI$('#tb-day').innerHTML = '<b><small>DAY</small>' + (d + 1) + '</b><span class="sub"><i>' + UIesc(A[0] + ' · ' + A[1]) + '</i><span>' + UIesc(UIA.dateLabel(d)) + '</span></span>';
+  UI$('#tb-day').innerHTML = '<b><small>DAY</small>' + (d + 1) + '</b><span class="sub"><i>' + UIesc(A[1]) + '</i><span>' + UIesc(UIA.dateLabel(d)) + ' · act ' + act + '</span></span>';
   var r = UIA.res(), H = r.hours;
   var hl = H.tracers.left + H.field.left + H.analysts.left, hm = H.tracers.max + H.field.max + H.analysts.max;
   var beds = r.beds.max ? r.beds.used / r.beds.max : 0;
@@ -206,7 +207,7 @@ UI.topbar = function () {
   UI$('#tb-end').disabled = UIA.over();
 };
 UI.badges = function () {
-  var unread = UIA.inbox().filter(function (m) { return !UIS.read[m.id]; }).length;
+  var unread = UIA.inbox().filter(function (m) { return !UIS.read[m.id] && !m.read; }).length;
   UI$$('.tab[data-tab=brief]').forEach(function (b) {
     var x = b.querySelector('.badge');
     if (!unread) { if (x) x.remove(); return; }
@@ -265,7 +266,7 @@ UI.menu = function () {
         else if (k === 'title') { UI.save(); UIsheet.close(); UIBoot.title(); }
         else if (k === 'end') {
           if (!x.dataset.armed) { x.dataset.armed = 1; x.querySelector('.tx b').textContent = 'Tap again to stand down'; x.classList.add('armed'); return; }
-          UIsheet.close(); UIA.g.over = true; if (!UIA.g.outcome) UIA.g.outcome = 'resigned'; UIA.bump(); UI.save(); UIDebrief.show();
+          UIsheet.close(); UIA.standDown(); UI.save(); UIDebrief.show();
         }
       });
     } });
@@ -286,7 +287,7 @@ UI.confirmEndDay = function () {
   var ex = UI$('.pop'); if (ex) { ex.remove(); return; }
   var r = UIA.res(), H = r.hours, hl = H.tracers.left + H.field.left + H.analysts.left, d = UIA.day();
   var pend = UIA.cases().filter(function (c) { return UIA.testState(c) === 'pending'; }).length;
-  var unread = UIA.inbox().filter(function (m) { return !UIS.read[m.id]; }).length;
+  var unread = UIA.inbox().filter(function (m) { return !UIS.read[m.id] && !m.read; }).length;
   var pop = UIel('<div class="pop" role="dialog" aria-label="End the day"><div class="eyebrow em">' + UIesc(UIA.dateLabel(d)) + '</div><h4>End day ' + (d + 1) + '?</h4><ul>' +
     '<li><b>' + hl + 'h</b>' + (hl ? 'staff hours unused — they do not carry over' : 'the team is spent') + '</li>' +
     '<li><b>' + r.tests.left + '</b>' + (r.tests.left ? 'tests unused today' : 'no tests left today') + '</li>' +

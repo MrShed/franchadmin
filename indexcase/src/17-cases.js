@@ -200,16 +200,19 @@ var UICases = UI.views.cases = {
     c.tests.forEach(function (t) { if (t.day !== null) ev.push({ d: t.resultDay !== null ? t.resultDay : t.day, l: t.result === 'pos' ? 'Test +' : t.result === 'pending' ? 'Test …' : t.result === 'flu' ? 'Flu' : 'Test −', c: '#3fd0aa' }); });
     if (c.admitted !== null) ev.push({ d: c.admitted, l: 'Admitted', c: '#f2b640' });
     if (c.died !== null) ev.push({ d: c.died, l: 'Died', c: '#d9d3c7' });
-    if (c.exposures) c.exposures.forEach(function (e) { if (e.day !== null && e.day !== undefined) ev.push({ d: e.day, l: 'Exposed?', c: '#8ce8cf', hollow: true }); });
+    var ex1 = true;
+    if (c.exposures) c.exposures.slice().sort(function (a, b) { return a.day - b.day; }).forEach(function (e) { if (e.day !== null && e.day !== undefined) { ev.push({ d: e.day, l: ex1 ? 'Exposures' : '', c: '#8ce8cf', hollow: true }); ex1 = false; } });
     if (!ev.length) return '';
     var d0 = Math.min.apply(null, ev.map(function (e) { return e.d; }).concat([day - 6])), d1 = day, W = 100;
     var x = function (d) { return 4 + (d - d0) / Math.max(1, d1 - d0) * 92; };
     ev.sort(function (a, b) { return a.d - b.d; });
     var rows = [], last = {};
-    ev.forEach(function (e) { var r = 0; while (last[r] !== undefined && x(e.d) - last[r] < 17) r++; last[r] = x(e.d); e.row = r; });
-    var nr = Math.max.apply(null, ev.map(function (e) { return e.row; })) + 1;
-    return '<div class="tl" style="height:' + (34 + nr * 17) + 'px"><div class="tl-axis"></div>' + ev.map(function (e) {
-      return '<div class="tl-ev" style="left:' + x(e.d).toFixed(1) + '%;top:' + (e.row * 17) + 'px"><i style="' + (e.hollow ? 'border:2px solid ' + e.c : 'background:' + e.c + ';box-shadow:0 0 8px ' + e.c) + '"></i><span>' + UIesc(e.l) + '</span></div>';
-    }).join('') + '<div class="tl-lbl" style="left:0">' + UIesc(UIA.dateShort(d0)) + '</div><div class="tl-lbl" style="right:0">Today</div></div>';
+    ev.forEach(function (e) { if (!e.l) { e.row = 0; return; } var r = 0; while (last[r] !== undefined && x(e.d) - last[r] < 17) r++; last[r] = x(e.d); e.row = r; });
+    var nr = Math.max.apply(null, ev.map(function (e) { return e.row; })) + 1, ax = nr * 17 + 10;
+    return '<div class="tl" style="height:' + (ax + 22) + 'px"><div class="tl-axis" style="top:' + ax + 'px"></div>' + ev.map(function (e) {
+      var top = (nr - 1 - e.row) * 17;
+      if (!e.l) top = ax - 5;
+      return '<div class="tl-ev' + (e.l ? '' : ' nl') + '" style="left:' + x(e.d).toFixed(1) + '%;top:' + top + 'px;height:' + (ax - top + 5) + 'px">' + (e.l ? '<span>' + UIesc(e.l) + '</span>' : '') + '<i style="' + (e.hollow ? 'border:2px solid ' + e.c + ';background:#0e161e' : 'background:' + e.c + ';box-shadow:0 0 8px ' + e.c) + '"></i></div>';
+    }).join('') + '<div class="tl-lbl" style="left:0;top:' + (ax + 8) + 'px">' + UIesc(UIA.dateShort(d0)) + '</div><div class="tl-lbl" style="right:0;top:' + (ax + 8) + 'px">Today</div></div>';
   }
 };
