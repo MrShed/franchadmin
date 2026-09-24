@@ -204,12 +204,12 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   IX.rFromGrowth = rFromGrowth;
 
   // more timing studies while too few transmissions have been timed (each study times only a handful)
-  function timingWanted(S, cap) {
+  IX.timingWanted = function (S, cap) {
     var L = S.timingStudies || [], got = 0, pending = 0;
     L.forEach(function (t) { if (t.result) got += t.result.before + t.result.after; else pending++; });
     if (L.length < cap) return true;
     return got < 14 && pending < 3 && L.length < 20;
-  }
+  };
 
   IX.estimate = function (g) {
     var S = g.S, ll = g.lineList(), byPid = {}, C = g.C;
@@ -514,7 +514,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
         live.forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
         live.forEach(function (c) { if (!done.trace[c.pid] && c.onset !== null && act('trace', c.pid, { daysBefore: 5 })) done.trace[c.pid] = 1; });
         var nt = (S.timingStudies || []).length;
-        live.forEach(function (c) { if (timingWanted(S, 8) && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
+        live.forEach(function (c) { if (IX.timingWanted(S, 8) && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
         g.clusters().forEach(function (k) {
           if (!k.place) return;
           var pi = g.placeIdx(k.place.id);
@@ -782,7 +782,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           live.forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
           live.forEach(function (c) { if (!done.trace[c.pid] && c.onset !== null && act('trace', c.pid, { daysBefore: 3 })) done.trace[c.pid] = 1; });
           var nt = (S.timingStudies || []).length;
-          live.forEach(function (c) { if (timingWanted(S, 6) && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
+          live.forEach(function (c) { if (IX.timingWanted(S, 6) && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
           g.clusters().slice(0, 6).forEach(function (k) {
             if (!k.place) return; var pi = g.placeIdx(k.place.id);
             if (!done.site[pi] && act('site_visit', pi)) done.site[pi] = 1;
