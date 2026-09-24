@@ -1176,11 +1176,8 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
         if (!slow || u(K.seq, q, a, 5) < 0.5) { elsewhere++; verdict = 'caught it elsewhere (genome does not match)'; }
         else {
           // the genome cannot rule the link out: the diaries decide, when they can
-          var dd = ((c.days && c.days[a]) || []).map(function (d0) { return self.sdOf(d0); });
-          var allB = dd.length && dd.every(function (d0) { return d0 < onA; }), allA = dd.length && dd.every(function (d0) { return d0 >= onA; });
-          if (allB) { before++; verdict = 'before (only met before; link not confirmable)'; }
-          else if (allA) { after++; verdict = 'after (only met after; link not confirmable)'; }
-          else { unclear++; verdict = 'cannot tell'; }
+          // a sound team does not count a link it cannot confirm
+          unclear++; verdict = 'cannot tell (genomes too alike to confirm the link)';
         }
       } else {
         var days = (c.days && c.days[a]) || [];

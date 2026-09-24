@@ -191,22 +191,31 @@ var UIMapR = (function () {
       else { gg.addColorStop(0, 'rgba(' + Math.round(16 + dn * 8) + ',' + Math.round(28 + dn * 10) + ',' + Math.round(40 + dn * 12) + ',.9)'); gg.addColorStop(1, 'rgba(10,18,27,.9)'); }
       ctx.fillStyle = gg; ctx.fill();
     });
-    // streets, clipped per district
-    var sw = Math.max(0.5, Math.min(1.1, T.s / 900));
-    ctx.save(); ctx.beginPath();
-    D.forEach(function (d) { if (d.poly && d.poly.length > 2) d.poly.forEach(function (p, i) { var q = tx(T, p); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); });
-    ctx.clip();
-    ctx.strokeStyle = 'rgba(143,203,255,' + (0.045 + Math.min(0.05, T.s / 30000)).toFixed(3) + ')'; ctx.lineWidth = sw;
-    ctx.beginPath();
-    dec.streets.forEach(function (L) { L.forEach(function (l) { var a = tx(T, [l[0], l[1]]), b = tx(T, [l[2], l[3]]); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }); });
-    ctx.stroke();
-    ctx.restore();
+    // streets, clipped to the districts: from a texture baked once per city (thousands of thin
+    // lines are the costliest thing on the map), as vectors only when zoomed in past its resolution
+    var sw = Math.max(0.5, Math.min(1.1, T.s / 900)), sa = 0.045 + Math.min(0.05, T.s / 30000), dprx = ctx.getTransform ? ctx.getTransform().a : 2;
+    var st = M.streetTex(city);
+    if (T.s * dprx <= st.px * 1.25) {
+      var p0 = tx(T, [st.bb[0], st.bb[1]]);
+      ctx.save(); ctx.globalAlpha = Math.min(1, sa / .09); ctx.imageSmoothingEnabled = true; ctx.drawImage(st.c, p0[0], p0[1], (st.bb[2] - st.bb[0]) * T.s, (st.bb[3] - st.bb[1]) * T.s); ctx.restore();
+    } else {
+      ctx.save(); ctx.beginPath();
+      D.forEach(function (d) { if (d.poly && d.poly.length > 2) d.poly.forEach(function (p, i) { var q = tx(T, p); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); });
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(143,203,255,' + sa.toFixed(3) + ')'; ctx.lineWidth = sw;
+      ctx.beginPath();
+      dec.streets.forEach(function (L) { L.forEach(function (l) { var a = tx(T, [l[0], l[1]]), b = tx(T, [l[2], l[3]]); if (Math.max(a[0], b[0]) < 0 || Math.min(a[0], b[0]) > w || Math.max(a[1], b[1]) < 0 || Math.min(a[1], b[1]) > h) return; ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }); });
+      ctx.stroke();
+      ctx.restore();
+    }
     // street lights
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     var ls = UIclamp(T.s / 420, .9, 2.4), LC = ['rgba(150,200,255,.16)', 'rgba(170,215,255,.3)', 'rgba(225,240,255,.62)'];
     for (var li = 0; li < 3; li++) {
       ctx.fillStyle = LC[li]; var z = li === 2 ? ls * 1.35 : ls;
-      dec.lights.forEach(function (p) { if (p[2] !== li) return; var q = tx(T, p); if (q[0] < -2 || q[1] < -2 || q[0] > w + 2 || q[1] > h + 2) return; ctx.fillRect(q[0] - z / 2, q[1] - z / 2, z, z); });
+      ctx.beginPath();
+      dec.lights.forEach(function (p) { if (p[2] !== li) return; var q = tx(T, p); if (q[0] < -2 || q[1] < -2 || q[0] > w + 2 || q[1] > h + 2) return; ctx.rect(q[0] - z / 2, q[1] - z / 2, z, z); });
+      ctx.fill();
     }
     ctx.restore();
     // wastewater: a violet heat haze pooled in each district
@@ -214,14 +223,13 @@ var UIMapR = (function () {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       D.forEach(function (d) {
         var v = o.ww[d.id]; if (!v || !d.poly || d.poly.length < 3) return;
-        ctx.save(); poly(ctx, T, d.poly); ctx.clip();
+        // soft unclipped blobs, so neighbouring districts melt into one haze
         var rr = UIrand('ww' + d.id);
         for (var b = 0; b < 3; b++) {
-          var c = tx(T, [d.centre[0] + (rr() - .5) * .05, d.centre[1] + (rr() - .5) * .05]), rad = T.s * (0.07 + 0.11 * v) * (b ? .75 : 1.1), gg = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], rad);
-          gg.addColorStop(0, 'rgba(170,140,255,' + ((0.08 + 0.34 * v) * (b ? .7 : 1)).toFixed(3) + ')'); gg.addColorStop(.6, 'rgba(120,90,230,' + (0.05 + 0.12 * v).toFixed(3) + ')'); gg.addColorStop(1, 'rgba(90,70,200,0)');
+          var c = tx(T, [d.centre[0] + (rr() - .5) * .06, d.centre[1] + (rr() - .5) * .06]), rad = T.s * (0.06 + 0.09 * v) * (b ? .7 : 1.15), gg = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], rad);
+          gg.addColorStop(0, 'rgba(176,150,255,' + ((0.06 + 0.3 * v) * (b ? .7 : 1)).toFixed(3) + ')'); gg.addColorStop(.55, 'rgba(120,90,230,' + (0.03 + 0.1 * v).toFixed(3) + ')'); gg.addColorStop(1, 'rgba(90,70,200,0)');
           ctx.fillStyle = gg; ctx.fillRect(c[0] - rad, c[1] - rad, rad * 2, rad * 2);
         }
-        ctx.restore();
       });
       ctx.restore();
     }
@@ -260,6 +268,22 @@ var UIMapR = (function () {
     if (o.sel && city.dById[o.sel]) { var sd = city.dById[o.sel]; ctx.save(); poly(ctx, T, sd.poly); ctx.strokeStyle = 'rgba(197,228,255,.8)'; ctx.lineWidth = 1.6; ctx.shadowColor = 'rgba(143,203,255,.9)'; ctx.shadowBlur = 12; ctx.stroke(); ctx.restore(); }
     if (!o.noVignette) M.vignette(ctx, w, h);
     return T;
+  };
+  /** the street grid baked into a world-space texture (once per city) */
+  M.streetTex = function (city) {
+    if (city._st) return city._st;
+    var dec = M.decor(city), bb = bbox(city), pad = .02, B = [bb[0] - pad, bb[1] - pad, bb[2] + pad, bb[3] + pad], px = 1100;
+    var sc = px / Math.max(B[2] - B[0], B[3] - B[1]), c = document.createElement('canvas');
+    c.width = Math.ceil((B[2] - B[0]) * sc); c.height = Math.ceil((B[3] - B[1]) * sc);
+    var x = c.getContext('2d'), P = function (p) { return [(p[0] - B[0]) * sc, (p[1] - B[1]) * sc]; };
+    x.beginPath();
+    city.districts.forEach(function (d) { if (d.poly && d.poly.length > 2) { d.poly.forEach(function (p, i) { var q = P(p); if (i) x.lineTo(q[0], q[1]); else x.moveTo(q[0], q[1]); }); x.closePath(); } });
+    x.clip();
+    x.strokeStyle = 'rgba(143,203,255,.09)'; x.lineWidth = 1.1; x.beginPath();
+    dec.streets.forEach(function (L) { L.forEach(function (l) { var a = P([l[0], l[1]]), b = P([l[2], l[3]]); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); }); });
+    x.stroke();
+    city._st = { c: c, bb: B, px: sc };
+    return city._st;
   };
   /** lens vignette with a faint warm leak in one corner */
   M.vignette = function (ctx, w, h) {
@@ -457,7 +481,7 @@ var UIMap = UI.views.map = {
    * redrawn crisp. When the data change (a new day) the old cache fades out over the new.
    * Animation frames only add the pulses on top. */
   draw: function (ctx, w, h) {
-    var st = UIS.map, dpr = this.cv.dpr, now = performance.now(), T = this.xf(w, h);
+    var st = UIS.map, dpr = Math.min(2, this.cv.dpr), now = performance.now(), T = this.xf(w, h);
     this.T = T;
     var dkey = [w, h, dpr, JSON.stringify(st.layers), st.recency, this.sel, UIA.v, this.dataV, UIA.city().name].join('|');
     var vkey = [T.x.toFixed(1), T.y.toFixed(1), T.s.toFixed(2)].join('|');
@@ -510,7 +534,7 @@ var UIMap = UI.views.map = {
     var vp = this.visiblePts();
     if (!anim) {
       var dens = UIclamp(Math.sqrt(400 / Math.max(1, vp.length)), .18, 1); vp.forEach(function (q) { q.a = dens * (q.b === 3 ? .6 : 1); });
-      UIMapR.bloom(ctx, T, vp); UIMapR.dots(ctx, T, vp);
+      UIMapR.bloom(ctx, T, vp.filter(function (q) { return q.b < 2; })); UIMapR.dots(ctx, T, vp);
       ctx.save(); ctx.strokeStyle = 'rgba(217,211,199,.75)'; ctx.lineWidth = 1.2;
       vp.forEach(function (q) { if (!q.died) return; var c = UIMapR.toScreen(T, q.p); ctx.beginPath(); ctx.arc(c[0], c[1], UIclamp(T.s / 120, 3, 7) + 2, 0, Math.PI * 2); ctx.stroke(); });
       ctx.restore();

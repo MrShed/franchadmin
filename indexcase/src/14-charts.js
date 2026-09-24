@@ -153,12 +153,13 @@ var UIChart = (function () {
     var W = C.width(host), rh = 26, T = 4, L = 54, R = W - 44, Hh = T + rows.length * rh + 4;
     var mx = 0.01; rows.forEach(function (r) { mx = Math.max(mx, r.a || 0, r.b || 0); });
     var sx = function (v) { return L + (v / mx) * (R - L); };
-    var s = '<svg width="' + W + '" height="' + Hh + '" class="chart" role="img" aria-label="' + UIesc(o.label) + '">';
+    var gid = 'ag' + UIh(o.color + o.label);
+    var s = '<svg width="' + W + '" height="' + Hh + '" class="chart" role="img" aria-label="' + UIesc(o.label) + '"><defs><linearGradient id="' + gid + '" x1="0" x2="1"><stop offset="0" stop-color="' + o.color + '" stop-opacity=".35"/><stop offset="1" stop-color="' + o.color + '"/></linearGradient></defs>';
     rows.forEach(function (r, i) {
       var yy = T + i * rh;
       s += '<text x="' + (L - 8) + '" y="' + (yy + 16) + '" text-anchor="end" class="tk">' + UIesc(r.label) + '</text>';
-      s += '<rect x="' + L + '" y="' + (yy + 5) + '" width="' + (R - L) + '" height="14" rx="3" fill="rgba(255,255,255,.03)"/>';
-      if (r.a > 0) s += '<rect x="' + L + '" y="' + (yy + 5) + '" width="' + Math.max(2, sx(r.a) - L).toFixed(1) + '" height="14" rx="3" fill="' + o.color + '" class="grow"/>';
+      s += '<rect x="' + L + '" y="' + (yy + 6) + '" width="' + (R - L) + '" height="12" rx="6" fill="rgba(255,255,255,.035)"/>';
+      if (r.a > 0) s += '<rect x="' + L + '" y="' + (yy + 6) + '" width="' + Math.max(3, sx(r.a) - L).toFixed(1) + '" height="12" rx="6" fill="url(#' + gid + ')" class="grow" style="animation-delay:' + (i * 50) + 'ms"/><circle cx="' + Math.max(L + 6, sx(r.a) - 6).toFixed(1) + '" cy="' + (yy + 12) + '" r="3" fill="#fff" fill-opacity=".55" class="grow" style="animation-delay:' + (i * 50) + 'ms"/>';
       if (r.b !== undefined) s += '<line x1="' + sx(r.b).toFixed(1) + '" x2="' + sx(r.b).toFixed(1) + '" y1="' + (yy + 2) + '" y2="' + (yy + 22) + '" stroke="#e9eff4" stroke-width="2" stroke-linecap="round" opacity=".75"/>';
       s += '<text x="' + (R + 6) + '" y="' + (yy + 16) + '" class="tk v">' + (o.fmt ? o.fmt(r) : UIfmt.pct(r.a)) + '</text>';
     });

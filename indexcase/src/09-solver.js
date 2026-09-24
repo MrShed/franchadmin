@@ -203,6 +203,14 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   function rFromGrowth(r, mu) { var sd = 0.45 * mu, k = mu * mu / (sd * sd), th = sd * sd / mu; return Math.pow(1 + r * th, k); }
   IX.rFromGrowth = rFromGrowth;
 
+  // more timing studies while too few transmissions have been timed (each study times only a handful)
+  function timingWanted(S, cap) {
+    var L = S.timingStudies || [], got = 0, pending = 0;
+    L.forEach(function (t) { if (t.result) got += t.result.before + t.result.after; else pending++; });
+    if (L.length < cap) return true;
+    return got < 14 && pending < 3 && L.length < 20;
+  }
+
   IX.estimate = function (g) {
     var S = g.S, ll = g.lineList(), byPid = {}, C = g.C;
     ll.forEach(function (c) { byPid[c.pid] = c; });
@@ -222,7 +230,9 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
       var D = days.filter(function (d0) { return d0 >= ca.onset - 6 && d0 <= ca.onset + 12 && d0 < cb.onset; });
       if (!D.length) return;
       var key = b + ':' + a; if (seenPair[key]) return; seenPair[key] = 1;
-      tp.push({ b: b, a: a, t: cb.onset, oA: ca.onset, D: D, single: D.length === 1, hh: g.C.hh[b] === g.C.hh[a] });
+      // an exposure that only stopped because the contact fell ill says little about when they caught it
+      var trunc = days.some(function (d0) { return d0 >= cb.onset && d0 <= ca.onset + 12; });
+      tp.push({ b: b, a: a, t: cb.onset, oA: ca.onset, D: D, single: D.length === 1, hh: g.C.hh[b] === g.C.hh[a], trunc: trunc });
     }
     cons.forEach(function (c) {
       if (c.onset === undefined) return;
@@ -258,7 +268,10 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     // incubation: fitted jointly with the timing of transmission, on household pairs, narrow exposures and point-source events
     var exact = [];
     S.quests.forEach(function (q) { if (!q.event || (q.onsets || []).length < 2) return; q.onsets.forEach(function (v) { if (v >= 1 && v <= 21) exact.push(v); }); });
-    var use = tp.filter(function (p) { return p.hh || p.D[p.D.length - 1] - p.D[0] <= 2; });
+    // household pairs only: an ill workmate or fellow guest has too often caught it somewhere else, and the
+    // timing of those links is noise that drags the estimate towards the middle (tested on 16 games: 13/16
+    // within tolerance with households and events, 9/16 with every pair)
+    var use = tp.filter(function (p) { return p.hh; });
     E.n.incubation = use.length + exact.length;
     if (use.length + exact.length >= 15) {
       var jf = jointFit(use, exact);
@@ -439,7 +452,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     var hcw = 0, occN = 0;
     ll.forEach(function (c) { if (c.status !== 'confirmed') return; var kp = S.people[c.pid]; if (!kp || !kp.known.occupation) return; occN++; if (/nurse|doctor|care worker|porter/.test(kp.known.occupation)) hcw++; });
     E.hcwShare = occN ? IX.round(hcw / occN, 2) : null;
-    if (occN >= 15 && hcw / occN > 0.18) ev.contact += 1.2;
+    if (occN >= 15 && hcw / occN > 0.3) ev.contact += 1.6;
     // explosive single-day clusters in shared air (choirs, pubs, gyms, services, parties) are the airborne signature
     var big = 0;
     g.clusters().forEach(function (k) { if (k.place && ['choir', 'pub', 'gym', 'church', 'mosque', 'temple', 'gurdwara', 'hotel', 'community_hall', 'restaurant'].indexOf(k.kind) >= 0 && k.size >= 6 && k.lastOnset !== null && k.lastOnset - k.firstOnset <= 7) big++; });
@@ -501,7 +514,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
         live.forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
         live.forEach(function (c) { if (!done.trace[c.pid] && c.onset !== null && act('trace', c.pid, { daysBefore: 5 })) done.trace[c.pid] = 1; });
         var nt = (S.timingStudies || []).length;
-        live.forEach(function (c) { if (nt < 8 && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
+        live.forEach(function (c) { if (timingWanted(S, 8) && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
         g.clusters().forEach(function (k) {
           if (!k.place) return;
           var pi = g.placeIdx(k.place.id);
@@ -562,7 +575,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     v.ghost = { infections: gh.n, deaths: deaths, hosp: hosp, peakDay: g.gd(peakSd), attack: IX.round(gh.n / C.N, 2) };
     if (deaths < A.minGhostDeaths && hosp < A.minGhostHosp) { v.fails.push('not dangerous (' + deaths + ' deaths, ' + hosp + ' admissions)'); v.level = 'pathogen'; }
     if (gh.n < 0.08 * C.N) v.fails.push('fizzles (' + gh.n + ' infections)');
-    if (g.gd(peakSd) < A.minPeakDay) { v.fails.push('peaks too soon (day ' + g.gd(peakSd) + ')'); }
+    if (g.gd(peakSd) < A.minPeakDay) { v.fails.push('peaks too soon (day ' + g.gd(peakSd) + ')'); v.level = 'pathogen'; }
     if (v.fails.length) return v;
     // observability proxies over the characterisation window: from the alert to ~3 weeks after community spread
     var cum = 0, commSd = -1;
@@ -769,7 +782,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
           live.forEach(function (c) { if (!done.interview[c.pid] && act('interview', c.pid)) done.interview[c.pid] = 1; });
           live.forEach(function (c) { if (!done.trace[c.pid] && c.onset !== null && act('trace', c.pid, { daysBefore: 3 })) done.trace[c.pid] = 1; });
           var nt = (S.timingStudies || []).length;
-          live.forEach(function (c) { if (nt < 6 && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
+          live.forEach(function (c) { if (timingWanted(S, 6) && done.trace[c.pid] && g.canAct('timing_study', c.pid) === null && act('timing_study', c.pid)) nt++; });
           g.clusters().slice(0, 6).forEach(function (k) {
             if (!k.place) return; var pi = g.placeIdx(k.place.id);
             if (!done.site[pi] && act('site_visit', pi)) done.site[pi] = 1;

@@ -36,6 +36,10 @@ IX.newGameAsync(seed, opts, onProgress) -> Promise<g>   // same game; yields to 
 var s = g.save()               // compressed string ('IXZ1:...', UTF-16 safe for localStorage), ~0.1-0.2 s
 var g2 = IX.load(s)            // identical game, continues deterministically (also accepts plain JSON saves)
 IX.GRADES                      // [{id, label, blurb, ...}]
+     // grade knobs: staff, trust (start offset), comply (order compliance multiplier), beds (hospital capacity
+     // multiplier), fund (funding multiplier), orderLag (extra days before orders bite; director +2),
+     // pcrStart/pcrGrow/pcrMax (lab capacity), seq, funding, vaccineBase (cure clock base days: 45/75/95),
+     // mentorCost. Probationer is deliberately forgiving (more staff, better compliance, more beds, faster vaccine).
 ```
 
 ## Game state (read-only props)

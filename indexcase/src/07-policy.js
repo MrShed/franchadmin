@@ -14,11 +14,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   // ---------------------------------------------------------------- grades
   IX.GRADES = [
     { id: 'probationer', label: 'Probationer', blurb: 'Respiratory viruses only, a bigger team, quicker lab results and a patient council.',
-      staff: { tracers: 6, field: 3, analysts: 3 }, trust: 10, comply: 1.15, beds: 1.35, fund: 1.3, panel: 16, pcrStart: 45, pcrGrow: 4, pcrMax: 180, seq: 4, funding: 500, vaccineBase: 40, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
+      staff: { tracers: 6, field: 3, analysts: 3 }, trust: 10, comply: 1.2, beds: 1.35, fund: 1.3, panel: 16, pcrStart: 45, pcrGrow: 4, pcrMax: 180, seq: 4, funding: 500, vaccineBase: 38, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
     { id: 'consultant', label: 'Consultant', blurb: 'The full range of diseases, a small team and a lab that is doing its best.',
-      staff: { tracers: 4, field: 2, analysts: 2 }, trust: 2, comply: 1.05, beds: 1.1, fund: 1, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 55, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
-    { id: 'director', label: 'Director', blurb: 'Wider and nastier diseases, noisier data, slower results and a council that wants the city open.',
-      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -6, comply: 0.95, beds: 0.9, fund: 0.75, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 70, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
+      staff: { tracers: 4, field: 2, analysts: 2 }, trust: 0, comply: 1, beds: 1, fund: 1, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 75, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
+    { id: 'director', label: 'Director', blurb: 'Wider and nastier diseases, noisier data, slower results, orders that take longer to bite and a council that wants the city open.',
+      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -10, comply: 0.85, beds: 0.8, fund: 0.7, orderLag: 2, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 95, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
   ];
   IX.gradeOf = function (id) { return IX.GRADES.filter(function (g) { return g.id === id; })[0] || IX.GRADES[1]; };
   GP.grades = function () { return IX.gradeOf(this.grade); };
@@ -270,7 +270,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     this._fresh = [];
     // replacing a parameterised order
     if (type === 'gatherings' || type === 'shielding' || type === 'vaccinate') this.ordersOf(type).forEach(function (o) { o.until = S.day; });
-    var o = { id: 'O' + (++S.orderSeq), type: type, since: S.day, lag: O.lag, params: IX.clone(params) };
+    var o = { id: 'O' + (++S.orderSeq), type: type, since: S.day, lag: O.lag + (this.grades().orderLag || 0), params: IX.clone(params) };
     if (O.target === 'place') { o.target = this.placeIdx(params.target); delete o.params.target; }
     if (type === 'vaccinate') { o.params.priority = (params.priority && params.priority.length ? params.priority : O.params[0].default).slice(); S.vaccine.queue = null; }
     S.orders.push(o);
@@ -486,7 +486,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (S.rumours.some(function (r) { return r.kind === kind; })) return;
     var R = IX.RUMOURS[kind];
     var bel = new Uint8Array(C.N), n = 0;
-    for (var i = 0; i < C.N && n < 12; i++) { var j = Math.floor(u(K, S.day, i, IX.hash(kind)) * C.N); if (district === undefined || C.dist[j] === district) { bel[j] = 1; n++; } }
+    for (var i = 0; i < C.N && n < 25; i++) { var j = Math.floor(u(K, S.day, i, IX.hash(kind)) * C.N); if (district === undefined || C.dist[j] === district) { bel[j] = 1; n++; } }
     S.rumours.push({ id: 'R' + (S.rumours.length + 1), kind: kind, short: R.short, born: S.day, bel: bel, share: 0, reported: false, district: district });
   };
   GP.rumourDay = function () {
@@ -496,7 +496,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     for (var a = 0; a < C.N; a++) cnt[C.dist[a] * 3 + D.trustBand(C.age[a])]++;
     S.rumours.forEach(function (r) {
       var B = r.bel, nb = new Uint8Array(B.length), tot = 0, damp = r.damp || 0;
-      var pSpread = 0.022 * (1 - damp), pForget = 0.03 + 0.08 * damp, kh = IX.hash(r.kind);
+      var pSpread = 0.12 * (1 - damp), pForget = 0.07 + 0.1 * damp, kh = IX.hash(r.kind);
       for (var i = 0; i < B.length; i++) {
         if (!B[i]) continue;
         if (u(K, i, S.day, 1) < pForget) continue;
@@ -673,7 +673,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (eta < V.eta - 1) { V.eta = Math.max(S.day + 7, eta); this.msg('lab', 'Vaccine timeline brought forward', 'UK Health Security Agency', ['Better characterisation means developers can skip some work. Doses now expected around ' + this.dateLong(V.eta) + '.']); }
     if (S.day === V.eta - 30) this.msg('press', 'Vaccine shows promise in trials', this.paperName(), ['Early results from the ' + S.agentName + ' vaccine trial look good, the developers say. Approval could come within a month.']);
     if (S.day >= V.eta) {
-      V.status = 'rollout'; V.perDay = Math.round(0.02 * this.C.N); V.done = 0; V.arrived = S.day;
+      V.status = 'rollout'; V.perDay = Math.round(0.016 * this.C.N); V.done = 0; V.arrived = S.day;
       this.msg('lab', 'Vaccine approved: doses arriving', 'UK Health Security Agency', ['The first ' + IX.fmt(V.perDay * this.C.scale) + ' doses a day are arriving in ' + this.C.name + ' from today. Set the priority order (PROTECT → Vaccination programme).', { k: 'n', x: ['About two-thirds protection against infection and more against severe illness, two weeks after the dose.'] }], { urgent: true });
       this.trustAll(4);
       S.pressQueue.push({ kind: 'vaccine' });

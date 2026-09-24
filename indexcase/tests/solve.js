@@ -23,7 +23,7 @@ for (var s = from; s <= to; s++) {
   } else {
     g = IX.newGame(String(s), { grade: grade });
     v = g._verify || { ok: false, fails: ['none'] };
-    if (full && v.ok) { var vf = IX.acceptFull(g); v.solver = vf.solver; v.charRef = vf.charRef; v.solverOk = vf.solverOk; if (!vf.solverOk) { v.solverFails = vf.fails; solverDisagree++; } }
+    if (full && v.ok) { var vf = IX.acceptFull(g); v.solver = vf.solver; v.charRef = vf.charRef; v.everTraits = vf.everTraits; v.solverOk = vf.solverOk; if (!vf.solverOk) { v.solverFails = vf.fails; solverDisagree++; } }
   }
   times.push(Date.now() - t1);
   attempts += g.attempt + 1;

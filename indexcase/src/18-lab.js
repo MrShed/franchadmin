@@ -55,7 +55,7 @@ var UITree = (function () {
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     var cases = {}; UIA.cases().forEach(function (c) { cases[c.pid] = c; });
     var dcol = {}; UIA.city().districts.forEach(function (d, i) { dcol[d.id] = T.COL[i % T.COL.length]; });
-    var reveal = X0(0) + (X0(L.maxX) - X0(0) + 60) * grow;
+    var reveal = grow >= 1 ? w + 400 : X0(0) + (X0(L.maxX) - X0(0) + 60) * grow;
     ctx.save(); ctx.beginPath(); ctx.rect(-10, -10, reveal + 10, h + 20); ctx.clip();
     // branches: a soft glow pass then a fine core, elbows rounded
     var segs = [];
@@ -102,7 +102,7 @@ var UITree = (function () {
     // scale bar
     if (o.labels) {
       var one = sx * v.k, units = one < 12 ? 5 : 1, bx = 16, by = h - 16;
-      ctx.fillStyle = 'rgba(5,9,14,.85)'; ctx.fillRect(bx - 8, by - 12, one * units + 110, 24);
+      ctx.fillStyle = 'rgba(5,9,14,.85)'; ctx.fillRect(bx - 8, by - 12, one * units + 96, 24);
       ctx.strokeStyle = 'rgba(233,239,244,.7)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(bx, by - 3); ctx.lineTo(bx, by); ctx.lineTo(bx + one * units, by); ctx.lineTo(bx + one * units, by - 3); ctx.stroke();
       ctx.font = '500 10px ' + fm; ctx.fillStyle = 'rgba(164,179,192,.95)'; ctx.textBaseline = 'middle'; ctx.fillText(units + ' mutation' + (units > 1 ? 's' : ''), bx + 8 + one * units, by - 1);
     }
@@ -151,7 +151,7 @@ var UILab = UI.views.lab = {
         '<button class="btn pri block" data-run="' + UIesc(dec.id) + '"' + (dec.available ? '' : ' disabled') + '>' + UIICON.flask + UIesc(dec.label) + '</button>' + (dec.available ? '' : '<p class="note" style="margin-top:8px">' + UIesc(dec.why) + '</p>') + '<div style="margin-top:8px">' + UIcosts(dec) + '</div></div></div>';
     }
     // capacity
-    function ring(frac, col) { var C = 2 * Math.PI * 26; return '<svg viewBox="0 0 64 64" class="ring"><circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="6"/><circle cx="32" cy="32" r="26" fill="none" stroke="' + col + '" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - UIclamp(frac, 0, 1))).toFixed(1) + '" transform="rotate(-90 32 32)" style="filter:drop-shadow(0 0 5px ' + col + ')"/></svg>'; }
+    function ring(frac, col) { var C = 2 * Math.PI * 26, off = (C * (1 - UIclamp(frac, 0, 1))).toFixed(1); return '<svg viewBox="0 0 64 64" class="ring" style="overflow:visible"><circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="4"/><circle cx="32" cy="32" r="26" fill="none" stroke="' + col + '" stroke-opacity=".22" stroke-width="10" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + off + '" transform="rotate(-90 32 32)"/><circle cx="32" cy="32" r="26" fill="none" stroke="' + col + '" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + off + '" transform="rotate(-90 32 32)"/>' + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(function (i) { var a = i / 12 * Math.PI * 2; return '<line x1="' + (32 + Math.sin(a) * 18).toFixed(1) + '" y1="' + (32 - Math.cos(a) * 18).toFixed(1) + '" x2="' + (32 + Math.sin(a) * 20.5).toFixed(1) + '" y2="' + (32 - Math.cos(a) * 20.5).toFixed(1) + '" stroke="rgba(255,255,255,.18)" stroke-width="1"/>'; }).join('') + '</svg>'; }
     html += '<div class="card"><div class="card-h"><div class="t"><div class="eyebrow">Today</div><h3>Capacity</h3></div></div><div class="card-b"><div class="cap">' +
       '<div class="cap-i">' + ring(r.tests.max ? r.tests.left / r.tests.max : 0, '#3fd0aa') + '<div><b>' + r.tests.left + '<small> / ' + r.tests.max + '</small></b><span>PCR tests left</span></div></div>' +
       '<div class="cap-i">' + ring(r.seq.max ? r.seq.left / r.seq.max : 0, '#a592ff') + '<div><b>' + r.seq.left + '<small> / ' + r.seq.max + '</small></b><span>sequencing slots</span></div></div></div>' +

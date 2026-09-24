@@ -395,6 +395,8 @@ i.su{background:rgba(217,211,199,.14);border:1px solid rgba(233,226,212,.7)}
 
 /* ---------- map ---------- */
 .mp{position:absolute;inset:0;overflow:hidden;background:#04080c}
+.mp::before{content:"";position:absolute;left:0;right:0;bottom:0;height:200px;z-index:1;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(3,6,10,.55) 55%,rgba(3,6,10,.82))}
+.mp-top,.mp-foot,.mp-zoom{z-index:2}
 .mp-cv{position:absolute;inset:0;touch-action:none;cursor:grab}
 .mp-cv canvas{display:block}
 .mp-top{position:absolute;left:0;right:0;top:0;padding:12px calc(12px + var(--safe-r)) 18px calc(12px + var(--safe-l));display:flex;flex-direction:column;gap:9px;pointer-events:none;background:linear-gradient(180deg,rgba(3,6,10,.82),rgba(3,6,10,.45) 60%,transparent)}
@@ -503,10 +505,10 @@ i.su{background:rgba(217,211,199,.14);border:1px solid rgba(233,226,212,.7)}
 .lab-grid{display:flex;flex-direction:column;gap:14px}
 .lab-hero{border-color:rgba(255,122,69,.35);background:radial-gradient(120% 90% at 100% 0,rgba(255,122,69,.13),transparent 60%),linear-gradient(180deg,rgba(24,36,47,.92),rgba(15,23,31,.94))}
 .cap{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.cap-i{display:flex;align-items:center;gap:10px}
+.cap-i{display:flex;align-items:center;gap:12px;min-width:0}
 .cap-i .ring{width:58px;height:58px;flex:none}
-.cap-i b{display:block;font:600 22px var(--f-mono)} .cap-i b small{font-size:12px;color:var(--ink3)}
-.cap-i span{font-size:12px;color:var(--ink3)}
+.cap-i b{display:block;font:400 34px/1 var(--f-disp);letter-spacing:-.02em} .cap-i b small{font:500 12px var(--f-mono);color:var(--ink3);letter-spacing:0}
+.cap-i span{display:block;margin-top:3px;font-size:12px;line-height:1.3;color:var(--ink3)}
 .q-list{display:flex;flex-direction:column;gap:4px}
 .q-it{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 10px;border-radius:10px;background:rgba(0,0,0,.2);text-align:left}
 .q-it b{font-weight:600;font-size:14px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

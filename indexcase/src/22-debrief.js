@@ -66,9 +66,9 @@ var UIDebrief = {
     var d0 = Math.min.apply(null, fr.map(function (f) { return f.day; })), d1 = Math.max(UIA.day(), Math.max.apply(null, fr.map(function (f) { return f.day; })));
     var pos = {}; fr.forEach(function (f) { pos[f.pid] = f.pos || UIMapR.homePos(city, f.pid, f.district, null); });
     var view = { x: 0, y: 0, k: 1 }, cur = d0, sl = UI$('#rp-s'); sl.min = d0; sl.max = d1; sl.value = d0;
+    var rpStore = {};
     var cv = UIcanvas(host, function (ctx, w, h) {
-      var T = UIMapR.base(ctx, w, h, { city: city, view: view });
-      UIMapR.labels(ctx, T, city, {});
+      var T = UIMapR.cached(rpStore, ctx, w, h, { city: city, view: view, labels: true }, [view.x.toFixed(1), view.y.toFixed(1), view.k.toFixed(3)].join(','));
       var pts = [], arcs = [], nOn = 0;
       fr.forEach(function (f) { if (f.day <= cur && cur - f.day <= 21) nOn++; });
       var base = UIclamp(Math.sqrt(220 / Math.max(1, nOn)), 0.14, 1);
