@@ -326,8 +326,10 @@
     var out = { ok: true, found: j.kind === 'exact', kind: j.kind, msgs: [] };
     // the van may be noticed
     var mem = W.mem[t.fromId];
-    var seenP = 0.12 * W.G.alert * (mem ? 0.6 + mem.careful : 1);
-    if (DX.u(W.key, 950, s.vans.length, s.shift) < seenP) { this._raise(8, 'van seen'); v.seen = true; }
+    // DF vans in the streets make a ring nervous; a van that is actually spotted more so
+    this._raise(4, 'van in the streets');
+    var seenP = 0.15 * W.G.alert * (mem ? 0.5 + mem.careful : 1);
+    if (DX.u(W.key, 950, s.vans.length, s.shift) < seenP) { this._raise(10, 'van seen'); v.seen = true; }
     if (j.kind === 'exact') {
       var b = this._locate(t, 'van');
       out.building = this.building(b.id);
@@ -707,7 +709,7 @@
   // ---------------------------------------------------------------- the security officer
   var REACT = {
     cadet: ['reschedule', 'reschedule', 'decoy', 'move'],
-    analyst: ['reschedule', 'stopReuse', 'decoy', 'burst', 'move'],
+    analyst: ['stopReuse', 'reschedule', 'decoy', 'burst', 'move'],
     chief: ['stopReuse', 'reschedule', 'burst', 'decoy', 'move']
   };
   CP._securityDawn = function () {
