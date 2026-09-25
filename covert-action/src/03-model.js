@@ -290,9 +290,9 @@ function plotDay(d) {
   if (mm.status !== 'free' && cr.foiled == null) foilPlot(d, true);
   if (cr.foiled != null) {
     const left = d - cr.foiled;
-    for (const p of cr.people) if (p.status === 'free' && p !== mm && rnd() < 0.08 + 0.1 * left) { p.status = 'fled'; game.news.push({ t: dayToT(d), text: 'A ' + p.org.name + ' suspect has slipped out of ' + cityById(p.city).name + '.' }); }
+    for (const p of cr.people) if (p.status === 'free' && p !== mm && rnd() < 0.08 + 0.1 * left) { p.status = 'in hiding'; game.news.push({ t: dayToT(d), text: 'A ' + p.org.name + ' suspect in ' + cityById(p.city).name + ' has gone into hiding.' }); }
     const anyFree = cr.people.some(p => p.status === 'free');
-    if (left >= 4 || !anyFree) { if (mm.status === 'free') mm.status = 'fled'; cr.over = true; cr.prevented = true; cr.endDay = d; }
+    if (left >= 4 || !anyFree) { if (mm.status === 'free') mm.status = 'in hiding'; cr.over = true; cr.prevented = true; cr.endDay = d; }
     return;
   }
   const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length, exec = cr.people[cr.executor];
@@ -311,7 +311,7 @@ function efficiency() {
   const cr = game.crime, rows = []; let got = 0, max = 0;
   for (const p of cr.people) {
     const m = epMax(p); let e = Math.round(m * ['name', 'org', 'city', 'hideout'].filter(f => p.known[f]).length / 8);
-    if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : p.status === 'fled' ? 'Fled' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
+    if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : p.status === 'in hiding' ? 'In Hiding' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
   }
   cr.items.forEach((it, i) => { const ok = i < cr.evidenceTaken; rows.push({ status: ok ? 'Captured' : 'Not Found', label: it.replace(/\b\w/g, c => c.toUpperCase()), ep: ok ? 50 : 0, max: 50 }); got += ok ? 50 : 0; max += 50; });
   if (cr.double) { const ok = cr.double.caught; rows.push({ status: ok ? 'Exposed' : 'Undetected', label: 'Double Agent', ep: ok ? 100 : 0, max: 100 }); got += ok ? 100 : 0; max += 100; }

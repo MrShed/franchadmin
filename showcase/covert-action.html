@@ -735,9 +735,9 @@ function plotDay(d) {
   if (mm.status !== 'free' && cr.foiled == null) foilPlot(d, true);
   if (cr.foiled != null) {
     const left = d - cr.foiled;
-    for (const p of cr.people) if (p.status === 'free' && p !== mm && rnd() < 0.08 + 0.1 * left) { p.status = 'fled'; game.news.push({ t: dayToT(d), text: 'A ' + p.org.name + ' suspect has slipped out of ' + cityById(p.city).name + '.' }); }
+    for (const p of cr.people) if (p.status === 'free' && p !== mm && rnd() < 0.08 + 0.1 * left) { p.status = 'in hiding'; game.news.push({ t: dayToT(d), text: 'A ' + p.org.name + ' suspect in ' + cityById(p.city).name + ' has gone into hiding.' }); }
     const anyFree = cr.people.some(p => p.status === 'free');
-    if (left >= 4 || !anyFree) { if (mm.status === 'free') mm.status = 'fled'; cr.over = true; cr.prevented = true; cr.endDay = d; }
+    if (left >= 4 || !anyFree) { if (mm.status === 'free') mm.status = 'in hiding'; cr.over = true; cr.prevented = true; cr.endDay = d; }
     return;
   }
   const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length, exec = cr.people[cr.executor];
@@ -756,7 +756,7 @@ function efficiency() {
   const cr = game.crime, rows = []; let got = 0, max = 0;
   for (const p of cr.people) {
     const m = epMax(p); let e = Math.round(m * ['name', 'org', 'city', 'hideout'].filter(f => p.known[f]).length / 8);
-    if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : p.status === 'fled' ? 'Fled' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
+    if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : p.status === 'in hiding' ? 'In Hiding' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
   }
   cr.items.forEach((it, i) => { const ok = i < cr.evidenceTaken; rows.push({ status: ok ? 'Captured' : 'Not Found', label: it.replace(/\b\w/g, c => c.toUpperCase()), ep: ok ? 50 : 0, max: 50 }); got += ok ? 50 : 0; max += 50; });
   if (cr.double) { const ok = cr.double.caught; rows.push({ status: ok ? 'Exposed' : 'Undetected', label: 'Double Agent', ep: ok ? 100 : 0, max: 100 }); got += ok ? 100 : 0; max += 100; }
@@ -7726,7 +7726,7 @@ function cityScene() {
   if (game.crime && game.crime.over && !game.crime.reported) return synopsisScene();
   if (game.crime && game.crime.prisonBreak && !game.crime.prisonBreak.handled && !practiceMode) return prisonBreakScene();
   if (game.crime && game.crime.foiled != null && !game.crime.foiledShown) { game.crime.foiledShown = true; const cr = game.crime, mmIn = cr.people[cr.mastermind].status === 'arrested';
-    return report('Plot Foiled', [mmIn ? 'With the Mastermind in custody, the ' + cr.kind.toLowerCase() + ' plot is dead. Nobody is left to give the orders.' : 'Word from every station: the ' + cr.kind.toLowerCase() + ' plot has collapsed. Without its key people it cannot go ahead.', 'The rest of the ring will scatter over the next few days' + (mmIn ? '' : ', and the Mastermind will go to ground') + '. Round up whoever you can while they are still in place. The case closes when they are gone.'], () => go(cityScene())); }
+    return report('Plot Foiled', [mmIn ? 'With the Mastermind in custody, the ' + cr.kind.toLowerCase() + ' plot is dead. Nobody is left to give the orders.' : 'Word from every station: the ' + cr.kind.toLowerCase() + ' plot has collapsed. Without its key people it cannot go ahead.', 'The rest of the ring will start going into hiding over the next few days' + (mmIn ? '' : ', the Mastermind last of all') + '. Round up whoever you can while they are still in place. The case closes when they are gone.'], () => go(cityScene())); }
   writeCase(); const city = cityById(game.city);
   const items = locationsHere().map(l => ({ label: fitText(l.label, 120), go: () => goLocation(l) }));
   items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });

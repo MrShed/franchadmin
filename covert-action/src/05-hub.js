@@ -553,7 +553,7 @@ function cityScene() {
   if (game.crime && game.crime.over && !game.crime.reported) return synopsisScene();
   if (game.crime && game.crime.prisonBreak && !game.crime.prisonBreak.handled && !practiceMode) return prisonBreakScene();
   if (game.crime && game.crime.foiled != null && !game.crime.foiledShown) { game.crime.foiledShown = true; const cr = game.crime, mmIn = cr.people[cr.mastermind].status === 'arrested';
-    return report('Plot Foiled', [mmIn ? 'With the Mastermind in custody, the ' + cr.kind.toLowerCase() + ' plot is dead. Nobody is left to give the orders.' : 'Word from every station: the ' + cr.kind.toLowerCase() + ' plot has collapsed. Without its key people it cannot go ahead.', 'The rest of the ring will scatter over the next few days' + (mmIn ? '' : ', and the Mastermind will go to ground') + '. Round up whoever you can while they are still in place. The case closes when they are gone.'], () => go(cityScene())); }
+    return report('Plot Foiled', [mmIn ? 'With the Mastermind in custody, the ' + cr.kind.toLowerCase() + ' plot is dead. Nobody is left to give the orders.' : 'Word from every station: the ' + cr.kind.toLowerCase() + ' plot has collapsed. Without its key people it cannot go ahead.', 'The rest of the ring will start going into hiding over the next few days' + (mmIn ? '' : ', the Mastermind last of all') + '. Round up whoever you can while they are still in place. The case closes when they are gone.'], () => go(cityScene())); }
   writeCase(); const city = cityById(game.city);
   const items = locationsHere().map(l => ({ label: fitText(l.label, 120), go: () => goLocation(l) }));
   items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });
