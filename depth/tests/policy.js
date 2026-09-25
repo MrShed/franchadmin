@@ -54,13 +54,17 @@ module.exports = function (DX) {
       now.sort(function (a, b) { return priority(b) - priority(a); });
       var t = now[0];
       // DF and the van first (the outstations and the van crew work while we copy)
+      var vanJob = null;
       if (t.mode !== 'VOICE' && t.mode !== 'BCAST' && !P.dfDone[t.id]) {
         var d = c.df(t.id);
         P.dfDone[t.id] = d.ok ? d : true;
-        if (d.ok) maybeVan(t, d);
+        if (d.ok) vanJob = maybeVan(t, d);
       }
-      var r = c.tune(t.id, inputs());
+      var inp = inputs();
+      if (vanJob) inp.driftHeld = Math.min(inp.driftHeld, R.range(0.45, 0.7));   // busy on the van radio
+      var r = c.tune(t.id, inp);
       if (r.ok) note('copied ' + (t.callsign || '?') + ' ' + r.msg + ' q' + r.quality);
+      if (vanJob) { var vr = c.vanResult(vanJob.pt, vanJob.id); note('van on ' + t.callsign + ': ' + vr.kind); }
       return true;
     }
 
@@ -75,19 +79,17 @@ module.exports = function (DX) {
     }
     function maybeVan(t, d) {
       var call = t.callsign;
-      if (!call || call === c.controller || located(call) || d.abroad || !d.fix) return;
+      if (!call || call === c.controller || located(call) || d.abroad || !d.fix) return null;
       var targets = vanTargets();
       var late = c.shift >= c.shifts - 2;
       var want = targets.indexOf(call) >= 0 || (late && c.warrants().left >= 2);
-      if (!want) return;
-      if ((P.vanTried[call] || 0) >= 3) return;
-      if (t.remaining < 4) return;
+      if (!want) return null;
+      if ((P.vanTried[call] || 0) >= 3) return null;
+      if (t.remaining < 4) return null;
       P.vanTried[call] = (P.vanTried[call] || 0) + 1;
       var v = c.van(t.id, [d.fix.x, d.fix.y]);
-      if (!v.ok) return;
-      var pt = driveVan(v.scene);
-      var res = c.vanResult(pt, v.scene.id);
-      note('van on ' + call + ': ' + res.kind);
+      if (!v.ok) return null;
+      return { id: v.scene.id, pt: driveVan(v.scene) };
     }
     function driveVan(sc) {
       // hill-climb along the street grid reading the meter; each block costs ~6 s of the budget
@@ -208,11 +210,10 @@ module.exports = function (DX) {
         var p = pr.best;
         if (!c.board()) {
           // Chief: the big computer
+          if (P.job) return;
           var bs = c.bench.boardSolve(ids, p);
-          note('big computer on ' + f + ' p' + p + ': ' + (bs.ok ? bs.keyword : 'failed'));
-          if (!bs.ok) return;
-          boardView = c.board();
-          P.courierKey[f] = { key: bs.key, period: p };
+          if (bs.ok) { P.job = { id: bs.job, f: f, p: p }; note('big computer booked on ' + f + ' p' + p); }
+          return;
         } else {
           var cols = c.bench.columns(ids, p);
           var k0 = cols.cols.map(function (col) { return col.fit[0].shift; });
@@ -234,6 +235,16 @@ module.exports = function (DX) {
         parseAll();
       });
       return did;
+    }
+    function checkJob() {
+      if (!P.job) return false;
+      var n = c.inbox().filter(function (x) { return x.job === P.job.id; })[0];
+      if (!n) return false;
+      var j = P.job; P.job = null;
+      note('computer: ' + (n.keyword || 'failed'));
+      if (!n.keyword) { P.courierTried[j.f] = null; return false; }
+      P.courierKey[j.f] = { key: n.key, period: j.p };
+      return true;
     }
     function readClear() {
       c.messages().forEach(function (m) { if (m.kind === 'clear' && !P.readTexts[m.id]) { P.readTexts[m.id] = { text: m.text, clear: true }; } });
@@ -390,6 +401,7 @@ module.exports = function (DX) {
       var steps = 0;
       while (!c.over && c.minute < SH && steps++ < 400) {
         if (listenNow()) { act(); continue; }
+        checkJob();
         if (tryCouriers()) { act(); continue; }
         if (tryDepths()) { act(); continue; }
         act();

@@ -117,6 +117,7 @@ var UIMap = (function () {
   function hit(bx) { return LBL.some(function (q) { return bx.x < q.x + q.w && bx.x + bx.w > q.x && bx.y < q.y + q.h && bx.y + bx.h > q.y; }); }
   function draw(x, w, h) {
     var city = UIA.city(), k = view.k, sc = S * k;
+    SHOWN = {};
     LBL = [{ x: 0, y: 0, w: w, h: 62 }, { x: w - 64, y: 0, w: 64, h: 160 }, { x: 0, y: h - 52, w: w, h: 52 }];
     // the desk under the lamp
     x.fillStyle = '#16140f'; x.fillRect(0, 0, w, h);
@@ -177,19 +178,21 @@ var UIMap = (function () {
       // masking tape at the corners
       [[t1[0], t1[1], -35], [t2[0], t1[1], 35], [t1[0], t2[1], 35], [t2[0], t2[1], -35]].forEach(function (q) { x.save(); x.translate(q[0], q[1]); x.rotate(q[2] * Math.PI / 180); x.fillStyle = 'rgba(232,214,160,.85)'; x.fillRect(-20, -7, 40, 14); x.fillStyle = 'rgba(255,255,255,.2)'; x.fillRect(-20, -7, 40, 3); x.restore(); });
       x.restore();
+      x.save(); x.beginPath(); x.rect(t1[0], t1[1], t2[0] - t1[0], t2[1] - t1[1]); x.clip();
       pencil(x, w, h, city);
+      x.restore();
     }
     // the lamp
     var lamp = x.createRadialGradient(w * 0.55, h * 0.3, Math.min(w, h) * 0.1, w * 0.5, h * 0.45, Math.max(w, h) * 0.85);
     lamp.addColorStop(0, 'rgba(255,220,160,.10)'); lamp.addColorStop(0.55, 'rgba(0,0,0,0)'); lamp.addColorStop(1, 'rgba(0,0,0,.55)');
     x.fillStyle = lamp; x.fillRect(0, 0, w, h);
   }
-  var LBL = [];
+  var LBL = [], SHOWN = {};
   function cartouche(x, city, sc) {
     // title block bottom-right of the plan, scale bar, north arrow
     var br = W2S([1, 1]), k = view.k, s1 = UIclamp(k, 0.8, 1.6);
     x.save();
-    var tl0 = W2S([0, 0]), bw = 150 * s1, bh = 50 * s1, bx = tl0[0] + 12 * s1, by = tl0[1] + 12 * s1;
+    var tl0 = W2S([0.15, 0.02]), bw = 150 * s1, bh = 50 * s1, bx = tl0[0], by = tl0[1];
     x.fillStyle = 'rgba(236,228,205,.92)'; x.fillRect(bx, by, bw, bh); x.strokeStyle = '#3a3226'; x.lineWidth = 1.2; x.strokeRect(bx + 0.5, by + 0.5, bw, bh); x.strokeRect(bx + 3.5, by + 3.5, bw - 6, bh - 6);
     x.fillStyle = '#26221b'; x.textAlign = 'center'; x.textBaseline = 'middle';
     x.font = '800 ' + Math.round(17 * s1) + 'px "DX Stencil", sans-serif'; spaced(x, (city.name || 'HALDMAR').toUpperCase(), bx + bw / 2, by + bh * 0.38, 3 * s1);
@@ -200,7 +203,7 @@ var UIMap = (function () {
     x.strokeStyle = '#26221b'; x.lineWidth = 1; x.strokeRect(sx + 0.5, sy + 0.5, km, 5);
     x.font = '400 ' + Math.round(9 * s1) + 'px "DX Type", monospace'; x.textAlign = 'left'; x.fillStyle = '#26221b'; x.fillText('0', sx - 2, sy - 7); x.fillText('1 km', sx + km - 10, sy - 7);
     // north arrow over the sea
-    var na = W2S([0.94, 0.06]); x.translate(na[0], na[1]); x.scale(s1, s1);
+    var na = [sx + km + 30 * s1, by + bh * 0.55]; x.translate(na[0], na[1]); x.scale(s1, s1);
     x.fillStyle = '#26221b'; x.beginPath(); x.moveTo(0, -16); x.lineTo(6, 8); x.lineTo(0, 3); x.closePath(); x.fill();
     x.strokeStyle = '#26221b'; x.beginPath(); x.moveTo(0, -16); x.lineTo(-6, 8); x.lineTo(0, 3); x.closePath(); x.stroke();
     x.font = '800 12px "DX Stencil", sans-serif'; x.textAlign = 'center'; x.fillText('N', 0, -24);
@@ -249,7 +252,8 @@ var UIMap = (function () {
     else { x.fillStyle = '#1d2024'; x.beginPath(); for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.35 : r * 0.8; x.lineTo(c[0] + Math.cos(a) * rr, c[1] + Math.sin(a) * rr); } x.closePath(); x.fill(); }
     var show = kd === 'L' || kd === 'q' ? k > 0.9 : k > 1.7;
     if (show && !(kd === 'q' && k < 1.6 && !/ 1$| 5$| 9$/.test(p.name))) {
-      var fs = Math.round(UIclamp(9 + k * 0.8, 9, 13)), nm = k < 1.5 ? p.name.split(',')[0] : p.name;
+      var fs = Math.round(UIclamp(9 + k * 0.8, 9, 13)), nm = k < 2.2 ? p.name.split(',')[0] : p.name;
+      if (SHOWN[nm]) { x.restore(); return; } SHOWN[nm] = 1;
       x.font = (kd === 'L' ? '700 ' : '400 ') + fs + 'px "DX Type", monospace'; x.textAlign = 'left'; x.textBaseline = 'middle';
       var tw = x.measureText(nm).width, bx = { x: c[0] + r + 2, y: c[1] - fs * 0.6, w: tw + 2, h: fs * 1.2 };
       if (bx.x + bx.w > W2S([1.03, 0])[0]) { bx.x = c[0] - r - 2 - tw; x.textAlign = 'right'; }

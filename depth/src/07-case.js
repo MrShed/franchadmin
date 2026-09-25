@@ -71,7 +71,7 @@
   };
   CP.costs = function () {
     var k = this._w.G.cost;
-    return { depth: r1(2 * k), crib: r1(1 * k), place: 0, period: r1(5 * k), columns: r1(3 * k), align: r1(3 * k), setKey: r1(1 * k), suggest: r1(2 * k), boardSolve: 60, accept: 0, warrant: 10, van: this._w.G.id === 'cadet' ? 15 : this._w.G.id === 'analyst' ? 20 : 25, df: 0 };
+    return { depth: r1(2 * k), crib: r1(1 * k), place: 0, period: r1(5 * k), columns: r1(3 * k), align: r1(3 * k), setKey: r1(1 * k), suggest: r1(2 * k), boardSolve: 5, accept: 0, warrant: 10, van: this._w.G.id === 'cadet' ? 5 : this._w.G.id === 'analyst' ? 10 : 15, boardSolveWait: 60, df: 0 };
   };
   function r1(x) { return Math.max(0, Math.round(x)); }
 
@@ -145,6 +145,10 @@
       if (it.k === 'tx') {
         s.seenStart[it.t.id] = 1;
         if (!it.t.cancelled) { var le = self._logFaint(it.t); ev(events, 'heard', { t: it.at, tx: it.t.id, intercept: le.id, freq: it.t.freq, mode: it.t.mode, callsign: le.callsign }); }
+      } else if (it.k === 'warrant' && it.p.kind === 'computer') {
+        it.p.done = true;
+        var cr = self._computerJob(it.p);
+        ev(events, 'computer', { t: it.at, job: it.p.id, ok: cr.ok, keyword: cr.keyword || null, inbox: cr.msgIds });
       } else if (it.k === 'warrant') {
         it.p.done = true;
         var r = self._resolveWarrant(it.p);
@@ -334,7 +338,9 @@
     } else {
       out.msgs.push(this._post('report', 'DF van: lost it', 'Van crew', [{ k: 'p', x: ['No joy on ', ref('callsign', t.from, t.from), '. The meter never climbed properly.'] }]));
     }
-    out.events = this._spend(W.G.id === 'cadet' ? 15 : W.G.id === 'analyst' ? 20 : 25);
+    // the hunt ran while the set was on air; afterwards the crew reports in
+    var endT = Math.max(s.minute, v.shift === s.shift ? Math.min(SHIFT, t.minute + t.dur) : s.minute);
+    out.events = this._advance(Math.min(SHIFT, endT + this.costs().van));
     return out;
   };
   /** building from a transmitter trace */
@@ -575,6 +581,20 @@
     w.result = summary;
     if (s.patience <= 0 && !s.outcome) this._end('sacked');
     return { summary: summary, msgIds: msgIds };
+  };
+
+  CP._computerJob = function (job) {
+    var s = this._s, self = this;
+    var st = job.ids.map(function (id) { return self._digitsOf(id); }).filter(Boolean);
+    var best = st.length ? DX.searchBoard(st, typeof job.arg === 'number' ? job.arg : DX.toDigits(job.arg)) : null;
+    job.result = best ? { keyword: best.keyword, key: best.key, plaus: best.plaus } : null;
+    if (best && best.plaus >= 0.55) {
+      if (!s.board) s.board = best.keyword;
+      job.ok = true;
+      return { ok: true, keyword: best.keyword, key: best.key, msgIds: [this._post('report', 'The big computer: checkerboard recovered', 'Computer room', [{ k: 'p', x: ['Keyword ' + best.keyword + ' gives readable text on ', ref('msg', job.ids[0], 'the courier traffic'), ' with key ' + best.key.join('') + ' (period ' + best.key.length + '). The checkerboard is on your bench.'] }], { job: job.id, keyword: best.keyword, key: best.key })] };
+    }
+    job.ok = false;
+    return { ok: false, msgIds: [this._post('report', 'The big computer: no luck', 'Computer room', [{ k: 'p', x: ['No keyword in the list gives readable text with period ' + (typeof job.arg === 'number' ? job.arg : job.arg.length) + '. Check the period, or wait for more traffic.'] }], { job: job.id })] };
   };
 
   CP._clearMessage = function (key, text, source) {
@@ -934,16 +954,17 @@
       var ev6 = c._spend(c.costs().setKey);
       return { ok: true, texts: list, text: list[0].text, plaus: list[0].plaus, events: ev6 };
     };
+    /** book the big computer: it tries every keyword in the list against these messages with this period (or
+     *  relative key). The job runs for an hour; the answer comes to the inbox (event kind 'computer'). */
     B.boardSolve = function (ids, periodOrRel) {
       var e = need(ids); if (e) return { ok: false, err: e };
+      var s = c._s;
+      if (s.pending.some(function (p) { return p.kind === 'computer' && !p.done; })) return { ok: false, err: 'the computer is already running a job for you' };
+      var job = { id: 'C' + (s.pending.length + 1), kind: 'computer', shift: s.shift, at: Math.min(SHIFT, s.minute + c.costs().boardSolveWait), ids: (Array.isArray(ids) ? ids : [ids]).slice(), arg: periodOrRel, done: false };
+      if (s.minute + c.costs().boardSolveWait > SHIFT) { job.shift = s.shift + 1; job.at = Math.min(SHIFT, s.minute + c.costs().boardSolveWait - SHIFT); }
+      s.pending.push(job);
       var ev7 = c._spend(c.costs().boardSolve);
-      var best = DX.searchBoard(streams(ids), typeof periodOrRel === 'number' ? periodOrRel : DX.toDigits(periodOrRel));
-      if (best && best.plaus >= 0.55) {
-        c._s.board = best.keyword;
-        c._post('report', 'The big computer: checkerboard recovered', 'Computer room', [{ k: 'p', x: ['Overnight run on the courier traffic: keyword ' + best.keyword + ' gives readable text with key ' + best.key.join('') + '. The checkerboard is on your bench.'] }]);
-        return { ok: true, keyword: best.keyword, key: best.key, plaus: best.plaus, board: c.board(), events: ev7 };
-      }
-      return { ok: false, err: 'no keyword in the list gives readable text with that key', plaus: best ? best.plaus : 0, events: ev7 };
+      return { ok: true, pending: true, job: job.id, ready: { shift: job.shift, t: job.at, label: DX.hhmm(job.at) }, events: ev7 };
     };
     B.decode = function (digits) { var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard' }; var d = DX.decode(bd, digits); return { ok: true, text: d.text, plaus: DX.plaus(d.text).score }; };
     B.encode = function (text) { var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard' }; return { ok: true, digits: DX.encode(bd, text) }; };
