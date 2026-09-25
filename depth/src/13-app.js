@@ -121,6 +121,7 @@ UI.openRef = function (t, id) {
   UIAudio.cue('tap');
   var push = UIsheet.isOpen();
   if (t === 'place' || t === 'address') UIMap.placeSheet(id, { push: push });
+  else if (t === 'building') UIMap.buildingSheet(id, { push: push });
   else if (t === 'district') { UIsheet.close(); UI.go('map'); UIMap.focusDistrict(id); }
   else if (t === 'person') UIDesk.personSheet(id, { push: push });
   else if (t === 'callsign' || t === 'cs') UITraffic.nodeSheet(id, { push: push });

@@ -553,6 +553,14 @@ var UIA = (function () {
       return Object.keys(m).map(function (k) { return m[k]; });
     });
   };
+  /** words the ring uses (engine vocabulary) for crib suggestions */
+  A.vocab = function () {
+    return cached('vocab', function () {
+      var v = typeof DX !== 'undefined' && DX.vocab && !A.isMock() ? safe(function () { return DX.vocab(); }, []) : [];
+      var w = arr(v).map(function (x) { return String(x.w || x.word || x); }).filter(function (x) { return /^[A-Z]{2,}$/.test(x); });
+      return w.length ? w : ['TO', 'FOR', 'NR', 'STOP', 'MEET', 'MEETING', 'TARGET', 'OPERATION', 'NIGHT', 'DROP', 'CONFIRM', 'READY', 'QUAY', 'CENTRE', 'GREETINGS', 'RECEIVED', 'EXECUTE', 'ALL', 'QUIET'];
+    });
+  };
   A.controller = function () { return (A.g && (A.g.controller || (A.g.ring && A.g.ring.controller && A.g.ring.controller.callsign))) || null; };
   return A;
 })();

@@ -47,36 +47,32 @@
   }
   DX._tokensFor = tokensFor;
 
-  /** can `s` (letters, digits, '.', '?') be the beginning of a sequence of dictionary tokens? */
+  /** can `s` (letters, digits, '.') be the beginning of a sequence of dictionary tokens?
+   *  DP over word boundaries: reach[i] = s[0..i) splits into whole tokens. */
   function validPrefix(trie, s) {
-    var memo = {};
-    function go(i, node, atRoot) {
-      if (i >= s.length) return true;
-      var key = i + (atRoot ? 'r' : '') + (node === trie ? '' : ':' + nodeId(node));
-      if (memo[key] !== undefined) return memo[key];
-      var ch = s[i], ok = false;
-      if (atRoot && (ch === '.' || (ch >= '0' && ch <= '9'))) ok = go(i + 1, trie, true);
-      if (!ok && ch === '?') {
-        if (atRoot) ok = go(i + 1, trie, true); // unknown: be generous
-        else { for (var k in node) { if (k === '$' || k === '#id') continue; if (go(i + 1, node[k], false)) { ok = true; break; } } if (!ok && node.$) ok = go(i, trie, true); }
-      } else if (!ok) {
-        var nx = node[ch];
-        if (nx && go(i + 1, nx, false)) ok = true;
-        if (!ok && !atRoot && node.$) ok = go(i, trie, true);
+    var n = s.length, reach = new Uint8Array(n + 1);
+    reach[0] = 1;
+    for (var i = 0; i < n; i++) {
+      if (!reach[i]) continue;
+      var ch = s[i];
+      if (ch === '.' || (ch >= '0' && ch <= '9') || ch === '?') { reach[i + 1] = 1; continue; }
+      var node = trie;
+      for (var j = i; j < n; j++) {
+        node = node[s[j]];
+        if (!node) break;
+        if (j === n - 1) return true;          // the tail is the beginning of a word
+        if (node.$) reach[j + 1] = 1;
       }
-      memo[key] = ok;
-      return ok;
     }
-    return go(0, trie, true);
+    return !!reach[n];
   }
-  var NID = 1;
-  function nodeId(n) { if (!n['#id']) Object.defineProperty(n, '#id', { value: NID++, enumerable: false }); return n['#id']; }
   DX._validPrefix = validPrefix;
 
   // ---------------------------------------------------------------- depth solver
   DX.solveDepth = function (board, ca, cb, opts) {
     opts = opts || {};
-    var beamW = opts.beam || 40, calls = opts.calls || [];
+    var beamW = opts.beam || 16, calls = opts.calls || [];
+    var vpCache = new Map();
     var LMW = DX.wordLM();
     var TK = tokensFor(board, calls), toks = TK.toks;
     var L = Math.min(ca.length, cb.length);
@@ -86,74 +82,92 @@
     // cribs: candidate openings per side (token lists); every combination seeds the beam, plus a free start
     var oa = opts.openA && opts.openA.length ? opts.openA : [null], ob = opts.openB && opts.openB.length ? opts.openB : [null];
     var beam = [], done = [];
-    oa.forEach(function (x) { ob.forEach(function (y) { var s0 = Object.assign({}, init); s0.force = [x, y]; beam.push(s0); }); });
+    oa.forEach(function (x) { ob.forEach(function (y) { var s0 = Object.assign({}, init); s0.force = [x, y]; s0.seed = beam.length; beam.push(s0); }); });
     var byText = {};
     toks.forEach(function (tk) { byText[tk.t] = tk; });
     var maxSteps = opts.maxSteps || 140;
+    function derive(side, sd, q) { return sd >= 0 && diff[q] >= 0 ? (side === 0 ? ((sd - diff[q]) % 10 + 10) % 10 : (sd + diff[q]) % 10) : -1; }
     for (var step = 0; step < maxSteps && beam.length; step++) {
       var next = [];
       beam.forEach(function (st) {
-        var side = st.f[0] <= st.f[1] ? 0 : 1, fS = st.f[side], fO = st.f[1 - side];
-        if (fS >= L - 1) { done.push(st); return; }
-        var S = side === 0 ? st.A : st.B, O = side === 0 ? st.B : st.A;
-        var any = false, cand = S[fS] >= 0 ? TK.byFirst[S[fS]] : toks;
-        var fz = st.force[side];
-        if (fz && st.tk[side].length < fz.length) { var ft = byText[fz[st.tk[side].length]]; cand = ft ? [ft] : []; }
-        for (var ti = 0; ti < cand.length; ti++) {
-          var tk = cand[ti], d = tk.d;
-          if (fS + d.length > L + 4) continue;
-          // match against digits already fixed on this side (derived from the other message)
-          var ok = true, pairV = -1;
-          for (var j = 0; j < d.length; j++) {
-            var pos = fS + j; if (pos >= L) break;
-            var have = S[pos], want = d[j];
-            if (want === -2) { pairV = have; continue; }
-            if (want === -3) { if (have >= 0 && pairV >= 0 && have !== pairV) { ok = false; break; } pairV = -1; continue; }
-            if (have >= 0 && have !== want) { ok = false; break; }
-          }
-          if (!ok) continue;
-          var nf = Math.min(L, fS + d.length);
-          // new digits beyond the other side's frontier fix the other message: check it reads as words
-          var newS = null;
-          if (nf > fO) {
-            newS = [];
-            var otherTail = [];
-            for (var q = fO; q < nf; q++) {
-              var sd = q - fS >= 0 && q - fS < d.length ? d[q - fS] : -1;
-              if (sd < 0) sd = S[q];
-              var od = sd >= 0 && diff[q] >= 0 ? (side === 0 ? ((sd - diff[q]) % 10 + 10) % 10 : (sd + diff[q]) % 10) : -1;
-              otherTail.push(od);
+        var lag = st.f[0] <= st.f[1] ? 0 : 1;
+        if (st.f[lag] >= L - 1) { done.push(st); return; }
+        var sides = [lag], numBlocked = false;
+        var any = false;
+        for (var si = 0; si < sides.length; si++) {
+          var side = sides[si];
+          var fS = st.f[side], fO = st.f[1 - side];
+          var S = side === 0 ? st.A : st.B, O = side === 0 ? st.B : st.A;
+          var cand = S[fS] >= 0 ? TK.byFirst[S[fS]] : toks;
+          var fz = st.force[side], forced = false;
+          if (fz && st.tk[side].length < fz.length) { var ft = byText[fz[st.tk[side].length]]; cand = ft ? [ft] : []; forced = true; }
+          for (var ti = 0; ti < cand.length; ti++) {
+            var tk = cand[ti], d = tk.d;
+            if (fS + d.length > L + 4) continue;
+            // numbers only where their figures are already fixed by the other message (a crib may say otherwise)
+            if (tk.num && !forced && fS + d.length > fO + 2) { if (side === lag && (S[fS] < 0 || S[fS] === d[0])) numBlocked = true; continue; }
+            if (side !== lag && tk.letter) continue;
+            var ok = true, pairV = -1;
+            for (var j = 0; j < d.length; j++) {
+              var pos = fS + j; if (pos >= L) break;
+              var have = S[pos], want = d[j];
+              if (want === -2) { pairV = have; continue; }
+              if (want === -3) { if (have >= 0 && pairV >= 0 && have !== pairV) { ok = false; break; } pairV = -1; continue; }
+              if (have >= 0 && have !== want) { ok = false; break; }
             }
-            // decode other side from its frontier: its known digits [fO, nf)
-            // only the stretch before the first unknown digit can be checked (after a gap the code alignment is lost)
-            var dec = DX.decode(board, otherTail).text, qm = dec.indexOf('?');
-            if (qm >= 0) dec = dec.slice(0, qm);
-            if (dec && !validPrefix(TK.trie, dec)) continue;
+            if (!ok) continue;
+            var nf = Math.min(L, fS + d.length);
+            var from = Math.max(fS, fO);
+            if (nf > from) {
+              // the other text's digits from its frontier to nf must read as the beginning of words
+              var tail = [];
+              for (var q = fO; q < nf; q++) {
+                if (q < from) { tail.push(O[q]); continue; }
+                var sd = d[q - fS]; if (sd < 0) sd = S[q];
+                tail.push(derive(side, sd, q));
+              }
+              var dec = DX.decode(board, tail).text, qm = dec.indexOf('?');
+              if (qm >= 0) dec = dec.slice(0, qm);
+              if (dec) {
+                var vp = vpCache.get(dec);
+                if (vp === undefined) { vp = validPrefix(TK.trie, dec); vpCache.set(dec, vp); }
+                if (!vp) continue;
+              }
+            }
+            any = true;
+            var pv = st.prev[side];
+            var ns = { A: st.A, B: st.B, f: st.f.slice(), score: st.score + tk.lp + (tk.c ? LMW.lp(pv[0], pv[1], tk.c) : -2), tk: [st.tk[0], st.tk[1]], prev: st.prev.slice(), force: st.force, seed: st.seed };
+            ns.prev[side] = tk.c ? [pv[1], tk.c] : pv;
+            var nS = new Int8Array(S), nO = O;
+            for (var j2 = 0; j2 < d.length && fS + j2 < L; j2++) { var w = d[j2]; if (w >= 0) nS[fS + j2] = w; }
+            if (nf > from) {
+              nO = new Int8Array(O);
+              for (var q2 = from; q2 < nf; q2++) nO[q2] = derive(side, nS[q2], q2);
+            }
+            if (side === 0) { ns.A = nS; ns.B = nO; } else { ns.B = nS; ns.A = nO; }
+            ns.f[side] = nf;
+            ns.tk[side] = st.tk[side].concat([{ t: tk.t, at: fS, num: tk.num || 0 }]);
+            next.push(ns);
           }
-          any = true;
-          var pv = st.prev[side];
-          var ns = { A: st.A, B: st.B, f: st.f.slice(), score: st.score + tk.lp + (tk.c ? LMW.lp(pv[0], pv[1], tk.c) : -2), tk: [st.tk[0], st.tk[1]], prev: st.prev.slice(), force: st.force };
-          ns.prev[side] = tk.c ? [pv[1], tk.c] : pv;
-          var nS = new Int8Array(S), nO = O;
-          for (var j2 = 0; j2 < d.length && fS + j2 < L; j2++) { var w = d[j2]; if (w >= 0) nS[fS + j2] = w; }
-          if (nf > fO) {
-            nO = new Int8Array(O);
-            for (var q2 = fO; q2 < nf; q2++) { var sd2 = nS[q2]; nO[q2] = sd2 >= 0 && diff[q2] >= 0 ? (side === 0 ? ((sd2 - diff[q2]) % 10 + 10) % 10 : (sd2 + diff[q2]) % 10) : -1; }
-          }
-          if (side === 0) { ns.A = nS; ns.B = nO; } else { ns.B = nS; ns.A = nO; }
-          ns.f[side] = nf;
-          ns.tk[side] = st.tk[side].concat([{ t: tk.t, at: fS, num: tk.num || 0 }]);
-          next.push(ns);
+          // a number would not fit yet: let the leading text move on first
+          if (si === 0 && numBlocked && st.f[1 - lag] < L - 1) sides.push(1 - lag);
         }
         if (!any) done.push(st);
       });
       // rank: log-probability per digit covered; keep diversity by frontier pair
       next.forEach(function (s2) { s2.rank = s2.score / Math.max(1, s2.f[0] + s2.f[1]); });
       next.sort(function (x, y) { return y.rank - x.rank; });
-      var seen = {}, nb = [];
-      for (var k = 0; k < next.length && nb.length < beamW; k++) {
-        var s3 = next[k], key = s3.f[0] + ',' + s3.f[1] + ',' + (s3.force[0] && s3.tk[0].length < s3.force[0].length ? 'F' + oa.indexOf(s3.force[0]) : '') + (s3.force[1] && s3.tk[1].length < s3.force[1].length ? 'G' + ob.indexOf(s3.force[1]) : '') + ',' + s3.tk[0].map(function (x) { return x.t; }).slice(-2).join('') + '/' + s3.tk[1].map(function (x) { return x.t; }).slice(-2).join('');
-        if (seen[key]) continue; seen[key] = 1; nb.push(s3);
+      // every crib combination keeps a few states (a wrong crib can look fluent for a while in a zero-difference stretch)
+      var seen = {}, nb = [], perSeed = {}, quota = beam.length > 1 || next.length > beamW ? 3 : 0;
+      function keyOf(s3) { return s3.seed + '|' + s3.f[0] + ',' + s3.f[1] + ',' + s3.tk[0].map(function (x) { return x.t; }).slice(-2).join('') + '/' + s3.tk[1].map(function (x) { return x.t; }).slice(-2).join(''); }
+      for (var k = 0; k < next.length; k++) {
+        var s3 = next[k], key = keyOf(s3);
+        if (seen[key] || (perSeed[s3.seed] || 0) >= quota) continue;
+        seen[key] = 1; perSeed[s3.seed] = (perSeed[s3.seed] || 0) + 1; nb.push(s3);
+      }
+      for (k = 0; k < next.length && nb.length < beamW + quota * 4; k++) {
+        var s5 = next[k], key2 = keyOf(s5);
+        if (seen[key2]) continue; seen[key2] = 1; nb.push(s5);
       }
       beam = nb;
     }

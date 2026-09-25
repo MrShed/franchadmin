@@ -509,7 +509,7 @@
     D.CONTROLLERS.forEach(function (c) { add(c[1], 2); });
     D.LANDMARKS.forEach(function (c) { add(c[2], 1); }); D.CAFES.forEach(function (c) { add(c[1], 1); });
     D.SPOTS.forEach(function (c) { add(c[1], 1); }); D.SIGNALS.forEach(function (c) { add(c[1], 1); });
-    add('QUAY', 3); add('KRONER', 1);
+    add('QUAY', 3); add('KRONER', 1); add('HE', 2); add('SHE', 2);
     ITEMS.forEach(function (c) { add(c, 1); }); OPS.forEach(function (o) { add(o.what, 1); });
     VOCAB = Object.keys(counts).sort().map(function (w) { return { w: w, n: counts[w] }; });
     return VOCAB;

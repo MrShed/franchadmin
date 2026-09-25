@@ -32,7 +32,7 @@ var UIRx = (function () {
       '<div class="rx-wrap">' +
       '<section class="rx-set panel" aria-label="Receiver">' +
         '<i class="screw a"></i><i class="screw b"></i><i class="screw c"></i><i class="screw d"></i>' +
-        '<div class="rx-head"><div class="plate"><span class="engr big">KESTREL</span><span class="engr sm">RX-2 · HF communications receiver</span></div>' +
+        '<div class="rx-head"><div class="plate"><span class="engr big">KESTREL</span><span class="engr sm">RX-2 · HF receiver</span></div>' +
         '<div class="vfd" id="rx-vfd"></div></div>' +
         '<div class="rx-glass" id="rx-glass" aria-label="Dial glass: drag to tune"></div>' +
         '<div class="crt"><div class="crt-in" id="rx-wf"></div><div class="crt-ov" id="rx-ov"></div><div class="crt-glass"></div>' +
@@ -259,17 +259,24 @@ var UIRx = (function () {
     }
     // labels for known transmitters
     x.textBaseline = 'top';
-    sigs.forEach(function (s) {
-      var xx = X(sigF(s)); if (xx < -20 || xx > w + 20) return;
-      var isNew = R._newId === s.id;
-      if (!s.label && !isNew) return;
+    var labs = sigs.map(function (s) {
+      var xx = X(sigF(s)), isNew = R._newId === s.id;
+      if (xx < -20 || xx > w + 20 || (!s.label && !isNew)) return null;
       var t = isNew && !s.label ? 'NEW' : (s.label || '').toUpperCase();
-      x.font = (s.bcast ? '500 ' : '700 ') + '10px "DX Mono", monospace';
-      var tw = x.measureText(t).width;
-      var lx = UIclamp(xx, tw / 2 + 3, w - tw / 2 - 3);
-      x.fillStyle = s.bcast ? 'rgba(130,220,170,.5)' : isNew ? 'rgba(255,210,120,.95)' : 'rgba(200,255,220,.92)';
-      x.fillText(t, lx, 5);
-      if (!s.bcast) { x.strokeStyle = x.fillStyle; x.beginPath(); x.moveTo(xx, 17); x.lineTo(xx, 22); x.stroke(); }
+      if (s.bcast && sp === 'band') t = t.split(/[ ,(]/)[0];
+      return { s: s, xx: xx, t: t, isNew: isNew, pri: s.bcast ? 0 : isNew ? 2 : 1 };
+    }).filter(Boolean).sort(function (a, b) { return b.pri - a.pri; });
+    var placed = [];
+    labs.forEach(function (L) {
+      x.font = (L.s.bcast ? '500 ' : '700 ') + '10px "DX Mono", monospace';
+      var tw = x.measureText(L.t).width, lx = UIclamp(L.xx, tw / 2 + 3, w - tw / 2 - 3), row = 0;
+      while (row < 2 && placed.some(function (p) { return p.row === row && Math.abs(p.x - lx) < (p.w + tw) / 2 + 6; })) row++;
+      if (row >= 2 || (L.s.bcast && row > 0)) return;
+      placed.push({ x: lx, w: tw, row: row });
+      var y = 5 + row * 13;
+      x.fillStyle = L.s.bcast ? 'rgba(130,220,170,.5)' : L.isNew ? 'rgba(255,210,120,.95)' : 'rgba(200,255,220,.92)';
+      x.fillText(L.t, lx, y);
+      if (!L.s.bcast) { x.strokeStyle = x.fillStyle; x.beginPath(); x.moveTo(L.xx, y + 12); x.lineTo(L.xx, y + 17); x.stroke(); }
     });
     // tuning: hairline (zoomed) or needle (band)
     var tx = sp === 'band' ? X(kHz()) : w / 2;
@@ -323,12 +330,12 @@ var UIRx = (function () {
     var h;
     if (!near) h = '<span class="dim">' + (sigs.filter(function (s) { return !s.bcast; }).length ? 'Nothing here. Tap a bright trace on the display to tune to it.' : 'Only broadcasters on the air. Wait for the next schedule, or watch the band.') + '</span>';
     else {
-      var nm = near.bcast ? near.label : near.label ? near.label.toUpperCase() : 'Unknown station';
-      var how = UImodeLong(near.mode), hint = '';
-      if (!modeOk(near)) hint = '<em>' + (needMode(near) === 'voice' ? 'Voice — switch to AM' : 'Morse — switch to CW') + '</em>';
-      else if (ne > 0.6) hint = '<em>Turn FINE to centre it</em>';
-      else hint = near.bcast ? '<em>A broadcaster</em>' : '<em>Centred — press COPY</em>';
-      h = '<b>' + UIesc(nm) + '</b> <span>' + how + '</span> ' + hint;
+      var nm = near.bcast ? near.label : near.label ? near.label.toUpperCase() : 'Unknown';
+      var how = near.mode === 'voice' ? 'voice' : near.mode === 'cw' ? 'Morse' : 'burst', hint = '';
+      if (!modeOk(near)) hint = '<em>' + (needMode(near) === 'voice' ? 'lever to AM' : 'lever to CW') + '</em>';
+      else if (ne > 0.6) hint = '<em>' + (kHz() > sigF(near) ? '◂ FINE left' : 'FINE right ▸') + '</em>';
+      else hint = near.bcast ? '<em>broadcaster</em>' : '<em>centred · COPY</em>';
+      h = '<b>' + UIesc(nm) + '</b> · <span>' + how + '</span> · ' + hint;
     }
     el.tape.innerHTML = '<div class="tp-st">' + h + '</div>';
     R.buttons(near, ne);
@@ -488,7 +495,13 @@ var UIRx = (function () {
   R.renderSched = function () {
     var c = UIA.clock(), up = UIA.upcoming(480), m = c.minute;
     var log = UIA.log().filter(function (e) { return e.shift === c.shift; });
-    var blocks = up.map(function (u) { var l = u.at / 480 * 100, w = Math.max(1.6, u.dur / 480 * 100); return '<button class="sb-blk m-' + u.mode + (u.at <= m ? ' now' : '') + '" style="left:' + l + '%;width:' + w + '%" data-up="' + UIesc(u.id || '') + '" data-at="' + u.at + '" aria-label="' + UIesc(u.label + ' at ' + UIA.hhmm(u.at)) + '"><span>' + UIesc(u.callsign || u.label) + '</span></button>'; }).join('');
+    var lanes = [];
+    var blocks = up.map(function (u) {
+      var l = u.at / 480 * 100, w = Math.max(1.6, u.dur / 480 * 100), lane = 0;
+      while (lanes[lane] !== undefined && lanes[lane] > u.at - 34) lane++;
+      lanes[lane] = u.at + u.dur;
+      return '<button class="sb-blk m-' + u.mode + (u.at <= m ? ' now' : '') + ' ln' + Math.min(lane, 1) + '" style="left:' + l + '%;width:' + w + '%" data-up="' + UIesc(u.id || '') + '" data-at="' + u.at + '" aria-label="' + UIesc(u.label + ' at ' + UIA.hhmm(u.at)) + '"><span>' + UIesc(u.callsign || u.label) + (u.repeat ? '<i>R</i>' : '') + '</span></button>';
+    }).join('');
     var ticks = ''; for (var hh = 0; hh <= 8; hh++) ticks += '<i style="left:' + (hh * 12.5) + '%"><b>' + String((18 + hh) % 24).padStart(2, '0') + '</b></i>';
     var past = log.map(function (e) { return '<u class="' + (e.faint ? 'f' : '') + '" style="left:' + (e.minute / 480 * 100) + '%"></u>'; }).join('');
     var next = up.filter(function (u) { return u.at + u.dur > m; })[0];

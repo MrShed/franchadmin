@@ -57,7 +57,7 @@ var UIPaint = (function () {
   /** S-meter: value 0..1 (0 = S0, 0.75 = S9, 1 = +40 dB) */
   P.meter = function (x, w, h, v, o) {
     o = o || {};
-    var cx = w / 2, cy = h * 1.28, R = h * 1.05;
+    var cx = w / 2, cy = h * 1.34, R = h * 1.16;
     var g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#f6ecd0'); g.addColorStop(1, '#e2d2a6');
     x.fillStyle = g; x.fillRect(0, 0, w, h);
     var lamp = x.createRadialGradient(cx, h * 0.85, 4, cx, h * 0.85, w * 0.7); lamp.addColorStop(0, 'rgba(255,214,140,.45)'); lamp.addColorStop(1, 'rgba(255,214,140,0)');
@@ -74,9 +74,9 @@ var UIPaint = (function () {
       x.strokeStyle = t > 0.75 ? 'rgba(170,30,20,.9)' : 'rgba(30,24,16,.85)'; x.lineWidth = i % 2 ? 0.8 : 1.3;
       x.beginPath(); x.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); x.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); x.stroke();
     }
-    x.font = '800 ' + Math.max(9, h * 0.16) + 'px "DX Stencil", sans-serif';
-    labels.forEach(function (l) { if (!l[1]) return; var a = ang(l[0]), r = R * 0.86 - h * 0.27; x.fillStyle = l[0] > 0.75 ? '#a8241a' : '#1e1810'; x.fillText(l[1], cx + Math.cos(a) * r, cy + Math.sin(a) * r); });
-    x.font = '600 ' + Math.max(7, h * 0.12) + 'px "DX Mono", monospace'; x.fillStyle = 'rgba(30,24,16,.7)'; x.fillText(o.label || 'S UNITS', cx, h * 0.63);
+    x.font = '800 ' + Math.max(9, h * 0.15) + 'px "DX Stencil", sans-serif';
+    labels.forEach(function (l) { if (!l[1]) return; var a = ang(l[0]), r = R * 0.86 - h * 0.24; x.fillStyle = l[0] > 0.75 ? '#a8241a' : '#1e1810'; x.fillText(l[1], cx + Math.cos(a) * r, cy + Math.sin(a) * r); });
+    x.font = '600 ' + Math.max(7, h * 0.11) + 'px "DX Mono", monospace'; x.fillStyle = 'rgba(30,24,16,.6)'; x.textAlign = 'left'; x.fillText(o.label || 'S', 6, h - 8); x.textAlign = 'right'; x.fillText('dB', w - 6, h - 8); x.textAlign = 'center';
     // needle with shadow
     var na = ang(UIclamp(v, 0, 1.02));
     x.save(); x.lineCap = 'round';
