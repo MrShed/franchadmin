@@ -406,6 +406,7 @@ module.exports = function (DX) {
     while (!c.over && guard++ < 40) {
       var steps = 0;
       while (!c.over && c.minute < SH && steps++ < 400) {
+        if (kind === 'listener') { if (listenNow()) continue; c.waitForSignal(SH); continue; }
         if (listenNow()) { act(); continue; }
         checkJob();
         if (tryCouriers()) { act(); continue; }
@@ -415,7 +416,7 @@ module.exports = function (DX) {
         c.waitForSignal(SH);
       }
       if (c.over) break;
-      act();
+      if (kind !== 'listener') act();
       c.endShift();
     }
     return { kind: kind, facts: P.facts, log: P.log, drops: P.drops, meets: P.meets, cw: P.cw };

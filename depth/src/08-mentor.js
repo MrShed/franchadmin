@@ -63,10 +63,10 @@
       var period = cm && cm.periodKey ? cm.periodKey.length : null;
       if (list.length < 2 && !(list.length && list[0].length > 40)) return;
       if (!s.board) out.push({ pri: 75, key: 'board:' + f, nudge: 'Without the checkerboard nothing reads. The courier\'s hand cipher is the way in.',
-        pointer: ['Pool ', ref('callsign', f, f), '\'s messages, find the period (it is ' + period + '), and book the big computer with it.'],
+        pointer: ['Pool ', ref('callsign', f, f), '\'s messages, find the period (it is ' + period + '), and book the big computer with it. It knows how couriers open their messages.'],
         act: function () { var r = c.bench.boardSolve(list.map(function (x) { return x.id; }), period); return r.ok ? 'The computer found keyword ' + r.keyword + '.' : null; } });
       else out.push({ pri: 60, key: 'periodic:' + f, nudge: 'The courier traffic has no indicator group. That means a short repeating key, and those break.',
-        pointer: [ref('callsign', f, f), ' uses a key of period ' + period + '. Pool his messages, count each column against the checkerboard.'],
+        pointer: [ref('callsign', f, f), ' uses a key of period ' + period + '. Every message restarts the key and opens the same way: put his usual opening under the first groups and the key falls out.'],
         act: function () { list.forEach(function (m) { c._mentorRead(m.id); }); return 'Read ' + list.length + ' courier message' + (list.length > 1 ? 's' : '') + ' for you.'; } });
     });
     // 5. drops and meetings read but not acted on

@@ -89,7 +89,7 @@ for (var i = 1; i <= 8; i++) ['cadet', 'analyst', 'chief'].forEach(function (g) 
   ring.members.filter(function (m) { return m.courier; }).forEach(function (cm) {
     var ms = W.plan.msgs.filter(function (m) { return m.from === cm.id; });
     var st = ms.map(function (m) { return DX.toDigits(m.groups.join('')); });
-    var r = DX.solvePeriodic(st, g === 'chief' ? null : bd);
+    var r = DX.solvePeriodic(st, g === 'chief' ? null : bd, { cribs: DX.openingTexts(cm.call, ring.resident.call, ctl.spell, ctl.call) });
     if (r.ok) {
       ok(r.key.length % cm.periodKey.length === 0, 'period is the key length or a multiple');
       var plains = st.map(function (s2) { return DX.decode(DX.boardCache(r.keyword), DX.subKey(s2, r.key)).text; });
