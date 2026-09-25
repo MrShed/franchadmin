@@ -22,6 +22,10 @@
   #turn { display: none; flex: 1; align-items: center; justify-content: center; font: 12px/1.4 monospace; letter-spacing: .08em; color: #5c6072; text-transform: uppercase; text-align: center; padding: 0 24px; }
   body.touch:not(.land) #turn { display: flex; }
   body.touch.land #turn { display: none; }
+  /* phone keyboard up: just ESC / TAB / HIDE under the screen */
+  body.touch.kbup #stick, body.touch.kbup .side.right, body.touch.kbup #turn { display: none; }
+  body.touch.kbup:not(.land) #pad { justify-content: center; padding: 8px 16px; }
+  body.touch.kbup .mid { flex-direction: row; }
   body.touch #pad { display: flex; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); }
   body.touch { justify-content: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
   .side { display: flex; align-items: center; gap: 12px; }
@@ -113,16 +117,21 @@ const P = {
 // ---------- fit canvas ----------
 function fit() {
   const touch = document.body.classList.contains('touch');
-  const kbUp = document.activeElement && document.activeElement.id === 'kb'; // the phone keyboard covers the pad anyway
-  const land = touch && window.innerWidth > window.innerHeight; document.body.classList.toggle('land', land);
-  // landscape: controls sit either side of the screen; portrait: under it
-  const vw = window.innerWidth - (land ? 2 * Math.min(190, Math.max(150, window.innerWidth * 0.2)) : 0), vh = window.innerHeight - (touch && !land && !kbUp ? 190 : 0);
+  const kbUp = touch && document.activeElement && document.activeElement.id === 'kb';
+  // orientation from the device, not the window: the phone keyboard shrinks the window and must not flip the layout
+  const land = touch && isLand(); document.body.classList.toggle('land', land); document.body.classList.toggle('kbup', kbUp);
+  const kbBtn = document.getElementById('k-kb'); if (kbBtn) kbBtn.textContent = kbUp ? 'HIDE' : 'KEYS';
+  // landscape: controls sit either side of the screen; portrait: under it (only ESC/TAB/HIDE while the keyboard is up)
+  const vv = window.visualViewport, H0 = kbUp && vv ? vv.height : window.innerHeight;
+  const vw = window.innerWidth - (land ? 2 * Math.min(190, Math.max(150, window.innerWidth * 0.2)) : 0), vh = H0 - (touch && !land ? (kbUp ? 60 : 190) : 0);
   // original ran 320x200 on a 4:3 monitor: pixels were 1.2x taller than wide
   let w = Math.min(vw, vh * 4 / 3), h = w * 3 / 4;
   if (w >= 640 && !touch) { const s = Math.floor(w / 320); w = 320 * s; h = w * 3 / 4; }
   cv.style.width = Math.floor(w) + 'px'; cv.style.height = Math.floor(h) + 'px';
 }
+function isLand() { const o = screen.orientation && screen.orientation.type; if (o) return o.startsWith('landscape'); if (typeof window.orientation === 'number') return Math.abs(window.orientation) === 90; return window.innerWidth > window.innerHeight; }
 window.addEventListener('resize', fit);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
 
 // ---------- rng ----------
 let seed = (Date.now() ^ 0x5eed) >>> 0;
@@ -229,7 +238,8 @@ const kb = document.getElementById('kb'), KB_FILL = '  ';
 let kbWanted = false;
 function kbReset() { kb.value = KB_FILL; try { kb.setSelectionRange(KB_FILL.length, KB_FILL.length); } catch (e) {} }
 // focusing only raises the keyboard inside a tap on iOS, so this is called from tap handlers too
-function kbOpen() { if (!typing || !document.body.classList.contains('touch')) return; if (document.activeElement !== kb) { kbReset(); kb.focus({ preventScroll: true }); } }
+let kbHidden = false; // the player tapped HIDE: stay down until they ask again or a new typing screen opens
+function kbOpen(force) { if (force) kbHidden = false; if (!typing || !document.body.classList.contains('touch') || ((isLand() || kbHidden) && !force)) return; if (document.activeElement !== kb) { kbReset(); kb.focus({ preventScroll: true }); } }
 kb.addEventListener('input', () => {
   const v = kb.value;
   if (v.length < KB_FILL.length) { if (typing && scene.onChar) scene.onChar(''); }
@@ -237,13 +247,16 @@ kb.addEventListener('input', () => {
   kbReset();
 });
 kb.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); pressedQ.push('select'); } });
-document.getElementById('k-kb').addEventListener('pointerdown', e => { e.preventDefault(); sfx.unlock(); kbReset(); kb.focus({ preventScroll: true }); });
+// KEYS raises the keyboard (the only way in landscape, where it would cover the screen); HIDE drops it
+document.getElementById('k-kb').addEventListener('pointerdown', e => { e.preventDefault(); sfx.unlock(); if (document.activeElement === kb) { kbHidden = true; kb.blur(); } else kbOpen(true); });
+const refit = () => { fit(); setTimeout(fit, 120); setTimeout(fit, 400); };
+kb.addEventListener('focus', refit); kb.addEventListener('blur', refit);
 document.getElementById('k-kb').addEventListener('mousedown', e => e.preventDefault());
 // each frame: raise the keyboard when a typing scene starts (Android allows it), drop it when typing ends
 function kbSync() {
   const want = typing && document.body.classList.contains('touch');
   document.body.classList.toggle('typing', want);
-  if (want && !kbWanted) kbOpen();
+  if (want && !kbWanted) { kbHidden = false; kbOpen(); }
   if (!want && document.activeElement === kb) kb.blur();
   kbWanted = want;
 }
