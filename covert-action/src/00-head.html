@@ -37,10 +37,16 @@
   .btns button { height: 48px; }
   .mid { display: flex; flex-direction: column; gap: 8px; }
   .mid button { width: 56px; height: 30px; }
+  #pad #k-kb { display: none; background: linear-gradient(#b08a20, #7a5c10); color: #fff6c8; border-color: #e8c860; }
+  body.typing #pad #k-kb { display: block; }
+  /* the phone's own keyboard: an invisible text field that takes the letters */
+  #kb { position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; font-size: 16px;
+    -webkit-user-select: text; user-select: text; pointer-events: none; caret-color: transparent; background: transparent; color: transparent; }
 </style>
 </head>
 <body>
 <canvas id="screen" width="320" height="200" tabindex="0" aria-label="Covert Action game screen"></canvas>
+<input id="kb" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" aria-label="Keyboard input" tabindex="-1">
 <div id="pad" aria-hidden="true">
   <div class="dpad">
     <button data-k="up" id="k-up">▲</button>
@@ -51,6 +57,7 @@
   <div class="mid">
     <button data-k="menu" id="k-menu">ESC</button>
     <button data-k="alt2" id="k-alt2">TAB</button>
+    <button id="k-kb" aria-label="Show keyboard">KEYS</button>
   </div>
   <div class="btns">
     <button data-k="alt" id="k-alt">GREN</button>

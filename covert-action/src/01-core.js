@@ -25,7 +25,8 @@ const P = {
 // ---------- fit canvas ----------
 function fit() {
   const touch = document.body.classList.contains('touch');
-  const vw = window.innerWidth, vh = window.innerHeight - (touch ? 190 : 0);
+  const kbUp = document.activeElement && document.activeElement.id === 'kb'; // the phone keyboard covers the pad anyway
+  const vw = window.innerWidth, vh = window.innerHeight - (touch && !kbUp ? 190 : 0);
   // original ran 320x200 on a 4:3 monitor: pixels were 1.2x taller than wide
   let w = Math.min(vw, vh * 4 / 3), h = w * 3 / 4;
   if (w >= 640 && !touch) { const s = Math.floor(w / 320); w = 320 * s; h = w * 3 / 4; }
@@ -110,6 +111,8 @@ const input = {
 };
 let typing = false; // crypto scene wants raw letters
 window.addEventListener('keydown', e => {
+  // letters typed into the phone keyboard field arrive through its input event instead
+  if (e.target && e.target.id === 'kb' && (e.key === 'Enter' || e.key === 'Backspace' || e.key === ' ' || e.keyCode === 229 || e.key === 'Unidentified' || /^Key[A-Z]$/.test(e.code))) return;
   if (e.code === 'KeyM' && !typing) { sfx.toggle(); e.preventDefault(); return; }
   if (typing && /^Key[A-Z]$/.test(e.code) && !e.ctrlKey && !e.metaKey) { scene.onChar && scene.onChar(e.code.slice(3)); e.preventDefault(); return; }
   if (typing && (e.code === 'Backspace' || e.code === 'Delete')) { scene.onChar && scene.onChar(''); e.preventDefault(); return; }
@@ -123,12 +126,36 @@ window.addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) held.de
 window.addEventListener('blur', () => held.clear());
 
 // touch pad
-document.querySelectorAll('#pad button').forEach(b => {
+document.querySelectorAll('#pad button[data-k]').forEach(b => {
   const k = b.dataset.k;
-  const down = e => { e.preventDefault(); sfx.unlock(); if (!held.has(k)) pressedQ.push(k); held.add(k); b.classList.add('on'); };
+  b.addEventListener('mousedown', e => e.preventDefault()); // keep the keyboard field focused
+  const down = e => { e.preventDefault(); sfx.unlock(); if (!held.has(k)) pressedQ.push(k); held.add(k); b.classList.add('on'); kbOpen(); };
   const up = e => { e.preventDefault(); held.delete(k); b.classList.remove('on'); };
   b.addEventListener('pointerdown', down); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up);
 });
+// ---------- the phone's own keyboard, for scenes that want letters (codebreaking, mainframe, codename) ----------
+const kb = document.getElementById('kb'), KB_FILL = '  ';
+let kbWanted = false;
+function kbReset() { kb.value = KB_FILL; try { kb.setSelectionRange(KB_FILL.length, KB_FILL.length); } catch (e) {} }
+// focusing only raises the keyboard inside a tap on iOS, so this is called from tap handlers too
+function kbOpen() { if (!typing || !document.body.classList.contains('touch')) return; if (document.activeElement !== kb) { kbReset(); kb.focus({ preventScroll: true }); } }
+kb.addEventListener('input', () => {
+  const v = kb.value;
+  if (v.length < KB_FILL.length) { if (typing && scene.onChar) scene.onChar(''); }
+  else for (const ch of v.slice(KB_FILL.length).toUpperCase()) { if (ch >= 'A' && ch <= 'Z') { if (typing && scene.onChar) scene.onChar(ch); } else if (ch === ' ') pressedQ.push('fire'); }
+  kbReset();
+});
+kb.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); pressedQ.push('select'); } });
+document.getElementById('k-kb').addEventListener('pointerdown', e => { e.preventDefault(); sfx.unlock(); kbReset(); kb.focus({ preventScroll: true }); });
+document.getElementById('k-kb').addEventListener('mousedown', e => e.preventDefault());
+// each frame: raise the keyboard when a typing scene starts (Android allows it), drop it when typing ends
+function kbSync() {
+  const want = typing && document.body.classList.contains('touch');
+  document.body.classList.toggle('typing', want);
+  if (want && !kbWanted) kbOpen();
+  if (!want && document.activeElement === kb) kb.blur();
+  kbWanted = want;
+}
 function enableTouch() { if (!document.body.classList.contains('touch')) { document.body.classList.add('touch'); fit(); } }
 if (matchMedia('(pointer: coarse)').matches) enableTouch();
 window.addEventListener('touchstart', enableTouch, { passive: true });
@@ -136,7 +163,8 @@ window.addEventListener('touchstart', enableTouch, { passive: true });
 // pointer on the canvas -> game coordinates
 const mouse = { x: -1, y: -1, down: false };
 function toGame(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
-cv.addEventListener('pointerdown', e => { e.preventDefault(); cv.focus(); sfx.unlock(); const p = toGame(e); mouse.x = p.x; mouse.y = p.y; mouse.down = true; scene.onTap && scene.onTap(p.x, p.y); });
+cv.addEventListener('mousedown', e => { if (typing) e.preventDefault(); });
+cv.addEventListener('pointerdown', e => { e.preventDefault(); if (typing && document.body.classList.contains('touch')) kbOpen(); else cv.focus(); sfx.unlock(); const p = toGame(e); mouse.x = p.x; mouse.y = p.y; mouse.down = true; scene.onTap && scene.onTap(p.x, p.y); });
 cv.addEventListener('pointermove', e => { const p = toGame(e); mouse.x = p.x; mouse.y = p.y; scene.onHover && scene.onHover(p.x, p.y); });
 window.addEventListener('pointerup', () => { mouse.down = false; });
 cv.addEventListener('contextmenu', e => e.preventDefault());
@@ -183,6 +211,7 @@ function go(s) { if (scene.leave) scene.leave(); scene = s; typing = !!s.typing;
 let last = performance.now(), acc = 0; const STEP = 1 / 60;
 function frameLoop(now) {
   let dt = Math.min(0.1, (now - last) / 1000); last = now; acc += dt;
+  kbSync();
   while (pressedQ.length) { const k = pressedQ.shift(); scene.onKey && scene.onKey(k); }
   let n = 0; while (acc >= STEP && n < 6) { scene.update && scene.update(STEP); acc -= STEP; n++; }
   if (n === 6) acc = 0;
