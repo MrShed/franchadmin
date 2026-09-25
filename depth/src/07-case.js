@@ -71,7 +71,7 @@
   };
   CP.costs = function () {
     var k = this._w.G.cost;
-    return { depth: r1(2 * k), crib: r1(1 * k), place: 0, period: r1(5 * k), columns: r1(3 * k), align: r1(3 * k), setKey: r1(1 * k), suggest: r1(2 * k), boardSolve: 60, accept: 0, warrant: 10, van: 30, df: 0 };
+    return { depth: r1(2 * k), crib: r1(1 * k), place: 0, period: r1(5 * k), columns: r1(3 * k), align: r1(3 * k), setKey: r1(1 * k), suggest: r1(2 * k), boardSolve: 60, accept: 0, warrant: 10, van: this._w.G.id === 'cadet' ? 15 : this._w.G.id === 'analyst' ? 20 : 25, df: 0 };
   };
   function r1(x) { return Math.max(0, Math.round(x)); }
 
@@ -252,11 +252,20 @@
       o.length = g.length;
     }
     if (s.accepts[wid]) o.decrypted = DX.copy(s.accepts[wid]);
-    // depth partners the player can see (same indicator, both copied)
-    if (o.indicator && o.indicator.indexOf('?') < 0) {
-      var self = this;
-      o.sameIndicator = Object.keys(s.wb).filter(function (k) { if (k === wid || s.wb[k].kind !== 'pad') return false; var g2 = self._mergedGroups(k); return g2[0] === o.indicator; });
-    } else o.sameIndicator = [];
+    // depth partners the player can see: the same indicator group (exact), or the same apart from garbled figures
+    o.sameIndicator = []; o.likelyIndicator = [];
+    if (o.indicator) {
+      var self = this, mine = o.indicator;
+      Object.keys(s.wb).forEach(function (k) {
+        if (k === wid || s.wb[k].kind !== 'pad') return;
+        var other = self._mergedGroups(k)[0];
+        if (!other) return;
+        var agree = 0, unk = 0;
+        for (var i = 0; i < 5; i++) { if (mine[i] === '?' || other[i] === '?') unk++; else if (mine[i] === other[i]) agree++; }
+        if (agree === 5) o.sameIndicator.push(k);
+        else if (agree + unk === 5 && unk <= 2) o.likelyIndicator.push(k);
+      });
+    }
     return o;
   };
   CP.board = function () {
@@ -325,7 +334,7 @@
     } else {
       out.msgs.push(this._post('report', 'DF van: lost it', 'Van crew', [{ k: 'p', x: ['No joy on ', ref('callsign', t.from, t.from), '. The meter never climbed properly.'] }]));
     }
-    out.events = this._spend(W.G.id === 'cadet' ? 20 : 30);
+    out.events = this._spend(W.G.id === 'cadet' ? 15 : W.G.id === 'analyst' ? 20 : 25);
     return out;
   };
   /** building from a transmitter trace */

@@ -32,6 +32,7 @@ var UIDesk = (function () {
       if (b.k === 'n') return '<p class="m-n">' + x + '</p>';
       if (b.k === 'm') return '<pre class="m-m">' + x + '</pre>';
       if (b.k === 'q') return '<blockquote>' + x + '</blockquote>';
+      if (b.k === 'h') return '<h5>' + x + '</h5>';
       return '<p>' + x + '</p>';
     }).join('');
   }
@@ -144,14 +145,14 @@ var UIDesk = (function () {
 
   // ------------------------------------------------------------------ the night supervisor
   function mentor(body) {
-    var mi = UIA.mentorInfo(), gi = UIA.g.gradeInfo || {}, mc = gi.mentorCost || { 1: 0, 2: 20, 3: 10 };
-    var c = UIA.clock(), freeUsed = UIS.mentorFree === c.shift, log = UIS.mentorLog || (UIS.mentorLog = []);
+    var mi = UIA.mentorInfo(), ms = UIA.mentorStatus();
+    var c = UIA.clock(), freeUsed = !ms[1].ok || UIS.mentorFree === c.shift, log = UIS.mentorLog || (UIS.mentorLog = []);
     body.innerHTML = '<section class="mentor"><div class="mt-id paper"><div class="mt-photo" aria-hidden="true"><svg viewBox="0 0 60 70"><rect width="60" height="70" fill="#cfc6ae"/><circle cx="30" cy="27" r="13" fill="#6d6452"/><path d="M8 70c2-17 11-24 22-24s20 7 22 24z" fill="#6d6452"/><path d="M17 24c0-10 6-15 13-15s13 5 13 15c-3-5-8-7-13-7s-10 2-13 7z" fill="#4a4336"/></svg></div>' +
       '<div><span class="eyebrow">' + UIesc(mi.title) + '</span><h3>' + UIesc(mi.name) + '</h3><p class="note">' + UIesc(mi.bio) + '</p></div></div>' +
       '<div class="mt-tiers">' +
       '<button class="mt-t" data-tier="1"' + (freeUsed ? ' disabled' : '') + '><b>A nudge</b><small>' + (freeUsed ? 'Used tonight' : 'Free, once a night') + '</small></button>' +
-      '<button class="mt-t" data-tier="2"><b>Point me at it</b><small>Costs ' + (mc[2] || 20) + ' min of station time</small></button>' +
-      '<button class="mt-t" data-tier="3"><b>Do it for me</b><small>Costs ' + (mc[3] || 10) + ' points of score</small></button></div>' +
+      '<button class="mt-t" data-tier="2"><b>Point me at it</b><small>Costs ' + ms[2].cost + ' min of station time</small></button>' +
+      '<button class="mt-t" data-tier="3"><b>Do it for me</b><small>Costs ' + ms[3].cost + ' points of score</small></button></div>' +
       '<div class="mt-log">' + (log.length ? log.slice().reverse().map(function (l) { return '<div class="mt-note"><span class="mt-n">Night ' + (l.shift + 1) + ' · ' + UIesc(l.label) + ' · tier ' + l.tier + '</span><p>' + UIesc(l.text) + '</p>' + (l.action && l.action.tab ? '<button class="btn xs" data-go="' + UIesc(JSON.stringify(l.action)) + '">Take me there</button>' : '') + '</div>'; }).join('') : '<p class="pencil-note">“Ask when you are stuck. Not before.”</p>') + '</div></section>';
     body.onclick = function (e) {
       var t = e.target.closest('[data-tier]');
@@ -160,8 +161,9 @@ var UIDesk = (function () {
         if (tier === 1) UIS.mentorFree = c.shift;
         var r = UIA.mentor(tier);
         UIAudio.cue('paper');
-        log.push({ tier: tier, text: r.text, action: r.action, shift: c.shift, label: UIA.clock().label });
-        UI.act(function () { }); mentor(body); UI.emit('mentor', tier);
+        if (!r.ok) { UItoast(r.text || 'She is busy.', { err: true }); return; }
+        log.push({ tier: tier, text: r.text, refs: r.refs || [], action: r.action, shift: c.shift, label: UIA.clock().label });
+        UI.act(function () { }); UI.showEvents(r.events); mentor(body); UI.emit('mentor', tier);
         return;
       }
       var g = e.target.closest('[data-go]');

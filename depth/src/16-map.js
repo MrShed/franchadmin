@@ -114,8 +114,10 @@ var UIMap = (function () {
     for (var i = 1; i <= n; i++) { var t = i / n; x.lineTo(a[0] + (b[0] - a[0]) * t + (i < n ? (r() - 0.5) * amp : 0), a[1] + (b[1] - a[1]) * t + (i < n ? (r() - 0.5) * amp : 0)); }
     x.stroke();
   }
+  function hit(bx) { return LBL.some(function (q) { return bx.x < q.x + q.w && bx.x + bx.w > q.x && bx.y < q.y + q.h && bx.y + bx.h > q.y; }); }
   function draw(x, w, h) {
     var city = UIA.city(), k = view.k, sc = S * k;
+    LBL = [{ x: 0, y: 0, w: w, h: 62 }, { x: w - 64, y: 0, w: 64, h: 160 }, { x: 0, y: h - 52, w: w, h: 52 }];
     // the desk under the lamp
     x.fillStyle = '#16140f'; x.fillRect(0, 0, w, h);
     var tl = W2S([-0.04, -0.04]), br = W2S([1.04, 1.04]);
@@ -145,11 +147,15 @@ var UIMap = (function () {
     city.districts.forEach(function (d) { if (d.poly.length < 3) return; path(x, d.poly, true); x.strokeStyle = 'rgba(120,95,60,.45)'; x.lineWidth = 1; x.stroke(); });
     x.setLineDash([]);
     x.textAlign = 'center'; x.textBaseline = 'middle';
-    city.districts.forEach(function (d) { var c = W2S(d.centre); x.font = '700 ' + Math.round(UIclamp(9 + k * 2, 9, 17)) + 'px "DX Type", monospace'; x.fillStyle = 'rgba(95,72,40,.55)'; spaced(x, d.name.toUpperCase(), c[0], c[1], 1.5 + k * 0.4); });
+    city.districts.forEach(function (d) {
+      var c = W2S(d.centre), fs = Math.round(UIclamp(9 + k * 2, 9, 17)), sp = 1.5 + k * 0.4; x.font = '700 ' + fs + 'px "DX Type", monospace';
+      var tw = x.measureText(d.name).width + d.name.length * sp, bx = { x: c[0] - tw / 2, y: c[1] - fs * 0.6, w: tw, h: fs * 1.2 };
+      if (hit(bx)) return; LBL.push(bx);
+      x.fillStyle = 'rgba(95,72,40,.55)'; spaced(x, d.name.toUpperCase(), c[0], c[1], sp);
+    });
     // street names when zoomed
     if (k > 2.2) { x.font = 'italic 400 ' + Math.round(9 + k) + 'px "DX Serif", serif'; x.fillStyle = 'rgba(80,65,45,.7)'; city.streets.forEach(function (s) { if (!s.name || s.line.length < 2) return; var m = Math.floor(s.line.length / 2), a = W2S(s.line[m - 1] || s.line[0]), b = W2S(s.line[m]); var ang = Math.atan2(b[1] - a[1], b[0] - a[0]); if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI; x.save(); x.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); x.rotate(ang); x.fillText(s.name, 0, -6); x.restore(); }); }
     // places: landmarks first so they win label space
-    LBL = [];
     var pri = function (p) { var kd = (KIND[p.kind] || ['', 'L'])[1]; return kd === 'L' ? 0 : kd === 'q' ? 1 : 2; };
     city.places.slice().sort(function (a, b) { return pri(a) - pri(b); }).forEach(function (p) { glyph(x, p, k); });
     // cartouche, scale bar and north arrow
@@ -158,7 +164,8 @@ var UIMap = (function () {
     city.outstations.forEach(function (o) {
       var c = W2S(o.pos); x.fillStyle = '#1d2024'; x.beginPath(); x.moveTo(c[0], c[1] - 8); x.lineTo(c[0] + 7, c[1] + 5); x.lineTo(c[0] - 7, c[1] + 5); x.closePath(); x.fill();
       x.strokeStyle = '#e7dfc6'; x.lineWidth = 1; x.beginPath(); x.moveTo(c[0], c[1] - 3); x.lineTo(c[0], c[1] + 3); x.stroke();
-      x.font = '700 11px "DX Type", monospace'; x.fillStyle = '#1d2024'; x.textAlign = c[0] > w / 2 ? 'right' : 'left'; x.fillText(o.name, c[0] + (c[0] > w / 2 ? -10 : 10), c[1] + (c[1] > h / 2 ? -12 : 12));
+      x.font = '700 11px "DX Type", monospace'; x.fillStyle = '#1d2024'; x.textAlign = c[0] > w / 2 ? 'right' : 'left';
+      var ox = c[0] + (c[0] > w / 2 ? -10 : 10), oy = c[1] + (c[1] > h / 2 ? -12 : 12), ow = x.measureText(o.name).width; x.fillText(o.name, ox, oy); LBL.push({ x: c[0] > w / 2 ? ox - ow : ox, y: oy - 7, w: ow, h: 14 });
     });
     x.restore();
     // ---- the tracing sheet
@@ -246,8 +253,7 @@ var UIMap = (function () {
       x.font = (kd === 'L' ? '700 ' : '400 ') + fs + 'px "DX Type", monospace'; x.textAlign = 'left'; x.textBaseline = 'middle';
       var tw = x.measureText(nm).width, bx = { x: c[0] + r + 2, y: c[1] - fs * 0.6, w: tw + 2, h: fs * 1.2 };
       if (bx.x + bx.w > W2S([1.03, 0])[0]) { bx.x = c[0] - r - 2 - tw; x.textAlign = 'right'; }
-      var clash = LBL.some(function (q) { return bx.x < q.x + q.w && bx.x + bx.w > q.x && bx.y < q.y + q.h && bx.y + bx.h > q.y; });
-      if (!clash) {
+      if (!hit(bx)) {
         LBL.push(bx);
         var tx = x.textAlign === 'right' ? c[0] - r - 3 : c[0] + r + 3;
         x.lineWidth = 3; x.strokeStyle = 'rgba(231,223,198,.85)'; x.strokeText(nm, tx, c[1]); x.fillStyle = '#26221b'; x.fillText(nm, tx, c[1]);
@@ -271,20 +277,24 @@ var UIMap = (function () {
         x.strokeStyle = 'rgba(191,53,38,.35)'; x.lineWidth = 0.8; x.beginPath(); x.moveTo(p0[0], p0[1]); x.lineTo(p0[0] + a1[0] * L, p0[1] + a1[1] * L); x.moveTo(p0[0], p0[1]); x.lineTo(p0[0] + a2[0] * L, p0[1] + a2[1] * L); x.stroke();
         x.strokeStyle = 'rgba(176,40,28,.9)'; x.lineWidth = 1.5; jitterLine(x, p0, [p0[0] + a0[0] * L, p0[1] + a0[1] * L], d.key + b.station, 1.2);
         x.font = '600 15px "DX Hand", cursive'; x.fillStyle = 'rgba(176,40,28,.95)'; x.textAlign = 'center';
-        var lp = [p0[0] + a0[0] * 46, p0[1] + a0[1] * 46]; x.fillText(Math.round(b.deg) + '°', lp[0] + 12, lp[1]);
+        var lp = [p0[0] + a0[0] * 46, p0[1] + a0[1] * 46]; var db = { x: lp[0], y: lp[1] - 10, w: 34, h: 18 }; if (!hit(db)) { LBL.push(db); x.fillText(Math.round(b.deg) + '°', lp[0] + 12, lp[1]); }
       });
     });
     // fixes
     list.forEach(function (d) {
       if (!d.fix) return;
-      var f = d.fix, c = W2S([f.x, f.y]), on = sel ? sel === d.key : d === list[list.length - 1];
-      x.save(); x.translate(c[0], c[1]); x.rotate(f.rot * Math.PI / 180);
+      var f = d.fix, c = W2S([f.x, f.y]), on = sel ? sel === d.key : d === list[list.length - 1], old = d.shift !== UIA.clock().shift;
+      x.save(); x.globalAlpha = on ? 1 : old ? 0.35 : 0.75; x.translate(c[0], c[1]); x.rotate(f.rot * Math.PI / 180);
       x.setLineDash([5, 4]); x.lineWidth = on ? 2.2 : 1.4; x.strokeStyle = on ? 'rgba(176,40,28,.95)' : 'rgba(60,64,70,.65)';
       x.beginPath(); x.ellipse(0, 0, Math.max(6, f.rx * sc), Math.max(4, f.ry * sc), 0, 0, 7); x.stroke(); x.setLineDash([]);
       if (on) { x.fillStyle = 'rgba(191,53,38,.08)'; x.fill(); }
       x.restore();
       x.fillStyle = on ? 'rgba(176,40,28,.95)' : 'rgba(55,58,62,.8)'; x.font = '600 ' + (on ? 18 : 15) + 'px "DX Hand", cursive'; x.textAlign = 'left'; x.textBaseline = 'middle';
-      x.fillText((d.cs || '?') + ' · ' + d.label + (d.live ? ' (now)' : ''), c[0] + Math.max(6, f.rx * sc) + 6, c[1] - 4);
+      var lt = (d.cs || '?') + ' · ' + (old ? 'night ' + (d.shift + 1) + ' ' : '') + d.label + (d.live ? ' (now)' : ''), lw = x.measureText(lt).width, lx = c[0] + Math.max(6, f.rx * sc) + 6;
+      if (lx + lw > w - 70) lx = c[0] - Math.max(6, f.rx * sc) - 6 - lw;
+      var lb = { x: lx, y: c[1] - 14, w: lw, h: 20 };
+      if (on || (!old && !hit(lb))) { if (!on) LBL.push(lb); x.globalAlpha = on ? 1 : 0.8; x.fillText(lt, lx, c[1] - 4); }
+      x.globalAlpha = 1;
     });
     // van areas
     UIA.areas().forEach(function (a) { var c = W2S(a.centre), r = a.r * sc; x.strokeStyle = 'rgba(55,58,62,.8)'; x.lineWidth = 1.3; x.beginPath(); x.arc(c[0], c[1], Math.max(8, r), 0, 7); x.stroke(); x.fillStyle = patt(x, 'hatch'); x.globalAlpha = 0.3; x.fill(); x.globalAlpha = 1; x.font = '600 15px "DX Hand", cursive'; x.fillStyle = 'rgba(55,58,62,.9)'; x.fillText('van: ' + (a.callsign || '?'), c[0] + Math.max(8, r) + 4, c[1]); });

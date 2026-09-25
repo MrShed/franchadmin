@@ -84,6 +84,8 @@ var UIA = (function () {
   };
   A.over = function () { return !!(A.g && A.g.over); };
   A.outcome = function () { var o = A.g.outcome; if (!o) return null; if (typeof o === 'string') o = { kind: o }; return { kind: o.kind || 'open', win: o.win !== undefined ? !!o.win : o.kind === 'stopped', title: o.title || '', text: o.text || '', how: o.how || o.kind }; };
+  /** the superintendent's patience {value, max} (engine c.patience), or null */
+  A.patience = function () { var p = A.g && A.g.patience; if (typeof p !== 'number') return null; var gi = A.g.gradeInfo || {}; return { value: p, max: num(gi.patience, 100) }; };
   var ALERT_L = ['calm', 'wary', 'nervous', 'alarmed', 'running scared'];
   /** {level 0..4, label, value 0..100} */
   A.alert = function () {
@@ -494,9 +496,17 @@ var UIA = (function () {
     if (has('mentor')) {
       var r = safe(function () { return A.g.mentor(tier); }, null);
       A.bump();
-      if (r) { if (typeof r === 'string') r = { text: r }; return { text: String(r.text || r.err || ''), action: r.action || null, cost: r.cost || null, ok: r.ok !== false }; }
+      if (r) { if (typeof r === 'string') r = { text: r }; return { text: String(r.text || r.err || ''), refs: parts(r.refs), action: r.action && typeof r.action === 'object' ? r.action : null, cost: r.cost || null, ok: r.ok !== false && !r.err, events: events(r.events) }; }
     }
     return A._mentorLocal(tier);
+  };
+  /** {1:{ok, cost, why}, 2:{...}, 3:{...}} — what each tier costs now */
+  A.mentorStatus = function () {
+    var st = has('mentorStatus') ? safe(function () { return A.g.mentorStatus(); }, null) : null;
+    var mc = (A.g && A.g.gradeInfo && A.g.gradeInfo.mentorCost) || { 1: 0, 2: 20, 3: 10 };
+    var out = {};
+    [1, 2, 3].forEach(function (t) { var x = st && st[t] || {}; out[t] = { ok: x.ok !== false, cost: num(x.cost, mc[t] || 0), why: x.why || '' }; });
+    return out;
   };
   A._mentorLocal = function (tier) {
     var up = A.upcoming(480), log = A.log(), copied = log.filter(function (e) { return !e.faint; }), pairs = A.depthPairs(), ms = A.messages(), card = A.opCard();

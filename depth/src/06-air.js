@@ -172,7 +172,7 @@
     return {
       id: 'V' + sceneNo, tx: tx.id, centre: [DX.round(cx, 4), DX.round(cy, 4)], origin: [DX.round(origin[0], 4), DX.round(origin[1], 4)], size: VAN_SIZE,
       district: DX.cityDistrictAt(city, [cx, cy]), cols: cols, rows: rows, streets: streets, blocks: blocks,
-      start: [0.5, 1], seconds: seconds, noise: DX.round(0.05 + 0.08 * W.G.garble, 3),
+      start: [0.5, 0.5], seconds: seconds, noise: DX.round(0.025 + 0.04 * W.G.garble, 3),
       k: [DX.round(target[0] + ox, 5), DX.round(target[1] + oy, 5), h]
     };
   };
@@ -180,7 +180,7 @@
   /** signal meter 0..1 at scene point (x,y) at second sec (noise flickers with time) */
   DX.vanMeter = function (scene, x, y, sec) {
     var t = unk(scene), d = Math.sqrt((x - t[0]) * (x - t[0]) + (y - t[1]) * (y - t[1]));
-    var s = 1 / (1 + Math.pow(d / 0.16, 2));
+    var s = 1 / (1 + Math.pow(d / 0.12, 2));
     var n = scene.noise * (DX.u(scene.k[2], Math.floor((sec || 0) * 4), Math.round(x * 50), Math.round(y * 50)) - 0.5) * 2;
     return DX.round(DX.clamp(s + n, 0, 1), 3);
   };

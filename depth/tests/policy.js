@@ -78,7 +78,7 @@ module.exports = function (DX) {
       if (!call || call === c.controller || located(call) || d.abroad || !d.fix) return;
       var targets = vanTargets();
       var late = c.shift >= c.shifts - 2;
-      var want = targets.indexOf(call) >= 0 || (late && c.warrants().left >= 2) || c.grade === 'cadet';
+      var want = targets.indexOf(call) >= 0 || (late && c.warrants().left >= 2);
       if (!want) return;
       if ((P.vanTried[call] || 0) >= 3) return;
       if (t.remaining < 4) return;
@@ -92,7 +92,7 @@ module.exports = function (DX) {
     function driveVan(sc) {
       // hill-climb along the street grid reading the meter; each block costs ~6 s of the budget
       var time = 0, budget = sc.seconds, cols = sc.cols, rows = sc.rows;
-      var cur = [Math.round(sc.start[0] * cols), rows], best = -1, visited = {};
+      var cur = [Math.round(sc.start[0] * cols), Math.round(sc.start[1] * rows)], best = -1, visited = {};
       function read(i, j) { time += 6; return DX.vanMeter(sc, i / cols, j / rows, time); }
       var here = read(cur[0], cur[1]);
       best = here;
@@ -103,6 +103,8 @@ module.exports = function (DX) {
         for (var k = 0; k < moves.length && time < budget; k++) {
           var ni = cur[0] + moves[k][0], nj = cur[1] + moves[k][1];
           if (ni < 0 || nj < 0 || ni > cols || nj > rows || visited[ni + ',' + nj]) continue;
+          // the needle is watched all the way along the block
+          samples.push([(cur[0] + ni) / 2 / cols, (cur[1] + nj) / 2 / rows, DX.vanMeter(sc, (cur[0] + ni) / 2 / cols, (cur[1] + nj) / 2 / rows, time)]);
           var v = read(ni, nj);
           samples.push([ni / cols, nj / rows, v]);
           if (v > bestVal + 0.01) { bestVal = v; bestMove = [ni, nj]; }
@@ -141,14 +143,12 @@ module.exports = function (DX) {
       var msgs = c.messages(), did = false;
       for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
-        for (var j = 0; j < (m.sameIndicator || []).length; j++) {
-          var o = c.message(m.sameIndicator[j]);
+        var partners = (m.sameIndicator || []).concat(m.likelyIndicator || []);
+        for (var j = 0; j < partners.length; j++) {
+          var o = c.message(partners[j]);
           if (o.no < m.no) continue;
           var key = m.id + '|' + o.id, hsig = holes(m) + '/' + holes(o) + '/' + m.copies + '/' + o.copies + '/' + calls().length;
           if (P.pairTries[key] === hsig) continue;
-          // a human puts a pair on the bench when there is time before the next schedule
-          var est = benchCost('depth') + 30 * Math.max(1, benchCost('crib'));
-          if (timeTillNext() < Math.min(est, 45) && c.minute < SH - 30) continue;
           P.pairTries[key] = hsig;
           solvePair(m, o);
           did = true;
@@ -168,7 +168,10 @@ module.exports = function (DX) {
       // the work at the bench: one crib per word placed
       var n = Math.min(40, r.placements.length);
       c.bench.unplace(m.id, o.id);
-      for (var k = 0; k < n && !c.over; k++) { var p = r.placements[k]; c.bench.crib(m.id, o.id, p.text, p.offset, p.side); c.bench.place(m.id, o.id, p.side, p.text, p.offset); }
+      for (var k = 0; k < n && !c.over; k++) {
+        while (!c.over && c.minute < SH && listenNow()) act();   // back to the set when a carrier appears
+        var p = r.placements[k]; c.bench.crib(m.id, o.id, p.text, p.offset, p.side); c.bench.place(m.id, o.id, p.side, p.text, p.offset);
+      }
       if (c.over) return;
       var ga = c.bench.accept(m.id, r.a), gb = c.bench.accept(o.id, r.b);
       P.readTexts[m.id] = { text: r.a, from: m.from, to: m.to }; P.readTexts[o.id] = { text: r.b, from: o.from, to: o.to };
@@ -199,14 +202,12 @@ module.exports = function (DX) {
         if (P.courierTried[f] === sig) return;
         var need = c.board() ? 170 : 330;
         if (digits < need) return;
-        if (timeTillNext() < 25 && c.minute < SH - 30) return;
         P.courierTried[f] = sig;
         var pr = c.bench.period(ids);
         if (!pr.ok) return;
         var p = pr.best;
         if (!c.board()) {
           // Chief: the big computer
-          if (timeTillNext() < 60 && c.minute < SH - 70) { P.courierTried[f] = null; return; }
           var bs = c.bench.boardSolve(ids, p);
           note('big computer on ' + f + ' p' + p + ': ' + (bs.ok ? bs.keyword : 'failed'));
           if (!bs.ok) return;
@@ -220,7 +221,7 @@ module.exports = function (DX) {
           // try the key; if it reads badly, flip columns to their next-best shifts (each trial costs a setKey)
           var rf = DX.refineKey(streams, board, k0);
           var trials = Math.min(12, Math.ceil(rf.evals / 8));
-          for (var t = 0; t < trials; t++) c.bench.setKey(ids, k0);
+          for (var t = 0; t < trials; t++) { while (!c.over && c.minute < SH && listenNow()) act(); c.bench.setKey(ids, k0); }
           if (rf.plaus < 0.5) { note('courier ' + f + ' did not read (p' + p + ')'); return; }
           P.courierKey[f] = { key: rf.key, period: p };
         }

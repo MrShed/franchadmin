@@ -123,7 +123,7 @@ UI.openRef = function (t, id) {
   if (t === 'place' || t === 'address') UIMap.placeSheet(id, { push: push });
   else if (t === 'building') UIMap.buildingSheet(id, { push: push });
   else if (t === 'district') { UIsheet.close(); UI.go('map'); UIMap.focusDistrict(id); }
-  else if (t === 'person') UIDesk.personSheet(id, { push: push });
+  else if (t === 'person') { if (UIA.building(id)) UIMap.buildingSheet(id, { push: push }); else UIDesk.personSheet(id, { push: push }); }
   else if (t === 'callsign' || t === 'cs') UITraffic.nodeSheet(id, { push: push });
   else if (t === 'msg' || t === 'message') { UIsheet.close(); UIBench.openMsg(id); }
   else if (t === 'log' || t === 'intercept') UIRx.logSheet(id, { push: push });
@@ -212,7 +212,8 @@ UI.alertSheet = function () {
   var a = UIA.alert().level;
   UIsheet.open({ title: 'The ring’s alert', eyebrow: 'How nervous they are', tag: 'alert', html:
     '<div class="alert-scale">' + UI.ALERTS.map(function (x, i) { return '<div class="as-row' + (i === a ? ' on' : '') + '"><span class="lamp a' + i + '"></span><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>' +
-    '<p class="note">Raids (right or wrong), a van seen in the street and long silences after arrests all raise it. It never falls far.</p>' });
+    '<p class="note">Arrests, wrong raids, a van seen in the street and watchers who are spotted all raise it. It never falls far.</p>' +
+    (function () { var p = UIA.patience(); if (!p) return ''; var f = UIclamp(p.value / p.max, 0, 1); return '<h4>The superintendent’s patience</h4><div class="pat"><i><b style="width:' + Math.round(f * 100) + '%;background:' + (f < 0.35 ? 'var(--red)' : f < 0.6 ? '#c9a53a' : '#2d8a4a') + '"></b></i><span>' + p.value + ' / ' + p.max + '</span></div><p class="note">Wrong raids and empty nights wear it down. At nothing, Copenhagen takes the case.</p>'; })() });
 };
 UI.help = function () {
   UIsheet.open({ title: 'How a night works', eyebrow: 'Station Kestrel · standing orders', tag: 'help', wide: true, html:
