@@ -552,7 +552,8 @@ function locationsHere() {
 function cityScene() {
   if (game.crime && game.crime.over && !game.crime.reported) return synopsisScene();
   if (game.crime && game.crime.prisonBreak && !game.crime.prisonBreak.handled && !practiceMode) return prisonBreakScene();
-  if (game.crime && game.crime.foiled != null && !game.crime.foiledShown) { game.crime.foiledShown = true; return report('Plot Foiled', ['Word from every station: the ' + game.crime.kind.toLowerCase() + ' plot has collapsed. Without its key people it cannot go ahead.', 'The rest of the ring will scatter over the next few days, and the Mastermind will go to ground. Round up whoever you can while they are still in place.'], () => go(cityScene())); }
+  if (game.crime && game.crime.foiled != null && !game.crime.foiledShown) { game.crime.foiledShown = true; const cr = game.crime, mmIn = cr.people[cr.mastermind].status === 'arrested';
+    return report('Plot Foiled', [mmIn ? 'With the Mastermind in custody, the ' + cr.kind.toLowerCase() + ' plot is dead. Nobody is left to give the orders.' : 'Word from every station: the ' + cr.kind.toLowerCase() + ' plot has collapsed. Without its key people it cannot go ahead.', 'The rest of the ring will scatter over the next few days' + (mmIn ? '' : ', and the Mastermind will go to ground') + '. Round up whoever you can while they are still in place. The case closes when they are gone.'], () => go(cityScene())); }
   writeCase(); const city = cityById(game.city);
   const items = locationsHere().map(l => ({ label: fitText(l.label, 120), go: () => goLocation(l) }));
   items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });
@@ -1110,7 +1111,7 @@ function arrestResult(p, how) {
   const cr = game.crime;
   if (!p.known.role) { p.exists = true; learn(p, 'face'); learn(p, 'name'); writeCase(); return splitLayout({ header: [], text: p.name + ' was taken to local headquarters for questioning, but had to be released for lack of evidence. Without proof of a role in the crime, an arrest will not stick.', art: (x, y, w, h) => interrogationArt(x, y, w, h, p), back: () => go(cityScene()), items: [{ label: 'Continue', go: () => go(cityScene()) }] }); }
   p.status = 'arrested'; p.jailCity = game.city; p.shownCity = null; addHeat(game.city, 2); FACET_ORDER.forEach(f => learn(p, f));
-  if (p.role === 'Mastermind') p.org.mastermindFree = false;
+  if (p.role === 'Mastermind') { p.org.mastermindFree = false; foilPlot(dayOf(game.t), true); }
   const told = [];
   const contacts = cr.steps.filter(s => s.to !== undefined && (s.from === p.id || s.to === p.id)).map(s => cr.people[s.from === p.id ? s.to : s.from]).filter(Boolean);
   for (const q of contacts) { if (isSuspect(q) && told.length < 3) { const c = clueAbout(q, 'Interrogation'); if (c) told.push(c.text); if (rnd() < 0.5 && !q.known.role) { const r = clueAbout(q, 'Interrogation', 'role'); if (r) told.push(r.text); } } }

@@ -286,18 +286,24 @@ function plotDay(d) {
   // blocked plans: once enough links are broken the plot is foiled, but the case goes on:
   // the rest of the ring scatters over the next few days, and the mastermind goes to ground last
   const mm = cr.people[cr.mastermind];
-  if (mm.status !== 'free') { cr.over = true; cr.prevented = true; cr.endDay = d; return; }
+  // the mastermind in custody foils the plot too: the ring leaderless, scattering
+  if (mm.status !== 'free' && cr.foiled == null) foilPlot(d, true);
   if (cr.foiled != null) {
     const left = d - cr.foiled;
-    for (const p of cr.people) if (p.status === 'free' && p !== mm && rnd() < 0.15 + 0.12 * left) { p.status = 'fled'; game.news.push({ t: dayToT(d), text: 'A ' + p.org.name + ' suspect has slipped out of ' + cityById(p.city).name + '.' }); }
-    if (left >= 4) { mm.status = 'fled'; cr.over = true; cr.prevented = true; cr.endDay = d; }
+    for (const p of cr.people) if (p.status === 'free' && p !== mm && rnd() < 0.08 + 0.1 * left) { p.status = 'fled'; game.news.push({ t: dayToT(d), text: 'A ' + p.org.name + ' suspect has slipped out of ' + cityById(p.city).name + '.' }); }
+    const anyFree = cr.people.some(p => p.status === 'free');
+    if (left >= 4 || !anyFree) { if (mm.status === 'free') mm.status = 'fled'; cr.over = true; cr.prevented = true; cr.endDay = d; }
     return;
   }
   const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length, exec = cr.people[cr.executor];
-  if (blocked / total > 0.5 || exec.status !== 'free' && exec !== mm) { cr.foiled = d; game.news.push({ t: dayToT(d), text: 'Sources say the ' + cr.kind.toLowerCase() + ' plot has collapsed. Its members are expected to go to ground.' }); }
+  if (blocked / total > 0.5 || exec.status !== 'free' && exec !== mm) foilPlot(d, false);
   else if (d >= cr.crimeDay + cr.delay) { cr.over = true; cr.prevented = false; cr.endDay = d; }
 }
 const dayToT = d => d * 1440 - 8 * 60 + 9 * 60;
+function foilPlot(d, byMastermind) {
+  const cr = game.crime; if (cr.foiled != null) return; cr.foiled = d; cr.foiledByMM = byMastermind;
+  game.news.push({ t: dayToT(d), text: byMastermind ? 'With its leader in custody, the ' + cr.kind.toLowerCase() + ' plot has collapsed. Its members are expected to go to ground.' : 'Sources say the ' + cr.kind.toLowerCase() + ' plot has collapsed. Its members are expected to go to ground.' });
+}
 
 // ---------- scoring: Efficiency Points, as on the original report ----------
 function epMax(p) { return p.role === 'Mastermind' ? 200 : p.rank >= 5 ? 35 : 25 + (p.rank % 4) * 5; }
