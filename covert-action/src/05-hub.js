@@ -476,7 +476,7 @@ function charScene() {
   let s, step = 0, sex = 'm', name = '';
   const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const m1 = Menu([{ label: 'Maximillian Remington', go: () => { sex = 'm'; step = 1; s.typing = true; typing = true; } }, { label: 'Maxine Remington', go: () => { sex = 'f'; step = 1; typing = true; } }], 110, 70, 118);
-  const m3 = () => Menu(DIFFICULTY.map((d, i) => ({ label: d.name, go: () => { game.diff = i; game.agent = newAgent(sex, name.trim() || (sex === 'f' ? 'Fox' : 'Fox')); game.cases = []; game.rank = 0; game.careerPoints = 0; ORGS.forEach(o => o.mastermindFree = true); go(trainingScene()); } })), 110, 70, 118);
+  const m3 = () => Menu(DIFFICULTY.map((d, i) => ({ label: d.name, go: () => { game.diff = i; game.agent = newAgent(sex, name.trim() || (sex === 'f' ? 'Fox' : 'Fox')); clearCase(); game.cases = []; game.rank = 0; game.careerPoints = 0; ORGS.forEach(o => o.mastermindFree = true); go(trainingScene()); } })), 110, 70, 118);
   const doneName = () => { step = 2; typing = false; s.menu = m3(); };
   s = menuScene({
     menu: m1,
