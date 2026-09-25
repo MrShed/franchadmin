@@ -45,7 +45,7 @@ var AUTO = function () {
     await closeExplain();
     await shot('receiver');
     // wait for the first broadcast from the schedule strip, then copy it by touch
-    await tap('.sb-btns .next'); await page.waitForTimeout(900);
+    await tap('[data-w=next]:visible'); await page.waitForTimeout(900);
     await shot('receiver-tuned');
     // centre it with the fine knob programmatically (what a player does by turning)
     await ev(function () { var s = UIA.band().now.filter(function (x) { return !x.bcast; })[0]; if (s) { UIS.rx.freq = s.freq; UIS.rx.mode = s.mode === 'voice' ? 'voice' : 'cw'; UIRx.refresh(); } });

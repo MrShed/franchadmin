@@ -822,9 +822,9 @@
     var s = this._s, W = this._w, self = this;
     var txt = s.accepts[wid] ? DX.norm(s.accepts[wid].text) : truthNorm;
     (facts || []).forEach(function (f) {
-      if (f.fact === 'codeword') return;
       var v = DX.norm(f.value);
       if (txt.indexOf(v) < 0) return;
+      if (f.fact === 'codeword') { s.card.codeword = f.value; return; }
       var card = s.card[f.fact] || (s.card[f.fact] = { known: false, parts: {}, from: [] });
       card.parts[f.key] = f.value;
       if (card.from.indexOf(wid) < 0) card.from.push(wid);

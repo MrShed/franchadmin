@@ -82,7 +82,8 @@ module.exports = function (DX) {
       if (!call || call === c.controller || located(call) || d.abroad || !d.fix) return null;
       var targets = vanTargets();
       var late = c.shift >= c.shifts - 2;
-      var want = targets.indexOf(call) >= 0 || (late && c.warrants().left >= 2);
+      // locate every agent early (an address is what Special Branch needs); keep trying the known targets
+      var want = targets.indexOf(call) >= 0 || (P.vanTried[call] || 0) < 1 || (late && c.warrants().left >= 2);
       if (!want) return null;
       if ((P.vanTried[call] || 0) >= 3) return null;
       if (t.remaining < 4) return null;

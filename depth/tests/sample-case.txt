@@ -1,0 +1,106 @@
+DEPTH case "sample-1"  grade Analyst  attempt 0  generated in 214 ms  verify: stake-out, arrest  (periodic:PV9@1379 depth:x0/x10 depth:x1/x4 depth:x5/x11 lift)
+Nights: 4 (Mon 10 Oct .. Thu 13 Oct)   warrants 4   outstations DF1 Skovhøj, DF2 Rønnebakke, DF3 Holmen mole
+
+THE CITY: Haldmar — 12 districts (Brohus, Lindevang, Frihavn, Søndermark, Østerled, Skipperholm, Ravnsborg, Nordhavn, Kalkværket, Gammelby, Sankt Jakob, Møllebakken), 11 streets, 58 places
+
+THE RING
+  controller LOM (abroad, voice numbers, male voice)   keyword PUSHKIN   security officer Pyotr Lanin
+  ZE7  resident          Leif Sørensen         customs clerk
+         home Havnegade 5 (Frihavn)   transmits from home   slot 23:40 9.08 MHz   one-time pad   fist 15 wpm, dah 2.62, "long zeros"   careful 0.49
+  ZS8  agent             Juozas Aaberg         tram conductor
+         home Tovgade 30 (Brohus)   transmits from home   slot 23:00 7.62 MHz   one-time pad   fist 13 wpm, dah 3.46, "long zeros"   careful 0.46
+  KB2  agent             Leif Olsen            crane driver at Nordhavn
+         home Bryggergade 8 (Søndermark)   transmits from home   slot 22:30 6.885 MHz   one-time pad   fist 10 wpm, dah 2.67, "a heavy, even hand"   careful 0.41
+  V4X  agent    EXECUTOR Nina Kask             clerk at a ship's chandler
+         home Havnegang 26 (Ravnsborg)   transmits from mobile   slot 00:45 4.5 MHz   one-time pad   fist 18 wpm, dah 2.75, "clipped dits"   careful 0.72
+  PV9  courier           Frode Hagen           retired sea captain
+         home Toldstræde 43 (Lindevang)   transmits from home   slot 23:45 8.91 MHz   periodic key 481299   fist 15 wpm, dah 2.88, "long zeros"   careful 0.83
+
+CONTROLLER SCHEDULE: 19:50 on 4.36 MHz, 21:20 on 6.49 MHz (repeat next night +15 min)
+
+THE OPERATION  "SAFFRON": disable the coastguard radar (DISABLE THE COASTGUARD RADAR)
+  WHERE Coastguard radar mast   WHEN night of Thu 13 Oct at 23:50   WHO V4X (Nina Kask)   item: TOOLS
+  drop drop0: hollow bench leg, Tivoli park loaded Wed 12 Oct after 22:00 for V4X, cleared Thu 13 Oct 19:20 — "FOR V4X. SAFFRON AT RADAR MAST NIGHT OF THURSDAY AT 2350. TOOLS ENCLOSED. BURN THIS."
+  drop drop1: water tower railings, Møllebakken loaded Tue 11 Oct after 22:10 for ZS8, cleared Wed 12 Oct 18:30 — "FOR ZS8. 7000 KRONER. NEW SIGNAL SITE TORVET KIOSK. BURN THIS."
+  meeting: Café Bristol Thu 13 Oct 20:50 between ZE7 and V4X
+
+DEPTHS (reused pad pages): x0+x10 page 40259, x1+x4 page 40268, x5+x11 page 40293
+
+MESSAGES (plaintext; facts; cipher)
+  x0  Mon 10 Oct 19:50 LOM > ZE7  pad 40259 DEPTH with x10  [what]
+        ZE7 FROM LOM NR34. CENTRE APPROVES OPERATION SAFFRON. OBJECT IS TO DISABLE THE COASTGUARD RADAR. ALL OTHER TASKS SUSPENDED. REGARDS LOM
+  x2  Mon 10 Oct 20:20 LOM > ZE7  pad 40271
+        ZE7 FROM LOM NR36. LOAD WATER TOWER FOR ZS8 NIGHT OF TUESDAY AFTER 2210. SIGNAL CHALK MARK ON KLOSTER RAILINGS. REGARDS LOM
+  x1  Mon 10 Oct 21:20 LOM > ZE7  pad 40268 DEPTH with x4  [who]
+        ZE7 FROM LOM NR35. SAFFRON TO BE CARRIED OUT BY V4X. V4X TO COLLECT TOOLS FROM TIVOLI BENCH. REGARDS LOM
+  x9  Mon 10 Oct 23:40 ZE7 > LOM  pad 40321
+        NR19 FROM ZE7. YOUR NR19 RECEIVED AND UNDERSTOOD. KB2 REPORTS NOTHING NEW. NOTHING FURTHER
+  x19 Mon 10 Oct 23:55 PV9 > ZE7  periodic
+        FOR ZE7 NR21. WATER TOWER LOADED NIGHT OF TUESDAY AFTER 2210 FOR ZS8. MARK ON KIRKEGADE LAMP. PACKAGE CONTAINS TOOLS. MARK SEEN ON TORVET KIOSK. TRAM SHELTER EMPTIED. NOTHING FOR YOU. END PV9
+  x3  Tue 11 Oct 19:50 LOM > ZE7  pad 40278  [where]
+        ZE7 FROM LOM NR37. SAFFRON WILL BE AT RADAR MAST. KEEP ALL PEOPLE AWAY FROM THE AREA UNTIL THEN. REGARDS LOM
+  x4  Tue 11 Oct 21:20 LOM > ZE7  pad 40268 DEPTH with x1
+        ZE7 FROM LOM NR38. POLICE ACTIVE NEAR QUAY 7. REDUCE TRAFFIC. NO MEETINGS AT KONDITORI HOLM. REGARDS LOM
+  x10 Tue 11 Oct 23:40 ZE7 > LOM  pad 40259 DEPTH with x0  [who where]
+        NR20 FROM ZE7. V4X WILL DO SAFFRON. SHE KNOWS RADAR MAST WELL. NOTHING FURTHER
+  x15 Tue 11 Oct 00:00 ZE7 > ZS8  pad 90552
+        NR23 FROM ZE7. CLEAR CEMETERY URN AFTER 2300 TUESDAY. BURN THE PAPER. NOTHING FURTHER
+  x13 Tue 11 Oct 00:45 V4X > ZE7  pad 80523  [where]
+        NR13 FROM V4X. I HAVE WATCHED RADAR MAST THREE NIGHTS. ONE GUARD ONLY AFTER 2120. V4X OUT
+  x5  Wed 12 Oct 19:50 LOM > ZE7  pad 40293 DEPTH with x11  [when]
+        ZE7 FROM LOM NR39. DATE FOR SAFFRON IS NIGHT OF THURSDAY. HOUR 2350. NO CHANGES. REGARDS LOM
+  x6  Wed 12 Oct 21:20 LOM > ZE7  pad 40299
+        ZE7 FROM LOM NR40. MEET V4X AT CAFE BRISTOL THURSDAY AT 2050. RECOGNITION NEWSPAPER UNDER LEFT ARM. REGARDS LOM
+  x18 Wed 12 Oct 22:30 KB2 > ZE7  pad 40794
+        ZE7 DE KB2 NR15. SHIP ARRIVED AT QUAY 7. THREE MEN ON WATCH. END KB2
+  x16 Wed 12 Oct 23:00 ZS8 > ZE7  pad 90563
+        ZE7 DE ZS8 NR26. I NEED MONEY FOR RENT. SEND BY OLAI WALL. ENDS
+  x11 Wed 12 Oct 23:40 ZE7 > LOM  pad 40293 DEPTH with x5  [who when]
+        NR21 FROM ZE7. SAFFRON READY. V4X WILL BE IN POSITION NIGHT OF THURSDAY. NOTHING FURTHER
+  x17 Wed 12 Oct 00:00 ZE7 > KB2  pad 40791
+        NR24 FROM ZE7. WATCH YARD MAIN GATE NIGHT OF TUESDAY AND REPORT. NOTHING FURTHER
+  x20 Wed 12 Oct 00:15 PV9 > ZE7  periodic  [who when]
+        FOR ZE7 NR22. PACKAGE FOR V4X IS IN TIVOLI BENCH FROM WEDNESDAY AFTER 2200. V4X MUST CLEAR IT BEFORE NIGHT OF THURSDAY. SHIP ARRIVED AT QUAY 8. THREE MEN ON WATCH. END PV9
+  x14 Wed 12 Oct 00:45 V4X > ZE7  pad 80528  [when]
+        NR14 FROM V4X. READY FOR SAFFRON. THURSDAY AT 2350 IS GOOD. V4X OUT
+  x21 Wed 12 Oct 00:55 PV9 > ZE7  periodic
+        FOR ZE7 NR23. MARK SEEN ON TORVET KIOSK. BOATHOUSE EMPTIED. NOTHING FOR YOU. ALL DROPS CLEAR. NO SURVEILLANCE SEEN AT CEMETERY URN. NEXT CONTACT TUESDAY AT 2020. END PV9
+  x7  Thu 13 Oct 19:50 LOM > ZE7  pad 40309
+        ZE7 FROM LOM NR41. NO CHANGE TO SAFFRON. PROCEED. DESTROY ALL NOTES AFTERWARDS. REGARDS LOM
+  x8  Thu 13 Oct 21:20 LOM > ZE7  pad 40313
+        ZE7 FROM LOM NR42. YOUR NR22 RECEIVED. CENTRE IS PLEASED WITH YOUR WORK. REGARDS LOM
+  x12 Thu 13 Oct 23:40 ZE7 > LOM  pad 40346
+        NR22 FROM ZE7. YOUR NR22 RECEIVED AND UNDERSTOOD. ZS8 REPORTS NOTHING NEW. NOTHING FURTHER
+
+TRANSMISSIONS
+  T1  Mon 10 Oct 19:50-20:03 4.36   VOICE LOM > ZE7   x0
+  T5  Mon 10 Oct 20:20-20:33 4.36   VOICE LOM > ZE7   x2
+  T3  Mon 10 Oct 21:20-21:32 6.49   VOICE LOM > ZE7   x1
+  T17 Mon 10 Oct 23:40-23:48 9.08   CW    ZE7 > LOM   x9
+  T27 Mon 10 Oct 23:55-00:10 8.91   CW    PV9 > ZE7   x19
+  T30 Mon 10 Oct 00:40-00:42 10.245 CW    VVV >       test VVV
+  T7  Tue 11 Oct 19:50-20:01 4.36   VOICE LOM > ZE7   x3
+  T2  Tue 11 Oct 20:05-20:18 4.36   VOICE LOM > ZE7   x0 (repeat)
+  T6  Tue 11 Oct 20:35-20:48 4.36   VOICE LOM > ZE7   x2 (repeat)
+  T9  Tue 11 Oct 21:20-21:31 6.49   VOICE LOM > ZE7   x4
+  T4  Tue 11 Oct 21:35-21:47 6.49   VOICE LOM > ZE7   x1 (repeat)
+  T18 Tue 11 Oct 23:40-23:48 9.08   CW    ZE7 > LOM   x10
+  T31 Tue 11 Oct 23:50-23:52 10.465 CW    VVV >       test VVV
+  T23 Tue 11 Oct 00:00-00:08 9.08   CW    ZE7 > ZS8   x15
+  T21 Tue 11 Oct 00:45-00:52 4.5    CW    V4X > ZE7   x13
+  T11 Wed 12 Oct 19:50-20:00 4.36   VOICE LOM > ZE7   x5
+  T8  Wed 12 Oct 20:05-20:16 4.36   VOICE LOM > ZE7   x3 (repeat)
+  T13 Wed 12 Oct 21:20-21:32 6.49   VOICE LOM > ZE7   x6
+  T10 Wed 12 Oct 21:35-21:46 6.49   VOICE LOM > ZE7   x4 (repeat)
+  T26 Wed 12 Oct 22:30-22:40 6.885  CW    KB2 > ZE7   x18
+  T24 Wed 12 Oct 23:00-23:07 7.62   CW    ZS8 > ZE7   x16
+  T19 Wed 12 Oct 23:40-23:48 9.08   CW    ZE7 > LOM   x11
+  T25 Wed 12 Oct 00:00-00:07 9.08   CW    ZE7 > KB2   x17
+  T28 Wed 12 Oct 00:15-00:29 8.91   CW    PV9 > ZE7   x20
+  T22 Wed 12 Oct 00:45-00:51 4.5    CW    V4X > ZE7   x14
+  T29 Wed 12 Oct 00:55-01:08 8.91   CW    PV9 > ZE7   x21
+  T15 Thu 13 Oct 19:50-20:00 4.36   VOICE LOM > ZE7   x7
+  T12 Thu 13 Oct 20:05-20:15 4.36   VOICE LOM > ZE7   x5 (repeat)
+  T16 Thu 13 Oct 21:20-21:30 6.49   VOICE LOM > ZE7   x8
+  T14 Thu 13 Oct 21:35-21:47 6.49   VOICE LOM > ZE7   x6 (repeat)
+  T20 Thu 13 Oct 23:40-23:48 9.08   CW    ZE7 > LOM   x12

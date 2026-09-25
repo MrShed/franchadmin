@@ -100,8 +100,11 @@ Transmissions with `mode:'BURST'` last one minute: you must already be tuned (ca
 ### Time
 ```js
 c.wait(minutes) / c.advanceTo(minute) -> {events, clock}
+c.waitForSignal(max?) -> {events, tx: band view of what just keyed up | null, clock}
+     // the operator sits at the set: time runs until the next transmission starts (or max minutes / 02:00)
 event = {kind:'heard', t, tx, intercept, freq, mode, callsign}      // band watch logged a transmission (faint)
       | {kind:'warrant', t, warrant, wkind, result, inbox:[noteIds]}
+      | {kind:'computer', t, job, ok, keyword, inbox:[noteIds]}    // the big computer answered (Chief)
       | {kind:'op', t, stopped}                                     // the operation hour came
 ```
 Time never passes 480 on its own; call `c.endShift()` to go to the next night.
@@ -113,6 +116,7 @@ from the call-up, no groups) and teaches the schedule. Copying needs `tune`.
 c.tune(txId, {freqErr: kHz, modeOk: bool, driftHeld: 0..1})
   -> {ok, intercept, msg:'M114', groups:[...], quality 0..1, lost, corrupt, events, clock}
 ```
+The VVV test transmitter can be tuned but carries no groups (`msg:null, groups:[]`).
 Call while the transmission is on air (or up to 15 min before; the clock advances to its start). The engine
 advances the clock to the END of the transmission (you listen to the rest of it). Joining late loses the first
 groups (`'?????'`). Quality = tuning × mode × drift × signal/noise; each group is garbled with probability
@@ -135,6 +139,7 @@ c.messages() -> [msg] ; c.message(id) -> msg
 msg = {id:'M114', no:114, from, to, kind:'pad'|'periodic'|'clear', copies, intercepts:[...], first:{shift,t},
        groups:[merged], indicator|null, holes (count of '?'), length,
        sameIndicator:[other message ids with the same indicator group]   // = a depth!
+       likelyIndicator:[ids whose indicator agrees except for garbled figures (≤2 '?')]
        decrypted?: {text, grade:'right'|'partial'|'wrong', score, by:'player'|'seized'|'mentor', shift, t},
        text?, source?  (kind 'clear': drop contents)}
 c.board() -> null (Chief until recovered) | {key, blanks:[p1,p2], cols:[0..9],
@@ -159,8 +164,14 @@ c.bench.period(ids)                  -> {ic:[{period, ic}] 1..12, repeats:[{seq,
 c.bench.columns(ids, period)         -> {cols:[{col, n, freq:[10], fit?:[{shift, score}] best first}], expect:[10]|null}
 c.bench.align(ids, period)           -> {rel:[key digits relative to column 0], conf:[...]}   (Chief: no board needed)
 c.bench.setKey(ids, keyDigits)       -> {texts:[{id, text, plaus}], text, plaus}   trial decrypt
-c.bench.boardSolve(ids, period|relKey) -> {ok, keyword, key, plaus, board}   Chief: "time on the big computer" (60 min):
-     tries every keyword in DX.DATA.KEYWORDS against the courier traffic; sets the checkerboard when found
+c.bench.keyFromCrib(ids, crib, period) -> {key:[digits, -1 unknown], keyStr, known, conflict}
+     known plaintext: the crib (e.g. 'FORKX7NR#2.' — '#2' = a two-figure number) is assumed at the start of each
+     message (every courier message restarts the key and couriers always open the same way)
+c.bench.boardSolve(ids, period|relKey, crib?) -> {ok, pending:true, job:'C3', ready:{shift, t, label}}
+     Chief: "time on the big computer". 5 min of paperwork; the job runs 60 minutes (it can finish next night) and
+     answers in the inbox (note.job, note.keyword, note.key) + a 'computer' event. It tries every keyword in
+     DX.DATA.KEYWORDS: from your crib (or the ring's usual openings with the logged callsigns), column
+     frequencies and aligned columns; sets the checkerboard when one reads. One job at a time.
 c.bench.decode(digits) / c.bench.encode(text)
 c.bench.accept(id, text) -> {grade:'right'|'partial'|'wrong', score, card}   record a decrypt; graded against the truth
 ```
@@ -182,14 +193,19 @@ c.df(txId, stationIds?) -> {ok, tx, bearings:[{station, deg, sd}], fix:{x, y, rx
      fix: least-squares intersection, 2-sigma ellipse (rx, ry in map units, rot in degrees). abroad: the controller.
 c.fix(bearings) -> fix       recompute from (possibly adjusted / subset) bearings
 DX.inFix(fix, [x,y])
-c.van(txId, centre?:[x,y]) -> {ok, scene}   while on air with >= 3 min left; centre defaults to the last fix
+c.van(txId, centre?:[x,y]) -> {ok, scene}   while on air with >= 3 min left; centre defaults to the last fix.
+     The hunt happens WHILE the set is on air: the UI runs the scene, may still call tune for the same
+     transmission (the tape kept running; pass a lower driftHeld, the operator was busy), then vanResult.
 scene = {id:'V0', tx, centre, origin:[x,y], size (map units, 0.16), district, cols:6, rows:6,
          streets:[{name, a:[x,y], b:[x,y]}] (scene coords 0..1), blocks:[{x,y,w,h, buildings:[{id,x,y}]}],
-         start:[0.5,1], seconds (real-time budget), noise, k (hidden target, do not read)}
+         start:[0.5,0.5] (the van arrives at the fix), seconds (real-time budget), noise, k (hidden target, do not read)}
+         scene coords: x = (mapX - origin[0]) / size
 DX.vanMeter(scene, x, y, sec) -> 0..1   signal meter at a scene point (noisy)
 c.vanResult({x, y}|null, sceneId?) -> {found, kind:'exact'|'area'|'none', building?, area?, msgs, events}
-     exact: within ~a building -> building located (evidence 'transmitter'); area: within ~1.5 blocks -> area circle.
-     Costs 30 min (Cadet 20). The van may be noticed (raises alert).
+     exact: within ~half a block of the set -> building located (evidence 'transmitter'); area: within ~1.5 blocks
+     -> area circle. The clock goes to the end of the transmission + 5/10/15 min (crew debrief, by grade).
+     The van may be noticed (raises alert). A mobile set is found in a parked vehicle: the registration gives the
+     owner's home (how:'vehicle').
 c.buildings() -> [{id, address, pos, district, how:'home'|'room'|'vehicle'|'van', occupant:{name,cover,photo}|null,
                    evidence:[{kind:'transmitter'|'meeting'|'drop'|'seen', detail, callsign?, shift, t}], callsigns, raided, strong}]
 c.building(id), c.areas() -> [{id, tx, callsign, centre, r, shift}]
@@ -200,7 +216,7 @@ c.building(id), c.areas() -> [{id, tx, callsign, centre, r, shift}]
 ```js
 c.links() -> {nodes:[{id:callsign, heard, copied, modes, first}], traffic:[{from, to, n}],
               links:[{a, b, kind, support 0..1, supported:bool, why}]}
-c.link(a, b, kind='talks'|'controls'|'same') ; c.unlink(a, b)
+c.link(a, b, kind='talks'|'controls'|'same') -> the diagram + {ok} ; c.unlink(a, b)
 ```
 Support comes only from what was logged (transmissions between the two; for `same`, the same fist).
 
@@ -264,5 +280,28 @@ plaintext = `{id, wb (bench id if heard), night, from, to, text, cipher, page, d
 * `c.bench.period/columns/setKey` accept an array of ids (pooling one courier's traffic).
 * `c.van(txId, centre)` takes where to send the van; `c.vanResult(found, sceneId?)`.
 * Hints: `c.mentor(tier)` plus `c.mentorStatus()`.
+* `c.waitForSignal(max)` (operator at the set), `c.bench.keyFromCrib`, and `boardSolve` is asynchronous (inbox).
+* The van: spec says "real time + 30 min"; here the hunt overlaps the transmission and costs 5/10/15 min after it
+  (a 30-minute block made the van cost the next schedule every time; balanced with tests/play.js).
+* `DX.warm()` builds the language tables; `newCase`/`load` call it (so no action pays for it).
 * Added: `c.signal(txId)` (audio), `c.schedule()`, `c.fix(bearings)`, `c.buildings()`, `c.areas()`, `c.opCard()`,
   `c.card()`, `c.alertLevel()`, `c.patience`, `c.costs()`, `c.message(id)`, `c.markRead(id)`.
+
+## Tests (node, no dependencies)
+
+| file | what |
+|---|---|
+| `tests/load.js` | loads `src/0*.js` as the page does and returns `DX` |
+| `tests/api.js [seed]` | walks the whole API (~360 checks): shapes, costs, receiver, repeats merging, bench tools, DF + van, every warrant, security reactions, Chief's computer, mentor, save/load determinism, debrief |
+| `tests/crypto.js` | checkerboard round trips for every keyword, pad/periodic arithmetic, depth cancels the pad, true cribs give true digits, the depth solver reads pairs and the operation facts, period finder + column fit + keyword search recover keys and boards |
+| `tests/play.js [a..b] [--policy=competent\|none\|listener] [--grade=..] [--v]` | headless players (`tests/policy.js`) and win rates per grade |
+| `tests/why.js [a..b] [--grade=..]` | post-mortem of lost games: what the case offered vs what the player got |
+| `tests/perf.js [n]` | newCase timings per grade, every per-action call during played games, save/load |
+| `tests/gen.js <seed> [--grade=..]` | dumps a case: ring, operation, drops, meeting, all plaintexts with cipher/depth, the transmission schedule (example: `tests/sample-case.txt`) |
+
+The competent policy plays through the public API only (never `c._w`): it listens to known schedules and to
+whatever keys up on the waterfall, mends garbled copies with the repeats, spots depths by indicator (including
+near-matches), breaks them with crib dragging over the station dictionary (`DX.solveDepth`, paying one crib per
+word), breaks courier traffic from the opening habit + column counts (Chief: books the big computer), reads the
+facts out of its own decrypts, takes bearings on every Morse set, sends the van on targets, and spends warrants on
+stake-outs, lifts, meeting/drop watches and raids with evidence. Receiver and van skill carry human error.

@@ -24,7 +24,7 @@ fs.mkdirSync(OUT, { recursive: true });
     await page.waitForTimeout(500);
     await shot(s.title.replace(/\W+/g, '-').toLowerCase());
     if (!s.wait) { await page.locator('#co-card [data-c=next]').tap(); continue; }
-    if (s.wait === 'waited') await page.locator('.sb-btns .next').tap();
+    if (s.wait === 'waited') await page.locator('[data-w=next]:visible').first().tap();
     else if (s.wait === 'copyready') {
       // drag the trace onto the hairline (narrow span: drag = fine tuning)
       for (var k = 0; k < 6; k++) {
