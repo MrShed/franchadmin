@@ -339,7 +339,7 @@ function chaseScene(opts, done) {
   function ahead(c) { let best = null, bd = 1e9; for (const o of cars) { if (o === c) continue; if (o.a[0] === c.a[0] && o.a[1] === c.a[1] && o.b[0] === c.b[0] && o.b[1] === c.b[1] && o.s > c.s) { const d = o.s - c.s; if (d < bd) { bd = d; best = o; } } } return best ? [best, bd] : null; }
   function headOn(c) { return sus.a[0] === c.b[0] && sus.a[1] === c.b[1] && sus.b[0] === c.a[0] && sus.b[1] === c.a[1] && Math.abs((SP - sus.s) - c.s) < 3; }
   function finish(kind) { if (over) return; over = { kind, t: 0 }; ['followed', 'arrest', 'evaded', 'safe'].includes(kind) ? sfx.success() : sfx.fail(); }
-  const scene = {
+  const scene = { noRepeat: true,
     update(dt) {
       t += dt; if (msgT > 0) msgT -= dt; if (over) { over.t += dt; return; }
       for (const c of cars) {
