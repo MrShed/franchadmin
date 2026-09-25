@@ -42,6 +42,7 @@ var UIMap = (function () {
     var w = cv.w, h = cv.h, pad = w < 600 ? 10 : 30;
     S = Math.min(w - pad * 2, h - pad * 2 - (w < 600 ? 90 : 40));
     view.k = 1; view.x = (w - S) / 2; view.y = (h - S) / 2 + (w < 600 ? 22 : 10);
+    if (h > w * 1.4) { var k0 = 1.3; view.k = k0; view.x = w / 2 - 0.5 * S * k0; view.y = h / 2 - 0.55 * S * k0 + 10; }
     M._fitted = true; cv.frame();
   }
   function zoom(f) { var cx = cv.w / 2, cy = cv.h / 2, k = UIclamp(view.k * f, 0.8, 7), wx = (cx - view.x) / view.k, wy = (cy - view.y) / view.k; view.k = k; view.x = cx - wx * k; view.y = cy - wy * k; cv.frame(); }
@@ -67,7 +68,7 @@ var UIMap = (function () {
       UIAudio.cue('phone');
       var r = UIA.df(s.id, null);
       if (!r.ok) { UItoast(r.err, { err: true }); return; }
-      UIRx.liveDf[s.id] = { bearings: r.bearings, fix: r.fix, callsign: s.label, t: UIA.clock().abs, freq: s.freq };
+      UIRx.liveDf[s.id] = { bearings: r.bearings, fix: r.fix, callsign: s.label, t: UIA.clock().minute, freq: s.freq };
       UI.act(function () { });
       UItoast(r.bearings.length + ' bearings in.' + (r.fix ? ' The fix is drawn.' : ''), { icon: 'df' });
       if (r.fix) M.focusFix(r.fix);
@@ -85,13 +86,14 @@ var UIMap = (function () {
   // ------------------------------------------------------------------ data to draw
   function dfs() {
     var c = UIA.clock(), out = [], seen = {};
-    Object.keys(UIRx.liveDf).forEach(function (k) { var d = UIRx.liveDf[k]; out.push({ key: 'live' + k, cs: d.callsign, bearings: d.bearings, fix: d.fix, shift: c.shift, label: UIA.hhmm(c.minute), live: true }); seen[k] = 1; });
+    var air = {}; UIA.band().now.forEach(function (s) { air[s.id] = 1; });
+    Object.keys(UIRx.liveDf).forEach(function (k) { var d = UIRx.liveDf[k]; out.push({ key: 'live' + k, cs: d.callsign, bearings: d.bearings, fix: d.fix, shift: c.shift, label: UIA.hhmm((d.t || 0) % 480), live: !!air[k], t: d.t || 0 }); seen[k] = 1; });
     UIA.log().forEach(function (e) {
       if (!e.df || seen[e.tx]) return;
       if (UIS.map.tonight && e.shift !== c.shift) return;
-      out.push({ key: e.id, log: e.id, cs: e.callsign, bearings: e.df.bearings, fix: e.df.fix, shift: e.shift, label: e.label, live: false });
+      out.push({ key: e.id, log: e.id, cs: e.callsign, bearings: e.df.bearings, fix: e.df.fix, shift: e.shift, label: e.label, live: false, t: e.t });
     });
-    return out;
+    return out.sort(function (a, b) { return a.t - b.t; });
   }
   function selKey() { return UIS.map.sel; }
 
@@ -117,6 +119,7 @@ var UIMap = (function () {
     // the desk under the lamp
     x.fillStyle = '#16140f'; x.fillRect(0, 0, w, h);
     var tl = W2S([-0.04, -0.04]), br = W2S([1.04, 1.04]);
+    props(x, w, h);
     // the plan: paper with a shadow
     x.save(); x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 26; x.shadowOffsetY = 8;
     x.fillStyle = '#e7dfc6'; x.fillRect(tl[0], tl[1], br[0] - tl[0], br[1] - tl[1]); x.restore();
@@ -136,7 +139,7 @@ var UIMap = (function () {
     // river
     if (city.river) { path(x, city.river); x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#4c6570'; x.lineWidth = Math.max(4, 0.016 * sc); x.stroke(); x.strokeStyle = '#b9cdd0'; x.lineWidth = Math.max(2.5, 0.016 * sc - 2.4); x.stroke(); }
     // streets
-    city.streets.forEach(function (s, i) { path(x, s.line); x.strokeStyle = 'rgba(95,82,58,.7)'; x.lineWidth = Math.max(0.8, 0.0026 * sc); x.lineCap = 'round'; x.lineJoin = 'round'; x.stroke(); });
+    city.streets.forEach(function (s, i) { path(x, s.line); x.strokeStyle = 'rgba(74,62,42,.78)'; x.lineWidth = Math.max(0.9, 0.003 * sc); x.lineCap = 'round'; x.lineJoin = 'round'; x.stroke(); });
     // district boundaries and names
     x.setLineDash([5, 4]);
     city.districts.forEach(function (d) { if (d.poly.length < 3) return; path(x, d.poly, true); x.strokeStyle = 'rgba(120,95,60,.45)'; x.lineWidth = 1; x.stroke(); });
@@ -145,8 +148,12 @@ var UIMap = (function () {
     city.districts.forEach(function (d) { var c = W2S(d.centre); x.font = '700 ' + Math.round(UIclamp(9 + k * 2, 9, 17)) + 'px "DX Type", monospace'; x.fillStyle = 'rgba(95,72,40,.55)'; spaced(x, d.name.toUpperCase(), c[0], c[1], 1.5 + k * 0.4); });
     // street names when zoomed
     if (k > 2.2) { x.font = 'italic 400 ' + Math.round(9 + k) + 'px "DX Serif", serif'; x.fillStyle = 'rgba(80,65,45,.7)'; city.streets.forEach(function (s) { if (!s.name || s.line.length < 2) return; var m = Math.floor(s.line.length / 2), a = W2S(s.line[m - 1] || s.line[0]), b = W2S(s.line[m]); var ang = Math.atan2(b[1] - a[1], b[0] - a[0]); if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI; x.save(); x.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); x.rotate(ang); x.fillText(s.name, 0, -6); x.restore(); }); }
-    // places
-    city.places.forEach(function (p) { glyph(x, p, k); });
+    // places: landmarks first so they win label space
+    LBL = [];
+    var pri = function (p) { var kd = (KIND[p.kind] || ['', 'L'])[1]; return kd === 'L' ? 0 : kd === 'q' ? 1 : 2; };
+    city.places.slice().sort(function (a, b) { return pri(a) - pri(b); }).forEach(function (p) { glyph(x, p, k); });
+    // cartouche, scale bar and north arrow
+    cartouche(x, city, sc);
     // outstations
     city.outstations.forEach(function (o) {
       var c = W2S(o.pos); x.fillStyle = '#1d2024'; x.beginPath(); x.moveTo(c[0], c[1] - 8); x.lineTo(c[0] + 7, c[1] + 5); x.lineTo(c[0] - 7, c[1] + 5); x.closePath(); x.fill();
@@ -170,6 +177,58 @@ var UIMap = (function () {
     lamp.addColorStop(0, 'rgba(255,220,160,.10)'); lamp.addColorStop(0.55, 'rgba(0,0,0,0)'); lamp.addColorStop(1, 'rgba(0,0,0,.55)');
     x.fillStyle = lamp; x.fillRect(0, 0, w, h);
   }
+  var LBL = [];
+  function cartouche(x, city, sc) {
+    // title block bottom-right of the plan, scale bar, north arrow
+    var br = W2S([1, 1]), k = view.k, s1 = UIclamp(k, 0.8, 1.6);
+    x.save();
+    var tl0 = W2S([0, 0]), bw = 150 * s1, bh = 50 * s1, bx = tl0[0] + 12 * s1, by = tl0[1] + 12 * s1;
+    x.fillStyle = 'rgba(236,228,205,.92)'; x.fillRect(bx, by, bw, bh); x.strokeStyle = '#3a3226'; x.lineWidth = 1.2; x.strokeRect(bx + 0.5, by + 0.5, bw, bh); x.strokeRect(bx + 3.5, by + 3.5, bw - 6, bh - 6);
+    x.fillStyle = '#26221b'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '800 ' + Math.round(17 * s1) + 'px "DX Stencil", sans-serif'; spaced(x, (city.name || 'HALDMAR').toUpperCase(), bx + bw / 2, by + bh * 0.38, 3 * s1);
+    x.font = '400 ' + Math.round(8.5 * s1) + 'px "DX Type", monospace'; x.fillText('BYPLAN · 1 : 12 500 · 1974', bx + bw / 2, by + bh * 0.74);
+    // scale bar: the city is about 5 km across
+    var km = sc / 5, sx = bx + bw + 16 * s1, sy = by + bh - 10 * s1;
+    for (var i = 0; i < 2; i++) { x.fillStyle = i % 2 ? '#e7dfc6' : '#26221b'; x.fillRect(sx + i * km / 2, sy, km / 2, 5); }
+    x.strokeStyle = '#26221b'; x.lineWidth = 1; x.strokeRect(sx + 0.5, sy + 0.5, km, 5);
+    x.font = '400 ' + Math.round(9 * s1) + 'px "DX Type", monospace'; x.textAlign = 'left'; x.fillStyle = '#26221b'; x.fillText('0', sx - 2, sy - 7); x.fillText('1 km', sx + km - 10, sy - 7);
+    // north arrow over the sea
+    var na = W2S([0.94, 0.06]); x.translate(na[0], na[1]); x.scale(s1, s1);
+    x.fillStyle = '#26221b'; x.beginPath(); x.moveTo(0, -16); x.lineTo(6, 8); x.lineTo(0, 3); x.closePath(); x.fill();
+    x.strokeStyle = '#26221b'; x.beginPath(); x.moveTo(0, -16); x.lineTo(-6, 8); x.lineTo(0, 3); x.closePath(); x.stroke();
+    x.font = '800 12px "DX Stencil", sans-serif'; x.textAlign = 'center'; x.fillText('N', 0, -24);
+    x.restore();
+  }
+  function props(x, w, h) {
+    // the desk around the plan: a steel rule, a pencil and a clear DF protractor, lit by the lamp
+    var tl = W2S([-0.04, -0.04]), br = W2S([1.04, 1.04]), r = UIrand('props');
+    x.save();
+    if (br[1] + 40 < h || tl[1] > 60) {
+      var ry = br[1] + 30 < h - 20 ? br[1] + 26 : tl[1] - 44;
+      x.save(); x.translate(w * 0.5, ry); x.rotate(-0.03);
+      var rl = Math.min(w * 0.8, 520); x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 10; x.shadowOffsetY = 4;
+      var g = x.createLinearGradient(0, -12, 0, 12); g.addColorStop(0, '#d9dcd8'); g.addColorStop(0.5, '#9ea3a0'); g.addColorStop(1, '#6d726f'); x.fillStyle = g; x.fillRect(-rl / 2, -11, rl, 22); x.shadowColor = 'transparent';
+      x.strokeStyle = 'rgba(20,20,20,.7)'; x.lineWidth = 1; for (var i = 0; i <= 60; i++) { var xx = -rl / 2 + 6 + i * (rl - 12) / 60; x.beginPath(); x.moveTo(xx, -11); x.lineTo(xx, -11 + (i % 10 ? i % 5 ? 4 : 7 : 10)); x.stroke(); }
+      x.fillStyle = 'rgba(20,20,20,.75)'; x.font = '600 8px "DX Mono", monospace'; x.textAlign = 'center'; for (var j = 0; j <= 6; j++) x.fillText(String(j * 10), -rl / 2 + 6 + j * (rl - 12) / 6, 8);
+      x.restore();
+    }
+    if (tl[0] > 70) {
+      // pencil down the left margin
+      x.save(); x.translate(tl[0] * 0.5, h * 0.55); x.rotate(0.12); x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 8; x.shadowOffsetX = 3;
+      x.fillStyle = '#b3321f'; x.fillRect(-5, -120, 10, 210); x.shadowColor = 'transparent'; x.fillStyle = '#d7b98a'; x.beginPath(); x.moveTo(-5, 90); x.lineTo(5, 90); x.lineTo(0, 112); x.closePath(); x.fill(); x.fillStyle = '#333'; x.beginPath(); x.moveTo(-1.6, 105); x.lineTo(1.6, 105); x.lineTo(0, 112); x.closePath(); x.fill();
+      x.fillStyle = '#c9c3a8'; x.fillRect(-5, -132, 10, 12); x.restore();
+      // protractor on the right
+      var px = br[0] + (w - br[0]) / 2, py = h * 0.32, pr = Math.min(90, (w - br[0]) * 0.4);
+      if (pr > 40) {
+        x.save(); x.translate(px, py); x.fillStyle = 'rgba(200,225,235,.13)'; x.strokeStyle = 'rgba(210,235,245,.5)'; x.lineWidth = 1.2; x.beginPath(); x.arc(0, 0, pr, 0, 7); x.fill(); x.stroke();
+        for (var d = 0; d < 360; d += 5) { var a = d * Math.PI / 180, l = d % 30 ? 5 : 10; x.beginPath(); x.moveTo(Math.sin(a) * pr, -Math.cos(a) * pr); x.lineTo(Math.sin(a) * (pr - l), -Math.cos(a) * (pr - l)); x.stroke(); }
+        x.fillStyle = 'rgba(210,235,245,.6)'; x.font = '600 8px "DX Mono", monospace'; x.textAlign = 'center'; x.textBaseline = 'middle';
+        for (var e = 0; e < 360; e += 30) { var b = e * Math.PI / 180; x.fillText(String(e), Math.sin(b) * (pr - 18), -Math.cos(b) * (pr - 18)); }
+        x.beginPath(); x.moveTo(-pr, 0); x.lineTo(pr, 0); x.moveTo(0, -pr); x.lineTo(0, pr); x.stroke(); x.restore();
+      }
+    }
+    x.restore();
+  }
   function spaced(x, t, cx, cy, sp) { var wsum = 0, ws = t.split('').map(function (c) { var m = x.measureText(c).width; wsum += m + sp; return m; }); var px = cx - (wsum - sp) / 2; x.textAlign = 'left'; t.split('').forEach(function (c, i) { x.fillText(c, px, cy); px += ws[i] + sp; }); x.textAlign = 'center'; }
   function glyph(x, p, k) {
     var c = W2S(p.pos), kd = (KIND[p.kind] || ['', 'L'])[1], r = 4 + Math.min(3, k);
@@ -182,10 +241,17 @@ var UIMap = (function () {
     else if (kd === 'a') { x.fillStyle = '#6b6252'; x.fillRect(c[0] - r * 0.35, c[1] - r * 0.35, r * 0.7, r * 0.7); }
     else { x.fillStyle = '#1d2024'; x.beginPath(); for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.35 : r * 0.8; x.lineTo(c[0] + Math.cos(a) * rr, c[1] + Math.sin(a) * rr); } x.closePath(); x.fill(); }
     var show = kd === 'L' || kd === 'q' ? k > 0.9 : k > 1.7;
-    if (hover === p.id) show = true;
     if (show && !(kd === 'q' && k < 1.6 && !/ 1$| 5$| 9$/.test(p.name))) {
-      x.font = (kd === 'L' ? '700 ' : '400 ') + Math.round(UIclamp(9 + k * 0.8, 9, 13)) + 'px "DX Type", monospace'; x.textAlign = 'left'; x.textBaseline = 'middle';
-      x.lineWidth = 3; x.strokeStyle = 'rgba(231,223,198,.85)'; x.strokeText(p.name, c[0] + r + 3, c[1]); x.fillStyle = '#26221b'; x.fillText(p.name, c[0] + r + 3, c[1]);
+      var fs = Math.round(UIclamp(9 + k * 0.8, 9, 13)), nm = k < 1.5 ? p.name.split(',')[0] : p.name;
+      x.font = (kd === 'L' ? '700 ' : '400 ') + fs + 'px "DX Type", monospace'; x.textAlign = 'left'; x.textBaseline = 'middle';
+      var tw = x.measureText(nm).width, bx = { x: c[0] + r + 2, y: c[1] - fs * 0.6, w: tw + 2, h: fs * 1.2 };
+      if (bx.x + bx.w > W2S([1.03, 0])[0]) { bx.x = c[0] - r - 2 - tw; x.textAlign = 'right'; }
+      var clash = LBL.some(function (q) { return bx.x < q.x + q.w && bx.x + bx.w > q.x && bx.y < q.y + q.h && bx.y + bx.h > q.y; });
+      if (!clash) {
+        LBL.push(bx);
+        var tx = x.textAlign === 'right' ? c[0] - r - 3 : c[0] + r + 3;
+        x.lineWidth = 3; x.strokeStyle = 'rgba(231,223,198,.85)'; x.strokeText(nm, tx, c[1]); x.fillStyle = '#26221b'; x.fillText(nm, tx, c[1]);
+      }
     }
     x.restore();
   }
@@ -194,8 +260,7 @@ var UIMap = (function () {
     x.save(); x.lineCap = 'round';
     // bearings: cones and lines (selected: red; others: graphite, lighter)
     list.forEach(function (d) {
-      var on = sel ? sel === d.key : d.live || list.length <= 2 || d === list[list.length - 1];
-      if (!on && !d.fix) return;
+      var on = sel ? sel === d.key : d === list[list.length - 1];
       if (!on) return;
       d.bearings.forEach(function (b) {
         var o = city.oById[b.station]; if (!o) return;
@@ -212,7 +277,7 @@ var UIMap = (function () {
     // fixes
     list.forEach(function (d) {
       if (!d.fix) return;
-      var f = d.fix, c = W2S([f.x, f.y]), on = sel ? sel === d.key : true;
+      var f = d.fix, c = W2S([f.x, f.y]), on = sel ? sel === d.key : d === list[list.length - 1];
       x.save(); x.translate(c[0], c[1]); x.rotate(f.rot * Math.PI / 180);
       x.setLineDash([5, 4]); x.lineWidth = on ? 2.2 : 1.4; x.strokeStyle = on ? 'rgba(176,40,28,.95)' : 'rgba(60,64,70,.65)';
       x.beginPath(); x.ellipse(0, 0, Math.max(6, f.rx * sc), Math.max(4, f.ry * sc), 0, 0, 7); x.stroke(); x.setLineDash([]);

@@ -167,14 +167,13 @@
       }
       blocks.push(bl);
     }
-    var inside = target[0] >= 0 && target[0] <= 1 && target[1] >= 0 && target[1] <= 1;
     // obfuscate the target so a casual look at the scene does not give it away
     var h = DX.hash('vk' + tx.id + sceneNo), ox = (h % 1000) / 1000, oy = ((h >>> 10) % 1000) / 1000;
     return {
       id: 'V' + sceneNo, tx: tx.id, centre: [DX.round(cx, 4), DX.round(cy, 4)], origin: [DX.round(origin[0], 4), DX.round(origin[1], 4)], size: VAN_SIZE,
       district: DX.cityDistrictAt(city, [cx, cy]), cols: cols, rows: rows, streets: streets, blocks: blocks,
       start: [0.5, 1], seconds: seconds, noise: DX.round(0.05 + 0.08 * W.G.garble, 3),
-      k: [DX.round(target[0] + ox, 5), DX.round(target[1] + oy, 5), h], inside: undefined, _inside: inside
+      k: [DX.round(target[0] + ox, 5), DX.round(target[1] + oy, 5), h]
     };
   };
   function unk(scene) { var h = scene.k[2], ox = (h % 1000) / 1000, oy = ((h >>> 10) % 1000) / 1000; return [scene.k[0] - ox, scene.k[1] - oy]; }
@@ -189,8 +188,9 @@
   AIR.vanJudge = function (scene, pt) {
     if (!pt) return { kind: 'none' };
     var t = unk(scene), d = Math.sqrt((pt.x - t[0]) * (pt.x - t[0]) + (pt.y - t[1]) * (pt.y - t[1]));
-    if (d <= 0.075 && scene._inside) return { kind: 'exact', d: d };
-    if (d <= 0.25 && scene._inside) return { kind: 'area', d: d, centre: [scene.origin[0] + pt.x * scene.size, scene.origin[1] + pt.y * scene.size], r: 0.3 * scene.size };
+    var inside = t[0] >= 0 && t[0] <= 1 && t[1] >= 0 && t[1] <= 1;
+    if (d <= 0.075 && inside) return { kind: 'exact', d: d };
+    if (d <= 0.25 && inside) return { kind: 'area', d: d, centre: [scene.origin[0] + pt.x * scene.size, scene.origin[1] + pt.y * scene.size], r: 0.3 * scene.size };
     return { kind: 'none', d: d };
   };
   AIR.VAN_SIZE = VAN_SIZE;

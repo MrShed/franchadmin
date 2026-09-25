@@ -43,7 +43,8 @@ var UIBench = (function () {
   }
   function hint() {
     var box = UI$('#bn-hint'), h = '';
-    if (helps()) {
+    var busy = (S().tech === 'depth' && S().a && S().b) || (S().tech === 'key' && S().kid && S().per[S().kid] && S().per[S().kid].pres) || S().tech === 'board';
+    if (helps() && !busy) {
       var pairs = UIA.depthPairs().filter(function (p) { var a = UIA.message(p[0]), b = UIA.message(p[1]); return !(a.decrypted && b.decrypted && a.decrypted.verdict === 'right' && b.decrypted.verdict === 'right'); });
       var per = UIA.messages().filter(function (m) { return m.kind === 'periodic' && !(m.decrypted && m.decrypted.verdict === 'right'); })[0];
       if (pairs.length && !(S().tech === 'depth' && S().a === pairs[0][0] && S().b === pairs[0][1])) {
@@ -151,13 +152,14 @@ var UIBench = (function () {
     w.innerHTML = '<section class="depth">' +
       '<header class="dp-head"><div><span class="eyebrow">Depth · page ' + UIesc(ma.indicator || '?') + (ma.indicator !== mb.indicator ? ' / ' + UIesc(mb.indicator || '?') : '') + '</span><h3>' + UIesc(a) + ' <span>and</span> ' + UIesc(b) + '</h3></div>' +
       '<div class="dp-hb">' + UIExplain.btn('depth') + '<button class="btn xs" id="dp-swap">' + UIICON.swap + 'Swap</button></div></header>' +
+      (helps() && /000/.test(D.diff) ? '<p class="zeroline"><b>0 0 0</b> Runs of noughts mean both messages say the same thing there — often the same opening.</p>' : '') +
       (ma.indicator !== mb.indicator ? '<p class="warnline">' + UIICON.warn + 'These two were not sent on the same page. The difference strip will be noise.</p>' : '') +
       '<div class="dp-scroll" id="dp-scroll"><div class="dp-strip" id="dp-strip" style="width:' + (n * CW + 8) + 'px">' +
         '<div class="dp-cols">' + cols + '</div>' +
         '<div class="dp-lab la">' + UIesc(a) + '</div>' +
         '<div class="dp-row plain pa" id="dp-pa"></div>' +
         dig(ma.digits, 'ciph ca') +
-        '<div class="dp-row diff" id="dp-diff">' + (function () { var h = ''; for (var i = 0; i < n; i++) { var d = D.diff[i] === undefined ? '' : D.diff[i]; h += '<span class="' + (d === '?' ? 'q' : '') + '" style="left:' + (i * CW) + 'px" data-off="' + i + '">' + d + '</span>'; } return h; })() + '<div class="dp-marks" id="dp-marks"></div></div>' +
+        '<div class="dp-row diff" id="dp-diff">' + (function () { var h = ''; for (var i = 0; i < n; i++) { var d = D.diff[i] === undefined ? '' : D.diff[i]; h += '<span class="' + (d === '?' ? 'q' : d === '0' && (D.diff[i - 1] === '0' || D.diff[i + 1] === '0') ? 'z' : '') + '" style="left:' + (i * CW) + 'px" data-off="' + i + '">' + d + '</span>'; } return h; })() + '<div class="dp-marks" id="dp-marks"></div></div>' +
         dig(mb.digits, 'ciph cb') +
         '<div class="dp-row plain pb" id="dp-pb"></div>' +
         '<div class="dp-lab lb">' + UIesc(b) + '</div>' +
@@ -260,7 +262,7 @@ var UIBench = (function () {
   function renderWork() {
     var box = UI$('#dp-work'); if (!box) return;
     var w = D.work, a = S().a, b = S().b;
-    var ta = w.a.text !== undefined && w.a.text !== '' && !UIA.isMock() ? w.a.text : sideText(w.a.digits), tb = w.b.text !== undefined && w.b.text !== '' && !UIA.isMock() ? w.b.text : sideText(w.b.digits);
+    var ta = sideText(w.a.digits), tb = sideText(w.b.digits);
     var ma = UIA.message(a), mb = UIA.message(b);
     box.innerHTML = '<h4>Worksheet</h4>' +
       (w.placed.length ? '<div class="placed">' + w.placed.map(function (p, i) { return '<span class="pl">' + UIesc(p.text) + ' <small>in ' + UIesc(p.side === 'A' ? a : b) + ' @' + (p.offset + 1) + '</small><button data-un="' + i + '" aria-label="Rub out">' + UIICON.close + '</button></span>'; }).join('') + '</div>' : '<p class="note">Nothing pencilled in yet.</p>') +
@@ -316,7 +318,7 @@ var UIBench = (function () {
       (pers.length > 1 ? '<div class="chips">' + pers.map(function (x) { return '<button class="chip' + (x.id === id ? ' on' : '') + '" data-k="' + UIesc(x.id) + '">' + UIesc(x.id) + '</button>'; }).join('') + '</div>' : '') +
       '<div class="step"><div class="st-h"><b>1</b><span>Find the period</span></div>';
     if (!P.pres) h += '<p class="note">Split the message into columns of every 2nd, 3rd, 4th… digit. At the true period each column is plain language shifted by one key digit, so its digits are lumpy instead of flat.</p><button class="btn pri" data-k-act="period">' + UIICON.chart + 'Run the period finder · ' + cost('period') + '</button>';
-    else h += periodChart(P) + '<p class="note">' + (P.period ? 'Period <b>' + P.period + '</b> chosen.' : 'Tap a bar to choose the period.') + (helps() && P.pres.best ? ' The finder suggests <b>' + P.pres.best + '</b>.' : '') + '</p>' + repeatsList(P);
+    else h += periodChart(P) + '<p class="note">' + (P.period ? 'Period <b>' + P.period + '</b> chosen.' : 'Tap a bar to choose the period.') + (helps() ? ' The finder suggests <b>' + bestP(P) + '</b>' + (P.pres.best && bestP(P) !== P.pres.best ? ' (' + P.pres.best + ' is a multiple of it)' : '') + '.' : '') + '</p>' + repeatsList(P);
     h += '</div>';
     if (P.period) {
       h += '<div class="step"><div class="st-h"><b>2</b><span>Line up each column</span>' + UIExplain.btn('columns') + '</div>';
@@ -341,7 +343,7 @@ var UIBench = (function () {
       var st = e.target.closest('[data-kd]'); if (st) { var c = +st.dataset.c; P.key[c] = (((P.key[c] || 0) + +st.dataset.kd) % 10 + 10) % 10; UIAudio.cue('detent'); B.render(); UI.save(); return; }
       var ac = e.target.closest('[data-k-act]'); if (!ac) return;
       var a = ac.dataset.kAct;
-      if (a === 'period') { var r = UIA.bench.period(id); if (!r) { UItoast('The period finder jammed.', { err: true }); return; } P.pres = r; if (helps() && r.best) P.period = r.best; UIAudio.cue('type'); UI.act(function () { }); B.render(); UI.emit('period', id); }
+      if (a === 'period') { var r = UIA.bench.period(id); if (!r) { UItoast('The period finder jammed.', { err: true }); return; } P.pres = r; if (helps()) P.period = bestP(P); UIAudio.cue('type'); UI.act(function () { }); B.render(); UI.emit('period', id); }
       else if (a === 'cols') { var c2 = UIA.bench.columns(id, P.period); if (!c2) return; P.cols = c2; P.key = c2.cols.map(function (c) { return helps() && c.fit ? c.fit[0].shift : 0; }); UIAudio.cue('type'); UI.act(function () { }); B.render(); UIExplain.once('columns'); UI.emit('columns', id); }
       else if (a === 'best') { P.key = P.cols.cols.map(function (c, i) { return c.fit ? c.fit[0].shift : bestShift(c.freq, P.cols.expect); }); UIAudio.cue('pencil'); B.render(); }
       else if (a === 'align') { var al = UIA.bench.align(id, P.period); if (!al) { UItoast('Alignment is not available.', { err: true }); return; } P.rel = al.rel; UI.act(function () { }); B.render(); }
@@ -350,12 +352,20 @@ var UIBench = (function () {
     };
   }
   function bestShift(freq, exp) { if (!exp) return 0; var best = 0, bs = -1e9; for (var sh = 0; sh < 10; sh++) { var sc = 0; for (var d = 0; d < 10; d++) sc += freq[(d + sh) % 10] * Math.log(exp[d] + 1e-3); if (sc > bs) { bs = sc; best = sh; } } return best; }
+  /** the smallest period that explains the peak: multiples of the true period score as well */
+  function bestP(P) {
+    var ic = P.pres.ic, base = Math.min.apply(null, ic.map(function (x) { return x.ic; })) * 0.97, best = P.pres.best || ic.slice(1).sort(function (a, b) { return b.ic - a.ic; })[0].period;
+    var ex = function (p) { var r = ic.filter(function (x) { return x.period === p; })[0]; return r ? r.ic - base : 0; };
+    for (var d = 2; d < best; d++) if (best % d === 0 && ex(d) >= 0.7 * ex(best)) return d;
+    return best;
+  }
   function periodChart(P) {
-    var ic = P.pres.ic.filter(function (x) { return x.period >= 1; }), mx = Math.max.apply(null, ic.map(function (x) { return x.ic; }).concat([0.16]));
+    var ic = P.pres.ic.filter(function (x) { return x.period >= 1; }), lo = Math.min.apply(null, ic.map(function (x) { return x.ic; })) * 0.97, mx = Math.max.apply(null, ic.map(function (x) { return x.ic; }));
+    var sug = helps() ? bestP(P) : null;
     return '<div class="pchart">' + ic.map(function (x) {
-      var hgt = Math.round(x.ic / mx * 100), best = helps() && P.pres.best === x.period;
-      return '<button class="pbar' + (P.period === x.period ? ' on' : '') + (best ? ' best' : '') + '" data-p="' + x.period + '" aria-label="Period ' + x.period + '"><i style="height:' + hgt + '%"></i><span>' + x.period + '</span></button>';
-    }).join('') + '<span class="pc-ref" style="bottom:calc(' + Math.round(0.1 / mx * 100) + '% * .78 + 22px)">random</span></div>';
+      var hgt = Math.round(8 + (x.ic - lo) / Math.max(1e-6, mx - lo) * 92);
+      return '<button class="pbar' + (P.period === x.period ? ' on' : '') + (sug === x.period ? ' best' : '') + '" data-p="' + x.period + '" aria-label="Period ' + x.period + '"><i style="height:' + hgt + '%"></i><span>' + x.period + '</span></button>';
+    }).join('') + '</div><p class="pc-cap">Taller = lumpier columns = more like language. Multiples of the true period stand tall too.</p>';
   }
   function repeatsList(P) {
     var reps = P.pres.repeats.slice(0, 4); if (!reps.length) return '';

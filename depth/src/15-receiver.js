@@ -10,11 +10,11 @@ var UIRx = (function () {
   var sigs = [], drift = {}, L = null, running = false, lastT = 0, t0 = performance.now(), sMeter = 0, eyeV = 0;
   var hist = null, histCtx = null, rowImg = null, lastSpanKey = '';
   R.liveDf = {};
-  var SPANS = { band: 9000, wide: 100, narrow: 10 };
+  var SPANS = { band: 9000, wide: 100, narrow: 6 };
 
   function kHz() { return UIS.rx.freq * 1000; }
   function helps() { return UIA.helps(); }
-  function gradeK() { var g = UIA.gradeId(); return g === 'cadet' ? 0.7 : g === 'chief' ? 1.3 : 1; }
+  function gradeK() { var g = UIA.gradeId(); return g === 'cadet' ? 0.6 : g === 'chief' ? 1.2 : 0.9; }
   function sigF(s) { return s.freq * 1000 + (drift[s.id] ? drift[s.id].d : 0); }
   function nearest(maxK) {
     var best = null, bd = maxK || 6;
@@ -36,7 +36,7 @@ var UIRx = (function () {
         '<div class="vfd" id="rx-vfd"></div></div>' +
         '<div class="rx-glass" id="rx-glass" aria-label="Dial glass: drag to tune"></div>' +
         '<div class="crt"><div class="crt-in" id="rx-wf"></div><div class="crt-ov" id="rx-ov"></div><div class="crt-glass"></div>' +
-          '<div class="crt-span" id="rx-span" data-nogesture><button data-span="band">Band</button><button data-span="wide">±50k</button><button data-span="narrow">±5k</button></div></div>' +
+          '<div class="crt-span" id="rx-span" data-nogesture><button data-span="band">Band</button><button data-span="wide">±50k</button><button data-span="narrow">±3k</button></div></div>' +
         '<div class="tape" id="rx-tape" aria-live="polite"></div>' +
         '<div class="rx-ctl">' +
           '<div class="rx-col l"><div class="meter" id="rx-meter"></div>' +
@@ -108,8 +108,8 @@ var UIRx = (function () {
   function autoSpan() {
     if (R._manualSpan && performance.now() - R._manualSpan < 1500) return;
     var n = nearest(60), e = n ? Math.abs(kHz() - sigF(n)) : 99;
-    if (UIS.rx.span === 'wide' && e < 3.5) setSpan('narrow');
-    else if (UIS.rx.span === 'narrow' && e > 6 && !L) setSpan('wide');
+    if (UIS.rx.span === 'wide' && e < 2.4) setSpan('narrow');
+    else if (UIS.rx.span === 'narrow' && e > 4.2 && !L) setSpan('wide');
   }
   function setMode(m) { if (UIS.rx.mode === m) return; UIS.rx.mode = m; UIAudio.cue('switch'); UIAudio.stopLoop(); modeUi(); vfd(); UI.emit('mode', m); UI.save(); }
   function tapWaterfall(x, w) {
@@ -188,8 +188,8 @@ var UIRx = (function () {
   function stepDrift(dt, T) {
     var k = gradeK();
     sigs.forEach(function (s) {
-      var d = drift[s.id], hot = L && L.sig === s && L.phase === 'hold', maxD = (s.mode === 'cw' ? 1.3 : 1.9) * (0.4 + s.drift) * (hot ? 1.6 : 1);
-      var push = (Math.random() - 0.5) * (hot ? 2.4 : 0.5) * k + (hot ? Math.sin(T * 0.45 + d.ph) * 0.55 * k : 0);
+      var d = drift[s.id], hot = L && L.sig === s && L.phase === 'hold', maxD = (s.mode === 'cw' ? 1.2 : 1.7) * (0.4 + s.drift) * (hot ? 1.2 : 1);
+      var push = (Math.random() - 0.5) * (hot ? 1.4 : 0.5) * k + (hot ? Math.sin(T * 0.4 + d.ph) * 0.3 * k : 0);
       d.v += push * dt - d.v * 0.6 * dt;
       d.d += d.v * dt * (hot ? 1.3 : 0.6);
       if (Math.abs(d.d) > maxD) { d.d = Math.sign(d.d) * maxD; d.v *= -0.4; }
@@ -325,7 +325,7 @@ var UIRx = (function () {
   R.status = function (near, ne) {
     if (!el.tape || L) return;
     if (near === undefined) { near = nearest(9); ne = near ? Math.abs(kHz() - sigF(near)) : 99; }
-    var key = (near ? near.id : '-') + (ne < 0.6 ? 'c' : ne < 3 ? 'n' : 'f') + UIS.rx.mode + UIS.rx.span;
+    var key = (near ? near.id : '-') + (ne < 0.3 ? 'c' : ne < 3 ? 'n' + (kHz() > sigF(near) ? 'L' : 'R') : 'f') + UIS.rx.mode + UIS.rx.span;
     if (R._stKey === key) return; R._stKey = key;
     var h;
     if (!near) h = '<span class="dim">' + (sigs.filter(function (s) { return !s.bcast; }).length ? 'Nothing here. Tap a bright trace on the display to tune to it.' : 'Only broadcasters on the air. Wait for the next schedule, or watch the band.') + '</span>';
@@ -333,7 +333,7 @@ var UIRx = (function () {
       var nm = near.bcast ? near.label : near.label ? near.label.toUpperCase() : 'Unknown';
       var how = near.mode === 'voice' ? 'voice' : near.mode === 'cw' ? 'Morse' : 'burst', hint = '';
       if (!modeOk(near)) hint = '<em>' + (needMode(near) === 'voice' ? 'lever to AM' : 'lever to CW') + '</em>';
-      else if (ne > 0.6) hint = '<em>' + (kHz() > sigF(near) ? '◂ FINE left' : 'FINE right ▸') + '</em>';
+      else if (ne > 0.3) hint = '<em>' + (kHz() > sigF(near) ? '◂ FINE left' : 'FINE right ▸') + '</em>';
       else hint = near.bcast ? '<em>broadcaster</em>' : '<em>centred · COPY</em>';
       h = '<b>' + UIesc(nm) + '</b> · <span>' + how + '</span> · ' + hint;
     }
@@ -345,8 +345,10 @@ var UIRx = (function () {
     if (near === undefined) { near = nearest(6); ne = near ? Math.abs(kHz() - sigF(near)) : 99; }
     var can = !!near && ne < 6 && !L;
     el.copy.disabled = !can && !L;
-    el.copy.classList.toggle('ready', can && modeOk(near) && ne < 1.5);
-    if (!L) el.copyS.textContent = !near || ne >= 6 ? 'tune to a signal' : near.bcast ? 'a broadcaster' : !modeOk(near) ? 'wrong mode' : ne < 1.5 ? 'ready' : 'nearly';
+    var rdy = can && modeOk(near) && ne < 0.35;
+    if (rdy && !el.copy.classList.contains('ready')) UI.emit('copyready');
+    el.copy.classList.toggle('ready', rdy);
+    if (!L) el.copyS.textContent = !near || ne >= 6 ? 'tune to a signal' : near.bcast ? 'a broadcaster' : !modeOk(near) ? 'wrong mode' : ne < 0.35 ? 'ready' : 'centre it first';
     var onAir = near && !near.bcast && ne < 6;
     el.df.disabled = !onAir || (L && L.phase !== 'hold');
     el.df.classList.toggle('lit', !!(onAir && R.liveDf[near.id]));
@@ -370,7 +372,7 @@ var UIRx = (function () {
     if (L) return;
     var dur = s.mode === 'burst' ? 3.2 : s.mode === 'cw' ? 11 : 13;
     if (UIA.cadet()) dur *= 0.85;
-    L = { sig: s, phase: 'hold', t: 0, dur: dur, n: 0, sum: 0, held: 0, mOk: 0, tol: UIA.cadet() ? 0.6 : UIA.gradeId() === 'chief' ? 0.35 : 0.45 };
+    L = { sig: s, phase: 'hold', t: 0, dur: dur, n: 0, sum: 0, held: 0, mOk: 0, tol: UIA.cadet() ? 0.4 : UIA.gradeId() === 'chief' ? 0.25 : 0.3 };
     setSpan('narrow');
     el.copy.classList.add('busy'); el.copyS.textContent = 'hold it centred';
     el.root.classList.add('holding');
@@ -386,7 +388,7 @@ var UIRx = (function () {
     if (L.n % 4 === 0) renderHold(err);
     if (L.t >= L.dur) finishHold();
   }
-  function qEst() { var m = L.sum / Math.max(1, L.n), h = L.held / Math.max(1, L.n); return UIclamp((1 - m / 2.2) * (0.55 + 0.45 * h) * (L.mOk / Math.max(1, L.n) > 0.5 ? 1 : 0.3), 0, 1); }
+  function qEst() { var m = L.sum / Math.max(1, L.n), h = L.held / Math.max(1, L.n); return UIclamp(Math.exp(-Math.pow(m / 0.45, 2)) * (0.55 + 0.45 * h) * (L.mOk / Math.max(1, L.n) > 0.5 ? 1 : 0.35), 0, 1); }
   function renderHold(err) {
     var q = qEst(), ok = modeOk(L.sig), e = err === undefined ? 0 : err;
     el.tape.innerHTML = '<div class="tp-hold"><span class="tp-k">' + (L.sig.mode === 'voice' ? 'Interval signal' : L.sig.mode === 'burst' ? 'Waiting for the burst' : 'Call-up: VVV') + '</span>' +
@@ -401,7 +403,7 @@ var UIRx = (function () {
     var res = UIA.tune(s.id, q);
     if (!res.ok) { UItoast(res.err || 'Lost it.', { err: true }); endListen(); return; }
     L.res = res; L.q = q; L.shown = 0; L.digit = -1; L.skip = false;
-    el.copyS.textContent = 'copying · tap to skip';
+    el.copyS.textContent = 'tap to skip';
     el.root.classList.remove('holding'); el.root.classList.add('copying');
     R.renderLog();
     UI.topbar();
@@ -472,7 +474,7 @@ var UIRx = (function () {
       UIAudio.cue('phone');
       var r = UIA.df(s.id, ids);
       if (!r.ok) { UItoast(r.err, { err: true }); UI.refresh(); return; }
-      R.liveDf[s.id] = { bearings: r.bearings, fix: r.fix, callsign: s.label, t: UIA.clock().abs, freq: s.freq };
+      R.liveDf[s.id] = { bearings: r.bearings, fix: r.fix, callsign: s.label, t: UIA.clock().minute, freq: s.freq };
       var d = r.fix ? UIA.districtAt(r.fix.x, r.fix.y) : null;
       UItoast(r.bearings.length + ' bearings' + (d ? ' · they cross in ' + d.name : '') + '. See the map.', { ms: 4200, icon: 'df' });
       UI.act(function () { });

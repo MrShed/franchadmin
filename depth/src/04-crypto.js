@@ -274,16 +274,19 @@
   /** the period suggested by IC and spacings (tool help): the smallest period whose IC excess over random
    *  is close to the best (multiples of the true period score as well), nudged by long repeats */
   DX.bestPeriod = function (icList, reps) {
-    var base = 0.1, max = 0;
-    icList.forEach(function (r) { if (r.period >= 2) max = Math.max(max, r.ic - base); });
-    var votes = {};
-    icList.forEach(function (r) { votes[r.period] = 0; (reps || []).forEach(function (x) { if (x.seq.length >= 5 && x.spacing % r.period === 0) votes[r.period] += x.seq.length - 4; }); });
-    for (var i = 0; i < icList.length; i++) {
-      var r = icList[i];
-      if (r.period < 2) continue;
-      if (r.ic - base >= 0.66 * max) return r.period;
+    // score each candidate by the IC excess averaged over its multiples (the true period and all its multiples
+    // are high; a chance peak is alone), plus long repeats whose spacing it divides
+    var ic = {}, base = 0.1;
+    icList.forEach(function (r) { ic[r.period] = r.ic - base; });
+    var maxP = icList.length, best = 2, bestS = -1e9;
+    for (var p = 2; p <= maxP; p++) {
+      var sum = 0, n = 0;
+      for (var k = p; k <= maxP; k += p) { sum += ic[k]; n++; }
+      var sc = sum / n - 0.0004 * p;
+      (reps || []).forEach(function (x) { if (x.seq.length >= 6 && x.spacing % p === 0) sc += 0.0006; });
+      if (sc > bestS) { bestS = sc; best = p; }
     }
-    return 2;
+    return best;
   };
   /** per-column digit counts; with a board, a ranked shift fit per column */
   DX.columnFreq = function (streams, period, b) {

@@ -56,6 +56,14 @@
       if (!reach[i]) continue;
       var ch = s[i];
       if (ch === '.' || (ch >= '0' && ch <= '9') || ch === '?') { reach[i + 1] = 1; continue; }
+      // an unknown callsign: one or two letters, figures, perhaps a letter
+      var k0 = i, lets = 0;
+      while (k0 < n && lets < 2 && s[k0] >= 'A' && s[k0] <= 'Z') { k0++; lets++; }
+      if (lets && k0 < n && s[k0] >= '0' && s[k0] <= '9') {
+        var k1 = k0; while (k1 < n && s[k1] >= '0' && s[k1] <= '9') k1++;
+        if (k1 >= n - 1) return true;
+        reach[k1] = 1; if (s[k1] >= 'A' && s[k1] <= 'Z') reach[k1 + 1] = 1;
+      } else if (lets && k0 >= n) { /* could still become a callsign */ }
       var node = trie;
       for (var j = i; j < n; j++) {
         node = node[s[j]];
@@ -83,7 +91,7 @@
     var oa = opts.openA && opts.openA.length ? opts.openA : [null], ob = opts.openB && opts.openB.length ? opts.openB : [null];
     var beam = [], done = [];
     oa.forEach(function (x) { ob.forEach(function (y) { var s0 = Object.assign({}, init); s0.force = [x, y]; s0.seed = beam.length; beam.push(s0); }); });
-    var byText = {};
+    var byText = {}, dynCall = {};
     toks.forEach(function (tk) { byText[tk.t] = tk; });
     var maxSteps = opts.maxSteps || 140;
     function derive(side, sd, q) { return sd >= 0 && diff[q] >= 0 ? (side === 0 ? ((sd - diff[q]) % 10 + 10) % 10 : (sd + diff[q]) % 10) : -1; }
@@ -99,6 +107,21 @@
           var fS = st.f[side], fO = st.f[1 - side];
           var S = side === 0 ? st.A : st.B, O = side === 0 ? st.B : st.A;
           var cand = S[fS] >= 0 ? TK.byFirst[S[fS]] : toks;
+          if (S[fS] >= 0 && fO > fS + 3) {
+            // the other message has fixed these digits: an unknown callsign reads as letters + figures
+            var known = [];
+            for (var q0 = fS; q0 < fO && S[q0] >= 0; q0++) known.push(S[q0]);
+            var kt = DX.decode(board, known).text, cm = /^([A-Z]{1,2}[0-9]{1,2})([A-Z]?)/.exec(kt);
+            if (cm) {
+              cand = cand.slice();
+              [cm[1], cm[1] + cm[2]].forEach(function (cs, ci) {
+                if (ci && !cm[2]) return;
+                if (byText[cs]) return;
+                var dt = dynCall[cs] || (dynCall[cs] = { t: cs, c: 'CALL', d: DX.toDigits(DX.encode(board, cs)), lp: -4, call: true });
+                cand.push(dt);
+              });
+            }
+          }
           var fz = st.force[side], forced = false;
           if (fz && st.tk[side].length < fz.length) { var ft = byText[fz[st.tk[side].length]]; cand = ft ? [ft] : []; forced = true; }
           for (var ti = 0; ti < cand.length; ti++) {
@@ -149,8 +172,8 @@
             ns.tk[side] = st.tk[side].concat([{ t: tk.t, at: fS, num: tk.num || 0 }]);
             next.push(ns);
           }
-          // a number would not fit yet: let the leading text move on first
-          if (si === 0 && numBlocked && st.f[1 - lag] < L - 1) sides.push(1 - lag);
+          // a number would not fit yet, or nothing fits (an unknown callsign?): let the leading text move on first
+          if (si === 0 && st.f[1 - lag] < L - 1 && numBlocked) sides.push(1 - lag);
         }
         if (!any) done.push(st);
       });

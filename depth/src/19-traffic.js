@@ -17,7 +17,7 @@ var UITraffic = (function () {
     ids.forEach(function (id) { if (pos[id]) return; if (id === ctl) rows[0].push(id); else if (fromCtl.indexOf(id) >= 0) rows[1].push(id); else rows[2].push(id); });
     rows.forEach(function (r, ri) {
       var taken = ids.filter(function (id) { return pos[id] && Math.abs(pos[id][1] - [0.14, 0.42, 0.74][ri]) < 0.05; }).length;
-      r.forEach(function (id, i) { var n = r.length + taken, k = i + taken; pos[id] = [n === 1 ? 0.5 : 0.14 + 0.72 * k / Math.max(1, n - 1), [0.14, 0.42, 0.74][ri] + (ri === 2 && n > 3 ? (k % 2) * 0.12 : 0)]; });
+      r.forEach(function (id, i) { var n = r.length + taken, k = i + taken; pos[id] = [n === 1 ? 0.5 : 0.13 + 0.74 * k / Math.max(1, n - 1), [0.13, 0.42, 0.72][ri] + (ri === 2 && n > 3 ? (k % 2) * 0.14 : 0)]; });
     });
   }
   T.build = function (r) {
@@ -44,7 +44,7 @@ var UITraffic = (function () {
     var sheet = UI$('#tf-sheet'), ids = nodes();
     if (!ids.length) { sheet.innerHTML = '<div class="tf-empty"><p class="pencil-note">No callsigns yet.</p><p class="note">Every transmission you copy puts its callsign — and who it was sent to — in the traffic book. Draw the ring here as it appears.</p></div>'; return; }
     layout(ids);
-    var W = 1000, H = 720, pos = UIS.traffic.pos, links = UIA.links(), tr = UIA.traffic(), cs = {};
+    var sw = Math.max(300, sheet.clientWidth - 20), W = sw < 600 ? 420 : 1000, H = sw < 600 ? 520 : 680, pos = UIS.traffic.pos, links = UIA.links(), tr = UIA.traffic(), cs = {};
     UIA.callsigns().forEach(function (c) { cs[c.id] = c; });
     var ctl = UIA.controller();
     function P(id) { return [pos[id][0] * W, pos[id][1] * H]; }
@@ -56,16 +56,18 @@ var UITraffic = (function () {
     if (helps()) tr.forEach(function (t) { if (!pos[t.from] || !pos[t.to]) return; if (links.some(function (l) { return (l.a === t.from && l.b === t.to) || (l.a === t.to && l.b === t.from); })) return; var a = P(t.from), b = P(t.to); svg += '<line class="obs" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/><text class="obs-t" x="' + ((a[0] + b[0]) / 2 + 8) + '" y="' + ((a[1] + b[1]) / 2) + '">' + t.n + '× in the log</text>'; });
     links.forEach(function (l) {
       if (!pos[l.a] || !pos[l.b]) return;
-      var a = P(l.a), b = P(l.b), dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, r = 62;
-      var x1 = a[0] + ux * r, y1 = a[1] + uy * 34, x2 = b[0] - ux * r, y2 = b[1] - uy * 34;
+      var a = P(l.a), b = P(l.b), dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, hw = W < 600 ? 46 : 62, hh = W < 600 ? 28 : 32;
+      var tt = Math.min(Math.abs(hw / (ux || 1e-6)), Math.abs(hh / (uy || 1e-6)));
+      var x1 = a[0] + ux * tt, y1 = a[1] + uy * tt, x2 = b[0] - ux * tt, y2 = b[1] - uy * tt;
       var cls = l.support === 'strong' ? 'lk ink' : l.support === 'some' ? 'lk pen' : 'lk hunch';
       svg += '<g class="lkg" data-la="' + UIesc(l.a) + '" data-lb="' + UIesc(l.b) + '"><line class="lk-hit" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"/><line class="' + cls + '" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"' + (l.kind === 'controls' ? ' marker-end="url(#' + (l.support === 'strong' ? 'ar-ink' : 'ar-pen') + ')"' : '') + (l.kind === 'same' ? ' stroke-dasharray="2 6"' : '') + '/>' +
         '<text class="lk-t ' + (l.support === 'strong' ? 'ok' : '') + '" x="' + ((x1 + x2) / 2 + 10) + '" y="' + ((y1 + y2) / 2 - 6) + '">' + (l.kind === 'controls' ? 'orders' : l.kind === 'same' ? 'same hand' : 'talks') + (l.support === 'strong' ? ' ✓' : l.support === 'none' ? ' ?' : '') + '</text></g>';
     });
     ids.forEach(function (id) {
       var p = P(id), c = cs[id] || { n: 0, sent: 0 }, isCtl = id === ctl, bld = UIA.buildings().filter(function (b) { return b.callsigns.indexOf(id) >= 0; })[0];
-      svg += '<g class="nd' + (isCtl ? ' ctl' : '') + '" data-n="' + UIesc(id) + '" transform="translate(' + p[0] + ',' + p[1] + ')"><rect class="nd-sh" x="-64" y="-32" width="128" height="64" rx="3"/><rect class="nd-b" x="-62" y="-34" width="124" height="64" rx="3"/>' +
-        '<text class="nd-t" y="-4">' + UIesc(id) + '</text><text class="nd-s" y="17">' + (isCtl ? 'voice · abroad' : c.sent + ' sent · ' + (c.got || 0) + ' rec’d') + '</text>' + (bld ? '<text class="nd-a" y="46">' + UIesc(bld.address) + '</text>' : '') + '</g>';
+      var bw = W < 600 ? 92 : 124, bh = W < 600 ? 56 : 64;
+      svg += '<g class="nd' + (isCtl ? ' ctl' : '') + (W < 600 ? ' sm' : '') + '" data-n="' + UIesc(id) + '" transform="translate(' + p[0] + ',' + p[1] + ')"><rect class="nd-sh" x="' + (-bw / 2 - 2) + '" y="' + (-bh / 2 + 2) + '" width="' + (bw + 4) + '" height="' + bh + '" rx="3"/><rect class="nd-b" x="' + (-bw / 2) + '" y="' + (-bh / 2) + '" width="' + bw + '" height="' + bh + '" rx="3"/>' +
+        '<text class="nd-t" y="' + (W < 600 ? 0 : -4) + '">' + UIesc(id) + '</text><text class="nd-s" y="' + (W < 600 ? 18 : 17) + '">' + (isCtl ? 'abroad' : c.sent + ' out · ' + (c.got || 0) + ' in') + '</text>' + (bld ? '<text class="nd-a" y="' + (bh / 2 + 16) + '">' + UIesc(bld.address) + '</text>' : '') + '</g>';
     });
     svg += '<line id="tf-rub" class="rub" x1="0" y1="0" x2="0" y2="0" visibility="hidden"/></svg>';
     sheet.innerHTML = '<div class="tf-legend"><span><i class="l-ink"></i>backed by the log</span><span><i class="l-pen"></i>some evidence</span><span><i class="l-hunch"></i>hunch</span>' + (helps() ? '<span><i class="l-obs"></i>seen in the log</span>' : '') + '</div>' + svg +
@@ -74,7 +76,7 @@ var UITraffic = (function () {
   }
   function bindSvg(svg, W, H) {
     function pt(e) { var r = svg.getBoundingClientRect(), s = Math.min(r.width / W, r.height / H), ox = (r.width - W * s) / 2, oy = (r.height - H * s) / 2; return [(e.clientX - r.left - ox) / s, (e.clientY - r.top - oy) / s]; }
-    function nodeAt(p) { var hit = null; Object.keys(UIS.traffic.pos).forEach(function (id) { var q = UIS.traffic.pos[id]; if (Math.abs(q[0] * W - p[0]) < 66 && Math.abs(q[1] * H - p[1]) < 36) hit = id; }); return nodes().indexOf(hit) >= 0 ? hit : null; }
+    function nodeAt(p) { var hit = null, hw = W < 600 ? 50 : 66, hh = W < 600 ? 32 : 36; Object.keys(UIS.traffic.pos).forEach(function (id) { var q = UIS.traffic.pos[id]; if (Math.abs(q[0] * W - p[0]) < hw && Math.abs(q[1] * H - p[1]) < hh) hit = id; }); return nodes().indexOf(hit) >= 0 ? hit : null; }
     svg.addEventListener('pointerdown', function (e) {
       var p = pt(e), n = nodeAt(p);
       if (!n) return;

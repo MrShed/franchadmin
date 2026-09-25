@@ -193,7 +193,7 @@
     var avoid = bcast.slice();
     var nr = {};
     function nextNr(m) { if (!nr[m]) nr[m] = R.int(11, 40); return nr[m]++; }
-    var ctlCall = ring.controller.spell;
+    var ctlCall = ring.controller.spell, ctlDisp = ring.controller.call;   // spelt in text / as logged
 
     var msgs = [], drops = [];
     var execSpot = spots[0], otherSpot = spots[1], spareSpots = spots.slice(2);
@@ -400,12 +400,12 @@
         var sl = sched.ctl[m.slot % 2];
         var t0 = sl.minute + (m.slot >= 2 ? 30 : 0);
         var d = durOf('VOICE', m.groups.length);
-        var tx = addTx({ night: n0, minute: t0, dur: d, freq: sl.freq, mode: 'VOICE', from: ctlCall, fromId: 'ctl', to: res.spell, toId: res.id, msg: m.id, repeat: false, slot: 'ctl' + (m.slot % 2), pos: ring.controller.pos });
+        var tx = addTx({ night: n0, minute: t0, dur: d, freq: sl.freq, mode: 'VOICE', from: ctlDisp, fromId: 'ctl', to: res.call, toId: res.id, msg: m.id, repeat: false, slot: 'ctl' + (m.slot % 2), pos: ring.controller.pos });
         book(n0, t0, d);
         m.txs = [tx.id];
         // repeated the next night, 15 minutes after the slot
         if (n0 + 1 < N) {
-          var tr = addTx({ night: n0 + 1, minute: t0 + 15, dur: d, freq: sl.freq, mode: 'VOICE', from: ctlCall, fromId: 'ctl', to: res.spell, toId: res.id, msg: m.id, repeat: true, slot: 'ctl' + (m.slot % 2) + 'r', pos: ring.controller.pos });
+          var tr = addTx({ night: n0 + 1, minute: t0 + 15, dur: d, freq: sl.freq, mode: 'VOICE', from: ctlDisp, fromId: 'ctl', to: res.call, toId: res.id, msg: m.id, repeat: true, slot: 'ctl' + (m.slot % 2) + 'r', pos: ring.controller.pos });
           book(n0 + 1, t0 + 15, d);
           m.txs.push(tr.id);
         }
@@ -420,8 +420,8 @@
       var k = 0;
       while (!free(m.night, t0, d) && k < 40) { t0 += 10; k++; if (t0 + d > 470) t0 = 40 + (t0 % 60); }
       book(m.night, t0, d);
-      var toSpell = m.to === 'ctl' ? ctlCall : members.filter(function (x) { return x.id === m.to; })[0].spell;
-      var tx = addTx({ night: m.night, minute: t0, dur: d, freq: fm.slot.freq, mode: 'CW', from: fm.spell, fromId: fm.id, to: toSpell, toId: m.to, msg: m.id, repeat: false, slot: fm.id, pos: pos(fm, m.night) });
+      var toSpell = m.to === 'ctl' ? ctlDisp : members.filter(function (x) { return x.id === m.to; })[0].call;
+      var tx = addTx({ night: m.night, minute: t0, dur: d, freq: fm.slot.freq, mode: 'CW', from: fm.call, fromId: fm.id, to: toSpell, toId: m.to, msg: m.id, repeat: false, slot: fm.id, pos: pos(fm, m.night) });
       m.txs = [tx.id];
     });
     // test transmitter (VVV) and background oddities

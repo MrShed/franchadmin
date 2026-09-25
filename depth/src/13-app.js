@@ -7,7 +7,7 @@ var UI = {
   listeners: [],
   freshState: function () {
     return { v: 1, tab: 'receiver', rx: { freq: 6.0, mode: 'voice', fine: 0, span: 'band', read: 'line' }, explained: {}, seenInbox: {}, seenMsgs: {}, seenLog: {},
-      bench: { a: null, b: null, tech: 'depth', crib: '', offset: 0, cribIn: 'a', frags: {}, period: {}, keys: {}, drafts: {} },
+      bench: { a: null, b: null, sel: null, kid: null, tech: 'msgs', side: 'A', crib: '', offset: 0, frags: {}, per: {}, drafts: {} },
       traffic: { pos: {}, mode: 'link', sub: 'diagram' }, map: { view: null, trace: true, sel: null }, desk: { sub: 'inbox', open: null },
       op: { what: '', where: '', when: '', who: '' }, coach: null, mentorFree: -1, pinned: [] };
   },

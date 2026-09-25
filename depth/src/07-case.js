@@ -42,7 +42,7 @@
   };
 
   // ---------------------------------------------------------------- Case
-  function Case(W, s) { this._w = W; this._s = s; var self = this; this.bench = makeBench(this); this.notes = s.notes; Object.defineProperty(this, 'notes', { get: function () { return self._s.notes; }, set: function (v) { self._s.notes = String(v == null ? '' : v).slice(0, 20000); }, enumerable: true }); }
+  function Case(W, s) { this._w = W; this._s = s; var self = this; this.bench = makeBench(this); Object.defineProperty(this, 'notes', { get: function () { return self._s.notes; }, set: function (v) { self._s.notes = String(v == null ? '' : v).slice(0, 20000); }, enumerable: true }); }
   DX.Case = Case;
   var CP = Case.prototype;
 
@@ -135,7 +135,7 @@
     var n = s.shift, list = W.byNight[n] || [], self = this;
     // gather timed happenings in (minute, target]
     var items = [];
-    list.forEach(function (t) { if (!t.cancelled && t.minute > s.minute - (s.minute === 0 ? 1 : 0) && t.minute <= target && !s.seenStart[t.id]) items.push({ at: t.minute, k: 'tx', t: t }); });
+    list.forEach(function (t) { if (!t.cancelled && t.minute >= s.minute && t.minute <= target && !s.seenStart[t.id]) items.push({ at: t.minute, k: 'tx', t: t }); });
     s.pending.forEach(function (p) { if (p.shift === n && p.at <= target && !p.done) items.push({ at: p.at, k: 'warrant', p: p }); });
     if (W.op.night === n && W.op.minute <= target && !s.opDone) items.push({ at: W.op.minute, k: 'op' });
     items.sort(function (a, b) { return a.at - b.at || (a.k === 'tx' ? -1 : 1); });
@@ -160,6 +160,16 @@
   CP.wait = function (minutes) { return { events: this._advance(this._s.minute + Math.max(0, +minutes || 0)), clock: this.clock() }; };
   CP.advanceTo = function (minute) { return { events: this._advance(minute), clock: this.clock() }; };
   CP._spend = function (minutes) { return this._advance(this._s.minute + minutes); };
+  /** band watch with the operator at the set: advance until the next transmission keys up (or `max` minutes).
+   *  -> {events, tx: band view of what just came on air | null, clock} */
+  CP.waitForSignal = function (max) {
+    var s = this._s, W = this._w, m = s.minute, end = Math.min(SHIFT, m + (max === undefined ? SHIFT : max));
+    var list = (W.byNight[s.shift] || []).filter(function (t) { return !t.cancelled && t.minute >= m && t.minute <= end && !s.seenStart[t.id]; });
+    list.sort(function (a, b) { return a.minute - b.minute; });
+    var t = list[0];
+    var events = this._advance(t ? t.minute : end);
+    return { events: events, tx: t && !s.outcome ? this._txView(t) : null, clock: this.clock() };
+  };
 
   // ---------------------------------------------------------------- log
   CP._logFaint = function (t) {
@@ -285,8 +295,7 @@
     var secs = Math.round(Math.min(W.G.vanSec, rem * 25));
     var scene = DX.AIR.vanScene(W, t, centre, secs, s.vans.length);
     s.vans.push({ id: scene.id, tx: txId, centre: scene.centre, shift: s.shift, t: s.minute, done: false });
-    var out = DX.copy(scene); delete out._inside;
-    return { ok: true, scene: out };
+    return { ok: true, scene: scene };
   };
   /** found: {x, y} in scene coordinates where the van stopped (or null if it gave up). */
   CP.vanResult = function (found, sceneId) {
@@ -324,14 +333,13 @@
     var W = this._w, mem = W.mem[t.fromId];
     if (t.decoySite) return this._building({ key: 'decoy:' + t.decoySite.text, address: t.decoySite.text, pos: t.decoySite.pos, truth: 'decoy', how: 'van' }, { kind: 'transmitter', detail: t.from + ' traced here' });
     if (!mem) return this._building({ key: 'odd:' + t.id, address: 'a garage off ' + DX.address(W.city, DX.rng(W.seed + t.id), DX.cityDistrictAt(W.city, t.pos)).street, pos: t.pos, truth: 'none', how: 'van' }, { kind: 'transmitter', detail: 'test transmitter' });
-    var addr = t.pos === (mem.room && mem.room.pos) ? mem.room : mem.home;
-    var kindHow = mem.txFrom === 'mobile' ? 'vehicle' : mem.txFrom === 'room' && addr === mem.room ? 'room' : 'home';
+    var addr = mem.movedTo && t.pos === mem.movedTo.pos ? mem.movedTo : mem.room && t.pos === mem.room.pos ? mem.room : mem.home;
+    var kindHow = mem.txFrom === 'mobile' && addr === mem.home ? 'vehicle' : addr === mem.home ? 'home' : 'room';
     return this._building({ key: 'mem:' + mem.id + ':' + addr.text, address: addr.text, pos: addr.pos, truth: mem.id, how: kindHow }, { kind: 'transmitter', detail: t.from + ' traced here (' + DX.hhmm(t.minute) + ', ' + DX.nightShort(t.night) + ')', callsign: t.from });
   };
   CP._building = function (o, evidence) {
-    var s = this._s, k;
-    for (k in s.buildings) if (s.buildings[k].key === o.key) break; else k = null;
-    var b = k ? s.buildings[k] : null;
+    var s = this._s, b = null;
+    Object.keys(s.buildings).forEach(function (k) { if (s.buildings[k].key === o.key) b = s.buildings[k]; });
     if (!b) {
       var id = 'b' + (Object.keys(s.buildings).length + 1);
       b = s.buildings[id] = { id: id, key: o.key, address: o.address, pos: o.pos, district: DX.cityDistrictAt(this._w.city, o.pos), truth: o.truth, how: o.how, occupant: null, evidence: [], callsigns: [] };
@@ -421,17 +429,17 @@
     var w = { id: 'W' + (s.warrants.length + 1), kind: kind, target: target, targetLabel: place ? place.name : bld ? bld.address : target, night: night, orderedShift: s.shift, orderedAt: s.minute, status: 'pending', result: null };
     if (kind === 'watch') {
       if (!place && !bld) return { ok: false, err: 'watch what? pick a place or a located building' };
-      w.at = bld ? s.minute + 60 : (night === s.shift ? s.minute : 0);
-      w.until = SHIFT;
+      w.at = bld ? Math.min(SHIFT, s.minute + 60) : SHIFT;     // place watches report at the end of the night
+      w.from = night === s.shift ? s.minute : 0;
     } else if (kind === 'lift') {
       if (!place || place.kind !== 'spot') return { ok: false, err: 'a lift needs a dead-drop site (a spot on the map)' };
       if (night !== s.shift) return { ok: false, err: 'a lift is done tonight or not at all' };
-      w.at = s.minute + 60;
+      w.at = Math.min(SHIFT, s.minute + 60);
     } else if (kind === 'raid') {
       if (!bld) return { ok: false, err: 'Special Branch raid buildings, not districts: locate the building first' };
       if (bld.raided) return { ok: false, err: 'already raided' };
       if (!bld.evidence.length) return { ok: false, err: 'Inspector Lyng wants evidence that ties this address to the ring' };
-      w.at = s.minute + WDELAY[W.G.id];
+      w.at = Math.min(SHIFT, s.minute + WDELAY[W.G.id]);
     } else if (kind === 'stakeout') {
       if (!place) return { ok: false, err: 'stake out which place?' };
       if (s.stakeouts.some(function (x) { return x.place === target && x.night === night; })) return { ok: false, err: 'already covered' };
@@ -446,8 +454,7 @@
       w.status = 'set';
       msgs.push(this._post('warrant', 'Stake-out approved', D.SB, [{ k: 'p', x: ['A team will be in position at ', ref('place', target, place.name), ' on the night of ' + DX.dateLabel(night) + ', from 18:00.'] }]));
     } else {
-      if (w.at >= SHIFT && kind !== 'watch') w.at = SHIFT;
-      s.pending.push({ id: w.id, kind: kind, shift: night, at: Math.min(SHIFT, w.at === null ? SHIFT : w.at), target: target, params: DX.copy(params), done: false });
+      s.pending.push({ id: w.id, kind: kind, shift: night, at: Math.min(SHIFT, w.at), from: w.from || 0, target: target, params: DX.copy(params), done: false });
       var what = kind === 'watch' ? 'Watch on ' : kind === 'lift' ? 'Photograph-and-replace at ' : 'Raid on ';
       msgs.push(this._post('warrant', 'Warrant granted: ' + kind, D.SB, [{ k: 'p', x: [what, place ? ref('place', target, place.name) : ref('building', target, bld.address), kind === 'watch' ? ', night of ' + DX.dateLabel(night) + '.' : ' at about ' + DX.hhmm(Math.min(SHIFT, w.at)) + '.'] }].concat(kind === 'raid' && !this.building(target).strong ? [{ k: 'n', x: ['Lyng: "Thin, this. I hope you are right."'] }] : [])));
     }
@@ -467,7 +474,7 @@
     if (p.kind === 'watch' && place) {
       var mt = meetingAt(W, place.id, p.shift);
       var body = [], found = [];
-      if (mt && !W.mem[mt.agent].arrested && !W.mem[mt.resident].arrested) {
+      if (mt && mt.minute >= p.from && !W.mem[mt.agent].arrested && !W.mem[mt.resident].arrested) {
         var a = W.mem[mt.resident], b = W.mem[mt.agent];
         body.push({ k: 'p', x: ['At ' + DX.hhmm(mt.minute) + ' a ' + (a.sex === 'F' ? 'woman' : 'man') + ' sat down at ', ref('place', place.id, place.name), ' with a newspaper folded under the left arm. A ' + (b.sex === 'F' ? 'woman' : 'man') + ' joined within five minutes. They talked for twenty minutes and left separately.'] });
         [a, b].forEach(function (m) {
@@ -483,8 +490,8 @@
         if (d.place !== place.id) return;
         var loader = d.contents === 'exec' ? (W.ring.members.filter(function (m) { return m.courier; })[0] || W.ring.resident) : W.ring.resident;
         var ev = null;
-        if (d.night === p.shift && !loader.arrested) ev = { m: loader, t: d.after, verb: 'loaded' };
-        if (d.collect.night === p.shift && !W.mem[d.forId].arrested && !d.lifted) ev = { m: W.mem[d.forId], t: d.collect.minute, verb: 'cleared' };
+        if (d.night === p.shift && d.after >= p.from && !loader.arrested) ev = { m: loader, t: d.after, verb: 'loaded' };
+        if (d.collect.night === p.shift && d.collect.minute >= p.from && !W.mem[d.forId].arrested) ev = { m: W.mem[d.forId], t: d.collect.minute, verb: 'cleared' };
         if (!ev) return;
         var bb = self._building({ key: 'mem:' + ev.m.id + ':' + ev.m.home.text, address: ev.m.home.text, pos: ev.m.home.pos, truth: ev.m.id, how: 'home' }, { kind: 'drop', detail: ev.verb + ' the drop at ' + place.name + ' (' + DX.dateLabel(p.shift) + ')' });
         bb.occupant = { name: ev.m.name, cover: ev.m.cover, photo: DX.hash(ev.m.id + W.seed) % 1000 };
@@ -493,7 +500,7 @@
         summary = 'drop serviced, followed';
         s.watchHits++;
       });
-      if (W.op.place === place.id && W.op.night === p.shift) {
+      if (W.op.place === place.id && W.op.night === p.shift && W.op.minute >= p.from) {
         body.push({ k: 'p', x: ['Our watchers saw figures at ', ref('place', place.id, place.name), ' at ' + DX.hhmm(W.op.minute) + '. A watch team cannot intervene.'] });
       }
       if (!body.length) {
@@ -675,7 +682,6 @@
     var seq = REACT[W.G.id];
     while (s.reactions.length < Math.min(level, seq.length)) {
       var r = { kind: seq[s.reactions.length], shift: s.shift, i: s.reactions.length };
-      if (r.kind === 'stopReuse' && s.reactions.length + 1 < W.G.stopReuseAt - 1) r.kind = 'reschedule';
       s.reactions.push(r);
       DX.applyReaction(W, r);
       out.push(r);
@@ -685,7 +691,8 @@
   /** apply a security reaction to the plan (future nights only). Deterministic: re-applied on load. */
   DX.applyReaction = function (W, r) {
     var R = DX.rng(W.seed + '/react/' + r.i), after = r.shift;   // effective from the next night
-    var live = W.ring.members.filter(function (m) { return !m.arrested; });
+    if (!r.live) r.live = W.ring.members.filter(function (m) { return !m.arrested; }).map(function (m) { return m.id; });
+    var live = r.live.map(function (id) { return W.mem[id]; });
     if (r.kind === 'reschedule') {
       // everyone moves their times and frequencies; the controller moves frequency
       live.forEach(function (m) {

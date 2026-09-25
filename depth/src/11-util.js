@@ -91,7 +91,7 @@ function UIcanvas(host, draw, o2) {
     if (o.onResize) o.onResize();
     return true;
   };
-  o.paint = function () { o.resize(); o.ctx.setTransform(o.dpr, 0, 0, o.dpr, 0, 0); o.draw(o.ctx, o.w, o.h); };
+  o.paint = function () { o.resize(); if (o.w < 4 || o.h < 4) return; o.ctx.setTransform(o.dpr, 0, 0, o.dpr, 0, 0); o.draw(o.ctx, o.w, o.h); };
   o.frame = function () { if (o.raf) return; o.raf = requestAnimationFrame(function () { o.raf = 0; o.paint(); }); };
   if (typeof ResizeObserver !== 'undefined') { o.ro = new ResizeObserver(function () { if (o.resize()) o.frame(); }); o.ro.observe(host); }
   return o;
@@ -225,8 +225,8 @@ var UITex = (function () {
 var UISeg = (function () {
   var SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg', '-': 'g', ' ': '' };
   var P = { a: 'M3 1h8l-1.6 1.6H4.6z', b: 'M11.4 1.6L12.5 2.7l-.6 6.4-1 .9-1-1 .5-6.2z', c: 'M11.9 11.2l1 .9-.6 6.4-1.1 1.1-1.3-1.3.5-5.7z', d: 'M2.4 19.4l1.4-1.4h6.4l1.5 1.4-1 .8H3.4z', e: 'M1.3 12.1l1-.9 1 1-.5 5.7-1.3 1.3-.8-.8z', f: 'M1.8 2.7L2.9 1.6l1.1 1.1-.5 6.2-1 1-1-.9z', g: 'M3 10.4l.9-.9h6.8l.9.9-.9.9H3.9z' };
-  function digit(ch) { var on = SEG[ch] || ''; return '<svg class="seg" viewBox="0 0 14 21" aria-hidden="true">' + 'abcdefg'.split('').map(function (k) { return '<path class="' + (on.indexOf(k) >= 0 ? 'on' : 'off') + '" d="' + P[k] + '"/>'; }).join('') + '</svg>'; }
-  return { html: function (s) { return String(s).split('').map(function (ch) { return ch === ':' ? '<i class="seg-colon"><b></b><b></b></i>' : digit(ch); }).join(''); } };
+  function digit(ch) { var on = SEG[ch] || ''; return '<svg class="sg7" viewBox="0 0 14 21" aria-hidden="true">' + 'abcdefg'.split('').map(function (k) { return '<path class="' + (on.indexOf(k) >= 0 ? 'on' : 'off') + '" d="' + P[k] + '"/>'; }).join('') + '</svg>'; }
+  return { html: function (s) { return String(s).split('').map(function (ch) { return ch === ':' ? '<i class="sg7-colon"><b></b><b></b></i>' : digit(ch); }).join(''); } };
 })();
 
 /* A tiny event-free schedule helper for timeouts that die with a view */
