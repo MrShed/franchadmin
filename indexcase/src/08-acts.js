@@ -507,7 +507,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     lines.push({ label: 'Understanding: estimates close to the truth, and early', pts: Math.round(300 * und / IX.KEY_TRAITS.length) });
     var econ = S.economy;
     var costPts = Math.round(150 * IX.clamp(1 - econ / 120, 0, 1) - Math.max(0, -S.funding) / 20);
-    lines.push({ label: 'Cost: £' + econ.toFixed(1) + 'm to the local economy, £' + IX.fmt(S.spent) + 'k spent', pts: Math.max(-50, costPts) });
+    lines.push({ label: 'Cost: £' + econ.toFixed(1) + 'm to the local economy, £' + (S.spent >= 1000 ? (S.spent / 1000).toFixed(1) + 'm' : Math.round(S.spent) + 'k') + ' spent', pts: Math.max(-50, costPts) });
     var tr = this.trustSummary().overall;
     lines.push({ label: 'Trust at the end: ' + tr + '/100', pts: Math.round(tr) });
     var orig = 0;

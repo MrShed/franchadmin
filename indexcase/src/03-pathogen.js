@@ -69,6 +69,7 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
     if (P.route === 'animal') r0 = R.range(1.25, 2.0);
     r0 *= Math.exp(-0.06 * v);
     if (grade === 'probationer') r0 = clamp(r0 * 0.8, 1.3, 2.3);
+    if (grade === 'director') r0 *= 1.12;   // wider and nastier: the director's diseases spread a little faster
     P.R = IX.round(clamp(fx.R || r0, 1.2, 5), 2);
 
     // who it hits

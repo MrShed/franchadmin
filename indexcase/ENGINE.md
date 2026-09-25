@@ -38,7 +38,7 @@ var g2 = IX.load(s)            // identical game, continues deterministically (a
 IX.GRADES                      // [{id, label, blurb, ...}]
      // grade knobs: staff, trust (start offset), comply (order compliance multiplier), beds (hospital capacity
      // multiplier), fund (funding multiplier), orderLag (extra days before orders bite; director +2),
-     // pcrStart/pcrGrow/pcrMax (lab capacity), seq, funding, vaccineBase (cure clock base days: 45/75/95),
+     // pcrStart/pcrGrow/pcrMax (lab capacity), seq, funding, vaccineBase (cure clock base days: 42/75/105),
      // mentorCost. Probationer is deliberately forgiving (more staff, better compliance, more beds, faster vaccine).
 ```
 

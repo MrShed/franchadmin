@@ -14,11 +14,11 @@ var IX = (typeof IX !== 'undefined' && IX) ? IX : {};
   // ---------------------------------------------------------------- grades
   IX.GRADES = [
     { id: 'probationer', label: 'Probationer', blurb: 'Respiratory viruses only, a bigger team, quicker lab results and a patient council.',
-      staff: { tracers: 6, field: 3, analysts: 3 }, trust: 10, comply: 1.2, beds: 1.35, fund: 1.3, panel: 16, pcrStart: 45, pcrGrow: 4, pcrMax: 180, seq: 4, funding: 500, vaccineBase: 38, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
+      staff: { tracers: 6, field: 3, analysts: 3 }, trust: 10, comply: 1.2, beds: 1.35, fund: 1.3, panel: 16, pcrStart: 45, pcrGrow: 4, pcrMax: 180, seq: 4, funding: 500, vaccineBase: 42, lagBonus: 0, mentorCost: { analysts: 2, credibility: 6 } },
     { id: 'consultant', label: 'Consultant', blurb: 'The full range of diseases, a small team and a lab that is doing its best.',
       staff: { tracers: 4, field: 2, analysts: 2 }, trust: 0, comply: 1, beds: 1, fund: 1, panel: 12, pcrStart: 25, pcrGrow: 2.5, pcrMax: 120, seq: 3, funding: 300, vaccineBase: 75, lagBonus: 0, mentorCost: { analysts: 3, credibility: 10 } },
     { id: 'director', label: 'Director', blurb: 'Wider and nastier diseases, noisier data, slower results, orders that take longer to bite and a council that wants the city open.',
-      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -10, comply: 0.85, beds: 0.8, fund: 0.7, orderLag: 2, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 95, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
+      staff: { tracers: 3, field: 1, analysts: 1 }, trust: -10, comply: 0.8, beds: 0.8, fund: 0.7, orderLag: 2, panel: 8, pcrStart: 15, pcrGrow: 2, pcrMax: 90, seq: 2, funding: 200, vaccineBase: 105, lagBonus: 1, mentorCost: { analysts: 4, credibility: 14 } }
   ];
   IX.gradeOf = function (id) { return IX.GRADES.filter(function (g) { return g.id === id; })[0] || IX.GRADES[1]; };
   GP.grades = function () { return IX.gradeOf(this.grade); };
