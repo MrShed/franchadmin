@@ -479,17 +479,17 @@ function newCrime() {
   const orgs = [mmOrg, ...allies];
   // each org keeps a hideout in 2-4 cities of the region
   const buildings = {};
-  for (const o of orgPool) { for (const c of shuffle(cities.slice()).slice(0, ri(2, 4))) { const key = o.id + '@' + c.id; buildings[key] = { key, org: o, city: c.id, address: mkAddress(c.lang), type: pick(['hideout', 'hideout', 'office', 'active cel', 'agent']), known: false, orgKnown: false, alert: 0, suspect: null, layout: null }; } }
-  for (const c of cities) for (const a of AGENCIES) if (rnd() < (a === 'Mossad' ? 0.5 : 0.8)) { const key = a + '@' + c.id; buildings[key] = { key, agency: a, city: c.id, address: mkAddress(c.lang), type: a === 'Mossad' ? 'active cel' : 'office', known: true, orgKnown: true, alert: 0 }; }
+  for (const o of orgPool) { for (const c of shuffle(cities.slice()).slice(0, ri(2, 4))) { const key = o.id + '@' + c.id; buildings[key] = { key, org: o, city: c.id, address: mkAddress(c.lang), type: pick(['hideout', 'hideout', 'office', 'active cell', 'agent']), known: false, orgKnown: false, alert: 0, suspect: null, layout: null }; } }
+  for (const c of cities) for (const a of AGENCIES) if (rnd() < (a === 'Mossad' ? 0.5 : 0.8)) { const key = a + '@' + c.id; buildings[key] = { key, agency: a, city: c.id, address: mkAddress(c.lang), type: a === 'Mossad' ? 'active cell' : 'office', known: true, orgKnown: true, alert: 0 }; }
   const crime = CRIMES[Math.floor(rnd() * CRIMES.length)];
   const n = ri(D.people[0], D.people[1]);
   const used = new Set(); const people = [];
   const hideoutsOf = o => Object.values(buildings).filter(b => b.org === o);
   function mk(org, role, rank, parent) {
     // one suspect per organization per city
-    const free = hideoutsOf(org).filter(b => !b.suspect);
+    const free = hideoutsOf(org).filter(b => b.suspect == null);
     let b = free.length ? pick(free) : null;
-    if (!b) { const c = pick(cities.filter(c => !buildings[org.id + '@' + c.id])) || pick(cities); const key = org.id + '@' + c.id; b = buildings[key] = buildings[key] || { key, org, city: c.id, address: mkAddress(c.lang), type: 'hideout', known: false, orgKnown: false, alert: 0, suspect: null }; if (b.suspect) return null; }
+    if (!b) { const c = pick(cities.filter(c => !buildings[org.id + '@' + c.id])) || pick(cities); const key = org.id + '@' + c.id; b = buildings[key] = buildings[key] || { key, org, city: c.id, address: mkAddress(c.lang), type: 'hideout', known: false, orgKnown: false, alert: 0, suspect: null }; if (b.suspect != null) return null; }
     const city = cityById(b.city), sex = rnd() < 0.15 ? 'f' : 'm';
     const p = { id: people.length, name: mkName(city.lang, sex, used), sex, org, role, rank, city: b.city, building: b.key, face: makeFace(sex, city.lang), parent: parent ? parent.id : null, kids: [],
       known: { face: false, name: false, org: false, city: false, hideout: false, role: false }, status: 'free', exists: false, tasks: 0 };
@@ -556,13 +556,22 @@ function clueAbout(p, method = 'Covert Surveillance', forceFacet) {
   }
   if (f === 'city' || f === 'name' || f === 'hideout') p.shownCity = null;
   switch (f) {
-    case 'face': return addClue(p, b.address, he + ' was identified by tenants at ' + b.address + '.', method, ['face']);
+    case 'face': b.known = true; return addClue(p, b.address, he + ' was identified by tenants at ' + b.address + ', ' + c.name + '.', method, ['face']);
     case 'name': return addClue(p, p.name, p.name + ' was seen ' + pick(['boarding a flight to ' + c.name, 'meeting known criminals in ' + c.name, 'renting a car in ' + c.name, 'withdrawing large sums in ' + c.name]) + '.', method, ['name', 'city']);
     case 'org': return addClue(p, o.name, 'An informant says the ' + o.name + ' has brought in ' + (p.known.name ? p.name : 'a ' + RANKS[p.rank].toLowerCase()) + ' for a special job.', method, ['org']);
     case 'city': return addClue(p, c.name, (p.known.name ? p.name : 'A suspect known to the ' + o.name) + ' is active in ' + c.name + '.', method, ['city'], { cityClaim: c.id });
-    case 'hideout': return addClue(p, b.address, 'The ' + o.name + ' is using a building at ' + b.address + ', ' + c.name + '.', method, ['hideout', 'org']);
+    case 'hideout': if (rnd() < 0.5) return addClue(p, b.address, (p.known.name ? p.name : 'A suspect') + ' was followed to a building at ' + b.address + ', ' + c.name + '.', method, ['hideout']);
+      return addClue(p, b.address, 'The ' + o.name + ' is using a building at ' + b.address + ', ' + c.name + '.', method, ['hideout', 'org']);
     case 'role': return addClue(p, p.role, (p.known.name ? p.name : 'A ' + o.name + ' member') + ' is the ' + p.role + ' in this operation.', method, ['role']);
   }
+}
+// an address with no name attached: sometimes a conspirator's building, sometimes a dead end
+function addressTip(b, method) {
+  const c = cityById(b.city), src = pick(SOURCES), source = src === 'CIA' ? 'CIA/' + pick(regionCities(game.region)).name : src;
+  const text = pick(['Neighbours report late-night visitors at ', 'Unusual phone traffic traced to ', 'A courier was seen making deliveries to ', 'Police note a rented office with blacked-out windows at ']) + b.address + ', ' + c.name + '.';
+  b.known = true; bumpActivity(c.id, 'tips');
+  const clue = { id: game.clues.length, pid: null, addr: b.key, heading: b.address, text, method, source, t: game.t, facets: [], face: false };
+  game.clues.push(clue); return clue;
 }
 function canArrestHere(p) { return p.status === 'free'; }
 // the city our files show: the double agent's lie, until a true report corrects it
@@ -591,14 +600,20 @@ function advance(minutes) {
 function plotDay(d) {
   const cr = game.crime; if (!cr || cr.over) return;
   const D = DIFFICULTY[game.diff];
-  for (const s of cr.steps) {
+  if (cr.foiled == null) for (const s of cr.steps) {
     if (s.done || s.blocked || s.day + cr.delay > d) continue;
     const a = cr.people[s.from], b = s.to !== undefined ? cr.people[s.to] : null;
     if (a.status !== 'free' || (b && b.status !== 'free')) { s.blocked = true; continue; }
     s.done = true; a.tasks--; if (b) b.tasks--;
     cr.chronologyAll = cr.chronologyAll || []; cr.chronologyAll.push({ day: d, s });
     // the world notices
-    if (rnd() < D.clueRate) clueAbout(rnd() < 0.5 || !b ? a : b, pick(['Covert Surveillance', 'Telephone Tap', 'Informant', 'Airport Surveillance']));
+    if (rnd() < D.clueRate) {
+      const q = rnd() < 0.5 || !b ? a : b, meth = pick(['Covert Surveillance', 'Telephone Tap', 'Informant', 'Airport Surveillance']);
+      if (rnd() < 0.25) { // just an address: sometimes theirs, sometimes a dead end
+        const empty = Object.values(cr.buildings).filter(x => x.org && x.suspect == null && !x.known);
+        addressTip(rnd() < 0.7 || !empty.length ? cr.buildings[q.building] : pick(empty), meth);
+      } else clueAbout(q, meth);
+    }
     if (s.kind !== 'item' && rnd() < D.clueRate * 0.5) game.messages.push(Object.assign(makeMessage(s), { src: 'NSA intercept' }));
     if (s.kind === 'item') game.news.push({ t: dayToT(d), text: 'Police in ' + cityById(a.city).name + ' report ' + (s.item.includes('money') || s.item.includes('withdrawal') ? 'a large money withdrawal.' : 'the theft of ' + s.item + '.') });
   }
@@ -614,9 +629,18 @@ function plotDay(d) {
     if (!cr.people.some(q => q.org === p.org && q.status === 'free')) continue;
     if (rnd() < 0.2) { p.breakTried = true; cr.prisonBreak = { pid: p.id, city: p.jailCity || game.city, day: d }; break; }
   }
-  // blocked plans: critical links broken means the conspiracy falls apart
-  const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length;
-  if (blocked / total > 0.34 || cr.people[cr.mastermind].status !== 'free' || cr.people[cr.organizer].status !== 'free' && blocked > 0) { cr.over = true; cr.prevented = true; cr.endDay = d; }
+  // blocked plans: once enough links are broken the plot is foiled, but the case goes on:
+  // the rest of the ring scatters over the next few days, and the mastermind goes to ground last
+  const mm = cr.people[cr.mastermind];
+  if (mm.status !== 'free') { cr.over = true; cr.prevented = true; cr.endDay = d; return; }
+  if (cr.foiled != null) {
+    const left = d - cr.foiled;
+    for (const p of cr.people) if (p.status === 'free' && p !== mm && rnd() < 0.15 + 0.12 * left) { p.status = 'fled'; game.news.push({ t: dayToT(d), text: 'A ' + p.org.name + ' suspect has slipped out of ' + cityById(p.city).name + '.' }); }
+    if (left >= 4) { mm.status = 'fled'; cr.over = true; cr.prevented = true; cr.endDay = d; }
+    return;
+  }
+  const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length, exec = cr.people[cr.executor];
+  if (blocked / total > 0.5 || exec.status !== 'free' && exec !== mm) { cr.foiled = d; game.news.push({ t: dayToT(d), text: 'Sources say the ' + cr.kind.toLowerCase() + ' plot has collapsed. Its members are expected to go to ground.' }); }
   else if (d >= cr.crimeDay + cr.delay) { cr.over = true; cr.prevented = false; cr.endDay = d; }
 }
 const dayToT = d => d * 1440 - 8 * 60 + 9 * 60;
@@ -627,7 +651,7 @@ function efficiency() {
   const cr = game.crime, rows = []; let got = 0, max = 0;
   for (const p of cr.people) {
     const m = epMax(p); let e = Math.round(m * ['name', 'org', 'city', 'hideout'].filter(f => p.known[f]).length / 8);
-    if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
+    if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : p.status === 'fled' ? 'Fled' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
   }
   cr.items.forEach((it, i) => { const ok = i < cr.evidenceTaken; rows.push({ status: ok ? 'Captured' : 'Not Found', label: it.replace(/\b\w/g, c => c.toUpperCase()), ep: ok ? 50 : 0, max: 50 }); got += ok ? 50 : 0; max += 50; });
   if (cr.double) { const ok = cr.double.caught; rows.push({ status: ok ? 'Exposed' : 'Undetected', label: 'Double Agent', ep: ok ? 100 : 0, max: 100 }); got += ok ? 100 : 0; max += 100; }
@@ -4653,7 +4677,7 @@ function ctX_bldLayers(b, w, h, n) {
     ctX_gStreet(V, { pave: '#b8ae9c', lamps: [], pw: 11 });
     const r = ctX_rng(key);
     if (type === 'agent') { const k = 1.35; ctX_scaled(k, 0, 0, () => { L.info = ctX_villa(ctX_V, b, r); }); const I = L.info; I.wins = I.wins.map(([a, b2, c2, d]) => [a * k, b2 * k, c2 * k, d * k]); I.door = [I.door[0] * k, I.door[1] * k]; I.gateLamp = I.gateLamp.map(([a, b2]) => [a * k, b2 * k]); }
-    else L.info = (type === 'office' ? ctX_office : type === 'active cel' ? ctX_towerBlock : ctX_townhouse)(V, b, r);
+    else L.info = (type === 'office' ? ctX_office : type === 'active cell' ? ctX_towerBlock : ctX_townhouse)(V, b, r);
     // a street lamp on the pavement
     const lx = L.info.lamp; ctX_R(lx - .6, -44, 1.2, 46, ctX_c('#2a302e', 0)); ctX_R(lx - .6, -44, .4, 46, ctX_c('#2a302e', 1.2)); ctX_R(lx - 1.4, -1, 2.8, 3, ctX_c('#2a302e', 0));
     ctX_L(lx, -43, lx + 6, -45, ctX_c('#2a302e', 0), .8); ctX_P([lx + 4, -45.5, lx + 9, -45.5, lx + 8, -43, lx + 5, -43], ctX_c('#2a302e', .4)); ctX_R(lx + 5.2, -43, 2.6, .8, V.n ? '#fff4c8' : ctX_c('#e8e4d0', 0));
@@ -4726,10 +4750,10 @@ function ctX_binoMask(w, h, c1x, c2x, cy, r) {
 function ctX_binoBack(b, type, n, open) { // 100 x 100 design units on a 400 x 400 fine canvas (u = 4)
   const V = { fw: 400, fh: 400, gy: 300, u: 4, ox: 200, n, fog: 0, flood: false, hz: '#8898b0', bot: 25 }, pv = ctX_V; ctX_V = V;
   try {
-    const wall = { hideout: '#8e4c38', office: '#c8c0b0', 'active cel': '#b4b0a4', agent: '#e6c088' }[type] || '#8e4c38';
-    ctX_bWall(-60, -80, 120, 80, wall, type === 'hideout' ? 'brick' : type === 'active cel' ? 'panel' : 'plain', 5);
+    const wall = { hideout: '#8e4c38', office: '#c8c0b0', 'active cell': '#b4b0a4', agent: '#e6c088' }[type] || '#8e4c38';
+    ctX_bWall(-60, -80, 120, 80, wall, type === 'hideout' ? 'brick' : type === 'active cell' ? 'panel' : 'plain', 5);
     if (type === 'office') { for (let x = -60; x < 60; x += 12) ctX_R(x, -80, .8, 80, ctX_c('#8a949c', 0)); ctX_banded(Math.round(ctX_x(-60)), 0, 480, Math.round(ctX_y(-50)), n ? ['#0e1830', '#1a2a48'] : ['#6a94b8', '#3e6a86'], 6); }
-    if (type === 'active cel') { g.strokeStyle = ctX_c('#d83a3a', .3); g.lineWidth = 5; g.beginPath(); for (let i = 0; i < 8; i++) g.lineTo(ctX_x(-44 + i * 3), ctX_y(-20 + (ctX_h(i, 3) - .5) * 8)); g.stroke(); g.strokeStyle = ctX_c('#3a8ad8', .3); g.beginPath(); for (let i = 0; i < 7; i++) g.lineTo(ctX_x(24 + i * 3), ctX_y(-14 + (ctX_h(i, 5) - .5) * 8)); g.stroke(); }
+    if (type === 'active cell') { g.strokeStyle = ctX_c('#d83a3a', .3); g.lineWidth = 5; g.beginPath(); for (let i = 0; i < 8; i++) g.lineTo(ctX_x(-44 + i * 3), ctX_y(-20 + (ctX_h(i, 3) - .5) * 8)); g.stroke(); g.strokeStyle = ctX_c('#3a8ad8', .3); g.beginPath(); for (let i = 0; i < 7; i++) g.lineTo(ctX_x(24 + i * 3), ctX_y(-14 + (ctX_h(i, 5) - .5) * 8)); g.stroke(); }
     // doorway
     const dw = 15, dh = 36, frameC = type === 'agent' ? '#f0e4c8' : '#d8ccb4';
     ctX_R(-dw / 2 - 3, -dh - 3, dw + 6, dh + 3, ctX_c(frameC, .3)); ctX_R(-dw / 2 - 3, -dh - 3, 1.2, dh + 3, ctX_c(frameC, 1.2)); ctX_R(dw / 2 + 1.8, -dh - 3, 1.2, dh + 3, ctX_c(frameC, -1.3));
@@ -7588,12 +7612,13 @@ function newCase() {
 // ---------- CITY ----------
 function locationsHere() {
   const out = [{ kind: 'airport', label: 'The Airport.' }, { kind: 'hotel', label: 'Your Hotel.' }, { kind: 'cia', label: 'CIA office' }];
-  for (const b of Object.values(game.buildings)) if (b.city === game.city && b.known) out.push({ kind: 'bld', b, label: (b.agency || (b.orgKnown ? b.org.name : 'Unknown')) + ' ' + (b.agency ? b.type : b.orgKnown ? b.type : 'building') });
+  for (const b of Object.values(game.buildings)) if (b.city === game.city && b.known) out.push({ kind: 'bld', b, label: b.agency ? b.agency + ' ' + b.type : b.orgKnown ? b.org.name + ' ' + b.type : b.address });
   return out;
 }
 function cityScene() {
   if (game.crime && game.crime.over && !game.crime.reported) return synopsisScene();
   if (game.crime && game.crime.prisonBreak && !game.crime.prisonBreak.handled && !practiceMode) return prisonBreakScene();
+  if (game.crime && game.crime.foiled != null && !game.crime.foiledShown) { game.crime.foiledShown = true; return report('Plot Foiled', ['Word from every station: the ' + game.crime.kind.toLowerCase() + ' plot has collapsed. Without its key people it cannot go ahead.', 'The rest of the ring will scatter over the next few days, and the Mastermind will go to ground. Round up whoever you can while they are still in place.'], () => go(cityScene())); }
   const city = cityById(game.city);
   const items = locationsHere().map(l => ({ label: fitText(l.label, 120), go: () => goLocation(l) }));
   items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });
@@ -7764,7 +7789,7 @@ function uiX_card(x, y, w, h, rule = 10, first = 18) {
 }
 function clueScreen(c, back) {
   const p = game.crime.people[c.pid];
-  const related = game.clues.filter(o => o !== c && o.pid === c.pid).slice(-2);
+  const related = game.clues.filter(o => o !== c && (c.pid != null ? o.pid === c.pid : o.addr === c.addr)).slice(-2);
   return pageScene(() => {
     folder(FOLDER.clue, 'Clue');
     text('Source: ' + c.source, 12, 20, uiX_I.g);
@@ -9261,6 +9286,10 @@ function breakinScene(opts, done) {
   const saved = seed; if (opts.building && opts.building.seed) seed = opts.building.seed;
   const B = mode === 'street' ? genStreet() : genBuilding(level); const { F, occ } = mode === 'street' ? furnishStreet(B) : furnish(B, { occupant, level });
   seed = saved;
+  // whatever was carried off on an earlier visit stays gone: strip it by kind, in layout order
+  const loot = (opts.building && mode === 'breakin' && opts.building.loot) || {};
+  for (const k in loot) { let n = loot[k]; for (const f of F) if (n > 0 && f.content === k) { f.content = null; if (k !== 'evidence') f.opened = true; n--; } }
+  const content0 = F.map(f => f.content);
   const PWORDS = ['CONDOR', 'SPHINX', 'ORCHID', 'JACKAL', 'VORTEX', 'ZENITH', 'COBALT', 'PHOENIX', 'MIDNIGHT', 'TANGO', 'OMEGA', 'SCIMITAR', 'GRANITE', 'MONSOON', 'LANTERN'];
   const bld = opts.building || {};
   if (!bld.pw) { bld.pw = PWORDS[(bld.seed || ri(0, 999)) % PWORDS.length]; bld.pwKnown = bld.pw.split('').map(() => false); }
@@ -9805,6 +9834,7 @@ function breakinScene(opts, done) {
   }
   function end() {
     const k = over.kind, lost = k === 'captured';
+    if (opts.building && mode === 'breakin') { const L = opts.building.loot = opts.building.loot || {}; F.forEach((f, i) => { const k0 = content0[i]; if (k0 && !f.content && (!lost || k0 === 'clue' || k0 === 'ammo' || k0 === 'grenade')) L[k0] = (L[k0] || 0) + 1; }); }
     if (out.bugged && opts.building && !lost) game.taps.push({ key: opts.building.key, until: dayOf(game.t) + 4 });
     done({ kind: k, clues: out.clues, messages: lost ? 0 : out.messages, plan: !lost && out.plan, personnel: !lost && out.personnel, evidence: lost ? null : out.evidence, prisoner: k === 'escaped' && max.prisoner ? occupant : null, alarm: out.alarm, seconds: t });
   }
@@ -12813,8 +12843,11 @@ function buildingScene(b) {
   const items = [{ label: 'Place wiretap', go: () => startWiretap(b) }];
   if (!b.agency) items.push({ label: 'Break into building', go: () => startBreakin(b) }, { label: 'Watch the building', go: () => go(watchScene(b)) });
   items.push({ label: 'Check Data', go: () => go(dataSection(back)) }, { label: 'Leave', go: () => go(cityScene()) });
-  const who_ = b.agency ? b.agency + ' ' + b.type : (b.orgKnown ? b.org.name : 'unknown') + ' ' + (b.orgKnown ? b.type : 'building');
-  const header = ['You are at the', who_, guardWords(b), 'Do you ...'].flatMap(l => wrap(l, 118));
+  const who_ = b.agency ? b.agency + ' ' + b.type : b.orgKnown ? b.org.name + ' ' + b.type : 'Unknown building';
+  // who lives here, as far as our files go
+  const occ = b.suspect != null ? game.crime.people[b.suspect] : null, mine = occ && occ.known.hideout;
+  const occLine = b.agency ? '' : mine ? 'Occupant: ' + (occ.known.name ? occ.name : 'Agent ' + String.fromCharCode(65 + occ.id)) + (occ.status !== 'free' ? ' (' + occ.status + ')' : occ.known.role ? ' (' + occ.role + ')' : ' (role unknown)') : 'Occupant: unknown';
+  const header = [who_ + (b.agency ? '' : ','), b.agency ? '' : b.address + '.', occLine, guardWords(b), 'Do you ...'].filter(Boolean).flatMap(l => wrap(l, 118));
   return menuScene({ menu: Menu(items, 13, 38 + header.length * 8, 108), back: () => go(cityScene()),
     draw() { rect(0, 0, W, H, P.K); uiX_backdrop(); buildingArt(130, 35, 190, 165, b); statusBox(4); header.forEach((l, i) => text(l, 7, 38 + i * 8, uiX_T.hd)); this.menu.draw(); } });
 }

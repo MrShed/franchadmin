@@ -11,8 +11,11 @@ function buildingScene(b) {
   const items = [{ label: 'Place wiretap', go: () => startWiretap(b) }];
   if (!b.agency) items.push({ label: 'Break into building', go: () => startBreakin(b) }, { label: 'Watch the building', go: () => go(watchScene(b)) });
   items.push({ label: 'Check Data', go: () => go(dataSection(back)) }, { label: 'Leave', go: () => go(cityScene()) });
-  const who_ = b.agency ? b.agency + ' ' + b.type : (b.orgKnown ? b.org.name : 'unknown') + ' ' + (b.orgKnown ? b.type : 'building');
-  const header = ['You are at the', who_, guardWords(b), 'Do you ...'].flatMap(l => wrap(l, 118));
+  const who_ = b.agency ? b.agency + ' ' + b.type : b.orgKnown ? b.org.name + ' ' + b.type : 'Unknown building';
+  // who lives here, as far as our files go
+  const occ = b.suspect != null ? game.crime.people[b.suspect] : null, mine = occ && occ.known.hideout;
+  const occLine = b.agency ? '' : mine ? 'Occupant: ' + (occ.known.name ? occ.name : 'Agent ' + String.fromCharCode(65 + occ.id)) + (occ.status !== 'free' ? ' (' + occ.status + ')' : occ.known.role ? ' (' + occ.role + ')' : ' (role unknown)') : 'Occupant: unknown';
+  const header = [who_ + (b.agency ? '' : ','), b.agency ? '' : b.address + '.', occLine, guardWords(b), 'Do you ...'].filter(Boolean).flatMap(l => wrap(l, 118));
   return menuScene({ menu: Menu(items, 13, 38 + header.length * 8, 108), back: () => go(cityScene()),
     draw() { rect(0, 0, W, H, P.K); uiX_backdrop(); buildingArt(130, 35, 190, 165, b); statusBox(4); header.forEach((l, i) => text(l, 7, 38 + i * 8, uiX_T.hd)); this.menu.draw(); } });
 }

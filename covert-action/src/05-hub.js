@@ -544,12 +544,13 @@ function newCase() {
 // ---------- CITY ----------
 function locationsHere() {
   const out = [{ kind: 'airport', label: 'The Airport.' }, { kind: 'hotel', label: 'Your Hotel.' }, { kind: 'cia', label: 'CIA office' }];
-  for (const b of Object.values(game.buildings)) if (b.city === game.city && b.known) out.push({ kind: 'bld', b, label: (b.agency || (b.orgKnown ? b.org.name : 'Unknown')) + ' ' + (b.agency ? b.type : b.orgKnown ? b.type : 'building') });
+  for (const b of Object.values(game.buildings)) if (b.city === game.city && b.known) out.push({ kind: 'bld', b, label: b.agency ? b.agency + ' ' + b.type : b.orgKnown ? b.org.name + ' ' + b.type : b.address });
   return out;
 }
 function cityScene() {
   if (game.crime && game.crime.over && !game.crime.reported) return synopsisScene();
   if (game.crime && game.crime.prisonBreak && !game.crime.prisonBreak.handled && !practiceMode) return prisonBreakScene();
+  if (game.crime && game.crime.foiled != null && !game.crime.foiledShown) { game.crime.foiledShown = true; return report('Plot Foiled', ['Word from every station: the ' + game.crime.kind.toLowerCase() + ' plot has collapsed. Without its key people it cannot go ahead.', 'The rest of the ring will scatter over the next few days, and the Mastermind will go to ground. Round up whoever you can while they are still in place.'], () => go(cityScene())); }
   const city = cityById(game.city);
   const items = locationsHere().map(l => ({ label: fitText(l.label, 120), go: () => goLocation(l) }));
   items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });
@@ -720,7 +721,7 @@ function uiX_card(x, y, w, h, rule = 10, first = 18) {
 }
 function clueScreen(c, back) {
   const p = game.crime.people[c.pid];
-  const related = game.clues.filter(o => o !== c && o.pid === c.pid).slice(-2);
+  const related = game.clues.filter(o => o !== c && (c.pid != null ? o.pid === c.pid : o.addr === c.addr)).slice(-2);
   return pageScene(() => {
     folder(FOLDER.clue, 'Clue');
     text('Source: ' + c.source, 12, 20, uiX_I.g);

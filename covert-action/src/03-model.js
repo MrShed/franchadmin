@@ -133,17 +133,17 @@ function newCrime() {
   const orgs = [mmOrg, ...allies];
   // each org keeps a hideout in 2-4 cities of the region
   const buildings = {};
-  for (const o of orgPool) { for (const c of shuffle(cities.slice()).slice(0, ri(2, 4))) { const key = o.id + '@' + c.id; buildings[key] = { key, org: o, city: c.id, address: mkAddress(c.lang), type: pick(['hideout', 'hideout', 'office', 'active cel', 'agent']), known: false, orgKnown: false, alert: 0, suspect: null, layout: null }; } }
-  for (const c of cities) for (const a of AGENCIES) if (rnd() < (a === 'Mossad' ? 0.5 : 0.8)) { const key = a + '@' + c.id; buildings[key] = { key, agency: a, city: c.id, address: mkAddress(c.lang), type: a === 'Mossad' ? 'active cel' : 'office', known: true, orgKnown: true, alert: 0 }; }
+  for (const o of orgPool) { for (const c of shuffle(cities.slice()).slice(0, ri(2, 4))) { const key = o.id + '@' + c.id; buildings[key] = { key, org: o, city: c.id, address: mkAddress(c.lang), type: pick(['hideout', 'hideout', 'office', 'active cell', 'agent']), known: false, orgKnown: false, alert: 0, suspect: null, layout: null }; } }
+  for (const c of cities) for (const a of AGENCIES) if (rnd() < (a === 'Mossad' ? 0.5 : 0.8)) { const key = a + '@' + c.id; buildings[key] = { key, agency: a, city: c.id, address: mkAddress(c.lang), type: a === 'Mossad' ? 'active cell' : 'office', known: true, orgKnown: true, alert: 0 }; }
   const crime = CRIMES[Math.floor(rnd() * CRIMES.length)];
   const n = ri(D.people[0], D.people[1]);
   const used = new Set(); const people = [];
   const hideoutsOf = o => Object.values(buildings).filter(b => b.org === o);
   function mk(org, role, rank, parent) {
     // one suspect per organization per city
-    const free = hideoutsOf(org).filter(b => !b.suspect);
+    const free = hideoutsOf(org).filter(b => b.suspect == null);
     let b = free.length ? pick(free) : null;
-    if (!b) { const c = pick(cities.filter(c => !buildings[org.id + '@' + c.id])) || pick(cities); const key = org.id + '@' + c.id; b = buildings[key] = buildings[key] || { key, org, city: c.id, address: mkAddress(c.lang), type: 'hideout', known: false, orgKnown: false, alert: 0, suspect: null }; if (b.suspect) return null; }
+    if (!b) { const c = pick(cities.filter(c => !buildings[org.id + '@' + c.id])) || pick(cities); const key = org.id + '@' + c.id; b = buildings[key] = buildings[key] || { key, org, city: c.id, address: mkAddress(c.lang), type: 'hideout', known: false, orgKnown: false, alert: 0, suspect: null }; if (b.suspect != null) return null; }
     const city = cityById(b.city), sex = rnd() < 0.15 ? 'f' : 'm';
     const p = { id: people.length, name: mkName(city.lang, sex, used), sex, org, role, rank, city: b.city, building: b.key, face: makeFace(sex, city.lang), parent: parent ? parent.id : null, kids: [],
       known: { face: false, name: false, org: false, city: false, hideout: false, role: false }, status: 'free', exists: false, tasks: 0 };
@@ -210,13 +210,22 @@ function clueAbout(p, method = 'Covert Surveillance', forceFacet) {
   }
   if (f === 'city' || f === 'name' || f === 'hideout') p.shownCity = null;
   switch (f) {
-    case 'face': return addClue(p, b.address, he + ' was identified by tenants at ' + b.address + '.', method, ['face']);
+    case 'face': b.known = true; return addClue(p, b.address, he + ' was identified by tenants at ' + b.address + ', ' + c.name + '.', method, ['face']);
     case 'name': return addClue(p, p.name, p.name + ' was seen ' + pick(['boarding a flight to ' + c.name, 'meeting known criminals in ' + c.name, 'renting a car in ' + c.name, 'withdrawing large sums in ' + c.name]) + '.', method, ['name', 'city']);
     case 'org': return addClue(p, o.name, 'An informant says the ' + o.name + ' has brought in ' + (p.known.name ? p.name : 'a ' + RANKS[p.rank].toLowerCase()) + ' for a special job.', method, ['org']);
     case 'city': return addClue(p, c.name, (p.known.name ? p.name : 'A suspect known to the ' + o.name) + ' is active in ' + c.name + '.', method, ['city'], { cityClaim: c.id });
-    case 'hideout': return addClue(p, b.address, 'The ' + o.name + ' is using a building at ' + b.address + ', ' + c.name + '.', method, ['hideout', 'org']);
+    case 'hideout': if (rnd() < 0.5) return addClue(p, b.address, (p.known.name ? p.name : 'A suspect') + ' was followed to a building at ' + b.address + ', ' + c.name + '.', method, ['hideout']);
+      return addClue(p, b.address, 'The ' + o.name + ' is using a building at ' + b.address + ', ' + c.name + '.', method, ['hideout', 'org']);
     case 'role': return addClue(p, p.role, (p.known.name ? p.name : 'A ' + o.name + ' member') + ' is the ' + p.role + ' in this operation.', method, ['role']);
   }
+}
+// an address with no name attached: sometimes a conspirator's building, sometimes a dead end
+function addressTip(b, method) {
+  const c = cityById(b.city), src = pick(SOURCES), source = src === 'CIA' ? 'CIA/' + pick(regionCities(game.region)).name : src;
+  const text = pick(['Neighbours report late-night visitors at ', 'Unusual phone traffic traced to ', 'A courier was seen making deliveries to ', 'Police note a rented office with blacked-out windows at ']) + b.address + ', ' + c.name + '.';
+  b.known = true; bumpActivity(c.id, 'tips');
+  const clue = { id: game.clues.length, pid: null, addr: b.key, heading: b.address, text, method, source, t: game.t, facets: [], face: false };
+  game.clues.push(clue); return clue;
 }
 function canArrestHere(p) { return p.status === 'free'; }
 // the city our files show: the double agent's lie, until a true report corrects it
@@ -245,14 +254,20 @@ function advance(minutes) {
 function plotDay(d) {
   const cr = game.crime; if (!cr || cr.over) return;
   const D = DIFFICULTY[game.diff];
-  for (const s of cr.steps) {
+  if (cr.foiled == null) for (const s of cr.steps) {
     if (s.done || s.blocked || s.day + cr.delay > d) continue;
     const a = cr.people[s.from], b = s.to !== undefined ? cr.people[s.to] : null;
     if (a.status !== 'free' || (b && b.status !== 'free')) { s.blocked = true; continue; }
     s.done = true; a.tasks--; if (b) b.tasks--;
     cr.chronologyAll = cr.chronologyAll || []; cr.chronologyAll.push({ day: d, s });
     // the world notices
-    if (rnd() < D.clueRate) clueAbout(rnd() < 0.5 || !b ? a : b, pick(['Covert Surveillance', 'Telephone Tap', 'Informant', 'Airport Surveillance']));
+    if (rnd() < D.clueRate) {
+      const q = rnd() < 0.5 || !b ? a : b, meth = pick(['Covert Surveillance', 'Telephone Tap', 'Informant', 'Airport Surveillance']);
+      if (rnd() < 0.25) { // just an address: sometimes theirs, sometimes a dead end
+        const empty = Object.values(cr.buildings).filter(x => x.org && x.suspect == null && !x.known);
+        addressTip(rnd() < 0.7 || !empty.length ? cr.buildings[q.building] : pick(empty), meth);
+      } else clueAbout(q, meth);
+    }
     if (s.kind !== 'item' && rnd() < D.clueRate * 0.5) game.messages.push(Object.assign(makeMessage(s), { src: 'NSA intercept' }));
     if (s.kind === 'item') game.news.push({ t: dayToT(d), text: 'Police in ' + cityById(a.city).name + ' report ' + (s.item.includes('money') || s.item.includes('withdrawal') ? 'a large money withdrawal.' : 'the theft of ' + s.item + '.') });
   }
@@ -268,9 +283,18 @@ function plotDay(d) {
     if (!cr.people.some(q => q.org === p.org && q.status === 'free')) continue;
     if (rnd() < 0.2) { p.breakTried = true; cr.prisonBreak = { pid: p.id, city: p.jailCity || game.city, day: d }; break; }
   }
-  // blocked plans: critical links broken means the conspiracy falls apart
-  const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length;
-  if (blocked / total > 0.34 || cr.people[cr.mastermind].status !== 'free' || cr.people[cr.organizer].status !== 'free' && blocked > 0) { cr.over = true; cr.prevented = true; cr.endDay = d; }
+  // blocked plans: once enough links are broken the plot is foiled, but the case goes on:
+  // the rest of the ring scatters over the next few days, and the mastermind goes to ground last
+  const mm = cr.people[cr.mastermind];
+  if (mm.status !== 'free') { cr.over = true; cr.prevented = true; cr.endDay = d; return; }
+  if (cr.foiled != null) {
+    const left = d - cr.foiled;
+    for (const p of cr.people) if (p.status === 'free' && p !== mm && rnd() < 0.15 + 0.12 * left) { p.status = 'fled'; game.news.push({ t: dayToT(d), text: 'A ' + p.org.name + ' suspect has slipped out of ' + cityById(p.city).name + '.' }); }
+    if (left >= 4) { mm.status = 'fled'; cr.over = true; cr.prevented = true; cr.endDay = d; }
+    return;
+  }
+  const blocked = cr.steps.filter(s => s.blocked).length, total = cr.steps.length, exec = cr.people[cr.executor];
+  if (blocked / total > 0.5 || exec.status !== 'free' && exec !== mm) { cr.foiled = d; game.news.push({ t: dayToT(d), text: 'Sources say the ' + cr.kind.toLowerCase() + ' plot has collapsed. Its members are expected to go to ground.' }); }
   else if (d >= cr.crimeDay + cr.delay) { cr.over = true; cr.prevented = false; cr.endDay = d; }
 }
 const dayToT = d => d * 1440 - 8 * 60 + 9 * 60;
@@ -281,7 +305,7 @@ function efficiency() {
   const cr = game.crime, rows = []; let got = 0, max = 0;
   for (const p of cr.people) {
     const m = epMax(p); let e = Math.round(m * ['name', 'org', 'city', 'hideout'].filter(f => p.known[f]).length / 8);
-    if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
+    if (p.status === 'arrested') e = m; rows.push({ status: p.status === 'arrested' ? 'Arrested' : p.status === 'turned' ? 'Turned' : p.status === 'fled' ? 'Fled' : 'At Large', label: p.role, ep: e, max: m, p }); got += e; max += m;
   }
   cr.items.forEach((it, i) => { const ok = i < cr.evidenceTaken; rows.push({ status: ok ? 'Captured' : 'Not Found', label: it.replace(/\b\w/g, c => c.toUpperCase()), ep: ok ? 50 : 0, max: 50 }); got += ok ? 50 : 0; max += 50; });
   if (cr.double) { const ok = cr.double.caught; rows.push({ status: ok ? 'Exposed' : 'Undetected', label: 'Double Agent', ep: ok ? 100 : 0, max: 100 }); got += ok ? 100 : 0; max += 100; }

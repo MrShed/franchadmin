@@ -1341,7 +1341,7 @@ function ctX_bldLayers(b, w, h, n) {
     ctX_gStreet(V, { pave: '#b8ae9c', lamps: [], pw: 11 });
     const r = ctX_rng(key);
     if (type === 'agent') { const k = 1.35; ctX_scaled(k, 0, 0, () => { L.info = ctX_villa(ctX_V, b, r); }); const I = L.info; I.wins = I.wins.map(([a, b2, c2, d]) => [a * k, b2 * k, c2 * k, d * k]); I.door = [I.door[0] * k, I.door[1] * k]; I.gateLamp = I.gateLamp.map(([a, b2]) => [a * k, b2 * k]); }
-    else L.info = (type === 'office' ? ctX_office : type === 'active cel' ? ctX_towerBlock : ctX_townhouse)(V, b, r);
+    else L.info = (type === 'office' ? ctX_office : type === 'active cell' ? ctX_towerBlock : ctX_townhouse)(V, b, r);
     // a street lamp on the pavement
     const lx = L.info.lamp; ctX_R(lx - .6, -44, 1.2, 46, ctX_c('#2a302e', 0)); ctX_R(lx - .6, -44, .4, 46, ctX_c('#2a302e', 1.2)); ctX_R(lx - 1.4, -1, 2.8, 3, ctX_c('#2a302e', 0));
     ctX_L(lx, -43, lx + 6, -45, ctX_c('#2a302e', 0), .8); ctX_P([lx + 4, -45.5, lx + 9, -45.5, lx + 8, -43, lx + 5, -43], ctX_c('#2a302e', .4)); ctX_R(lx + 5.2, -43, 2.6, .8, V.n ? '#fff4c8' : ctX_c('#e8e4d0', 0));
@@ -1414,10 +1414,10 @@ function ctX_binoMask(w, h, c1x, c2x, cy, r) {
 function ctX_binoBack(b, type, n, open) { // 100 x 100 design units on a 400 x 400 fine canvas (u = 4)
   const V = { fw: 400, fh: 400, gy: 300, u: 4, ox: 200, n, fog: 0, flood: false, hz: '#8898b0', bot: 25 }, pv = ctX_V; ctX_V = V;
   try {
-    const wall = { hideout: '#8e4c38', office: '#c8c0b0', 'active cel': '#b4b0a4', agent: '#e6c088' }[type] || '#8e4c38';
-    ctX_bWall(-60, -80, 120, 80, wall, type === 'hideout' ? 'brick' : type === 'active cel' ? 'panel' : 'plain', 5);
+    const wall = { hideout: '#8e4c38', office: '#c8c0b0', 'active cell': '#b4b0a4', agent: '#e6c088' }[type] || '#8e4c38';
+    ctX_bWall(-60, -80, 120, 80, wall, type === 'hideout' ? 'brick' : type === 'active cell' ? 'panel' : 'plain', 5);
     if (type === 'office') { for (let x = -60; x < 60; x += 12) ctX_R(x, -80, .8, 80, ctX_c('#8a949c', 0)); ctX_banded(Math.round(ctX_x(-60)), 0, 480, Math.round(ctX_y(-50)), n ? ['#0e1830', '#1a2a48'] : ['#6a94b8', '#3e6a86'], 6); }
-    if (type === 'active cel') { g.strokeStyle = ctX_c('#d83a3a', .3); g.lineWidth = 5; g.beginPath(); for (let i = 0; i < 8; i++) g.lineTo(ctX_x(-44 + i * 3), ctX_y(-20 + (ctX_h(i, 3) - .5) * 8)); g.stroke(); g.strokeStyle = ctX_c('#3a8ad8', .3); g.beginPath(); for (let i = 0; i < 7; i++) g.lineTo(ctX_x(24 + i * 3), ctX_y(-14 + (ctX_h(i, 5) - .5) * 8)); g.stroke(); }
+    if (type === 'active cell') { g.strokeStyle = ctX_c('#d83a3a', .3); g.lineWidth = 5; g.beginPath(); for (let i = 0; i < 8; i++) g.lineTo(ctX_x(-44 + i * 3), ctX_y(-20 + (ctX_h(i, 3) - .5) * 8)); g.stroke(); g.strokeStyle = ctX_c('#3a8ad8', .3); g.beginPath(); for (let i = 0; i < 7; i++) g.lineTo(ctX_x(24 + i * 3), ctX_y(-14 + (ctX_h(i, 5) - .5) * 8)); g.stroke(); }
     // doorway
     const dw = 15, dh = 36, frameC = type === 'agent' ? '#f0e4c8' : '#d8ccb4';
     ctX_R(-dw / 2 - 3, -dh - 3, dw + 6, dh + 3, ctX_c(frameC, .3)); ctX_R(-dw / 2 - 3, -dh - 3, 1.2, dh + 3, ctX_c(frameC, 1.2)); ctX_R(dw / 2 + 1.8, -dh - 3, 1.2, dh + 3, ctX_c(frameC, -1.3));

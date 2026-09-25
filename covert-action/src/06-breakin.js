@@ -973,6 +973,10 @@ function breakinScene(opts, done) {
   const saved = seed; if (opts.building && opts.building.seed) seed = opts.building.seed;
   const B = mode === 'street' ? genStreet() : genBuilding(level); const { F, occ } = mode === 'street' ? furnishStreet(B) : furnish(B, { occupant, level });
   seed = saved;
+  // whatever was carried off on an earlier visit stays gone: strip it by kind, in layout order
+  const loot = (opts.building && mode === 'breakin' && opts.building.loot) || {};
+  for (const k in loot) { let n = loot[k]; for (const f of F) if (n > 0 && f.content === k) { f.content = null; if (k !== 'evidence') f.opened = true; n--; } }
+  const content0 = F.map(f => f.content);
   const PWORDS = ['CONDOR', 'SPHINX', 'ORCHID', 'JACKAL', 'VORTEX', 'ZENITH', 'COBALT', 'PHOENIX', 'MIDNIGHT', 'TANGO', 'OMEGA', 'SCIMITAR', 'GRANITE', 'MONSOON', 'LANTERN'];
   const bld = opts.building || {};
   if (!bld.pw) { bld.pw = PWORDS[(bld.seed || ri(0, 999)) % PWORDS.length]; bld.pwKnown = bld.pw.split('').map(() => false); }
@@ -1517,6 +1521,7 @@ function breakinScene(opts, done) {
   }
   function end() {
     const k = over.kind, lost = k === 'captured';
+    if (opts.building && mode === 'breakin') { const L = opts.building.loot = opts.building.loot || {}; F.forEach((f, i) => { const k0 = content0[i]; if (k0 && !f.content && (!lost || k0 === 'clue' || k0 === 'ammo' || k0 === 'grenade')) L[k0] = (L[k0] || 0) + 1; }); }
     if (out.bugged && opts.building && !lost) game.taps.push({ key: opts.building.key, until: dayOf(game.t) + 4 });
     done({ kind: k, clues: out.clues, messages: lost ? 0 : out.messages, plan: !lost && out.plan, personnel: !lost && out.personnel, evidence: lost ? null : out.evidence, prisoner: k === 'escaped' && max.prisoner ? occupant : null, alarm: out.alarm, seconds: t });
   }
