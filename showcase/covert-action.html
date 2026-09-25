@@ -19,14 +19,24 @@
   }
   #pad { display: none; width: 100%; max-width: 640px; box-sizing: border-box; padding: 10px 16px 14px; gap: 12px;
     justify-content: space-between; align-items: center; }
-  body.touch #pad { display: flex; }
+  #turn { display: none; flex: 1; align-items: center; justify-content: center; font: 12px/1.4 monospace; letter-spacing: .08em; color: #5c6072; text-transform: uppercase; text-align: center; padding: 0 24px; }
+  body.touch:not(.land) #turn { display: flex; }
+  body.touch.land #turn { display: none; }
+  body.touch #pad { display: flex; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); }
   body.touch { justify-content: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
-  .dpad { position: relative; width: 132px; height: 132px; flex: none; }
-  .dpad button { position: absolute; width: 44px; height: 44px; }
-  .dpad [data-k="up"] { left: 44px; top: 0; }
-  .dpad [data-k="down"] { left: 44px; bottom: 0; }
-  .dpad [data-k="left"] { left: 0; top: 44px; }
-  .dpad [data-k="right"] { right: 0; top: 44px; }
+  .side { display: flex; align-items: center; gap: 12px; }
+  /* virtual thumbstick: touch anywhere in the zone, the stick centres under your thumb */
+  #stick { position: relative; width: 150px; height: 150px; flex: none; touch-action: none; }
+  #stick .base { position: absolute; box-sizing: border-box; width: 112px; height: 112px; left: 19px; top: 19px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 45%, #2c2f3a 0 55%, #1a1c24 70%, #0c0d12 100%); border: 2px solid #4a4e5e;
+    box-shadow: inset 0 3px 10px #000a, 0 1px 0 #6a6e7e; transition: opacity .2s; }
+  #stick .base::before, #stick .base::after { content: ''; position: absolute; left: 50%; top: 50%; background: #3a3e4c; transform: translate(-50%, -50%); }
+  #stick .base::before { width: 70%; height: 2px; } #stick .base::after { width: 2px; height: 70%; }
+  #stick .knob { position: absolute; box-sizing: border-box; width: 52px; height: 52px; left: 49px; top: 49px; border-radius: 50%; z-index: 1;
+    background: radial-gradient(circle at 38% 32%, #9ea2b4, #5c6072 45%, #33364a 100%); border: 2px solid #1c1e28;
+    box-shadow: 0 4px 8px #000c, inset 0 -3px 6px #0006; }
+  #stick.on .knob { background: radial-gradient(circle at 38% 32%, #fff2a0, #d8b030 45%, #7a5c10 100%); }
+  #stick.on .base { border-color: #8a7a3a; }
   .btns { display: grid; grid-template-columns: repeat(2, 60px); gap: 10px; }
   #pad button {
     font: bold 11px/1 monospace; letter-spacing: .05em; color: #d8d8e0;
@@ -36,6 +46,14 @@
   #pad button.on { background: #2034a8; color: #f8e030; }
   .btns button { height: 48px; }
   .mid { display: flex; flex-direction: column; gap: 8px; }
+  /* landscape phone: the screen fills the height, stick on the left, buttons on the right */
+  body.touch.land { flex-direction: row; justify-content: center; padding: 0 env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px); }
+  body.touch.land #pad { position: fixed; inset: 0; max-width: none; padding: 12px calc(env(safe-area-inset-right, 0px) + 14px) 14px calc(env(safe-area-inset-left, 0px) + 14px);
+    pointer-events: none; align-items: stretch; }
+  body.touch.land #pad .side { pointer-events: auto; flex-direction: column; justify-content: space-between; align-items: center; }
+  body.touch.land #pad .side.left .mid { flex-direction: row; order: -1; }
+  body.touch.land #pad .side.right { justify-content: space-between; }
+  body.touch.land #pad .mid { gap: 6px; } body.touch.land #pad .mid button { width: 44px; }
   .mid button { width: 56px; height: 30px; }
   #pad #k-kb { display: none; background: linear-gradient(#b08a20, #7a5c10); color: #fff6c8; border-color: #e8c860; }
   body.typing #pad #k-kb { display: block; }
@@ -46,24 +64,24 @@
 </head>
 <body>
 <canvas id="screen" width="320" height="200" tabindex="0" aria-label="Covert Action game screen"></canvas>
+<div id="turn">Turn your phone sideways for a bigger screen</div>
 <input id="kb" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" aria-label="Keyboard input" tabindex="-1">
 <div id="pad" aria-hidden="true">
-  <div class="dpad">
-    <button data-k="up" id="k-up">▲</button>
-    <button data-k="left" id="k-left">◀</button>
-    <button data-k="right" id="k-right">▶</button>
-    <button data-k="down" id="k-down">▼</button>
+  <div class="side left">
+    <div id="stick"><div class="base"></div><div class="knob"></div></div>
+    <div class="mid">
+      <button data-k="menu" id="k-menu">ESC</button>
+      <button data-k="alt2" id="k-alt2">TAB</button>
+      <button id="k-kb" aria-label="Show keyboard">KEYS</button>
+    </div>
   </div>
-  <div class="mid">
-    <button data-k="menu" id="k-menu">ESC</button>
-    <button data-k="alt2" id="k-alt2">TAB</button>
-    <button id="k-kb" aria-label="Show keyboard">KEYS</button>
-  </div>
+  <div class="side right">
   <div class="btns">
     <button data-k="alt" id="k-alt">GREN</button>
     <button data-k="fire" id="k-fire">FIRE</button>
     <button data-k="action" id="k-action">SEARCH</button>
     <button data-k="select" id="k-select">OK</button>
+  </div>
   </div>
 </div>
 <script>
@@ -96,7 +114,9 @@ const P = {
 function fit() {
   const touch = document.body.classList.contains('touch');
   const kbUp = document.activeElement && document.activeElement.id === 'kb'; // the phone keyboard covers the pad anyway
-  const vw = window.innerWidth, vh = window.innerHeight - (touch && !kbUp ? 190 : 0);
+  const land = touch && window.innerWidth > window.innerHeight; document.body.classList.toggle('land', land);
+  // landscape: controls sit either side of the screen; portrait: under it
+  const vw = window.innerWidth - (land ? 2 * Math.min(190, Math.max(150, window.innerWidth * 0.2)) : 0), vh = window.innerHeight - (touch && !land && !kbUp ? 190 : 0);
   // original ran 320x200 on a 4:3 monitor: pixels were 1.2x taller than wide
   let w = Math.min(vw, vh * 4 / 3), h = w * 3 / 4;
   if (w >= 640 && !touch) { const s = Math.floor(w / 320); w = 320 * s; h = w * 3 / 4; }
@@ -175,9 +195,10 @@ const KEYMAP = {
   Space: 'fire', ControlLeft: 'fire', KeyE: 'action', KeyX: 'action', KeyG: 'alt', KeyQ: 'alt', Tab: 'alt2', Enter: 'select', NumpadEnter: 'select', Escape: 'menu',
 };
 const held = new Set(); const pressedQ = [];
+const stick = { on: false, x: 0, y: 0, dir: null, rep: 0 }; // the touch thumbstick, -1..1 each way
 const input = {
   held: k => held.has(k),
-  axis() { return { x: (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0), y: (held.has('down') ? 1 : 0) - (held.has('up') ? 1 : 0) }; },
+  axis() { if (stick.on && (stick.x || stick.y)) return { x: stick.x, y: stick.y }; return { x: (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0), y: (held.has('down') ? 1 : 0) - (held.has('up') ? 1 : 0) }; },
 };
 let typing = false; // crypto scene wants raw letters
 window.addEventListener('keydown', e => {
@@ -226,6 +247,35 @@ function kbSync() {
   if (!want && document.activeElement === kb) kb.blur();
   kbWanted = want;
 }
+// ---------- thumbstick: analog for walking, and a press + auto-repeat for menus and grids ----------
+(function () {
+  const zone = document.getElementById('stick'), knob = zone.querySelector('.knob'), base = zone.querySelector('.base');
+  const R = 44, DEAD = 0.28; let id = null, cx = 0, cy = 0;
+  const setDirs = () => {
+    const m = Math.hypot(stick.x, stick.y), dirs = [];
+    if (m > DEAD) { if (stick.x > 0.38 * m) dirs.push('right'); if (stick.x < -0.38 * m) dirs.push('left'); if (stick.y > 0.38 * m) dirs.push('down'); if (stick.y < -0.38 * m) dirs.push('up'); }
+    for (const k of ['up', 'down', 'left', 'right']) if (!dirs.includes(k)) held.delete(k);
+    // the main direction presses once, then repeats while held, like a key
+    const main = m > 0.5 ? (Math.abs(stick.x) > Math.abs(stick.y) ? (stick.x > 0 ? 'right' : 'left') : (stick.y > 0 ? 'down' : 'up')) : null;
+    if (main !== stick.dir) { stick.dir = main; stick.rep = 0.45; if (main) pressedQ.push(main); }
+    for (const k of dirs) held.add(k);
+  };
+  const place = (x, y) => { knob.style.transform = 'translate(' + x + 'px,' + y + 'px)'; };
+  const move = e => { let dx = e.clientX - cx, dy = e.clientY - cy; const d = Math.hypot(dx, dy); if (d > R) { dx *= R / d; dy *= R / d; } place(dx, dy); const m = Math.hypot(dx, dy) / R; stick.x = m < DEAD ? 0 : dx / R; stick.y = m < DEAD ? 0 : dy / R; setDirs(); };
+  zone.addEventListener('pointerdown', e => {
+    e.preventDefault(); sfx.unlock(); kbOpen(); if (id !== null) return; id = e.pointerId; zone.setPointerCapture(id);
+    // the stick centres where the thumb lands, inside the zone
+    const r = zone.getBoundingClientRect(); cx = clamp(e.clientX, r.left + 40, r.right - 40); cy = clamp(e.clientY, r.top + 40, r.bottom - 40);
+    const ox = cx - (r.left + r.width / 2), oy = cy - (r.top + r.height / 2); base.style.transform = 'translate(' + ox + 'px,' + oy + 'px)';
+    knob.style.left = (49 + ox) + 'px'; knob.style.top = (49 + oy) + 'px';
+    stick.on = true; zone.classList.add('on'); move(e);
+  });
+  zone.addEventListener('pointermove', e => { if (e.pointerId === id) move(e); });
+  const up = e => { if (e.pointerId !== id) return; id = null; stick.on = false; stick.x = stick.y = 0; setDirs(); zone.classList.remove('on'); base.style.transform = ''; knob.style.left = knob.style.top = ''; place(0, 0); };
+  zone.addEventListener('pointerup', up); zone.addEventListener('pointercancel', up);
+  zone.addEventListener('mousedown', e => e.preventDefault());
+})();
+function stickTick(dt) { if (!stick.dir || scene.noRepeat) return; stick.rep -= dt; if (stick.rep <= 0) { stick.rep = 0.2; pressedQ.push(stick.dir); } }
 function enableTouch() { if (!document.body.classList.contains('touch')) { document.body.classList.add('touch'); fit(); } }
 if (matchMedia('(pointer: coarse)').matches) enableTouch();
 window.addEventListener('touchstart', enableTouch, { passive: true });
@@ -281,7 +331,7 @@ function go(s) { if (scene.leave) scene.leave(); scene = s; typing = !!s.typing;
 let last = performance.now(), acc = 0; const STEP = 1 / 60;
 function frameLoop(now) {
   let dt = Math.min(0.1, (now - last) / 1000); last = now; acc += dt;
-  kbSync();
+  kbSync(); stickTick(dt);
   while (pressedQ.length) { const k = pressedQ.shift(); scene.onKey && scene.onKey(k); }
   let n = 0; while (acc >= STEP && n < 6) { scene.update && scene.update(STEP); acc -= STEP; n++; }
   if (n === 6) acc = 0;
@@ -9580,7 +9630,7 @@ function breakinScene(opts, done) {
       max.cool -= dt;
       const ax = comp ? { x: 0, y: 0 } : input.axis();
       if (max.busy) { if (ax.x || ax.y) { max.busy = null; say('Interrupted.'); } else { max.busy.t += dt; if ((max.busy.t * 5 | 0) !== ((max.busy.t - dt) * 5 | 0)) sfx.tick(); if (max.busy.t >= max.busy.need) { const f = max.busy.f; max.busy = null; opened(f); } } }
-      else if (max.stun <= 0 && (ax.x || ax.y)) { const l = Math.hypot(ax.x, ax.y); max.dir = Math.atan2(ax.y, ax.x); const sp = (max.crouch ? 14 : 30) * (max.prisoner ? 0.8 : 1); moveEnt(max, ax.x / l * sp, ax.y / l * sp, dt); max.walk += dt; }
+      else if (max.stun <= 0 && (ax.x || ax.y)) { const l = Math.hypot(ax.x, ax.y); max.dir = Math.atan2(ax.y, ax.x); const sp = (max.crouch ? 14 : 30) * (max.prisoner ? 0.8 : 1); const m = Math.min(1, l * 1.4); moveEnt(max, ax.x / l * sp * m, ax.y / l * sp * m, dt); max.walk += dt; }
       if (input.held('fire') && !comp) fire();
       if (comp && people.some(p => p.kind === 'guard' && p.state === 'attack' && !p.out)) closeComputer('A guard! You jump away from the keyboard.');
       if (max.prisoner) { const p = max.prisoner; const d = dist(p.x, p.y, max.x, max.y); if (d > 8) { p.dir = Math.atan2(max.y - p.y, max.x - p.x); moveEnt(p, Math.cos(p.dir) * 34, Math.sin(p.dir) * 34, dt); p.walk += dt; if (d > 30) { p.x = max.x - Math.cos(max.dir) * 6; p.y = max.y - Math.sin(max.dir) * 6; } } if (p.alarmIn !== undefined) { p.alarmIn -= dt; if (p.alarmIn <= 0) { p.alarmIn = undefined; raiseAlarm('The kidnapping has been noticed.'); } } }
@@ -12101,7 +12151,7 @@ function chaseScene(opts, done) {
   function ahead(c) { let best = null, bd = 1e9; for (const o of cars) { if (o === c) continue; if (o.a[0] === c.a[0] && o.a[1] === c.a[1] && o.b[0] === c.b[0] && o.b[1] === c.b[1] && o.s > c.s) { const d = o.s - c.s; if (d < bd) { bd = d; best = o; } } } return best ? [best, bd] : null; }
   function headOn(c) { return sus.a[0] === c.b[0] && sus.a[1] === c.b[1] && sus.b[0] === c.a[0] && sus.b[1] === c.a[1] && Math.abs((SP - sus.s) - c.s) < 3; }
   function finish(kind) { if (over) return; over = { kind, t: 0 }; ['followed', 'arrest', 'evaded', 'safe'].includes(kind) ? sfx.success() : sfx.fail(); }
-  const scene = {
+  const scene = { noRepeat: true,
     update(dt) {
       t += dt; if (msgT > 0) msgT -= dt; if (over) { over.t += dt; return; }
       for (const c of cars) {
