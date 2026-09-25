@@ -116,7 +116,7 @@ function startBreakin(b) {
 function masterPlan() {
   const cr = game.crime; cr.people.forEach(p => { p.exists = true; learn(p, 'face'); });
   const pos = i => [14 + (i % 5) * 60, 26 + Math.floor(i / 5) * 78];
-  return { label: 'Master plan: ' + cr.object, draw() {
+  return { doc: 'plan', label: 'Master plan: ' + cr.object, draw() {
     // pinned photographs, typed role labels
     cr.people.forEach((p, i) => { const [x, y] = pos(i); uiX_print(x - 2, y - 2, 44, 54); drawFace(p.face, x, y, 40, 50); fine(() => { const X = (x - 2) * 2, Y = (y + 53) * 2; g.fillStyle = 'rgba(40,20,0,0.3)'; g.fillRect(X + 2, Y + 2, 88, 16); rect(X, Y, 88, 16, '#fbf8ee'); rect(X, Y, 88, 1, '#ffffff'); rect(X, Y + 15, 88, 1, '#d6ccb4'); }); text(fitText(p.role, 56), x, y + 53, uiX_I.k); });
     // red yarn from pin to pin between everyone who meets or messages, sagging a little
@@ -130,7 +130,7 @@ function masterPlan() {
 }
 function personnelFile(org) {
   const ps = game.crime.people.filter(p => p.org === org); ps.forEach(p => learn(p, 'name'));
-  return { label: 'Personnel file: ' + org.name, draw() {
+  return { doc: 'personnel', org, label: 'Personnel file: ' + org.name, draw() {
     text('NAME', 20, 19, uiX_I.g); text('LOCATION', 180, 19, uiX_I.g); fine(() => { rect(32, 54, 580, 2, uiX_I.k); rect(32, 58, 580, 1, uiX_I.k); });
     ps.forEach((p, i) => { const y = 30 + i * 10; text(p.name, 20, y, uiX_I.k); uiX_leader(24 + textW(p.name), 176, y + 6); text(cityById(p.city).name, 180, y, uiX_I.b); });
   } };
@@ -159,6 +159,7 @@ function startCrypto(m) {
 // ---------- shared ----------
 function afterMission(minutes, next) { if (practiceMode) { practiceMode = false; go(practiceScene()); return; } advance(minutes); if (!checkCaseEnd()) next(); }
 function report(title, lines, next) {
+  writeCase();
   return pageScene(t => {
     rect(0, 0, W, H, P.K); blit(uiX_reportBg(), 0, 0);
     const on = (t * 3 | 0) % 2; uiX_lamp(296, 13, on, P.RD2); uiX_lamp(302, 13, !on, P.GR2);
@@ -242,7 +243,7 @@ function hitSquad(org, next) {
 function practice(kind, diff) {
   practiceMode = true; game.diff = diff;
   if (!game.agent) game.agent = newAgent('m', 'Trainee');
-  Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [] }); game.startDate = new Date(1990, 5, 1, 8, 0, 0); newCrime();
+  Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [] }); game.startDate = new Date(1990, 5, 1, 8, 0, 0); newCrime(); game.crime.practice = true;
   const back = () => { practiceMode = false; go(practiceScene()); };
   const cr = game.crime, p = cr.people[1], b = game.buildings[p.building];
   if (kind === 'breakin') go(armoryScene(kit => go(breakinScene(Object.assign({ level: diff, occupant: p, building: b, org: b.org, alert: 0 }, kit), back))));

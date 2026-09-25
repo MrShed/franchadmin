@@ -433,6 +433,7 @@ function serifLogo() {
 function titleScene() {
   let menuOpen = false; let s;
   const items = () => [
+    ...(hasCase() ? [{ label: 'Continue case', go: () => { if (loadCase()) go(cityScene()); else { toast('Case file damaged'); menuOpen = false; } } }] : []),
     { label: 'Create a New Character', go: () => go(charScene()) },
     { label: 'Load a Saved Game', off: !loadSave(), go: () => { restoreSave(loadSave()); go(cityScene()); } },
     { label: 'Practice a skill', go: () => go(practiceScene()) },
@@ -445,7 +446,7 @@ function titleScene() {
       titleBackdrop(this.t);
       if (this.t > 1.2) { rect(0, 38, W, 125, P.K); rect(0, 38, W, 1, P.RD); rect(0, 162, W, 1, P.RD); g.drawImage(serifLogo(), 0, 40); }
       if (this.t > 1.8) { rect(40, 168, 240, 24, P.K); textC('A Techno-Thriller', W / 2, 170, P.YE); textC('from the Case Files of Max Remington', W / 2, 180, P.YE); }
-      if (menuOpen) { msgBox(65, 58, 170, 58); text('Do you want to...', 71, 62, uiX_T.hd); this.menu.draw(); }
+      if (menuOpen) { msgBox(65, 58, 170, 18 + this.menu.items.length * 8); text('Do you want to...', 71, 62, uiX_T.hd); this.menu.draw(); }
     },
     onKey(k) { if (!menuOpen) { menuOpen = true; this.t = Math.max(this.t, 2.1); this.menu = Menu(items(), 79, 70, 150); sfx.select(); return; } if (k === 'menu') { menuOpen = false; return; } this.menu.key(k); },
     onTap(x, y) { if (!menuOpen) { this.onKey('select'); return; } this.menu.tap(x, y); }, onHover(x, y) { this.menu && this.menu.hover(x, y); },
@@ -531,6 +532,7 @@ function chiefScene() {
   return chiefTalk('Welcome back, ' + game.agent.short + '. It looks like the bad guys are preparing for action and the President is worried. He insists that you\'re the agent for this job. Things seem to be heating up in ' + REGIONS[cr.region].name + '. We\'ve picked up a few clues already - check them at any CIA office. Good luck ' + game.agent.short + ', you are our best hope.', () => { game.city = 'WAS'; go(cityScene()); });
 }
 function newCase() {
+  clearCase();
   Object.assign(game, { t: 0, clues: [], messages: [], news: [], taps: [], activity: {}, inside: [], caseStart: Date.now(), ciaVisited: {}, heatBy: {}, ciaBlocked: {} });
   game.startDate = new Date(1990 + Math.floor(game.cases.length / 4), ri(0, 11), ri(1, 25), 8, 0, 0);
   newCrime();
@@ -551,7 +553,7 @@ function cityScene() {
   if (game.crime && game.crime.over && !game.crime.reported) return synopsisScene();
   if (game.crime && game.crime.prisonBreak && !game.crime.prisonBreak.handled && !practiceMode) return prisonBreakScene();
   if (game.crime && game.crime.foiled != null && !game.crime.foiledShown) { game.crime.foiledShown = true; return report('Plot Foiled', ['Word from every station: the ' + game.crime.kind.toLowerCase() + ' plot has collapsed. Without its key people it cannot go ahead.', 'The rest of the ring will scatter over the next few days, and the Mastermind will go to ground. Round up whoever you can while they are still in place.'], () => go(cityScene())); }
-  const city = cityById(game.city);
+  writeCase(); const city = cityById(game.city);
   const items = locationsHere().map(l => ({ label: fitText(l.label, 120), go: () => goLocation(l) }));
   items.push({ label: 'Check Data', go: () => go(dataSection(() => go(cityScene()))) });
   return cityLayout({ header: ['You are in ' + city.name, 'Do you go to ...'], items, pic: (x, y, w, h, t) => cityPic(x, y, w, h, city), caption: city.name + ', ' + (city.hq ? 'D.C.' : city.country), back: () => go(pauseScene(() => go(cityScene()))) });
@@ -567,7 +569,7 @@ function goLocation(l) {
 function goLocation2(l) { if (l.kind === 'cia') go(game.ciaBlocked[game.city] ? pageScene(() => { rect(0, 0, W, H, P.K); uiX_backdrop(); ciaLobbyArt(170, 0, 150, 200, 0); uiX_mullion(169); para('The station chief meets you at the door. After your accusation, nobody in this office will work with you. Try the CIA in another city.', 15, 20, 140, uiX_T.hd, 8); statusBox(174); }, () => go(cityScene())) : ciaArrive()); else if (l.kind === 'airport') go(airportScene()); else if (l.kind === 'hotel') go(hotelScene()); else go(buildingScene(l.b)); }
 function pauseScene(back) {
   return menuScene({
-    menu: Menu([{ label: 'Continue', go: back }, { label: 'Sound on / off', go: () => { sfx.toggle(); } }, { label: 'How to play', go: () => go(helpScene(() => go(pauseScene(back)))) }, { label: 'Save Game', go: () => { writeSave(); toast('Game saved'); } }, { label: 'Quit to title', go: () => go(titleScene()) }], 118, 76, 110),
+    menu: Menu([{ label: 'Continue', go: back }, { label: 'Sound on / off', go: () => { sfx.toggle(); } }, { label: 'How to play', go: () => go(helpScene(() => go(pauseScene(back)))) }, { label: 'Save Game', go: () => { writeSave(); writeCase(); toast('Game saved'); } }, { label: 'Quit to title', go: () => go(titleScene()) }], 118, 76, 110),
     back, draw() { blit(uiX_deskArt(), 0, 0); uiX_deskLive(this.t); msgBox(100, 60, 124, 60); text('Do you want to...', 106, 64, uiX_T.hd); this.menu.draw(); },
   });
 }
@@ -593,6 +595,7 @@ function dataSection(back) {
   return splitLayout({ header: ['Data Section...'], floor: 1, back, art: (x, y, w, h, t) => dataRoomArt(x, y, w, h, t), items: [
     { label: 'Review Clues', go: () => go(reviewClues(me)) },
     { label: 'Review Suspects', go: () => go(reviewSuspects(me)) },
+    { label: 'Case Board', go: () => go(caseBoard(me)) },
     { label: 'Inside Information', go: () => go(insideInfo(me)) },
     { label: 'News Bulletins', go: () => go(folderList('News', FOLDER.news, game.news.slice().reverse().map(n => ({ label: dayStr(n.t) + '  ' + n.text })), me, { empty: '...no news' })) },
     { label: 'Organization Summary', go: () => go(orgSummary(me)) },
@@ -719,10 +722,23 @@ function uiX_card(x, y, w, h, rule = 10, first = 18) {
     for (let yy = y + first; yy < y + h - 2; yy += 8) rect(X + 2, yy * 2 + 1, Wd - 4, 1, '#b5cde2');
   });
 }
+// the address a clue names, as 'street no, City' (the same street number can turn up in two cities)
+function clueAddr(c) {
+  const full = b => b.address + ', ' + cityById(b.city).name;
+  if (c.addr && game.buildings[c.addr]) return full(game.buildings[c.addr]);
+  const b = Object.values(game.buildings).find(b => c.text.includes(full(b))); return b ? full(b) : null;
+}
+function addressClues(addr, c, back) {
+  const me = () => go(addressClues(addr, c, back));
+  return folderList(fitText(addr.split(',')[0], 130), FOLDER.clue, game.clues.filter(o => o !== c && o.text.includes(addr)).reverse().map(o => ({ label: o.text.split(addr)[0].replace(/\s+(at|to)\s*$/, '') + '...', right: dayStr(o.t), open: () => go(clueScreen(o, me)) })), back);
+}
 function clueScreen(c, back) {
   const p = game.crime.people[c.pid];
   const related = game.clues.filter(o => o !== c && (c.pid != null ? o.pid === c.pid : o.addr === c.addr)).slice(-2);
-  return pageScene(() => {
+  // other clues naming the same address: only clues already in our files
+  const addr = clueAddr(c), same = addr ? game.clues.filter(o => o !== c && o.text.includes(addr)) : [];
+  const link = same.length ? 'Also at this address (' + same.length + ')' : '', lw = textW(link) + 16, lx = 306 - lw;
+  const s = pageScene(() => {
     folder(FOLDER.clue, 'Clue');
     text('Source: ' + c.source, 12, 20, uiX_I.g);
     const y = para(c.text, 12, 28, c.face ? 240 : 260, uiX_I.k, 8);
@@ -731,8 +747,16 @@ function clueScreen(c, back) {
     text('Related Clues:', 12, 92, uiX_I.r);
     if (!related.length) text('...none', 12, 100, uiX_I.k);
     related.forEach((r, i) => { const yy = 102 + i * 36; uiX_card(10, yy, 298, 34); text('Source: ' + r.source, 14, yy + 3, uiX_I.g); para(r.text, 14, yy + 11, 288, uiX_I.k, 8); });
+    // a cross-reference slip tucked into the file
+    if (link) { fine(() => { const X = lx * 2, Y = 170; uiX_cast(X, Y, lw * 2, 22, 0.3, 3); rect(X, Y, lw * 2, 22, '#fdf3c8'); rect(X, Y, lw * 2, 1, '#ffffff'); rect(X, Y + 21, lw * 2, 1, '#d8c690'); rect(X, Y, 4, 22, '#c9433a'); }); text(link, lx + 6, 88, uiX_I.b); fine(() => { rect((lx + 6) * 2, 193, textW(link) * 2, 1, uiX_I.b); uiX_poly([[(lx + lw - 7) * 2, 180], [(lx + lw - 3) * 2, 184], [(lx + lw - 7) * 2, 188]], uiX_I.b); }); }
     if (c.lie && game.crime.double && game.crime.double.caught) uiX_stamp('DISINFORMATION', 200 - uiX_stampW('DISINFORMATION') / 2, 63);
   }, back);
+  if (link) {
+    const cross = () => { sfx.select(); go(addressClues(addr, c, () => go(clueScreen(c, back)))); }, pk = s.onKey, pt = s.onTap;
+    s.onKey = function (k) { if (this.t > 0.3 && (k === 'right' || k === 'action' || k === 'alt')) cross(); else pk.call(this, k); };
+    s.onTap = function (x, y) { if (this.t > 0.3 && x >= lx && x < 308 && y >= 83 && y < 98) cross(); else pt.call(this, x, y); };
+  }
+  return s;
 }
 function reviewSuspects(back) {
   const ps = game.crime.people.filter(isSuspect);
@@ -767,6 +791,80 @@ function suspectFile(p, back) {
     if (p.status !== 'free') { const s = p.status.toUpperCase(); uiX_stamp(s, 250 - uiX_stampW(s) / 2, 83); }
     if (!p.known.role) text('No evidence of involvement - an arrest will not stick.', 16, 168, uiX_I.r);
   }, back);
+}
+// ---------- CASE BOARD: every suspect we know of, pinned to cork, yarn only where we have proof of contact ----------
+function uiX_corkArt() {
+  return art('uiX_cork', W, H, () => {
+    uiX_woodF(0, 0, 640, 400, 5);
+    rect(10, 10, 620, 380, '#3a2412'); g.fillStyle = uiX_lg(0, 12, 0, 388, ['#b88a58', '#a8784a', '#976a3f']); g.fillRect(12, 12, 616, 376);
+    for (let i = 0; i < 5200; i++) { const x = 12 + uiX_hash(i, 1, 41) * 614, y = 12 + uiX_hash(i, 2, 41) * 374, k = uiX_hash(i, 3, 41); rect(x, y, k < 0.5 ? 2 : 1, 1 + (k * 4 | 0) % 2, k < 0.3 ? '#6e4a28' : k < 0.6 ? '#86582f' : k < 0.85 ? '#c99a66' : '#d9b07c'); }
+    g.fillStyle = uiX_rg(200, 120, 20, 520, ['rgba(255,220,160,0.12)', 'rgba(0,0,0,0)', 'rgba(20,8,0,0.35)']); g.fillRect(12, 12, 616, 376);
+    rect(12, 12, 616, 2, 'rgba(0,0,0,0.35)'); rect(12, 12, 2, 376, 'rgba(0,0,0,0.3)'); rect(12, 386, 616, 2, 'rgba(255,230,190,0.18)');
+  });
+}
+function uiX_pin(x, y) { fine(() => { const X = x * 2, Y = y * 2; uiX_circ(X + 2, Y + 3, 4, 'rgba(40,10,0,0.35)'); uiX_circ(X, Y, 4.4, '#7a1612'); uiX_circ(X, Y, 3.6, '#c42c22'); uiX_circ(X - 1.2, Y - 1.2, 1.4, '#ff9a8a'); }); }
+const boardName = p => p.known.name ? fitText(textW(p.name) > 56 ? p.name[0] + '. ' + p.name.split(' ').slice(1).join(' ') : p.name, 56) : 'Agent ' + String.fromCharCode(65 + p.id);
+function boardStatus(p) {
+  if (p.status !== 'free') return [p.status === 'arrested' ? 'in custody' : p.status, uiX_I.g];
+  if (p.known.role && p.known.hideout) return ['ready to arrest', uiX_I.gr];
+  return ['needs ' + [!p.known.role && 'role', !p.known.hideout && 'hideout'].filter(Boolean).join(', '), uiX_I.r];
+}
+function caseBoard(back, page = 0, sel = 0) {
+  const cr = game.crime, ps = cr.people.filter(isSuspect), per = 10, pages = Math.max(1, Math.ceil(ps.length / per));
+  page = Math.min(page, pages - 1);
+  const on = () => ps.slice(page * per, page * per + per), pos = i => [33 + (i % 5) * 63, 22 + Math.floor(i / 5) * 86];
+  const open = i => { const p = on()[i]; if (p) { sfx.select(); go(suspectFile(p, () => go(caseBoard(back, page, i)))); } };
+  const flip = d => { if (page + d < 0 || page + d >= pages) return; page += d; sel = 0; sfx.blip(); };
+  return {
+    t: 0, update(dt) { this.t += dt; },
+    onKey(k) {
+      const n = on().length;
+      if (k === 'menu') { sfx.blip(); back(); return; }
+      if (!n) { if (k === 'select' || k === 'fire') back(); return; }
+      if (k === 'left') { if (sel % 5 === 0 && page > 0) { flip(-1); sel = Math.min(on().length - 1, 4); } else sel = Math.max(0, sel - 1); }
+      if (k === 'right') { if ((sel % 5 === 4 || sel === n - 1) && page < pages - 1) flip(1); else sel = Math.min(n - 1, sel + 1); }
+      if (k === 'up') sel = sel >= 5 ? sel - 5 : sel; if (k === 'down') sel = Math.min(n - 1, sel + 5);
+      if (k === 'select' || k === 'fire') open(sel);
+    },
+    onTap(x, y) {
+      if (pages > 1 && y >= 184) { flip(x < 160 ? -1 : 1); return; }
+      const i = on().findIndex((p, k) => { const [cx, cy] = pos(k); return x >= cx - 31 && x < cx + 31 && y >= cy - 4 && y < cy + 80; });
+      if (i >= 0) { sel = i; open(i); } else { sfx.blip(); back(); }
+    },
+    onHover(x, y) { const i = on().findIndex((p, k) => { const [cx, cy] = pos(k); return x >= cx - 31 && x < cx + 31 && y >= cy - 4 && y < cy + 80; }); if (i >= 0) sel = i; },
+    draw() {
+      blit(uiX_corkArt(), 0, 0);
+      // a typed label tacked to the top of the board
+      fine(() => { uiX_cast(16, 12, 148, 22, 0.3, 3); rect(16, 12, 148, 22, '#f4eedd'); rect(16, 12, 148, 1, '#ffffff'); rect(16, 31, 148, 1, '#dc7b6b'); });
+      text('CASE BOARD', 13, 8, uiX_I.k);
+      const note = ps.length ? ps.length + ' suspect' + (ps.length > 1 ? 's' : '') + ' on file' : '';
+      if (note) { fine(() => { const w = textW(note) * 2 + 16; uiX_cast(620 - w, 12, w, 22, 0.3, 3); rect(620 - w, 12, w, 22, '#f4eedd'); rect(620 - w, 12, w, 1, '#ffffff'); }); textR(note, 306, 8, uiX_I.g); }
+      const cards = on();
+      if (!cards.length) { uiX_card(90, 80, 140, 34); uiX_pin(160, 81); textC('No suspects on file yet.', 160, 94, uiX_I.k); textC('Check the clues.', 160, 103, uiX_I.g); return; }
+      cards.forEach((p, i) => {
+        const [cx, y] = pos(i);
+        uiX_print(cx - 21, y, 42, 50);
+        if (p.known.face) drawFace(p.face, cx - 19, y + 2, 38, 46); else { rect(cx - 19, y + 2, 38, 46, '#2f5d66'); g.save(); g.translate(cx - 19, y + 2); g.scale(38 / 26, 46 / 32); drawUnknownFace(0, 0); g.restore(); }
+      });
+      // red yarn between suspects we know were in touch (decoded traffic, interrogations); it runs under the typed labels
+      const idx = new Map(cards.map((p, i) => [p.id, i]));
+      const links = cr.steps.filter(s => s.known && s.to !== undefined && idx.has(s.from) && idx.has(s.to));
+      fine(() => {
+        const yarn = (lw, c, o) => { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; links.forEach(s => { const [ax, ay] = pos(idx.get(s.from)), [bx, by] = pos(idx.get(s.to)); const x0 = ax * 2 + o, y0 = (ay - 1) * 2 + o, x1 = bx * 2 + o, y1 = (by - 1) * 2 + o, sag = 16 + Math.hypot(x1 - x0, y1 - y0) * 0.12; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + sag, x1, y1); g.stroke(); }); };
+        yarn(2.4, 'rgba(40,10,0,0.28)', 3); yarn(2.2, '#7a1612', 0); yarn(1, '#e0493c', -0.5);
+      });
+      cards.forEach((p, i) => {
+        const [cx, y] = pos(i), mm = p.known.role && p.role === 'Mastermind', nm = boardName(p);
+        fine(() => { const X = (cx - 30) * 2, Y = (y + 52) * 2; g.fillStyle = 'rgba(40,20,0,0.35)'; g.fillRect(X + 3, Y + 3, 120, 56); rect(X, Y, 120, 56, mm ? '#fbe9c4' : '#fbf8ee'); rect(X, Y, 120, 1, '#ffffff'); rect(X, Y + 18, 120, 1, '#e08a7c'); rect(X, Y + 55, 120, 1, '#d6ccb4'); });
+        textC(nm, cx, y + 53, mm ? uiX_I.r : uiX_I.k);
+        const [st, col] = boardStatus(p); wrap(st, 58).slice(0, 2).forEach((l, k) => textC(l, cx, y + 63 + k * 8, col));
+        if (p.status !== 'free') { const w = p.status.toUpperCase(); uiX_stamp(w, cx - uiX_stampW(w) / 2, y + 26, P.RD, true); }
+        if (i === sel) fine(() => { const X = (cx - 31) * 2, Y = (y - 3) * 2; g.strokeStyle = 'rgba(255,196,60,0.9)'; g.lineWidth = 2; g.strokeRect(X, Y, 124, 168); });
+      });
+      cards.forEach((p, i) => { const [cx, y] = pos(i); uiX_pin(cx, y - 1); });
+      if (pages > 1) { fine(() => { uiX_cast(236, 370, 168, 22, 0.3, 3); rect(236, 370, 168, 22, '#f4eedd'); }); textC((page > 0 ? '< ' : '  ') + 'page ' + (page + 1) + '/' + pages + (page < pages - 1 ? ' >' : '  '), 160, 187, uiX_I.k); }
+    },
+  };
 }
 function insideInfo(back) { return folderList('Documents', FOLDER.docs, (game.inside || []).map(x => ({ label: x.label, open: () => go(pageScene(() => { folder(P.G3, x.tab || 'Documents', true, 'TOP SECRET'); x.draw(); }, () => go(insideInfo(back)))) })), back, { empty: '...no master plans or personnel files' }); }
 // a double red rule under a centred typed title
@@ -928,7 +1026,7 @@ function hotelScene() {
     { label: 'Leave Hotel', go: () => go(cityScene()) },
     { label: 'Visit the lounge', go: () => { advance(180); const pool = game.crime.people.filter(p => p.status === 'free' && p.city === game.city); const c = pool.length && rnd() < 0.6 ? clueAbout(pick(pool), 'Local Gossip') : null; addHeat(game.city, 1); go(c ? clueScreen(c, () => go(hotelScene())) : pageScene(() => { hotelLobbyArt(0); popup(['Nothing but tourists and piano music.', 'Somebody at the bar is watching you, though.']); }, () => go(hotelScene()))); } },
     { label: 'Sleep through case', go: () => go(sleepScene()) },
-    { label: 'Save Game', go: () => { writeSave(); toast('Saved as "' + game.agent.codename + '"'); } },
+    { label: 'Save Game', go: () => { writeSave(); writeCase(); toast('Saved as "' + game.agent.codename + '"'); } },
     { label: 'Load Game', off: !loadSave(), go: () => { restoreSave(loadSave()); go(cityScene()); } },
     { label: 'Quit', go: () => go(titleScene()) },
   ] });
@@ -941,6 +1039,41 @@ function sleepScene() {
 function writeSave() { try { localStorage.setItem('covert-action-save', JSON.stringify({ agent: game.agent, diff: game.diff, rank: game.rank, careerPoints: game.careerPoints, cases: game.cases, masterminds: ORGS.map(o => o.mastermindFree) })); } catch (e) {} }
 function loadSave() { try { return JSON.parse(localStorage.getItem('covert-action-save')); } catch (e) { return null; } }
 function restoreSave(s) { Object.assign(game, { agent: s.agent, diff: s.diff, rank: s.rank, careerPoints: s.careerPoints, cases: s.cases || [] }); (s.masterminds || []).forEach((f, i) => ORGS[i].mastermindFree = f); newCase(); game.city = 'WAS'; }
+// the case in progress, autosaved so a killed tab can pick up where it left off.
+// Links to ORGS entries and plan steps are stored as ids ({$org}, {$step}) and rebuilt on load.
+const CASE_KEY = 'covert-action-case';
+function caseRefs(k, v) { if (v && typeof v === 'object') { if (ORGS[v.id] === v) return { $org: v.id }; const i = game.crime.steps.indexOf(v); if (i >= 0 && this !== game.crime.steps) return { $step: i }; } return v; }
+function writeCase() {
+  const cr = game.crime; if (practiceMode || !cr || cr.practice || cr.reported || !game.agent || game.buildings !== cr.buildings) return;
+  const snap = { v: 1, agent: game.agent, diff: game.diff, rank: game.rank, careerPoints: game.careerPoints, cases: game.cases, masterminds: ORGS.map(o => o.mastermindFree), seed,
+    crime: cr, t: game.t, startDate: game.startDate.getTime(), caseStart: game.caseStart, region: game.region, city: game.city, clues: game.clues, messages: game.messages, news: game.news, taps: game.taps,
+    activity: game.activity, inside: (game.inside || []).filter(x => x.doc), ciaVisited: game.ciaVisited, heatBy: game.heatBy, ciaBlocked: game.ciaBlocked, chronology: game.chronology, log: game.log };
+  try { localStorage.setItem(CASE_KEY, JSON.stringify(snap, caseRefs)); } catch (e) {}
+}
+function clearCase() { try { localStorage.removeItem(CASE_KEY); } catch (e) {} }
+function hasCase() { try { return !!localStorage.getItem(CASE_KEY); } catch (e) { return false; } }
+function caseUnref(o, steps) {
+  if (Array.isArray(o)) { for (let i = 0; i < o.length; i++) o[i] = caseUnref(o[i], steps); return o; }
+  if (!o || typeof o !== 'object') return o;
+  if ('$org' in o) { if (!ORGS[o.$org]) throw new Error('bad org'); return ORGS[o.$org]; }
+  if ('$step' in o) { if (!steps[o.$step]) throw new Error('bad step'); return steps[o.$step]; }
+  for (const k in o) o[k] = caseUnref(o[k], steps); return o;
+}
+// restore the saved case into game; false (and the save discarded) if it will not load cleanly
+function loadCase() {
+  try {
+    const s = JSON.parse(localStorage.getItem(CASE_KEY)); if (!s || s.v !== 1 || !s.crime || !s.crime.people || !s.crime.steps || !s.crime.buildings) throw new Error('no case');
+    caseUnref(s, s.crime.steps); const cr = s.crime;
+    if (!cr.people.every(p => p.org && ORGS[p.org.id] === p.org && cr.buildings[p.building]) || !cr.orgs.every(o => ORGS.includes(o)) || !cityById(s.city)) throw new Error('bad refs');
+    Object.assign(game, { agent: s.agent, diff: s.diff, rank: s.rank, careerPoints: s.careerPoints, cases: s.cases || [], t: s.t, startDate: new Date(s.startDate), caseStart: s.caseStart, region: s.region, city: s.city,
+      clues: s.clues || [], messages: s.messages || [], news: s.news || [], taps: s.taps || [], activity: s.activity || {}, ciaVisited: s.ciaVisited || {}, heatBy: s.heatBy || {}, ciaBlocked: s.ciaBlocked || {},
+      chronology: s.chronology || [], log: s.log || [], crime: cr, buildings: cr.buildings, ciaFloor: 0 });
+    (s.masterminds || []).forEach((f, i) => ORGS[i].mastermindFree = f);
+    if (s.seed != null) seed = s.seed >>> 0; practiceMode = false;
+    game.inside = (s.inside || []).map(x => x.doc === 'plan' ? masterPlan() : x.doc === 'personnel' && x.org ? personnelFile(x.org) : null).filter(Boolean);
+    return true;
+  } catch (e) { clearCase(); return false; }
+}
 function hallRead() { try { return JSON.parse(localStorage.getItem('covert-action-hall')) || []; } catch (e) { return []; } }
 function hallAdd(e) { const h = hallRead(); h.push(e); h.sort((a, b) => b.score - a.score); try { localStorage.setItem('covert-action-hall', JSON.stringify(h.slice(0, 5))); } catch (x) {} }
 function uiX_starF(cx, cy, r, c, hi) { const st = []; for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * 0.42 : r, a = -Math.PI / 2 + i * Math.PI / 5; st.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]); } uiX_poly(st, c); if (hi) uiX_poly([st[9], st[0], st[1], [cx, cy]], hi); }
@@ -975,13 +1108,14 @@ function hallOfFame(back) {
 // ---------- ARRESTS & INTERROGATION ----------
 function arrestResult(p, how) {
   const cr = game.crime;
-  if (!p.known.role) { p.exists = true; learn(p, 'face'); learn(p, 'name'); return splitLayout({ header: [], text: p.name + ' was taken to local headquarters for questioning, but had to be released for lack of evidence. Without proof of a role in the crime, an arrest will not stick.', art: (x, y, w, h) => interrogationArt(x, y, w, h, p), back: () => go(cityScene()), items: [{ label: 'Continue', go: () => go(cityScene()) }] }); }
+  if (!p.known.role) { p.exists = true; learn(p, 'face'); learn(p, 'name'); writeCase(); return splitLayout({ header: [], text: p.name + ' was taken to local headquarters for questioning, but had to be released for lack of evidence. Without proof of a role in the crime, an arrest will not stick.', art: (x, y, w, h) => interrogationArt(x, y, w, h, p), back: () => go(cityScene()), items: [{ label: 'Continue', go: () => go(cityScene()) }] }); }
   p.status = 'arrested'; p.jailCity = game.city; p.shownCity = null; addHeat(game.city, 2); FACET_ORDER.forEach(f => learn(p, f));
   if (p.role === 'Mastermind') p.org.mastermindFree = false;
   const told = [];
   const contacts = cr.steps.filter(s => s.to !== undefined && (s.from === p.id || s.to === p.id)).map(s => cr.people[s.from === p.id ? s.to : s.from]).filter(Boolean);
   for (const q of contacts) { if (isSuspect(q) && told.length < 3) { const c = clueAbout(q, 'Interrogation'); if (c) told.push(c.text); if (rnd() < 0.5 && !q.known.role) { const r = clueAbout(q, 'Interrogation', 'role'); if (r) told.push(r.text); } } }
   cr.steps.filter(s => s.from === p.id || s.to === p.id).forEach(s => s.known = true);
+  writeCase();
   const body = p.name + ' (' + p.role + ', ' + p.org.name + ') is in custody. Under interrogation: ' + (told.length ? told.join(' ') : '"I know nothing." The suspect only confirms what you already knew.');
   return splitLayout({ header: [how === 'car' ? 'Arrested on the road!' : 'Arrested!'], text: body, art: (x, y, w, h) => interrogationArt(x, y, w, h, p), back: () => go(cityScene()), items: [{ label: 'Continue', go: () => go(cityScene()) }] });
 }
@@ -998,7 +1132,7 @@ function uiX_idCard(x, y, band, active) {
   });
 }
 function synopsisScene() {
-  const cr = game.crime; cr.reported = true;
+  const cr = game.crime; cr.reported = true; clearCase();
   const steps = cr.steps.slice().sort((a, b) => a.day - b.day);
   const cards = cr.people.slice(0, 10);
   let i = 0;
