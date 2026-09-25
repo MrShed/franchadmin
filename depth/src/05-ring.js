@@ -433,29 +433,69 @@
   };
 
   // ---------------------------------------------------------------- corpus & vocabulary (the station's dictionary)
-  var CORPUS = null, VOCAB = null;
-  DX.corpus = function () {
-    if (CORPUS) return CORPUS;
+  var CORPUS = null, VOCAB = null, CTOK = null, WLM = null;
+  var CALLMARK = '\u0001';
+  function buildCorpus() {
     var R = DX.rng('corpus-1977');
     var placeCodes = [];
     D.CAFES.forEach(function (c) { placeCodes.push(c[1]); }); D.SPOTS.forEach(function (c) { placeCodes.push(c[1]); });
     D.SIGNALS.forEach(function (c) { placeCodes.push(c[1]); }); D.LANDMARKS.forEach(function (c) { placeCodes.push(c[2]); });
     for (var q = 1; q <= D.QUAYS; q++) placeCodes.push('QUAY ' + q);
-    var out = [];
+    var out = [], toks = [];
     var beats = Object.keys(T).filter(function (k) { return !/Open|Sign/.test(k); });
     var used = {};
-    for (var i = 0; i < 700; i++) {
-      var spec = R.pick(OPS), rc = callsign(R, used);
+    function cs() { return CALLMARK + callsign(R, used); }
+    for (var i = 0; i < 1500; i++) {
+      if (i % 200 === 0) used = {};
+      var spec = R.pick(OPS);
       var v = { CW: R.pick(D.CODEWORDS), WHAT: spec.what, OPPLACE: R.pick(spec.places), OPDAY: R.pick(DX.CAL.DAY_NAMES), OPTIME: DX.pad(R.int(0, 23), 2) + DX.pad(R.int(0, 5) * 10, 2),
-        EXEC: rc, ITEM: R.pick(ITEMS), PH: R.pick(['HE', 'SHE']), N: R.int(2, 9) * 1000, SPOT: R.pick(placeCodes), SIGNAL: R.pick(placeCodes), CAFE: R.pick(placeCodes),
-        PLACE: R.pick(placeCodes), AG: callsign(R, used), DAY: R.pick(DX.CAL.DAY_NAMES), TIME: '2140', N2: R.int(10, 40), F: '6915', TO: callsign(R, used), FROM: R.pick(D.CONTROLLERS)[1], NR: R.int(11, 60) };
+        EXEC: cs(), ITEM: R.pick(ITEMS), PH: R.pick(['HE', 'SHE']), N: R.int(2, 9) * 1000, SPOT: R.pick(placeCodes), SIGNAL: R.pick(placeCodes), CAFE: R.pick(placeCodes),
+        PLACE: R.pick(placeCodes), AG: cs(), DAY: R.pick(DX.CAL.DAY_NAMES), TIME: DX.pad(R.int(18, 23), 2) + DX.pad(R.int(0, 5) * 10, 2), N2: R.int(10, 40), F: String(R.int(3000, 9000)), TO: cs(), NR: R.int(11, 60) };
+      var ctl = i % 3 === 0;
+      v.FROM = ctl ? R.pick(D.CONTROLLERS)[1] : cs();
+      if (ctl) v.TO = cs();
       var line = fill(R.pick(T[beats[i % beats.length]]), v).text;
-      if (i % 3 === 0) line = fill(R.pick(T.ctlOpen), v).text + ' ' + line + ' ' + fill(R.pick(T.ctlSign), v).text;
-      else if (i % 3 === 1) line = fill(R.pick(T.agOpen), v).text + ' ' + line + ' ' + fill(R.pick(T.agSign), v).text;
-      out.push(line);
+      if (ctl) line = fill(R.pick(T.ctlOpen), v).text + ' ' + line + ' ' + fill(R.pick(T.ctlSign), v).text;
+      else line = fill(R.pick(T.agOpen), v).text + ' ' + line + ' ' + (i % 5 === 1 ? fill(R.pick(T[R.pick(['C_FILL', 'A_FILL'])]), v).text + ' ' : '') + fill(R.pick(T.agSign), v).text;
+      out.push(line.split(CALLMARK).join(''));
+      toks.push(tokenize(line));
     }
-    CORPUS = out;
+    CORPUS = out; CTOK = toks;
+  }
+  /** a line -> solver token classes: words, '#' (a number), '.', 'CALL' */
+  function tokenize(line) {
+    var out = [];
+    line.replace(/\./g, ' . ').split(/\s+/).forEach(function (w) {
+      if (!w) return;
+      if (w.charAt(0) === CALLMARK) { out.push('CALL'); return; }
+      if (w === '.') { out.push('.'); return; }
+      w.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/[0-9]+|[A-Z]+/g, function (x) { out.push(/[0-9]/.test(x) ? '#' : x); return x; });
+    });
     return out;
+  }
+  DX.corpus = function () { if (!CORPUS) buildCorpus(); return CORPUS; };
+  /** word-trigram model (backing off to bigram and unigram) of the ring's phrasing:
+   *  DX.wordLM().lp(p2, p1, tok); '^' marks the start of a message */
+  DX.wordLM = function () {
+    if (WLM) return WLM;
+    if (!CORPUS) buildCorpus();
+    var uni = {}, bi = {}, big = {}, tri = {}, trig = {}, tot = 0;
+    CTOK.forEach(function (ts) {
+      var p2 = '^', p1 = '^';
+      ts.forEach(function (t) {
+        uni[t] = (uni[t] || 0) + 1; tot++;
+        var b = bi[p1] || (bi[p1] = {}); b[t] = (b[t] || 0) + 1; big[p1] = (big[p1] || 0) + 1;
+        var k = p2 + ' ' + p1, tr = tri[k] || (tri[k] = {}); tr[t] = (tr[t] || 0) + 1; trig[k] = (trig[k] || 0) + 1;
+        p2 = p1; p1 = t;
+      });
+    });
+    DX.vocab().forEach(function (v) { if (!uni[v.w]) { uni[v.w] = 0.3; tot += 0.3; } });
+    var V = Object.keys(uni).length;
+    function pu(t) { return ((uni[t] || 0) + 0.1) / (tot + 0.1 * V); }
+    function pb(p1, t) { var b = bi[p1], n = big[p1] || 0; return (((b && b[t]) || 0) + 1.5 * pu(t)) / (n + 1.5); }
+    function pt(p2, p1, t) { var k = p2 + ' ' + p1, tr = tri[k], n = trig[k] || 0; return (((tr && tr[t]) || 0) + 1.0 * pb(p1, t)) / (n + 1.0); }
+    WLM = { lp: function (p2, p1, t) { return Math.log(pt(p2, p1, t)); }, uni: uni, total: tot };
+    return WLM;
   };
   /** the station's dictionary: [{w, n}] every letter-word the ring's traffic can contain (callsigns excluded;
    *  the players' own log supplies those) */

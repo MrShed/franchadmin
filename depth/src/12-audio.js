@@ -218,12 +218,14 @@ var UIAudio = (function () {
   // ------------------------------------------------------------------ interval signal
   // a music-box phrase, the station's identity; looped while the preamble runs
   var TUNE = [[74, 1], [77, 1], [81, 2], [79, 1], [77, 1], [76, 2], [74, 1], [69, 1], [72, 1], [74, 3]];
-  A.intervalLoop = function (on) {
+  A.intervalLoop = function (on, steps) {
     clearTimeout(A._tuneT);
     if (!on) return;
     var c = A.ctx; if (!c || !A.started) return;
     var t = c.currentTime + 0.05, beat = 0.27;
-    TUNE.forEach(function (n) {
+    // the controller's own interval signal: semitone steps above D, as a music-box phrase
+    var tune = steps && steps.length ? steps.map(function (st, i) { return [62 + st, i === steps.length - 1 ? 3 : i % 3 === 2 ? 2 : 1]; }).concat(steps.slice(0, 3).reverse().map(function (st, i) { return [62 + st, i === 2 ? 3 : 1]; })) : TUNE;
+    tune.forEach(function (n) {
       var f = 440 * Math.pow(2, (n[0] - 69) / 12);
       [1, 2.76, 5.4].forEach(function (h, k) {
         var o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f * h;
@@ -233,7 +235,7 @@ var UIAudio = (function () {
       });
       t += beat * n[1];
     });
-    A._tuneT = setTimeout(function () { A.intervalLoop(true); }, (t - c.currentTime + 0.9) * 1000);
+    A._tuneT = setTimeout(function () { A.intervalLoop(true, steps); }, (t - c.currentTime + 0.9) * 1000);
   };
 
   // ------------------------------------------------------------------ burst

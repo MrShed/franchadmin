@@ -250,7 +250,7 @@
   };
   /** repeated digit sequences (length >= minLen) and their spacings */
   DX.repeats = function (streams, minLen) {
-    minLen = minLen || 4;
+    minLen = minLen || 5;
     var seen = {}, out = [];
     streams.forEach(function (s, si) {
       for (var i = 0; i + minLen <= s.length; i++) {
@@ -271,18 +271,19 @@
     out.sort(function (x, y) { return x.spacing - y.spacing; });
     return out.slice(0, 24);
   };
-  /** the period suggested by IC and spacings (tool help) */
+  /** the period suggested by IC and spacings (tool help): the smallest period whose IC excess over random
+   *  is close to the best (multiples of the true period score as well), nudged by long repeats */
   DX.bestPeriod = function (icList, reps) {
-    var base = icList[0] ? icList[0].ic : 0.1, best = 1, bestS = -1;
-    icList.forEach(function (r) {
-      if (r.period < 2) return;
-      var votes = 0;
-      reps.forEach(function (x) { if (x.spacing % r.period === 0) votes++; });
-      // prefer small periods among near-equal scores (multiples of the true period also score high)
-      var s = (r.ic - base) * 100 + votes * 0.15 - r.period * 0.08;
-      if (s > bestS) { bestS = s; best = r.period; }
-    });
-    return best;
+    var base = 0.1, max = 0;
+    icList.forEach(function (r) { if (r.period >= 2) max = Math.max(max, r.ic - base); });
+    var votes = {};
+    icList.forEach(function (r) { votes[r.period] = 0; (reps || []).forEach(function (x) { if (x.seq.length >= 5 && x.spacing % r.period === 0) votes[r.period] += x.seq.length - 4; }); });
+    for (var i = 0; i < icList.length; i++) {
+      var r = icList[i];
+      if (r.period < 2) continue;
+      if (r.ic - base >= 0.66 * max) return r.period;
+    }
+    return 2;
   };
   /** per-column digit counts; with a board, a ranked shift fit per column */
   DX.columnFreq = function (streams, period, b) {
@@ -322,21 +323,53 @@
     return { rel: rel, conf: conf };
   };
 
-  /** keyword search: given streams and a relative key, try all 10 constants x keyword pool; returns best {keyword, key, plaus} */
-  DX.searchBoard = function (streams, rel, pool) {
+  /** keyword search (the big computer): for every keyword in the pool build the board, fit each column of the
+   *  period against that board's expected digit frequencies, and score the decrypt. If rel (a relative key) is
+   *  given, the 10 constants on top of it are tried as well. -> best {keyword, key, plaus} */
+  DX.searchBoard = function (streams, periodOrRel, pool) {
     pool = pool || DX.DATA.KEYWORDS;
-    var best = null;
-    for (var c = 0; c < 10; c++) {
-      var key = rel.map(function (r) { return (r + c) % 10; });
-      var plains = streams.map(function (s) { return DX.subKey(s, key); });
-      for (var k = 0; k < pool.length; k++) {
-        var b = DX.boardCache(pool[k]);
-        var txt = plains.map(function (p) { return DX.decode(b, p.slice(0, 90)).text; }).join('');
-        var pl = DX.plaus(txt).score;
-        if (!best || pl > best.plaus) best = { keyword: pool[k], key: key, plaus: pl };
-      }
+    var rel = Array.isArray(periodOrRel) ? periodOrRel : null, period = rel ? rel.length : periodOrRel;
+    var sample = streams.map(function (s) { return s.slice(0, 160); });
+    var cands = [];
+    for (var k = 0; k < pool.length; k++) {
+      var b = DX.boardCache(pool[k]);
+      var keys = [DX.columnFreq(streams, period, b).map(function (c) { return c.fit[0].shift; })];
+      if (rel) for (var c = 0; c < 10; c++) keys.push(rel.map(function (r) { return (r + c) % 10; }));
+      keys.forEach(function (key) {
+        var txt = sample.map(function (p) { return DX.decode(b, DX.subKey(p, key)).text; }).join('');
+        cands.push({ keyword: pool[k], key: key, plaus: DX.plaus(txt).score });
+      });
     }
+    cands.sort(function (x, y) { return y.plaus - x.plaus; });
+    // refine the three best keywords column by column
+    var best = null;
+    cands.slice(0, 3).forEach(function (cd) {
+      var r = DX.refineKey(streams, DX.boardCache(cd.keyword), cd.key);
+      if (!best || r.plaus > best.plaus) best = { keyword: cd.keyword, key: r.key, plaus: r.plaus };
+    });
     return best;
+  };
+  /** coordinate ascent on a periodic key: each column tries all ten shifts, keeping what reads best */
+  DX.refineKey = function (streams, b, key) {
+    key = key.slice();
+    var sample = streams.map(function (s) { return s.slice(0, 200); });
+    function score(k) { return DX.plaus(sample.map(function (s) { return DX.decode(b, DX.subKey(s, k)).text; }).join('')).score; }
+    var best = score(key), evals = 1;
+    for (var pass = 0; pass < 3; pass++) {
+      var changed = false;
+      for (var c = 0; c < key.length; c++) {
+        var bestS = key[c];
+        for (var sh = 0; sh < 10; sh++) {
+          if (sh === key[c]) continue;
+          var k2 = key.slice(); k2[c] = sh; evals++;
+          var sc = score(k2);
+          if (sc > best + 0.004) { best = sc; bestS = sh; }
+        }
+        if (bestS !== key[c]) { key[c] = bestS; changed = true; }
+      }
+      if (!changed) break;
+    }
+    return { key: key, plaus: best, evals: evals };
   };
   var BC = {};
   DX.boardCache = function (kw) { return BC[kw] || (BC[kw] = DX.makeBoard(kw)); };

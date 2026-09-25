@@ -18,23 +18,26 @@
     var toks = [];
     V.forEach(function (v) {
       if (v.w.length === 1 && v.w !== 'I' && v.w !== 'A') return;
-      toks.push({ t: v.w, d: DX.toDigits(DX.encode(board, v.w)), lp: Math.log(v.n / tot) });
+      toks.push({ t: v.w, c: v.w, d: DX.toDigits(DX.encode(board, v.w)), lp: 0 });
     });
-    (extraCalls || []).forEach(function (cs) { toks.push({ t: cs, d: DX.toDigits(DX.encode(board, cs)), lp: Math.log(40 / tot), call: true }); });
-    toks.push({ t: '.', d: DX.toDigits(board.stopCode), lp: Math.log(0.06) });
+    (extraCalls || []).forEach(function (cs) { toks.push({ t: cs, c: 'CALL', d: DX.toDigits(DX.encode(board, cs)), lp: -Math.log(Math.max(2, extraCalls.length)), call: true }); });
+    toks.push({ t: '.', c: '.', d: DX.toDigits(board.stopCode), lp: 0 });
     // numbers: FIG, n doubled figures (unknown), FIG. -2 marks a figure digit that must equal its pair.
     [1, 2, 4].forEach(function (n) {
       var d = DX.toDigits(board.figCode);
       for (var i = 0; i < n; i++) d.push(-2, -3);
       d = d.concat(DX.toDigits(board.figCode));
-      toks.push({ t: '#' + n, d: d, lp: Math.log(n === 4 ? 0.02 : n === 2 ? 0.015 : 0.01), num: n });
+      // each figure's value is a free choice: log(1/10) per figure
+      toks.push({ t: '#' + n, c: '#', d: d, lp: Math.log(n === 4 ? 0.5 : n === 2 ? 0.35 : 0.15) - n * Math.log(10), num: n });
     });
     // single letters as a last resort (heavily penalised) so the beam can cross gaps
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(function (L) { toks.push({ t: L, d: DX.toDigits(board.enc[L]), lp: -9.5, letter: true }); });
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(function (L) { toks.push({ t: L, c: null, d: DX.toDigits(board.enc[L]), lp: -11, letter: true }); });
     // trie over word letters for prefix checks
     var trie = {};
     toks.forEach(function (tk) { if (tk.num || tk.t === '.' || tk.letter) return; var n = trie; for (var i = 0; i < tk.t.length; i++) n = n[tk.t[i]] || (n[tk.t[i]] = {}); n.$ = 1; });
-    return { toks: toks, trie: trie };
+    var byFirst = [[], [], [], [], [], [], [], [], [], []];
+    toks.forEach(function (tk) { var f = tk.d[0]; if (f >= 0) byFirst[f].push(tk); else for (var i = 0; i < 10; i++) byFirst[i].push(tk); });
+    return { toks: toks, trie: trie, byFirst: byFirst };
   }
   var TCACHE = {};
   function tokensFor(board, calls) {
@@ -73,13 +76,19 @@
   // ---------------------------------------------------------------- depth solver
   DX.solveDepth = function (board, ca, cb, opts) {
     opts = opts || {};
-    var beamW = opts.beam || 24, calls = opts.calls || [];
+    var beamW = opts.beam || 40, calls = opts.calls || [];
+    var LMW = DX.wordLM();
     var TK = tokensFor(board, calls), toks = TK.toks;
     var L = Math.min(ca.length, cb.length);
     var diff = new Int8Array(L);
     for (var i = 0; i < L; i++) diff[i] = ca[i] < 0 || cb[i] < 0 ? -1 : ((ca[i] - cb[i]) % 10 + 10) % 10;
-    var init = { A: new Int8Array(L).fill(-1), B: new Int8Array(L).fill(-1), f: [0, 0], score: 0, tk: [[], []] };
-    var beam = [init], done = [];
+    var init = { A: new Int8Array(L).fill(-1), B: new Int8Array(L).fill(-1), f: [0, 0], score: 0, tk: [[], []], prev: [['^', '^'], ['^', '^']], force: [null, null] };
+    // cribs: candidate openings per side (token lists); every combination seeds the beam, plus a free start
+    var oa = opts.openA && opts.openA.length ? opts.openA : [null], ob = opts.openB && opts.openB.length ? opts.openB : [null];
+    var beam = [], done = [];
+    oa.forEach(function (x) { ob.forEach(function (y) { var s0 = Object.assign({}, init); s0.force = [x, y]; beam.push(s0); }); });
+    var byText = {};
+    toks.forEach(function (tk) { byText[tk.t] = tk; });
     var maxSteps = opts.maxSteps || 140;
     for (var step = 0; step < maxSteps && beam.length; step++) {
       var next = [];
@@ -87,9 +96,11 @@
         var side = st.f[0] <= st.f[1] ? 0 : 1, fS = st.f[side], fO = st.f[1 - side];
         if (fS >= L - 1) { done.push(st); return; }
         var S = side === 0 ? st.A : st.B, O = side === 0 ? st.B : st.A;
-        var any = false;
-        for (var ti = 0; ti < toks.length; ti++) {
-          var tk = toks[ti], d = tk.d;
+        var any = false, cand = S[fS] >= 0 ? TK.byFirst[S[fS]] : toks;
+        var fz = st.force[side];
+        if (fz && st.tk[side].length < fz.length) { var ft = byText[fz[st.tk[side].length]]; cand = ft ? [ft] : []; }
+        for (var ti = 0; ti < cand.length; ti++) {
+          var tk = cand[ti], d = tk.d;
           if (fS + d.length > L + 4) continue;
           // match against digits already fixed on this side (derived from the other message)
           var ok = true, pairV = -1;
@@ -114,11 +125,15 @@
               otherTail.push(od);
             }
             // decode other side from its frontier: its known digits [fO, nf)
-            var dec = DX.decode(board, otherTail).text;
-            if (!validPrefix(TK.trie, dec)) continue;
+            // only the stretch before the first unknown digit can be checked (after a gap the code alignment is lost)
+            var dec = DX.decode(board, otherTail).text, qm = dec.indexOf('?');
+            if (qm >= 0) dec = dec.slice(0, qm);
+            if (dec && !validPrefix(TK.trie, dec)) continue;
           }
           any = true;
-          var ns = { A: st.A, B: st.B, f: st.f.slice(), score: st.score + tk.lp, tk: [st.tk[0], st.tk[1]] };
+          var pv = st.prev[side];
+          var ns = { A: st.A, B: st.B, f: st.f.slice(), score: st.score + tk.lp + (tk.c ? LMW.lp(pv[0], pv[1], tk.c) : -2), tk: [st.tk[0], st.tk[1]], prev: st.prev.slice(), force: st.force };
+          ns.prev[side] = tk.c ? [pv[1], tk.c] : pv;
           var nS = new Int8Array(S), nO = O;
           for (var j2 = 0; j2 < d.length && fS + j2 < L; j2++) { var w = d[j2]; if (w >= 0) nS[fS + j2] = w; }
           if (nf > fO) {
@@ -137,14 +152,15 @@
       next.sort(function (x, y) { return y.rank - x.rank; });
       var seen = {}, nb = [];
       for (var k = 0; k < next.length && nb.length < beamW; k++) {
-        var s3 = next[k], key = s3.f[0] + ',' + s3.f[1] + ',' + s3.tk[0].map(function (x) { return x.t; }).slice(-2).join('') + '/' + s3.tk[1].map(function (x) { return x.t; }).slice(-2).join('');
+        var s3 = next[k], key = s3.f[0] + ',' + s3.f[1] + ',' + (s3.force[0] && s3.tk[0].length < s3.force[0].length ? 'F' + oa.indexOf(s3.force[0]) : '') + (s3.force[1] && s3.tk[1].length < s3.force[1].length ? 'G' + ob.indexOf(s3.force[1]) : '') + ',' + s3.tk[0].map(function (x) { return x.t; }).slice(-2).join('') + '/' + s3.tk[1].map(function (x) { return x.t; }).slice(-2).join('');
         if (seen[key]) continue; seen[key] = 1; nb.push(s3);
       }
       beam = nb;
     }
     done = done.concat(beam);
     if (!done.length) return null;
-    done.forEach(function (s4) { s4.rank2 = s4.score / Math.max(1, s4.f[0] + s4.f[1]) + 0.004 * (s4.f[0] + s4.f[1]); });
+    // prefer states that read further; among those, the more probable text
+    done.forEach(function (s4) { var cov = s4.f[0] + s4.f[1]; s4.rank2 = s4.score / Math.max(1, cov) - 3 * (1 - cov / (2 * L)); });
     done.sort(function (x, y) { return y.rank2 - x.rank2; });
     var best = done[0];
     var ta = DX.decode(board, Array.from(best.A)).text, tb = DX.decode(board, Array.from(best.B)).text;
@@ -154,35 +170,41 @@
       covered: [best.f[0], best.f[1]], tokensA: best.tk[0].map(function (x) { return x.t; }), tokensB: best.tk[1].map(function (x) { return x.t; }) };
   };
 
+  /** the ring's opening habits as crib token lists, for a message from `from` to `to` (callsigns as heard).
+   *  ctlSpell: how the controller's callsign is spelt in text (e.g. SAEL). */
+  DX.openingCribs = function (from, to, ctlSpell, ctlCall) {
+    var T = DX.TEMPLATES, out = [];
+    var isCtl = from === ctlCall, sp = function (x) { return x === ctlCall ? ctlSpell : x; };
+    (isCtl ? T.ctlOpen : T.agOpen).forEach(function (tpl) {
+      var line = tpl.replace('{TO}', sp(to)).replace('{FROM}', sp(from)).replace('{NR}', '#2');
+      var toks = [];
+      line.replace(/\./g, ' . ').split(/\s+/).forEach(function (w) {
+        if (!w) return;
+        if (w === sp(to) || w === sp(from)) { toks.push(w); return; }
+        w.replace(/#2|[A-Z]+|\./g, function (x) { toks.push(x); return x; });
+      });
+      out.push(toks);
+    });
+    return out;
+  };
+
   // ---------------------------------------------------------------- periodic solver
   /** streams: digit arrays (same key, each starting at key position 0). board may be null (then keyword search). */
   DX.solvePeriodic = function (streams, board, opts) {
     opts = opts || {};
-    var ic = DX.icByPeriod(streams, 12), reps = DX.repeats(streams, 4);
+    var ic = DX.icByPeriod(streams, 12), reps = DX.repeats(streams, 5);
     var p = opts.period || DX.bestPeriod(ic, reps);
-    var keyword = board ? board.key : null, key;
+    var keyword = board ? board.key : null, key, plaus;
     if (!board) {
-      var al = DX.alignColumns(streams, p);
-      var sb = DX.searchBoard(streams, al.rel);
-      if (!sb || sb.plaus < 0.55) return { ok: false, period: p, rel: al.rel, plaus: sb ? sb.plaus : 0 };
-      board = DX.boardCache(sb.keyword); keyword = sb.keyword; key = sb.key;
+      var sb = DX.searchBoard(streams, p);
+      if (!sb || sb.plaus < 0.55) return { ok: false, period: p, plaus: sb ? sb.plaus : 0 };
+      board = DX.boardCache(sb.keyword); keyword = sb.keyword; key = sb.key; plaus = sb.plaus;
     } else {
       key = DX.columnFreq(streams, p, board).map(function (col) { return col.fit[0].shift; });
+      var r = DX.refineKey(streams, board, key);
+      key = r.key; plaus = r.plaus;
     }
-    function score(k) { return DX.plaus(streams.map(function (s) { return DX.decode(board, DX.subKey(s, k)).text; }).join('')).score; }
-    var best = score(key), tries = 0;
-    // refine: try the next-best shifts per column (a human flips a column that reads badly)
-    var cols = DX.columnFreq(streams, p, board);
-    for (var pass = 0; pass < 2; pass++) {
-      for (var c = 0; c < p; c++) {
-        for (var r = 1; r < 4; r++) {
-          var k2 = key.slice(); k2[c] = cols[c].fit[r].shift; tries++;
-          var sc = score(k2);
-          if (sc > best + 0.005) { best = sc; key = k2; }
-        }
-      }
-    }
-    return { ok: best >= 0.5, period: p, key: key, keyword: keyword, plaus: best, tries: tries, texts: streams.map(function (s) { return DX.decode(board, DX.subKey(s, key)).text; }) };
+    return { ok: plaus >= 0.5, period: p, key: key, keyword: keyword, plaus: plaus, texts: streams.map(function (s) { return DX.decode(board, DX.subKey(s, key)).text; }) };
   };
 
   // ---------------------------------------------------------------- generation acceptance

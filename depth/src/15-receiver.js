@@ -144,10 +144,15 @@ var UIRx = (function () {
     if (!el.root) return;
     var b = UIA.band();
     sigs = b.now.slice();
-    sigs.forEach(function (s) { if (!drift[s.id]) { var r = UIrand(s.id); drift[s.id] = { d: (r() - 0.5) * 1.5 * s.drift, v: 0, ph: r() * 6.28, fist: UIAudio.fistFor(s.callsign || s.label || s.id, s.fist) }; } });
+    sigs.forEach(function (s) {
+      if (drift[s.id]) return;
+      var r = UIrand(s.id), sg = s.bcast ? null : UIA.signal(s.id);
+      drift[s.id] = { d: (r() - 0.5) * 1.5 * s.drift, v: 0, ph: r() * 6.28, fist: (sg && sg.fist) || UIAudio.fistFor(s.callsign || s.label || s.id, s.fist), callup: sg && sg.callup ? sg.callup : null, tune: sg && sg.voice ? sg.voice.interval : null, sex: sg && sg.voice ? sg.voice.sex : null };
+    });
     vfd(); spanBtns(); modeUi(); glass.frame();
     R.renderSched(); R.renderLog(); R.status(); R.buttons();
   };
+  R.reset = function () { stop(); el = {}; hist = null; drift = {}; L = null; R._stKey = ''; };
   R.show = function () { start(); if (glass) glass.frame(); };
   R.hide = function () { if (L && L.phase === 'hold') abortListen('You left the receiver; the copy was abandoned.'); stop(); UIAudio.setRx(null); UIAudio.stopLoop(); UIAudio.intervalLoop(false); };
   R.stopAll = function () { if (L) abortListen(); stop(); UIAudio.setRx(null); UIAudio.stopLoop(); UIAudio.intervalLoop(false); UIAudio.stopVoice(); };
@@ -301,7 +306,7 @@ var UIRx = (function () {
         if (UIS.rx.mode === 'cw') { o.cwHz = 700 + err * 380; o.cwVol = 0.2 * st * resp(err, 2.2); }
         else { o.cwHz = 90 + Math.abs(err) * 40; o.cwVol = 0.12 * st * resp(err, 3); }
         if (s.mode === 'cw' && !(listening && L.phase === 'copy')) {
-          var txt = s.label ? 'VVV DE ' + s.label.toUpperCase().replace(/[^A-Z0-9ÆØÅ]/g, '') : 'VVV VVV';
+          var txt = drift[s.id].callup ? drift[s.id].callup.toUpperCase() : s.label ? 'VVV DE ' + s.label.toUpperCase().replace(/[^A-Z0-9ÆØÅ]/g, '') : 'VVV VVV';
           if (UIAudio._loopKey !== txt) UIAudio.loopKey(txt, drift[s.id].fist);
         }
       }
@@ -362,7 +367,7 @@ var UIRx = (function () {
     setSpan('narrow');
     el.copy.classList.add('busy'); el.copyS.textContent = 'hold it centred';
     el.root.classList.add('holding');
-    if (s.mode === 'voice') UIAudio.intervalLoop(true);
+    if (s.mode === 'voice') UIAudio.intervalLoop(true, drift[s.id] && drift[s.id].tune);
     renderHold();
     UI.emit('copystart', s.id);
   }

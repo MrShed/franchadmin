@@ -893,7 +893,7 @@
     B.period = function (ids) {
       var e = need(ids); if (e) return { ok: false, err: e };
       var st = streams(ids);
-      var ic = DX.icByPeriod(st, 12), reps = DX.repeats(st, 4);
+      var ic = DX.icByPeriod(st, 12), reps = DX.repeats(st, 5);
       var ev4 = c._spend(c.costs().period);
       return { ok: true, ic: ic, repeats: reps, best: DX.bestPeriod(ic, reps), events: ev4 };
     };
@@ -918,10 +918,10 @@
       var ev6 = c._spend(c.costs().setKey);
       return { ok: true, texts: list, text: list[0].text, plaus: list[0].plaus, events: ev6 };
     };
-    B.boardSolve = function (ids, relKey) {
+    B.boardSolve = function (ids, periodOrRel) {
       var e = need(ids); if (e) return { ok: false, err: e };
       var ev7 = c._spend(c.costs().boardSolve);
-      var best = DX.searchBoard(streams(ids), DX.toDigits(relKey));
+      var best = DX.searchBoard(streams(ids), typeof periodOrRel === 'number' ? periodOrRel : DX.toDigits(periodOrRel));
       if (best && best.plaus >= 0.55) {
         c._s.board = best.keyword;
         c._post('report', 'The big computer: checkerboard recovered', 'Computer room', [{ k: 'p', x: ['Overnight run on the courier traffic: keyword ' + best.keyword + ' gives readable text with key ' + best.key.join('') + '. The checkerboard is on your bench.'] }]);

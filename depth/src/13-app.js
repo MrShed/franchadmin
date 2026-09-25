@@ -152,7 +152,7 @@ UI.buildFrame = function () {
   UI$('#tb-alert').addEventListener('click', UI.alertSheet);
   UI$('#tb-clock').addEventListener('click', function () { UI.go('receiver'); });
 };
-UI.ALERTS = [['Quiet', 'The ring behaves as if nobody is listening.'], ['Wary', 'Something has made them careful. Expect small changes.'], ['Nervous', 'They suspect they are watched: schedules and frequencies may change, pages stop being reused.'], ['Alarmed', 'The security officer is moving sets and sending decoys. They may bring the operation forward or go silent.']];
+UI.ALERTS = [['Calm', 'The ring behaves as if nobody is listening.'], ['Wary', 'Something has made them careful. Expect small changes.'], ['Nervous', 'They suspect they are watched: schedules and frequencies may change, pad pages stop being reused.'], ['Alarmed', 'The security officer is moving sets, switching to bursts and sending decoys.'], ['Running scared', 'They may go silent or change everything. Act on what you have.']];
 UI.topbar = function () {
   if (!UIA.g) return;
   var c = UIA.clock();
@@ -161,7 +161,7 @@ UI.topbar = function () {
   var w = UIA.warrants(), h = '';
   for (var i = 0; i < w.max; i++) h += '<i class="' + (i < w.left ? 'on' : '') + '"></i>';
   UI$('#tb-war').innerHTML = '<span class="k">Warrants</span><span class="toks">' + h + '</span>';
-  var a = UIA.alert();
+  var a = UIA.alert().level;
   UI$('#tb-alert').innerHTML = '<span class="k">Ring</span><span class="lamp a' + a + '"></span><span class="v">' + UI.ALERTS[a][0] + '</span>';
 };
 UI.badges = function () {
@@ -190,7 +190,7 @@ UI.menu = function () {
   UIsheet.open({ title: 'Station Kestrel', eyebrow: 'Night ' + (c.shift + 1) + ' of ' + c.shifts + ' · ' + UIesc(c.label), tag: 'menu', html:
     '<div class="menu">' +
     '<button class="li" data-m="end">' + UIICON.moon + '<span><b>End the shift</b><small>Special Branch act on warrants overnight; the next night begins.</small></span></button>' +
-    '<button class="li" data-m="mentor">' + UIICON.mentor + '<span><b>Ask Mrs Holm</b><small>Hints in three tiers.</small></span></button>' +
+    '<button class="li" data-m="mentor">' + UIICON.mentor + '<span><b>Ask ' + UIesc(UIA.mentorInfo().short) + '</b><small>Hints in three tiers.</small></span></button>' +
     '<button class="li" data-m="speech">' + UIICON.ear + '<span><b>Numbers voice: ' + (UIPREF.get('speech', true) ? 'spoken' : 'tone pips') + '</b><small>' + (UIAudio.canSpeak() || !UIPREF.get('speech', true) ? 'Switch between the synthetic voice and tone pips.' : 'No speech voice on this device; tone pips and on-screen digits are used.') + '</small></span></button>' +
     '<button class="li" data-m="help">' + UIICON.help + '<span><b>How to play</b><small>The loop, the instruments, the warrants.</small></span></button>' +
     '<button class="li" data-m="title">' + UIICON.back + '<span><b>Title screen</b><small>The case is saved; Continue from the title.</small></span></button>' +
@@ -208,7 +208,7 @@ UI.menu = function () {
     } });
 };
 UI.alertSheet = function () {
-  var a = UIA.alert();
+  var a = UIA.alert().level;
   UIsheet.open({ title: 'The ring’s alert', eyebrow: 'How nervous they are', tag: 'alert', html:
     '<div class="alert-scale">' + UI.ALERTS.map(function (x, i) { return '<div class="as-row' + (i === a ? ' on' : '') + '"><span class="lamp a' + i + '"></span><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>' +
     '<p class="note">Raids (right or wrong), a van seen in the street and long silences after arrests all raise it. It never falls far.</p>' });
@@ -302,7 +302,7 @@ var UIExplain = {
   show: function (k, after) {
     var t = UIExplain.T[k]; if (!t) return;
     var box = UI$('#explain');
-    box.innerHTML = '<div class="ex-card paper"><div class="ex-pin" aria-hidden="true"></div><div class="ex-from">From the night supervisor</div><h4>' + t[0] + '</h4><p>' + t[1] + '</p><div class="ex-sig">— I. Holm</div><button class="btn pri sm" id="ex-ok">Understood</button></div>';
+    box.innerHTML = '<div class="ex-card paper"><div class="ex-pin" aria-hidden="true"></div><div class="ex-from">From the night supervisor</div><h4>' + t[0] + '</h4><p>' + t[1] + '</p><div class="ex-sig">— ' + UIesc(UIA.mentorInfo().short) + '</div><button class="btn pri sm" id="ex-ok">Understood</button></div>';
     box.hidden = false; requestAnimationFrame(function () { box.classList.add('on'); });
     UIAudio.cue('paper');
     UI$('#ex-ok').addEventListener('click', function () { box.classList.remove('on'); setTimeout(function () { box.hidden = true; box.innerHTML = ''; if (after) after(); }, 250); });
