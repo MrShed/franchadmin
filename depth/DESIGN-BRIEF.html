@@ -1,0 +1,346 @@
+<title>Depth Listening Post</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --paper: #e6ecea; --paper2: #dde5e3; --ink: #1b2a33; --ink2: #4a5c63; --grid: #c3d1cf;
+  --pencil: #b3322a; --carbon: #2f4e8c; --bezel: #14201f; --bezel2: #22302f; --phos: #9fe3c2; --phosdim: #3f7a63;
+  --display: "Big Shoulders Stencil Display", "Arial Narrow", Impact, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; --paper: #121a1c; --paper2: #182224; --ink: #d9e3e1; --ink2: #93a5a8; --grid: #2a3a3c; --pencil: #e0685c; --carbon: #8fa8e0; --bezel: #0b1212; --bezel2: #1b2726; }
+}
+:root[data-theme="dark"] { color-scheme: dark; --paper: #121a1c; --paper2: #182224; --ink: #d9e3e1; --ink2: #93a5a8; --grid: #2a3a3c; --pencil: #e0685c; --carbon: #8fa8e0; --bezel: #0b1212; --bezel2: #1b2726; }
+
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 17px/1.6 var(--body); padding-inline: 16px; padding-block: 0 64px;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 28px 28px; background-attachment: local; }
+.wrap { max-width: 980px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--display); font-weight: 800; letter-spacing: .02em; line-height: 1; text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(34px, 6vw, 52px); text-transform: uppercase; }
+h3 { font-size: 26px; text-transform: uppercase; font-weight: 600; }
+p { margin: 0; max-width: 65ch; }
+.mono { font-family: var(--mono); font-size: 13.5px; }
+.label { font: 600 11.5px/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink2); }
+.pencil { color: var(--pencil); }
+
+/* ---------- receiver hero ---------- */
+.set { margin: 20px auto 0; max-width: 980px; background: var(--bezel); border-radius: 6px; padding: 14px; color: #cfe0db;
+  box-shadow: 0 1px 0 #ffffff22 inset, 0 18px 40px #0003; }
+.set-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; font: 600 11px/1.3 var(--mono); letter-spacing: .12em; color: #7f9a93; text-transform: uppercase; padding: 2px 4px 10px; }
+.set-top b { color: var(--phos); font-weight: 600; }
+.scope { position: relative; border-radius: 3px; overflow: hidden; background: #051009; border: 1px solid #2c3c39; }
+#wf { display: block; width: 100%; height: 190px; }
+.groups { font: 600 clamp(15px, 3.2vw, 22px)/1.5 var(--mono); color: var(--phos); letter-spacing: .12em; padding: 12px 6px 4px; min-height: 3.2em; word-spacing: .4em; }
+.groups .cur { color: #e8fff4; text-shadow: 0 0 8px #9fe3c2aa; }
+.title-block { padding: 34px 0 8px; display: grid; gap: 14px; }
+.title-block h1 { font-size: clamp(88px, 22vw, 200px); line-height: .82; letter-spacing: .01em; }
+.title-block .sub { font-size: clamp(19px, 2.6vw, 23px); font-style: italic; max-width: 40ch; }
+.stamp { display: inline-block; font: 600 12px/1 var(--mono); letter-spacing: .16em; color: var(--pencil); border: 2px solid var(--pencil); padding: 6px 9px; transform: rotate(-2deg); width: max-content; }
+
+section { padding-top: 60px; display: grid; gap: 18px; }
+.lede { font-size: 19px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px 28px; }
+
+/* log sheet */
+.sheet { background: var(--paper2); border: 1px solid var(--grid); padding: 18px 20px; display: grid; gap: 10px; }
+.sheet .row { display: grid; grid-template-columns: 7.5em 1fr; gap: 12px; align-items: baseline; }
+@media (max-width: 520px) { .sheet .row { grid-template-columns: 1fr; gap: 2px; } }
+
+/* loop */
+.loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; border-top: 2px solid var(--ink); }
+.loop div { padding: 12px 14px 14px 0; border-bottom: 1px solid var(--grid); display: grid; gap: 4px; align-content: start; }
+.loop b { font: 800 30px/1 var(--display); text-transform: uppercase; }
+.loop span { font-size: 15px; color: var(--ink2); line-height: 1.45; }
+
+/* instruments */
+.inst { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 22px 32px; padding: 26px 0; border-top: 1px solid var(--grid); align-items: start; }
+@media (max-width: 760px) { .inst { grid-template-columns: 1fr; } }
+.inst .txt { display: grid; gap: 12px; }
+.inst ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; max-width: 60ch; }
+.grade { font: 13.5px/1.5 var(--mono); border-left: 3px solid var(--pencil); padding: 4px 0 4px 12px; color: var(--ink); max-width: 60ch; }
+.fig { background: var(--paper2); border: 1px solid var(--grid); padding: 14px; display: grid; gap: 8px; overflow-x: auto; }
+.fig svg { width: 100%; height: auto; display: block; }
+.cap { font: 12px/1.45 var(--mono); color: var(--ink2); }
+table.depth { border-collapse: collapse; font: 13px/1 var(--mono); width: 100%; }
+@media (max-width: 520px) { table.depth td { padding: 4px 2px; font-size: 12px; } table.depth th { font-size: 9.5px; letter-spacing: .04em; padding-right: 4px; } }
+table.depth td, table.depth th { padding: 5px 5px; text-align: center; border: 1px solid var(--grid); }
+table.depth th { font-weight: 600; color: var(--ink2); font-size: 11px; letter-spacing: .1em; text-align: left; border: none; padding-right: 10px; white-space: nowrap; }
+table.depth .hit { background: color-mix(in srgb, var(--pencil) 18%, transparent); color: var(--pencil); font-weight: 600; }
+table.depth .crib { color: var(--carbon); font-weight: 600; }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px 32px; }
+.card { border-top: 2px solid var(--ink); padding-top: 12px; display: grid; gap: 8px; }
+.card p { font-size: 16px; }
+.miles { display: grid; gap: 0; border-top: 2px solid var(--ink); }
+.miles div { display: grid; grid-template-columns: 4.5em 1fr; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--grid); }
+.miles b { font: 800 28px/1 var(--display); color: var(--pencil); }
+.qs { display: grid; gap: 12px; counter-reset: q; padding: 0; margin: 0; list-style: none; }
+.qs li { display: grid; grid-template-columns: 2em 1fr; gap: 8px; }
+.qs li::before { counter-increment: q; content: "Q" counter(q); font: 600 13px/1.9 var(--mono); color: var(--pencil); }
+.vs { width: 100%; border-collapse: collapse; font-size: 15.5px; min-width: 560px; }
+.vs th, .vs td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--grid); }
+.vs th { font: 600 11.5px/1.2 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink2); }
+.scroll { overflow-x: auto; }
+footer { padding-top: 56px; color: var(--ink2); font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .groups .cur { text-shadow: none; } }
+</style>
+
+<div class="set" aria-label="Receiver: a numbers transmission on the waterfall display">
+  <div class="set-top"><span>Station Kestrel · RX 2</span><span>6.915 MHz · AM</span><span>Sched <b>SÆL-4</b> · 21:40 UTC</span></div>
+  <div class="scope"><canvas id="wf" width="960" height="190"></canvas></div>
+  <div class="groups" id="groups" aria-live="off">48213 &nbsp;90557 &nbsp;31104 &nbsp;77260 &nbsp;05193 &nbsp;48213</div>
+</div>
+
+<div class="wrap">
+  <header class="title-block">
+    <span class="stamp">Design brief · for approval</span>
+    <h1>Depth</h1>
+    <p class="sub">A spy ring is talking over the air. You can hear every word and understand none of it. Find them, read them, stop them.</p>
+  </header>
+
+  <section>
+    <div class="label">01 · The premise</div>
+    <p class="lede">Autumn 1977. You are a signals analyst at <b>Station Kestrel</b>, a listening post on the Baltic coast, watching the port city of Haldmar. An illegal network is preparing an operation there. Its controller abroad talks to it through a numbers station. Its agents answer with Morse and burst transmitters, and use phone boxes and dead drops for the rest.</p>
+    <p>You never leave the station. Everything you learn comes through a receiver, a map, a pencil and a pad. You hand targets to Special Branch, who do the arresting. Every raid you call costs a warrant, and a bad one warns the ring.</p>
+    <div class="sheet">
+      <div class="row"><span class="label">Taken from CA</span><span>A new hidden network every game, running to its own calendar. Several routes to the truth, each a skill game. Arrests need proof.</span></div>
+      <div class="row"><span class="label">Left behind</span><span>Break-ins, gunfights and car chases. Skill games that drop a random fact. An enemy that never notices you.</span></div>
+      <div class="row"><span class="label">The rule</span><span class="pencil">No instrument ever tells you a fact. Each one gives you material, and how well you play decides how good it is. You do the concluding.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">02 · A shift</div>
+    <p>Play is split into shifts: eight in-game hours, about 10 to 15 minutes of real time, so one fits on a train. Each task costs station time, and the network keeps moving whether you are listening or not.</p>
+    <div class="loop">
+      <div><b>Listen</b><span>Sweep the bands, catch what is on air, copy it down cleanly.</span></div>
+      <div><b>Fix</b><span>Ask the outstations for bearings and plot where the transmitter is.</span></div>
+      <div><b>Break</b><span>Put messages on the workbench and look for a way in.</span></div>
+      <div><b>Chart</b><span>Log who talks to whom and when. The shape of the ring shows up here first.</span></div>
+      <div><b>Act</b><span>Watch a house, lift a letter box, or raid. Spend warrants carefully.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">03 · The instruments</div>
+    <h2>Four skill games, one case file</h2>
+
+    <div class="inst">
+      <div class="txt">
+        <h3>The receiver</h3>
+        <p>A live waterfall display of the shortwave band, with static, fading and interference. You tune, set the bandwidth, pick the mode, and copy what you hear into the log.</p>
+        <ul>
+          <li><b>Voice numbers</b> from the controller: five-figure groups read by a flat synthetic voice, on a timetable you learn.</li>
+          <li><b>Morse</b> from agents, each with a recognisable touch on the key. Over time you learn to tell one operator from another by ear.</li>
+          <li><b>Burst transmissions</b>: a second of noise you only catch if you were already on the frequency.</li>
+        </ul>
+        <p class="grade">Your copy quality decides how many groups come through garbled. A garbled group can wreck a decrypt later on.</p>
+      </div>
+      <div class="fig">
+        <svg viewBox="0 0 420 170" role="img" aria-label="A log sheet line with two garbled groups marked by pencil">
+          <rect x="0" y="0" width="420" height="170" fill="none"/>
+          <text x="10" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="currentColor" opacity=".6">21:40  6.915  SÆL-4  VOICE (F)  QSA 3</text>
+          <g font-family="JetBrains Mono, monospace" font-size="19" font-weight="600" fill="currentColor">
+            <text x="10" y="66">48213</text><text x="92" y="66">90557</text><text x="174" y="66">311?4</text><text x="256" y="66">77260</text><text x="338" y="66">05193</text>
+            <text x="10" y="102">62418</text><text x="92" y="102">?????</text><text x="174" y="102">80321</text><text x="256" y="102">14470</text><text x="338" y="102">95108</text>
+          </g>
+          <ellipse cx="203" cy="60" rx="38" ry="17" fill="none" stroke="#b3322a" stroke-width="2"/>
+          <ellipse cx="121" cy="96" rx="40" ry="17" fill="none" stroke="#b3322a" stroke-width="2"/>
+          <text x="10" y="148" font-family="Source Serif 4, Georgia, serif" font-style="italic" font-size="15" fill="#b3322a">fade at 21:43 · group 3 digit 4 lost · group 7 gone</text>
+        </svg>
+        <div class="cap">Copy from a poor night. Two groups are damaged. You can come back for the repeat broadcast, which is exactly what the ring relies on you not doing.</div>
+      </div>
+    </div>
+
+    <div class="inst">
+      <div class="txt">
+        <h3>Direction finding</h3>
+        <p>When an agent's set is on air, you ask outstations for bearings. Each one gives a line with an error cone, and the size of the cone depends on how long the signal lasts and how good the station is. Where the cones overlap on the city map is where the set probably is.</p>
+        <ul>
+          <li>Short transmissions give wide cones, so you plot across several nights and narrow it down.</li>
+          <li>Some sets move in vans. A fix that lands somewhere different every night is itself a clue.</li>
+          <li>At the end you can send a direction-finding van into the streets. That is a hot-and-cold search with a signal meter, and it is the only real-time part of the game.</li>
+        </ul>
+        <p class="grade">What you get is a search area measured in city blocks, not an address. The tighter you make it, the cheaper the raid.</p>
+      </div>
+      <div class="fig">
+        <svg viewBox="0 0 420 260" role="img" aria-label="Three bearing cones from outstations crossing over a district of the city">
+          <g stroke="currentColor" stroke-opacity=".18" stroke-width="1">
+            <path d="M40 40 L380 40 M40 80 L380 80 M40 120 L380 120 M40 160 L380 160 M40 200 L380 200 M80 20 L80 240 M140 20 L140 240 M200 20 L200 240 M260 20 L260 240 M320 20 L320 240"/>
+          </g>
+          <path d="M20 250 C 90 210, 120 238, 190 214 S 330 236, 410 200" fill="none" stroke="#2f4e8c" stroke-opacity=".5" stroke-width="10"/>
+          <g fill="#b3322a" fill-opacity=".10" stroke="#b3322a" stroke-width="1.2">
+            <path d="M18 24 L262 118 L250 150 Z"/>
+            <path d="M404 30 L204 126 L222 156 Z"/>
+            <path d="M232 252 L212 96 L256 98 Z"/>
+          </g>
+          <g font-family="JetBrains Mono, monospace" font-size="11" fill="currentColor">
+            <circle cx="18" cy="24" r="4" fill="#b3322a"/><text x="28" y="20">DF-1 Skagen</text>
+            <circle cx="404" cy="30" r="4" fill="#b3322a"/><text x="318" y="20">DF-2 Rønne</text>
+            <circle cx="232" cy="252" r="4" fill="#b3322a"/><text x="244" y="250">DF-3 harbour</text>
+          </g>
+          <ellipse cx="232" cy="130" rx="22" ry="14" fill="none" stroke="#b3322a" stroke-width="2.2" stroke-dasharray="4 3"/>
+          <text x="258" y="142" font-family="Source Serif 4, Georgia, serif" font-style="italic" font-size="14" fill="#b3322a">Vestergade, 4 blocks</text>
+        </svg>
+        <div class="cap">Three bearings on a 40-second Morse transmission. The overlap is four blocks by the river.</div>
+      </div>
+    </div>
+
+    <div class="inst">
+      <div class="txt">
+        <h3>The workbench</h3>
+        <p>Real cryptanalysis, made playable. A one-time pad used properly cannot be broken, so you look for where people got lazy. Every network is generated with human weaknesses in it.</p>
+        <ul>
+          <li><b>Depth</b>: two messages sent with the same key page. Line them up, guess a likely word in one (a crib), and see whether the other message turns into sense. That is what the game is named after.</li>
+          <li><b>Hand ciphers</b> used by low-level couriers, such as a straddling checkerboard with a transposition. They are weaker, so you attack them with frequency counts and patterns.</li>
+          <li><b>Operator habits</b>: the same opening group every Tuesday, a sign-off that never changes, the date written into the indicator.</li>
+        </ul>
+        <p class="grade">The result is a partial decrypt with holes in it. The holes are real; you fill them from context or leave them open.</p>
+      </div>
+      <div class="fig">
+        <div class="scroll">
+        <table class="depth" aria-label="Crib-dragging two messages in depth">
+          <tr><th>MSG 114</th><td>7</td><td>3</td><td>0</td><td>9</td><td>1</td><td>4</td><td>8</td><td>2</td><td>6</td><td>5</td><td>1</td><td>0</td></tr>
+          <tr><th>MSG 121</th><td>2</td><td>8</td><td>4</td><td>4</td><td>6</td><td>0</td><td>3</td><td>9</td><td>1</td><td>7</td><td>7</td><td>2</td></tr>
+          <tr><th>CRIB (114)</th><td></td><td></td><td class="crib">T</td><td class="crib">U</td><td class="crib">E</td><td class="crib">S</td><td class="crib">D</td><td class="crib">A</td><td class="crib">Y</td><td></td><td></td><td></td></tr>
+          <tr><th>GIVES (121)</th><td></td><td></td><td class="hit">H</td><td class="hit">A</td><td class="hit">R</td><td class="hit">B</td><td class="hit">O</td><td class="hit">U</td><td class="hit">R</td><td></td><td></td><td></td></tr>
+        </table>
+        </div>
+        <div class="cap">Two messages sent on the same key page. Guess TUESDAY at position 3 in one and the other reads HARBOUR. (Shown one letter per digit to keep it readable.) Nobody hands you that; it is a guess you placed yourself.</div>
+      </div>
+    </div>
+
+    <div class="inst">
+      <div class="txt">
+        <h3>Traffic analysis</h3>
+        <p>You often can't read a message, but you can always see that it was sent. Your log builds a picture of the ring: callsigns, times, message lengths, who replies and after how long. From that you draw a diagram showing who gives orders, who passes them on, and who acts.</p>
+        <ul>
+          <li>A spike of long messages before a quiet spell means something is about to happen.</li>
+          <li>A new callsign appearing means the ring has recruited someone, or is testing you.</li>
+          <li>When you raid someone, their contacts go quiet. That confirms the links, and it also tells the ring you are on to them.</li>
+        </ul>
+        <p class="grade">You draw the network diagram yourself, and the game marks each link you draw by how much evidence backs it.</p>
+      </div>
+      <div class="fig">
+        <svg viewBox="0 0 420 220" role="img" aria-label="A traffic diagram: the controller broadcasts to the resident, who relays to three agents">
+          <g font-family="JetBrains Mono, monospace" font-size="11.5" fill="currentColor">
+            <rect x="160" y="10" width="100" height="32" fill="none" stroke="currentColor"/><text x="170" y="31">SÆL (voice)</text>
+            <rect x="160" y="92" width="100" height="32" fill="none" stroke="currentColor"/><text x="178" y="113">KX7 ·resid.</text>
+            <rect x="20" y="176" width="92" height="32" fill="none" stroke="currentColor"/><text x="36" y="197">R3M</text>
+            <rect x="164" y="176" width="92" height="32" fill="none" stroke="currentColor"/><text x="180" y="197">ANO</text>
+            <rect x="308" y="176" width="92" height="32" fill="none" stroke="#b3322a" stroke-dasharray="4 3"/><text x="324" y="197" fill="#b3322a">? new</text>
+          </g>
+          <g stroke="currentColor" stroke-width="1.6" fill="none">
+            <path d="M210 42 L210 92"/><path d="M190 124 L70 176"/><path d="M210 124 L210 176"/>
+          </g>
+          <path d="M232 124 L352 176" stroke="#b3322a" stroke-width="1.6" stroke-dasharray="5 4" fill="none"/>
+          <g font-family="Source Serif 4, Georgia, serif" font-style="italic" font-size="13" fill="#b3322a">
+            <text x="220" y="70">replies within 20 min, every Tue/Fri</text>
+            <text x="286" y="150">first heard 14 Oct</text>
+          </g>
+        </svg>
+        <div class="cap">Links in solid ink are backed by evidence. The dashed one is your hunch and stays marked as a hunch until you prove it.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">04 · The other side</div>
+    <h2>They listen too</h2>
+    <div class="two">
+      <div class="card"><h3>Counter-measures</h3><p>The ring has a security officer, and he reacts to what you do. After a raid they change key pages, frequencies and timetables. After a near miss they send decoy traffic that goes nowhere. A careless operator gets replaced by a better one. The ring learns from you just as you learn from them.</p></div>
+      <div class="card"><h3>The operation</h3><p>Every network is generated around a plot with a date: sabotage during a NATO exercise, getting a defector out, a theft from the naval yard. Traffic rises towards that date. Read it in time and you can be waiting at the right quay.</p></div>
+      <div class="card"><h3>Warrants and trust</h3><p>Special Branch gives you a few warrants a week. Watching a house is cheap, lifting a dead drop costs more, and a raid costs most. A wrong raid costs warrants, the ring's trust in its own security (which makes them tighten up), and your superintendent's patience.</p></div>
+      <div class="card"><h3>A mole at Kestrel?</h3><p>On harder grades the ring may have someone inside your station. Tip-offs arrive at bad moments. It is the double agent from Covert Action, turned into something you can catch with a planted false schedule.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">05 · Why this and not the 1990 design</div>
+    <div class="scroll">
+    <table class="vs">
+      <tr><th>Covert Action, 1990</th><th>Depth</th></tr>
+      <tr><td>A skill game ends and a random fact drops out.</td><td>A skill game gives you material, and how well you played decides its quality. You draw the conclusion.</td></tr>
+      <tr><td>Codebreaking is a letter-swap puzzle.</td><td>Codebreaking uses real techniques: depth, cribs, checkerboards and operator habits.</td></tr>
+      <tr><td>You collect clues and fill in a suspect list.</td><td>You build a picture of the ring from its traffic before you can read a word of it.</td></tr>
+      <tr><td>The enemy runs on a fixed script.</td><td>The enemy changes keys, frequencies and timetables in response to what you do.</td></tr>
+      <tr><td>Wrong arrests have no cost beyond wasted time.</td><td>Warrants are scarce, and every raid warns the ring.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">06 · Look, sound, phone</div>
+    <div class="cols">
+      <p><b>Look.</b> Painted instrument panels and paper: a green waterfall display, grey log sheets, a pencil for red rings and notes, a street map with a tracing-paper overlay. Close to Cutout's desk, but at night, with the equipment switched on.</p>
+      <p><b>Sound matters most.</b> All of it is synthesised: static that breathes, Morse with each operator's own rhythm, the numbers voice, the interval tune that plays before each broadcast. It needs headphones, and you can hear a burst transmission a moment before the display shows it.</p>
+      <p><b>Phone first.</b> Tuning is a big drag dial and copying is a number pad, so there is almost no typing. The workbench is drag and drop. Everything is turn-based except the van search. The game autosaves at the end of every shift.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">07 · How it gets built</div>
+    <div class="miles">
+      <div><b>M1</b><span><b>The ring and the air.</b> Generator for a network, its plot, schedules and operator habits; simulation of the traffic; the receiver with synthesised audio; the log sheet. At this point you can play a shift where you only listen.</span></div>
+      <div><b>M2</b><span><b>Breaking and fixing.</b> The workbench with depth, cribs and checkerboards; direction finding on the city map; a solver that checks every generated ring can be broken with the material available.</span></div>
+      <div><b>M3</b><span><b>Acting and reacting.</b> Traffic diagram, warrants and raids, the security officer's counter-measures, the plot date, the end-of-case report.</span></div>
+      <div><b>M4</b><span><b>A career.</b> A tutorial ring, difficulty grades, the mole, the van search, station improvements between cases (a new outstation, a teleprinter, time on the big computer), and hints in the same style as Cutout's night analyst.</span></div>
+    </div>
+    <p>It will be a single HTML file like the others, and I'll publish playable builds as each milestone lands.</p>
+  </section>
+
+  <section>
+    <div class="label">08 · Decisions for you</div>
+    <ol class="qs">
+      <li><span><b>Setting.</b> Baltic, 1977, as written? Or a present-day version, which would change the tools to phones, metadata, encrypted apps and satellites?</span></li>
+      <li><span><b>How real the codebreaking should be.</b> I'd make the techniques real but give plenty of help: frequency counts, suggested crib positions, and the checkerboard drawn out for you. Or do you want it harder and less assisted?</span></li>
+      <li><span><b>The van search.</b> Keep it as the one real-time moment, or keep the whole game at a desk?</span></li>
+      <li><span><b>Length.</b> I'd aim for a case to take 4 to 6 shifts, about an hour. Longer and more like a campaign, or shorter?</span></li>
+    </ol>
+  </section>
+
+  <footer>Depth · design brief for a new game · draft 1</footer>
+</div>
+
+<script>
+(() => {
+  const cv = document.getElementById('wf'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let seed = 7; const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const img = g.createImageData(W, 1);
+  // one waterfall row: band noise, a numbers carrier with voice sidebands, a Morse agent keying on and off, a faint carrier
+  function row(t) {
+    const d = img.data, key = Math.floor(t / 3) % 7 < 4 && Math.floor(t / 11) % 3 !== 0, voice = Math.sin(t * 0.21) > -0.2;
+    for (let x = 0; x < W; x++) {
+      let v = r() * 38 + 8 + 10 * Math.sin(x * 0.013 + t * 0.002);
+      const dc = Math.abs(x - 300); if (dc < 2) v += 200; else if (voice && dc < 26) v += (26 - dc) * 5 * r();
+      if (key && Math.abs(x - 610) < 2) v += 185;
+      if (Math.abs(x - 820) < 1) v += 70 + 40 * Math.sin(t * 0.05);
+      if (Math.abs(x - 150 - 30 * Math.sin(t * 0.01)) < 5) v += 40 * r();
+      v = Math.min(255, v); const i = x * 4;
+      d[i] = v * v / 380; d[i + 1] = v * 0.95; d[i + 2] = v * 0.62 + 6; d[i + 3] = 255;
+    }
+  }
+  let t = 0;
+  function step() { g.drawImage(cv, 0, 0, W, H - 1, 0, 1, W, H - 1); row(t++); g.putImageData(img, 0, 0); }
+  for (let i = 0; i < H; i++) step();
+  g.fillStyle = 'rgba(159,227,194,.7)'; g.font = '600 13px JetBrains Mono, monospace';
+  const labels = () => { g.fillStyle = 'rgba(159,227,194,.75)'; g.fillText('SÆL-4 voice', 312, 16); g.fillText('agent R3M · CW', 622, 16); };
+  labels();
+  // the groups line: the reader's current group lights up, as if you were copying along
+  const el = document.getElementById('groups');
+  const groups = ['48213', '90557', '31104', '77260', '05193', '62418', '11375', '80321', '14470', '95108'];
+  let k = 0;
+  function show() { const s = groups.slice(0, 6).map((x, i) => i === k % 6 ? '<span class="cur">' + x + '</span>' : x).join(' '); el.innerHTML = s; }
+  show();
+  if (still) return;
+  let last = 0;
+  function frame(now) { if (now - last > 45) { step(); labels(); last = now; } requestAnimationFrame(frame); }
+  requestAnimationFrame(frame);
+  setInterval(() => { k++; if (k % 6 === 0) groups.push(groups.shift()); show(); }, 1400);
+})();
+</script>
