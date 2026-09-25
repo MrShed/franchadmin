@@ -22,6 +22,10 @@
   #turn { display: none; flex: 1; align-items: center; justify-content: center; font: 12px/1.4 monospace; letter-spacing: .08em; color: #5c6072; text-transform: uppercase; text-align: center; padding: 0 24px; }
   body.touch:not(.land) #turn { display: flex; }
   body.touch.land #turn { display: none; }
+  /* phone keyboard up: just ESC / TAB / HIDE under the screen */
+  body.touch.kbup #stick, body.touch.kbup .side.right, body.touch.kbup #turn { display: none; }
+  body.touch.kbup:not(.land) #pad { justify-content: center; padding: 8px 16px; }
+  body.touch.kbup .mid { flex-direction: row; }
   body.touch #pad { display: flex; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); }
   body.touch { justify-content: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
   .side { display: flex; align-items: center; gap: 12px; }
