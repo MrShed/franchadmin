@@ -16,7 +16,7 @@ var UIBench = (function () {
   B.build = function (r) {
     root = r;
     root.innerHTML = '<div class="bench"><div class="bn-tray" id="bn-tray" aria-label="Messages"></div>' +
-      '<div class="bn-main"><div class="bn-tabs" id="bn-tabs" role="tablist"><button data-t="msgs">' + UIICON.bench + 'Messages</button><button data-t="depth">' + UIICON.swap + 'Depth</button><button data-t="key">' + UIICON.key + 'Key</button><button data-t="board">' + UIICON.grid + 'Checkerboard</button></div>' +
+      '<div class="bn-main"><div class="bn-tabs" id="bn-tabs" role="tablist"><button data-t="msgs">' + UIICON.bench + 'Messages</button><button data-t="depth">' + UIICON.swap + 'Depth</button><button data-t="key">' + UIICON.key + 'Key</button><button data-t="board">' + UIICON.grid + '<span class="lg">Checkerboard</span><span class="sm">Board</span></button></div>' +
       '<div class="bn-hint" id="bn-hint"></div><div class="bn-work" id="bn-work"></div></div></div>';
     UI$('#bn-tray').addEventListener('click', function (e) { var c = e.target.closest('[data-m]'); if (!c) return; UIAudio.cue('paper'); B.openMsg(c.dataset.m); });
     UI$('#bn-tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-t]'); if (!b) return; UIAudio.cue('switch'); S().tech = b.dataset.t; B.render(); });
@@ -382,7 +382,7 @@ var UIBench = (function () {
         '<div class="cc-k"><button class="ib" data-kd="-1" data-c="' + i + '" aria-label="Key digit down">' + UIICON.minus + '</button><b>' + k + '</b><button class="ib" data-kd="1" data-c="' + i + '" aria-label="Key digit up">' + UIICON.plus + '</button></div></div>';
     });
     h += '</div>' + (exp ? '<p class="note">Grey: how plain text looks on this checkerboard. Ink: this column, shifted back by the key digit. When they match, the digit is right.</p>' : '<p class="note">No checkerboard to compare against: line the columns up against each other instead.</p>') +
-      (helps() && exp ? '<div class="row" style="gap:8px"><button class="btn sm" data-k-act="best">' + UIICON.check + 'Use every best fit</button><button class="btn sm" data-k-act="polish">' + UIICON.pencil + 'Polish: try each column for readable text</button></div>' : '');
+      (helps() && exp ? '<div class="row" style="gap:8px"><button class="btn sm" data-k-act="best">' + UIICON.check + 'Use every best fit</button></div>' : '');
     return h;
   }
   /** coordinate ascent on the key: each column tries all ten shifts, keeping what reads best (tool help) */

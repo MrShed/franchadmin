@@ -50,6 +50,7 @@ var UIRx = (function () {
           '<button class="pbtn sq" id="rx-van" aria-label="Van search">' + UIICON.van + '<b>Van</b></button>' +
         '</div>' +
       '</section>' +
+      '<div class="rx-timebar" id="rx-timebar" aria-label="Time"></div>' +
       '<div class="rx-side">' +
         '<section class="sched" id="rx-sched" aria-label="Schedule and time"></section>' +
         '<section class="logsheet paper" id="rx-log" aria-label="Intercept log"></section>' +
@@ -64,7 +65,7 @@ var UIRx = (function () {
     meter = UIcanvas(UI$('#rx-meter'), function (x, w, h) { UIPaint.meter(x, w, h, sMeter); });
     eye = UIcanvas(UI$('#rx-eye'), function (x, w, h) { UIPaint.eye(x, w, h, eyeV, true); });
     // knobs
-    var sz = UIland() ? 104 : UIwide() ? 150 : 132;
+    var sz = UIland() ? 104 : UIwide() ? 150 : window.innerHeight < 780 ? 112 : 132;
     var lastTurn = 0;
     knob = UIPaint.knob(UI$('#rx-knob'), { size: sz, label: 'Tuning', ticks: 48, dimple: true, detent: 7, cls: 'big',
       onTurn: function (d) {
@@ -73,17 +74,19 @@ var UIRx = (function () {
         var acc = 1 + Math.min(sp === 'band' ? 10 : 20, speed * speed * 0.6);
         setFreq(kHz() + d * base * acc);
       } });
-    fine = UIPaint.knob(UI$('#rx-fine'), { size: UIland() ? 62 : 74, label: 'Fine tuning', ticks: 24, detent: 10, cls: 'fine',
+    fine = UIPaint.knob(UI$('#rx-fine'), { size: UIland() ? 62 : window.innerHeight < 780 && !UIwide() ? 66 : 74, label: 'Fine tuning', ticks: 24, detent: 10, cls: 'fine',
       onTurn: function (d) { setFreq(kHz() + d * 0.012); } });
     // dial glass drag
-    UIdrag(UI$('#rx-glass'), { start: function (p) { setFreq(UIPaint.glassF(p.w, p.x) * 1000); }, move: function (p) { setFreq(UIPaint.glassF(p.w, p.x) * 1000); }, end: function () { UIAudio.cue('detent'); } });
+    UIdrag(UI$('#rx-glass'), { prevent: false,
+      move: function (p, d) { if (Math.abs(d.x) > 6 && Math.abs(d.x) > Math.abs(d.y)) setFreq(UIPaint.glassF(p.w, p.x) * 1000); },
+      end: function (p, moved, e) { if (e.type === 'pointercancel') return; if (!moved) setFreq(UIPaint.glassF(p.w, p.x) * 1000); UIAudio.cue('detent'); } });
     // waterfall: tap to tune, drag to pan / fine-tune
     var dragF = null;
-    UIdrag(UI$('#rx-ov'), {
+    UIdrag(UI$('#rx-ov'), { prevent: false,
       filter: function (e) { return !e.target.closest('[data-nogesture]'); },
       start: function (p) { dragF = kHz(); },
-      move: function (p, d) { if (UIS.rx.span === 'band') return; var kpp = SPANS[UIS.rx.span] / p.w; setFreq(dragF - d.x * kpp); },
-      end: function (p, moved) { if (!moved) tapWaterfall(p.x, p.w); dragF = null; }
+      move: function (p, d) { if (UIS.rx.span === 'band' || Math.abs(d.x) < 4 || Math.abs(d.x) < Math.abs(d.y)) return; var kpp = SPANS[UIS.rx.span] / p.w; setFreq(dragF - d.x * kpp); },
+      end: function (p, moved, e) { if (!moved && e.type !== 'pointercancel') tapWaterfall(p.x, p.w); dragF = null; }
     });
     UI$('#rx-span').addEventListener('click', function (e) { var b = e.target.closest('[data-span]'); if (!b) return; UIAudio.cue('switch'); setSpan(b.dataset.span, true); });
     UI$('#rx-mode').addEventListener('click', function (e) { var b = e.target.closest('[data-m]'); var m = b ? b.dataset.m : (UIS.rx.mode === 'voice' ? 'cw' : 'voice'); setMode(m); });
@@ -92,6 +95,7 @@ var UIRx = (function () {
     el.van.addEventListener('click', onVan);
     el.log.addEventListener('click', function (e) { var r = e.target.closest('[data-log]'); if (r) { UIAudio.cue('paper'); R.logSheet(r.dataset.log); } });
     el.sched.addEventListener('click', onSched);
+    el.tbar = UI$('#rx-timebar'); el.tbar.addEventListener('click', onSched);
     R.refresh();
     UIExplain.once('receiver');
   };
@@ -249,6 +253,8 @@ var UIRx = (function () {
     }
     histCtx.putImageData(rowImg, 0, 0);
   }
+  /** 'RADIO NORDVIK' -> 'R.NORDVIK', 'MARINE WEATHER, RØNNE' -> 'M.WEATHER' */
+  function abbr(t) { t = t.split(',')[0].replace(/\(.*\)/, '').trim(); var w = t.split(/\s+/); if (w.length < 2) return t.slice(0, 9); var last = w[w.length - 1]; return w.slice(0, -1).map(function (x) { return x.charAt(0); }).join('.') + '.' + last.slice(0, 8); }
   function drawOverlay(x, w, h) {
     x.clearRect(0, 0, w, h);
     var sp = UIS.rx.span, span = SPANS[sp], f0 = sp === 'band' ? 3000 : kHz() - span / 2;
@@ -268,13 +274,14 @@ var UIRx = (function () {
       var xx = X(sigF(s)), isNew = R._newId === s.id;
       if (xx < -20 || xx > w + 20 || (!s.label && !isNew)) return null;
       var t = isNew && !s.label ? 'NEW' : (s.label || '').toUpperCase();
-      if (s.bcast && sp === 'band') t = t.split(/[ ,(]/)[0];
-      return { s: s, xx: xx, t: t, isNew: isNew, pri: s.bcast ? 0 : isNew ? 2 : 1 };
+      var near = Math.abs(sigF(s) - kHz()) < (sp === 'band' ? 120 : sp === 'wide' ? 8 : 3);
+      if (s.bcast && !near) t = abbr(t);
+      return { s: s, xx: xx, t: t, isNew: isNew, pri: near ? 3 : s.bcast ? 0 : isNew ? 2 : 1 };
     }).filter(Boolean).sort(function (a, b) { return b.pri - a.pri; });
     var placed = [];
     labs.forEach(function (L) {
       x.font = (L.s.bcast ? '500 ' : '700 ') + '10px "DX Mono", monospace';
-      var tw = x.measureText(L.t).width, lx = UIclamp(L.xx, tw / 2 + 3, w - tw / 2 - 3), row = 0;
+      var tw = x.measureText(L.t).width, lx = UIclamp(L.xx, tw / 2 + 14, w - tw / 2 - 14), row = 0;
       while (row < 2 && placed.some(function (p) { return p.row === row && Math.abs(p.x - lx) < (p.w + tw) / 2 + 6; })) row++;
       if (row >= 2 || (L.s.bcast && row > 0)) return;
       placed.push({ x: lx, w: tw, row: row });
@@ -514,6 +521,8 @@ var UIRx = (function () {
     var ticks = ''; for (var hh = 0; hh <= 8; hh++) ticks += '<i style="left:' + (hh * 12.5) + '%"><b>' + String((18 + hh) % 24).padStart(2, '0') + '</b></i>';
     var past = log.map(function (e) { return '<u class="' + (e.faint ? 'f' : '') + '" style="left:' + (e.minute / 480 * 100) + '%"></u>'; }).join('');
     var next = up.filter(function (u) { return u.at + u.dur > m; })[0];
+    if (el.tbar) el.tbar.innerHTML = (next ? '<button class="btn next" data-w="next">' + UIICON.wait + '<span>Wait for <b>' + UIA.hhmm(next.at) + ' ' + UIesc(next.callsign || next.label) + '</b></span></button>' : '<button class="btn next" data-w="watch">' + UIICON.eye + '<span>Watch the band</span></button>') +
+      '<button class="btn" data-w="10">+10</button><button class="btn" data-w="30">+30</button><button class="btn ghost" data-w="end" aria-label="End shift">' + UIICON.moon + '</button>';
     el.sched.innerHTML =
       '<div class="sb-head"><span class="engr xs">Tonight’s schedule</span><span class="sb-sub">' + (up.length ? UIplural(up.length, 'known transmission') + ' to come' : 'nothing more known tonight') + '</span></div>' +
       '<div class="sb-strip"><div class="sb-ticks">' + ticks + '</div><div class="sb-past">' + past + '</div>' + blocks + '<span class="sb-now" style="left:' + (m / 480 * 100) + '%"></span></div>' +

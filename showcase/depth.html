@@ -160,12 +160,13 @@ p{margin:0 0 .7em}
 .vfd b{font:600 22px/1 var(--mono);color:var(--vfd);letter-spacing:.04em;text-shadow:0 0 8px rgba(80,255,200,.7)}
 .vfd small{font:600 10px/1 var(--mono);color:#3ecfa4;letter-spacing:.1em}
 .vfd .vm{font:700 10px/1 var(--mono);color:#0b1a17;background:var(--vfd);padding:3px 4px 2px;border-radius:2px;margin-left:4px;box-shadow:0 0 8px rgba(80,255,200,.6)}
-.rx-glass{height:34px;border-radius:5px;overflow:hidden;cursor:ew-resize;touch-action:none;box-shadow:0 0 0 3px #1b1714,0 0 0 4px rgba(255,255,255,.12),inset 0 2px 6px rgba(0,0,0,.5)}
+.rx-glass{height:34px;border-radius:5px;overflow:hidden;cursor:ew-resize;touch-action:pan-y;box-shadow:0 0 0 3px #1b1714,0 0 0 4px rgba(255,255,255,.12),inset 0 2px 6px rgba(0,0,0,.5)}
 .rx-glass canvas,.crt canvas,.meter canvas,.eye canvas{display:block}
 .crt{position:relative;height:172px;border-radius:14px/18px;overflow:hidden;background:#020604;
   box-shadow:0 0 0 5px #121210,0 0 0 6px rgba(255,255,255,.1),0 0 0 9px #0b0b0a,inset 0 0 0 1px #000}
 .crt-in,.crt-ov{position:absolute;inset:0}
-.crt-ov{touch-action:none;cursor:crosshair}
+.crt-glow{position:absolute;inset:0;width:100%;height:100%;filter:blur(7px) brightness(1.6);mix-blend-mode:screen;opacity:.55;pointer-events:none}
+.crt-ov{touch-action:pan-y;cursor:crosshair}
 .crt-glass{position:absolute;inset:0;pointer-events:none;border-radius:inherit;
   background:radial-gradient(130% 90% at 30% 0%,rgba(255,255,255,.13),rgba(255,255,255,0) 45%),repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,rgba(0,0,0,0) 1px 3px);
   box-shadow:inset 0 0 38px rgba(0,0,0,.9),inset 0 0 8px rgba(0,0,0,.8)}
@@ -177,7 +178,7 @@ p{margin:0 0 .7em}
 .tape b{color:var(--phos2);font-weight:700;letter-spacing:.04em}
 .tape em{font-style:normal;color:#ffcf8a;text-shadow:0 0 6px rgba(255,180,80,.5)}
 .tape .dim{color:#5fae86}
-.tp-st{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+.tp-st{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;width:100%}
 @media (max-width:520px){.tape{font-size:12.5px}}
 .tp-hold{display:grid;grid-template-columns:1fr auto;grid-template-areas:"k q" "bar bar" "hint hint";gap:4px 10px;width:100%}
 .tp-k{grid-area:k;color:#7bd9a4;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
@@ -287,6 +288,7 @@ p{margin:0 0 .7em}
 .ls-row.faint{color:var(--graphite)}
 .ls-row.faint .ls-t,.ls-row.faint .ls-cs{font-weight:400}
 .ls-row.live{background:rgba(255,230,160,.35)}
+.ls-row .onair{color:var(--red)}
 .qs{font:700 10.5px/1 var(--type);padding:2px 4px;border:1.4px solid currentColor;border-radius:2px;transform:rotate(-3deg)}
 .qs.q5,.qs.q4{color:#2d6a3a}.qs.q3{color:#8a6a10}.qs.q2,.qs.q1{color:var(--red)}
 .dfm{font:700 9.5px/1 var(--mono);color:#fff;background:var(--red);padding:2px 3px;border-radius:2px}
@@ -304,7 +306,12 @@ p{margin:0 0 .7em}
   .rx-ctl{grid-area:ctl;grid-template-columns:1fr 1fr;grid-template-areas:"main main" "l r";align-self:start;gap:6px 4px;padding:0}
   .rx-ctl .rx-main{grid-area:main}.rx-ctl .rx-col.l{grid-area:l}.rx-ctl .rx-col.r{grid-area:r}
   .rx-btns{grid-area:btns;grid-template-columns:1fr 50px 50px;gap:6px}
-  .rx-head .engr.sm{display:none}.vfd b{font-size:18px}
+  .rx-head .engr.sm{display:none}.vfd b{font-size:17px}.vfd{padding:4px 8px}
+  .rx-set{row-gap:6px}.rx-head{padding:0 2px}.crt{height:116px}
+  .tp-hold{grid-template-columns:auto 1fr auto;grid-template-areas:"k bar q" "hint hint hint";align-items:center;gap:2px 8px}
+  .tp-k{font-size:10.5px}.tp-q{font-size:14px}.tp-hint{font-size:12px}.tp-copy{font-size:17px}
+  .pbtn.copy small{display:none}
+  .sb-head .sb-sub{display:none}
   .lever button{min-height:32px;padding:4px 2px}.lv-slot{width:28px}.lever.cw .lv-bat{left:13px}
   .pbtn{min-height:44px}.pbtn.copy{padding:0 10px}.pbtn.copy b{font-size:13px}
   .meter{width:92px;height:54px}
@@ -826,6 +833,28 @@ textarea.wu{width:100%;min-height:140px;padding:12px;border:0;border-radius:3px;
 .pt-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.pt-h b{font:700 14px/1 var(--type)}.pt-h small{font:600 11px/1 var(--mono);color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}.pt-h small.dw{color:var(--red)}.pt-h .vstamp{margin-left:auto}
 .pt p{font:400 15.5px/1.45 var(--type);margin:6px 0 0}
 .db-f{display:flex;flex-wrap:wrap;gap:10px;padding-top:24px}
+
+/* phone portrait: the time controls stay reachable above the tabs */
+.rx-timebar{display:none}
+@media (max-width:600px) and (orientation:portrait){
+  .rx-timebar{display:flex;position:sticky;bottom:0;z-index:5;gap:6px;margin:0 -10px;padding:8px 10px calc(8px);background:linear-gradient(rgba(14,16,15,0),rgba(14,16,15,.94) 22%,#0e100f);}
+  .rx-timebar .btn{min-height:46px;padding:0 10px;flex:none}
+  .rx-timebar .btn.next{flex:1;min-width:0;justify-content:flex-start;background:linear-gradient(#ffe0a3,#e2a44c);box-shadow:0 2px 0 #7b5320,0 4px 12px rgba(255,170,70,.25),inset 0 1px 0 rgba(255,255,255,.8)}
+  .rx-timebar .btn.next span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
+  .rx-timebar .btn.next b{font-size:12.5px}
+  .rx-timebar .btn.ghost{color:#c9c2ad;width:46px;padding:0}
+  .sb-btns .btn.next{display:none}
+}
+.bn-tabs .sm{display:none}
+@media (max-width:600px){.bn-tabs .lg{display:none}.bn-tabs .sm{display:inline}.bn-tabs button{padding:0 8px}}
+@media (max-width:600px){
+  .dk-subs{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible}
+  .dk-subs button{min-width:0;min-height:52px;padding:7px 4px 6px;font-size:9.5px}
+}
+@media (max-width:600px) and (orientation:portrait) and (max-height:780px){
+  .rx-set{gap:8px;padding:12px}.crt{height:132px}.rx-glass{height:30px}.engr.big{font-size:19px}.vfd b{font-size:19px}
+  .meter{width:100px;height:60px}.pbtn{min-height:52px}.tape{min-height:40px;padding:6px 10px}
+}
 /*MORE*/
 
 </style>
@@ -1141,7 +1170,7 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
   // Every knob the case uses. Balanced with tests/play.js.
   DX.GRADES = [
     { id: 'cadet', label: 'Cadet', blurb: 'Five nights. The station holds the ring\'s checkerboard, the pad clerk was lazy, and Special Branch is generous.',
-      shifts: 5, warrants: 6, outstations: 4, reusePairs: 5, garble: 0.55, cost: 0.6, alert: 0.5, boardHeld: true, suggest: true,
+      shifts: 5, warrants: 6, outstations: 4, reusePairs: 4, garble: 0.7, cost: 0.6, alert: 0.5, boardHeld: true, suggest: true,
       period: [4, 5], bursts: 0, decoys: 0, patience: 120, collapseAgents: 1, dfSd: 0.75, vanSec: 150, opNights: [3, 4],
       mentorCost: { 1: 0, 2: 15, 3: 5 }, courierMsgs: 3, stopReuseAt: 99, lateReuse: 1 },
     { id: 'analyst', label: 'Analyst', blurb: 'Four nights. You hold the checkerboard; the pad clerk reused a few pages. The ring reacts to what you do.',
@@ -1149,9 +1178,9 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
       period: [5, 6], bursts: 0.25, decoys: 1, patience: 100, collapseAgents: 2, dfSd: 1.0, vanSec: 110, opNights: [2, 3],
       mentorCost: { 1: 0, 2: 30, 3: 10 }, courierMsgs: 2, stopReuseAt: 3, lateReuse: 0 },
     { id: 'chief', label: 'Chief', blurb: 'Four nights. No checkerboard on file: recover it from courier traffic. Few warrants; a sharp security officer.',
-      shifts: 4, warrants: 3, outstations: 3, reusePairs: 2, garble: 1.3, cost: 1.3, alert: 1.5, boardHeld: false, suggest: false,
+      shifts: 4, warrants: 3, outstations: 3, reusePairs: 2, garble: 1.45, cost: 1.3, alert: 1.5, boardHeld: false, suggest: false,
       period: [6, 7], bursts: 0.5, decoys: 2, patience: 80, collapseAgents: 2, dfSd: 1.3, vanSec: 80, opNights: [2, 3],
-      mentorCost: { 1: 0, 2: 45, 3: 15 }, courierMsgs: 2, stopReuseAt: 2, lateReuse: 0 }
+      mentorCost: { 1: 0, 2: 45, 3: 15 }, courierMsgs: 1, stopReuseAt: 2, lateReuse: 0 }
   ];
   DX.grade = function (id) { for (var i = 0; i < DX.GRADES.length; i++) if (DX.GRADES[i].id === id) return DX.GRADES[i]; return DX.GRADES[1]; };
 })();
@@ -1286,7 +1315,11 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
     D.LANDMARKS.forEach(function (L) {
       var w = where[L[0]], pos;
       if (L[0] === 'bridge') { var ry = R.range(0.55, 0.8); pos = [riverXAt(ry), ry]; }
-      else { var xx = R.range(w[0], w[1]); pos = [xx, coastY(xx) + 0.02 + R.range(w[2], w[3])]; }
+      else {
+        var xx = R.range(w[0], w[1]);
+        var coastal = ['naval_yard', 'fuel_depot', 'ferry', 'lighthouse', 'power', 'customs', 'radar', 'market'].indexOf(L[0]) >= 0;
+        pos = [xx, coastal ? coastY(xx) + 0.02 + R.range(w[2], w[3]) : DX.clamp(R.range(w[2], w[3]) + 0.1, coastY(xx) + 0.05, 0.95)];
+      }
       addPlace(L[0], L[1], L[2], pos);
     });
     D.CAFES.forEach(function (cf) { addPlace('cafe', cf[0], cf[1], landPoint(0.08, 0.92, 0.28, 0.9)); });
@@ -1648,36 +1681,80 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
   /** keyword search (the big computer): for every keyword in the pool build the board, fit each column of the
    *  period against that board's expected digit frequencies, and score the decrypt. If rel (a relative key) is
    *  given, the 10 constants on top of it are tried as well. -> best {keyword, key, plaus} */
-  DX.searchBoard = function (streams, periodOrRel, pool) {
+  /** crib text -> digit array; '#n' stands for an n-figure number (figures unknown: -1) */
+  DX.cribDigits = function (b, crib) {
+    var out = [];
+    String(crib).split(/(#[0-9])/).forEach(function (part) {
+      var m = /^#([0-9])$/.exec(part);
+      if (m) { out = out.concat(DX.toDigits(b.figCode)); for (var i = 0; i < 2 * +m[1]; i++) out.push(-1); out = out.concat(DX.toDigits(b.figCode)); return; }
+      if (part) out = out.concat(DX.toDigits(DX.encode(b, part)));
+    });
+    return out;
+  };
+  /** known plaintext at the start of each stream -> periodic key digits (-1 where no crib covers a column).
+   *  cribs: one digit array per stream (or null). Returns null when the cribs contradict each other. */
+  DX.keyFromCribs = function (streams, cribs, period) {
+    var key = [], i;
+    for (i = 0; i < period; i++) key.push(-1);
+    for (var s = 0; s < streams.length; s++) {
+      var cr = cribs[s];
+      if (!cr) continue;
+      for (i = 0; i < cr.length && i < streams[s].length; i++) {
+        if (cr[i] < 0 || streams[s][i] < 0) continue;
+        var k = ((streams[s][i] - cr[i]) % 10 + 10) % 10, col = i % period;
+        if (key[col] >= 0 && key[col] !== k) return null;
+        key[col] = k;
+      }
+    }
+    return key;
+  };
+  /** keyword search (the big computer): for every keyword in the pool build the board and derive a key three
+   *  ways — known openings (cribs, a list of candidate opening texts), column frequencies, and the columns aligned
+   *  on each other plus one constant — then score the decrypt. -> best {keyword, key, plaus} */
+  DX.searchBoard = function (streams, periodOrRel, pool, cribs) {
     pool = pool || DX.DATA.KEYWORDS;
     var rel = Array.isArray(periodOrRel) ? periodOrRel : null, period = rel ? rel.length : periodOrRel;
-    var sample = streams.map(function (s) { return s.slice(0, 160); });
+    if (!rel) rel = DX.alignColumns(streams, period).rel;
+    var sample = streams.map(function (s) { return s.slice(0, 110); });
+    var pooled = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    streams.forEach(function (s) { for (var i = 0; i < s.length; i++) if (s[i] >= 0) pooled[((s[i] - rel[i % period]) % 10 + 10) % 10]++; });
     var cands = [];
-    for (var k = 0; k < pool.length; k++) {
-      var b = DX.boardCache(pool[k]);
-      var keys = [DX.columnFreq(streams, period, b).map(function (c) { return c.fit[0].shift; })];
-      if (rel) for (var c = 0; c < 10; c++) keys.push(rel.map(function (r) { return (r + c) % 10; }));
-      keys.forEach(function (key) {
-        var txt = sample.map(function (p) { return DX.decode(b, DX.subKey(p, key)).text; }).join('');
-        cands.push({ keyword: pool[k], key: key, plaus: DX.plaus(txt).score });
+    function score(kw, b, key) { var txt = sample.map(function (p) { return DX.decode(b, DX.subKey(p, key)).text; }).join(''); cands.push({ keyword: kw, key: key, plaus: DX.plaus(txt).score }); }
+    // 1. known openings: consistent across every message, or not at all
+    if (cribs && cribs.length) {
+      pool.forEach(function (kw) {
+        var b = DX.boardCache(kw), colfit = null;
+        cribs.forEach(function (ct) {
+          var cd = DX.cribDigits(b, ct);
+          var kk = DX.keyFromCribs(streams, streams.map(function () { return cd; }), period);
+          if (!kk) return;
+          if (kk.indexOf(-1) >= 0 && !colfit) colfit = DX.columnFreq(streams, period, b).map(function (c) { return c.fit[0].shift; });
+          score(kw, b, kk.map(function (x, i) { return x >= 0 ? x : colfit[i]; }));
+        });
       });
+      cands.sort(function (x, y) { return y.plaus - x.plaus; });
+    }
+    // 2. statistics only (no crib fits): column fit, and aligned columns + one constant
+    if (!cands.length || cands[0].plaus < 0.6) {
+      for (var k = 0; k < pool.length; k++) {
+        var b = DX.boardCache(pool[k]), exp = DX.boardExpect(b);
+        score(pool[k], b, DX.columnFreq(streams, period, b).map(function (c) { return c.fit[0].shift; }));
+        var bestC = 0, bestSc = -1e18;
+        for (var c = 0; c < 10; c++) { var sc = 0; for (var d = 0; d < 10; d++) sc += pooled[(d + c) % 10] * Math.log(exp[d]); if (sc > bestSc) { bestSc = sc; bestC = c; } }
+        score(pool[k], b, rel.map(function (r) { return (r + bestC) % 10; }));
+      }
     }
     cands.sort(function (x, y) { return y.plaus - x.plaus; });
-    // refine the three best keywords column by column
-    var best = null;
-    cands.slice(0, 3).forEach(function (cd) {
-      var r = DX.refineKey(streams, DX.boardCache(cd.keyword), cd.key);
-      if (!best || r.plaus > best.plaus) best = { keyword: cd.keyword, key: r.key, plaus: r.plaus };
-    });
-    return best;
+    var cd0 = cands[0], r = DX.refineKey(streams, DX.boardCache(cd0.keyword), cd0.key, 2);
+    return { keyword: cd0.keyword, key: r.key, plaus: r.plaus };
   };
   /** coordinate ascent on a periodic key: each column tries all ten shifts, keeping what reads best */
-  DX.refineKey = function (streams, b, key) {
+  DX.refineKey = function (streams, b, key, passes) {
     key = key.slice();
-    var sample = streams.map(function (s) { return s.slice(0, 200); });
+    var sample = streams.map(function (s) { return s.slice(0, 160); });
     function score(k) { return DX.plaus(sample.map(function (s) { return DX.decode(b, DX.subKey(s, k)).text; }).join('')).score; }
     var best = score(key), evals = 1;
-    for (var pass = 0; pass < 3; pass++) {
+    for (var pass = 0; pass < (passes || 3); pass++) {
       var changed = false;
       for (var c = 0; c < key.length; c++) {
         var bestS = key[c];
@@ -1750,7 +1827,7 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
     E_RECON: ['RECONNAISSANCE OF {OPPLACE} COMPLETE. GUARDS CHANGE AT {TIME}. FENCE WEAK ON EAST SIDE.',
       'I HAVE WATCHED {OPPLACE} THREE NIGHTS. ONE GUARD ONLY AFTER {TIME}.'],
     E_READY: ['{ITEM} RECEIVED. I WILL BE IN POSITION NIGHT OF {OPDAY} AT {OPTIME}.', 'READY FOR {CW}. {OPDAY} AT {OPTIME} IS GOOD.'],
-    A_FILL: ['NOTHING NEW. {PLACE} QUIET. WAITING FOR ORDERS.', 'SHIP ARRIVED AT {PLACE}. THREE MEN ON WATCH.', 'I NEED MONEY FOR RENT. SEND BY {SPOT}.'],
+    A_FILL: ['NOTHING NEW. {PLACE} QUIET. WAITING FOR ORDERS.', 'SHIP ARRIVED AT {QUAY}. THREE MEN ON WATCH.', 'I NEED MONEY FOR RENT. SEND BY {SPOT}.'],
     RA_ORDER: ['WATCH {PLACE} NIGHT OF {DAY} AND REPORT.', 'CLEAR {SPOT} AFTER {TIME} {DAY}. BURN THE PAPER.'],
     C_DROP: ['{SPOT} LOADED NIGHT OF {DAY} AFTER {TIME} FOR {AG}. MARK ON {SIGNAL}. PACKAGE CONTAINS {ITEM}.'],
     C_EXEC: ['PACKAGE FOR {EXEC} IS IN {SPOT} FROM {DAY} AFTER {TIME}. {EXEC} MUST CLEAR IT BEFORE NIGHT OF {OPDAY}.'],
@@ -1922,7 +1999,7 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
     function V(extra) {
       var v = {
         CW: op.codeword, WHAT: op.what, OPPLACE: opPlace.code, OPDAY: DX.nightName(o), OPTIME: DX.hhmm4(op.minute), EXEC: ex.spell,
-        ITEM: execItem, PH: ex.sex === 'F' ? 'SHE' : 'HE', N: op.kroner, SPOT: execSpot.code, SIGNAL: R.pick(signals).code,
+        ITEM: execItem, PH: ex.sex === 'F' ? 'SHE' : 'HE', N: op.kroner, SPOT: R.pick(spareSpots).code, QUAY: 'QUAY ' + R.int(1, 9), SIGNAL: R.pick(signals).code,
         CAFE: R.pick(cafes).code, PLACE: R.pick(landmarks).code, AG: (R.pick(otherAgents.length ? otherAgents : plainAgents)).spell,
         DAY: DX.nightName(R.int(0, N - 1)), TIME: DX.hhmm4(R.int(10, 40) * 10), N2: R.int(10, 40), F: String(R.int(3000, 9000))
       };
@@ -1940,8 +2017,12 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
       var sign = isCtl ? T.ctlSign[ring.signCtl] : T.agSign[fromM.sign];
       var vars = V(extra);
       vars.TO = toSpell; vars.FROM = fromSpell; vars.NR = nextNr(from);
-      if (opts.more) tpl = tpl + ' ' + R.pick(T[opts.more]);
       var a = fill(open + ' ', vars), b = fill(tpl + ' ', vars), c = fill(sign, vars);
+      if (opts.more) {
+        // a second, unrelated sentence (its own fillers)
+        var b2 = fill(R.pick(T[opts.more]) + ' ', V({})), nb = DX.norm(b.text).length;
+        b = { text: b.text + b2.text, facts: b.facts.concat(b2.facts.map(function (f) { return { fact: f.fact, key: f.key, value: f.value, span: [f.span[0] + nb, f.span[1] + nb] }; })) };
+      }
       var off1 = DX.norm(a.text).length, off2 = off1 + DX.norm(b.text).length;
       var facts = a.facts.concat(b.facts.map(function (f) { return { fact: f.fact, key: f.key, value: f.value, span: [f.span[0] + off1, f.span[1] + off1] }; }))
         .concat(c.facts.map(function (f) { return { fact: f.fact, key: f.key, value: f.value, span: [f.span[0] + off2, f.span[1] + off2] }; }));
@@ -1968,6 +2049,8 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
     for (n = 0; n <= o && n < N; n++) {
       ctlBeats[n].slice(0, 3).forEach(function (beat, k) {
         var extra = {};
+        if (beat === 'OP_WHO') extra = { SPOT: execSpot.code };
+        if (beat === 'MONEY') extra = { SPOT: otherSpot.code };
         if (beat === 'MEET') { extra = { AG: meetAgent.spell, CAFE: city.places.filter(function (p) { return p.id === meet.cafe; })[0].code, DAY: DX.nightName(meet.night), TIME: DX.hhmm4(meet.minute) }; }
         if (beat === 'ORDER_DROP') { extra = { SPOT: otherSpot.code, AG: members.filter(function (m) { return m.id === odrop.forId; })[0].spell, DAY: DX.nightName(odrop.night), TIME: DX.hhmm4(odrop.after) }; }
         var m = compose('ctl', res.id, beat, n, extra);
@@ -2158,7 +2241,7 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
       var spec = R.pick(OPS);
       var v = { CW: R.pick(D.CODEWORDS), WHAT: spec.what, OPPLACE: R.pick(spec.places), OPDAY: R.pick(DX.CAL.DAY_NAMES), OPTIME: DX.pad(R.int(0, 23), 2) + DX.pad(R.int(0, 5) * 10, 2),
         EXEC: cs(), ITEM: R.pick(ITEMS), PH: R.pick(['HE', 'SHE']), N: R.int(2, 9) * 1000, SPOT: R.pick(placeCodes), SIGNAL: R.pick(placeCodes), CAFE: R.pick(placeCodes),
-        PLACE: R.pick(placeCodes), AG: cs(), DAY: R.pick(DX.CAL.DAY_NAMES), TIME: DX.pad(R.int(18, 23), 2) + DX.pad(R.int(0, 5) * 10, 2), N2: R.int(10, 40), F: String(R.int(3000, 9000)), TO: cs(), NR: R.int(11, 60) };
+        PLACE: R.pick(placeCodes), QUAY: 'QUAY ' + R.int(1, 9), AG: cs(), DAY: R.pick(DX.CAL.DAY_NAMES), TIME: DX.pad(R.int(18, 23), 2) + DX.pad(R.int(0, 5) * 10, 2), N2: R.int(10, 40), F: String(R.int(3000, 9000)), TO: cs(), NR: R.int(11, 60) };
       var ctl = i % 3 === 0;
       v.FROM = ctl ? R.pick(D.CONTROLLERS)[1] : cs();
       if (ctl) v.TO = cs();
@@ -2626,13 +2709,17 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
     var join = s.minute;
     var noise = DX.AIR.noise(W, t.night, t.minute), str = DX.AIR.strength(W, t);
     var q = DX.AIR.quality(inp, str, noise);
-    var groups = t.msg ? W.msg[t.msg].groups : t.groups;
+    var groups = t.msg ? W.msg[t.msg].groups : (t.groups || []);
     var cp = DX.AIR.copy(W, t, groups, inp, join, q);
     events = events.concat(this._advance(t.minute + t.dur));
     var e = this._logFaint(t);
     e.faint = false; e.groups = cp.groups; e.quality = cp.quality; e.length = groups.length; e.lost = cp.lost; e.corrupt = cp.corrupt;
     var hasInd = t.msg ? W.msg[t.msg].cipher === 'pad' : !!t.indicator;
     e.indicator = hasInd ? cp.groups[0] : null;
+    if (!groups.length) {   // the VVV test transmitter: nothing to copy but its call-up
+      e.faint = false; e.groups = []; e.quality = cp.quality; e.length = 0;
+      return { ok: true, intercept: DX.copy(e), msg: null, groups: [], quality: cp.quality, lost: 0, corrupt: 0, events: events, clock: this.clock(), note: 'VVV VVV VVV: a test transmission, no message' };
+    }
     // workbench message (copies of the same message merge: repeats are recognised by length and indicator)
     var key = t.msg || ('decoy:' + t.id);
     if (!s.wbByKey[key]) { var no = s.nextNo++; s.wbByKey[key] = 'M' + no; s.wb['M' + no] = { id: 'M' + no, no: no, key: key, copies: [], first: { shift: t.night, t: t.minute }, from: t.from, to: t.to, kind: hasInd ? 'pad' : 'periodic' }; }
@@ -2814,7 +2901,8 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
     if (!a || !b || a === b) return { ok: false, err: 'two different callsigns' };
     this.unlink(a, b);
     this._s.links.push({ a: a, b: b, kind: kind });
-    return { ok: true, links: this.links() };
+    var dg = this.links(); dg.ok = true;
+    return dg;
   };
   CP.unlink = function (a, b) { this._s.links = this._s.links.filter(function (l) { return !((l.a === a && l.b === b) || (l.a === b && l.b === a)); }); return { ok: true }; };
   CP.links = function () {
@@ -3008,7 +3096,10 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
   CP._computerJob = function (job) {
     var s = this._s, self = this;
     var st = job.ids.map(function (id) { return self._digitsOf(id); }).filter(Boolean);
-    var best = st.length ? DX.searchBoard(st, typeof job.arg === 'number' ? job.arg : DX.toDigits(job.arg)) : null;
+    // the computer room tries the player's crib, or the ring's usual openings with the callsigns in the log
+    var wb0 = s.wb[job.ids[0]], W = this._w;
+    var cribs = job.crib ? [DX.norm(job.crib)] : DX.openingTexts(wb0.from, wb0.to, W.ring.controller.spell, W.ring.controller.call);
+    var best = st.length ? DX.searchBoard(st, typeof job.arg === 'number' ? job.arg : DX.toDigits(job.arg), null, cribs) : null;
     job.result = best ? { keyword: best.keyword, key: best.key, plaus: best.plaus } : null;
     if (best && best.plaus >= 0.55) {
       if (!s.board) s.board = best.keyword;
@@ -3378,15 +3469,27 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
     };
     /** book the big computer: it tries every keyword in the list against these messages with this period (or
      *  relative key). The job runs for an hour; the answer comes to the inbox (event kind 'computer'). */
-    B.boardSolve = function (ids, periodOrRel) {
+    B.boardSolve = function (ids, periodOrRel, crib) {
       var e = need(ids); if (e) return { ok: false, err: e };
       var s = c._s;
       if (s.pending.some(function (p) { return p.kind === 'computer' && !p.done; })) return { ok: false, err: 'the computer is already running a job for you' };
-      var job = { id: 'C' + (s.pending.length + 1), kind: 'computer', shift: s.shift, at: Math.min(SHIFT, s.minute + c.costs().boardSolveWait), ids: (Array.isArray(ids) ? ids : [ids]).slice(), arg: periodOrRel, done: false };
+      var job = { id: 'C' + (s.pending.length + 1), kind: 'computer', shift: s.shift, at: Math.min(SHIFT, s.minute + c.costs().boardSolveWait), ids: (Array.isArray(ids) ? ids : [ids]).slice(), arg: periodOrRel, crib: crib || null, done: false };
       if (s.minute + c.costs().boardSolveWait > SHIFT) { job.shift = s.shift + 1; job.at = Math.min(SHIFT, s.minute + c.costs().boardSolveWait - SHIFT); }
       s.pending.push(job);
       var ev7 = c._spend(c.costs().boardSolve);
       return { ok: true, pending: true, job: job.id, ready: { shift: job.shift, t: job.at, label: DX.hhmm(job.at) }, events: ev7 };
+    };
+    /** known plaintext: a crib assumed at the start of each message gives the key digits it covers.
+     *  crib may hold '#n' for an n-figure number. -> {key:[digits, -1 unknown], known, conflict} */
+    B.keyFromCrib = function (ids, crib, period) {
+      var e = need(ids); if (e) return { ok: false, err: e };
+      var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard: recover it first' };
+      period = Math.max(1, period | 0);
+      var st = streams(ids), cd = DX.cribDigits(bd, crib);
+      var key = DX.keyFromCribs(st, st.map(function () { return cd; }), period);
+      var ev9 = c._spend(c.costs().setKey);
+      if (!key) return { ok: true, key: null, conflict: true, known: 0, events: ev9 };
+      return { ok: true, key: key, keyStr: DX.digitStr(key), known: key.filter(function (x) { return x >= 0; }).length, conflict: false, events: ev9 };
     };
     B.decode = function (digits) { var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard' }; var d = DX.decode(bd, digits); return { ok: true, text: d.text, plaus: DX.plaus(d.text).score }; };
     B.encode = function (text) { var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard' }; return { ok: true, digits: DX.encode(bd, text) }; };
@@ -3507,8 +3610,11 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
     });
   }
 
+  /** build the lazily computed language tables now (so no player action pays for them) */
+  DX.warm = function () { DX.lang(); DX.wordLM(); DX.vocab(); };
   DX.newCase = function (seed, opts) {
     opts = opts || {};
+    DX.warm();
     if (seed === undefined || seed === null || seed === '') seed = String(Math.floor(Math.random() * 1e9));
     var grade = DX.grade(opts.tutorial ? 'cadet' : opts.grade || 'analyst').id;
     if (opts.tutorial) seed = 'tutorial-1977';
@@ -3533,6 +3639,7 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
   DX.load = function (str) {
     var json = /^DX1:/.test(str) ? DX.unpack(str.slice(4)) : str;
     var s = JSON.parse(json);
+    DX.warm();
     var W = DX.makeWorld(s.seed, s.grade, s.attempt);
     // replay the world changes: security reactions and arrests, in order
     s.reactions.forEach(function (r) { DX.applyReaction(W, r); });
@@ -3910,6 +4017,11 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
       covered: [best.f[0], best.f[1]], tokensA: best.tk[0].map(function (x) { return x.t; }), tokensB: best.tk[1].map(function (x) { return x.t; }) };
   };
 
+  /** the ring's opening habits as crib TEXTS ('#2' = the message number), for a courier/agent from -> to */
+  DX.openingTexts = function (from, to, ctlSpell, ctlCall) {
+    var T = DX.TEMPLATES, isCtl = from === ctlCall, sp = function (x) { return x === ctlCall ? ctlSpell : x; };
+    return (isCtl ? T.ctlOpen : T.agOpen).map(function (tpl) { return tpl.replace('{TO}', sp(to)).replace('{FROM}', sp(from)).split('{NR}').map(DX.norm).join('#2'); });
+  };
   /** the ring's opening habits as crib token lists, for a message from `from` to `to` (callsigns as heard).
    *  ctlSpell: how the controller's callsign is spelt in text (e.g. SAEL). */
   DX.openingCribs = function (from, to, ctlSpell, ctlCall) {
@@ -3936,13 +4048,19 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
     var p = opts.period || DX.bestPeriod(ic, reps);
     var keyword = board ? board.key : null, key, plaus;
     if (!board) {
-      var sb = DX.searchBoard(streams, p);
+      var sb = DX.searchBoard(streams, p, null, opts.cribs);
       if (!sb || sb.plaus < 0.55) return { ok: false, period: p, plaus: sb ? sb.plaus : 0 };
       board = DX.boardCache(sb.keyword); keyword = sb.keyword; key = sb.key; plaus = sb.plaus;
     } else {
-      key = DX.columnFreq(streams, p, board).map(function (col) { return col.fit[0].shift; });
-      var r = DX.refineKey(streams, board, key);
-      key = r.key; plaus = r.plaus;
+      var fit = DX.columnFreq(streams, p, board).map(function (col) { return col.fit[0].shift; });
+      var tries = [fit];
+      (opts.cribs || []).forEach(function (ct) {
+        var cd = DX.cribDigits(board, ct), kk = DX.keyFromCribs(streams, streams.map(function () { return cd; }), p);
+        if (kk) tries.push(kk.map(function (x, i) { return x >= 0 ? x : fit[i]; }));
+      });
+      var bestR = null;
+      tries.forEach(function (k0) { var r = DX.refineKey(streams, board, k0, 2); if (!bestR || r.plaus > bestR.plaus) bestR = r; });
+      key = bestR.key; plaus = bestR.plaus;
     }
     return { ok: plaus >= 0.5, period: p, key: key, keyword: keyword, plaus: plaus, texts: streams.map(function (s) { return DX.decode(board, DX.subKey(s, key)).text; }) };
   };
@@ -3971,7 +4089,7 @@ var DX = (typeof DX !== 'undefined' && DX) ? DX : {};
       // try with the first k messages as they arrive
       for (var k = 2; k <= ms.length; k++) {
         var sub = ms.slice(0, k);
-        var r = DX.solvePeriodic(sub.map(cipherDigits), G.boardHeld ? board : null);
+        var r = DX.solvePeriodic(sub.map(cipherDigits), G.boardHeld ? board : null, { cribs: DX.openingTexts(cm.call, W.ring.resident.call, W.ring.controller.spell, W.ring.controller.call) });
         if (r.ok) {
           var t = Math.max.apply(null, sub.map(firstHeard)) + (G.boardHeld ? 30 : 90);
           if (!G.boardHeld) boardAt = Math.min(boardAt, t);
@@ -5382,7 +5500,8 @@ UI.act = function (f) {
   return r;
 };
 UI.showEvents = function (evs) {
-  evs = (evs || []).filter(function (e) { return e.text; });
+  var air = {}; UIA.band().now.forEach(function (s) { air[s.id] = 1; });
+  evs = (evs || []).filter(function (e) { return e.text && !(e.kind === 'heard' && e.tx && air[e.tx]); });
   if (!evs.length) return;
   if (evs.length === 1) UItoast(evs[0].text, { ms: 4200 });
   else UItoast(evs.length + ' things happened while you waited — see the log.', { ms: 3600 });
@@ -5627,7 +5746,7 @@ var UIRx = (function () {
         '<div class="rx-head"><div class="plate"><span class="engr big">KESTREL</span><span class="engr sm">RX-2 · HF receiver</span></div>' +
         '<div class="vfd" id="rx-vfd"></div></div>' +
         '<div class="rx-glass" id="rx-glass" aria-label="Dial glass: drag to tune"></div>' +
-        '<div class="crt"><div class="crt-in" id="rx-wf"></div><div class="crt-ov" id="rx-ov"></div><div class="crt-glass"></div>' +
+        '<div class="crt"><div class="crt-in" id="rx-wf"></div><canvas class="crt-glow" id="rx-glow" width="160" height="60" aria-hidden="true"></canvas><div class="crt-ov" id="rx-ov"></div><div class="crt-glass"></div>' +
           '<div class="crt-span" id="rx-span" data-nogesture><button data-span="band">Band</button><button data-span="wide">±50k</button><button data-span="narrow">±3k</button></div></div>' +
         '<div class="tape" id="rx-tape" aria-live="polite"></div>' +
         '<div class="rx-ctl">' +
@@ -5642,6 +5761,7 @@ var UIRx = (function () {
           '<button class="pbtn sq" id="rx-van" aria-label="Van search">' + UIICON.van + '<b>Van</b></button>' +
         '</div>' +
       '</section>' +
+      '<div class="rx-timebar" id="rx-timebar" aria-label="Time"></div>' +
       '<div class="rx-side">' +
         '<section class="sched" id="rx-sched" aria-label="Schedule and time"></section>' +
         '<section class="logsheet paper" id="rx-log" aria-label="Intercept log"></section>' +
@@ -5656,7 +5776,7 @@ var UIRx = (function () {
     meter = UIcanvas(UI$('#rx-meter'), function (x, w, h) { UIPaint.meter(x, w, h, sMeter); });
     eye = UIcanvas(UI$('#rx-eye'), function (x, w, h) { UIPaint.eye(x, w, h, eyeV, true); });
     // knobs
-    var sz = UIland() ? 104 : UIwide() ? 150 : 132;
+    var sz = UIland() ? 104 : UIwide() ? 150 : window.innerHeight < 780 ? 112 : 132;
     var lastTurn = 0;
     knob = UIPaint.knob(UI$('#rx-knob'), { size: sz, label: 'Tuning', ticks: 48, dimple: true, detent: 7, cls: 'big',
       onTurn: function (d) {
@@ -5665,17 +5785,19 @@ var UIRx = (function () {
         var acc = 1 + Math.min(sp === 'band' ? 10 : 20, speed * speed * 0.6);
         setFreq(kHz() + d * base * acc);
       } });
-    fine = UIPaint.knob(UI$('#rx-fine'), { size: UIland() ? 62 : 74, label: 'Fine tuning', ticks: 24, detent: 10, cls: 'fine',
+    fine = UIPaint.knob(UI$('#rx-fine'), { size: UIland() ? 62 : window.innerHeight < 780 && !UIwide() ? 66 : 74, label: 'Fine tuning', ticks: 24, detent: 10, cls: 'fine',
       onTurn: function (d) { setFreq(kHz() + d * 0.012); } });
     // dial glass drag
-    UIdrag(UI$('#rx-glass'), { start: function (p) { setFreq(UIPaint.glassF(p.w, p.x) * 1000); }, move: function (p) { setFreq(UIPaint.glassF(p.w, p.x) * 1000); }, end: function () { UIAudio.cue('detent'); } });
+    UIdrag(UI$('#rx-glass'), { prevent: false,
+      move: function (p, d) { if (Math.abs(d.x) > 6 && Math.abs(d.x) > Math.abs(d.y)) setFreq(UIPaint.glassF(p.w, p.x) * 1000); },
+      end: function (p, moved, e) { if (e.type === 'pointercancel') return; if (!moved) setFreq(UIPaint.glassF(p.w, p.x) * 1000); UIAudio.cue('detent'); } });
     // waterfall: tap to tune, drag to pan / fine-tune
     var dragF = null;
-    UIdrag(UI$('#rx-ov'), {
+    UIdrag(UI$('#rx-ov'), { prevent: false,
       filter: function (e) { return !e.target.closest('[data-nogesture]'); },
       start: function (p) { dragF = kHz(); },
-      move: function (p, d) { if (UIS.rx.span === 'band') return; var kpp = SPANS[UIS.rx.span] / p.w; setFreq(dragF - d.x * kpp); },
-      end: function (p, moved) { if (!moved) tapWaterfall(p.x, p.w); dragF = null; }
+      move: function (p, d) { if (UIS.rx.span === 'band' || Math.abs(d.x) < 4 || Math.abs(d.x) < Math.abs(d.y)) return; var kpp = SPANS[UIS.rx.span] / p.w; setFreq(dragF - d.x * kpp); },
+      end: function (p, moved, e) { if (!moved && e.type !== 'pointercancel') tapWaterfall(p.x, p.w); dragF = null; }
     });
     UI$('#rx-span').addEventListener('click', function (e) { var b = e.target.closest('[data-span]'); if (!b) return; UIAudio.cue('switch'); setSpan(b.dataset.span, true); });
     UI$('#rx-mode').addEventListener('click', function (e) { var b = e.target.closest('[data-m]'); var m = b ? b.dataset.m : (UIS.rx.mode === 'voice' ? 'cw' : 'voice'); setMode(m); });
@@ -5684,6 +5806,7 @@ var UIRx = (function () {
     el.van.addEventListener('click', onVan);
     el.log.addEventListener('click', function (e) { var r = e.target.closest('[data-log]'); if (r) { UIAudio.cue('paper'); R.logSheet(r.dataset.log); } });
     el.sched.addEventListener('click', onSched);
+    el.tbar = UI$('#rx-timebar'); el.tbar.addEventListener('click', onSched);
     R.refresh();
     UIExplain.once('receiver');
   };
@@ -5801,6 +5924,11 @@ var UIRx = (function () {
     var rows = Math.max(1, Math.round(wf.dpr));
     for (var r = 0; r < rows; r++) scrollRow(T, false);
     var ctx = wf.ctx; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(hist, 0, 0);
+    // phosphor bloom: a small copy, blurred by CSS and screened over the tube
+    var gc = el.glow || (el.glow = UI$('#rx-glow'));
+    if (gc) { if (!gc._x) gc._x = gc.getContext('2d'); gc._x.drawImage(hist, 0, 0, gc.width, gc.height); }
+    // static crashes: a whole row flares now and then when the band is noisy
+    if (Math.random() < 0.004 + UIA.band().noise * 0.01) { histCtx.fillStyle = 'rgba(120,255,170,' + (0.08 + Math.random() * 0.12).toFixed(2) + ')'; histCtx.fillRect(0, 0, W, 1 + Math.random() * 2); }
   }
   var rowN = 0;
   function scrollRow(T, prefill) {
@@ -5836,6 +5964,8 @@ var UIRx = (function () {
     }
     histCtx.putImageData(rowImg, 0, 0);
   }
+  /** 'RADIO NORDVIK' -> 'R.NORDVIK', 'MARINE WEATHER, RØNNE' -> 'M.WEATHER' */
+  function abbr(t) { t = t.split(',')[0].replace(/\(.*\)/, '').trim(); var w = t.split(/\s+/); if (w.length < 2) return t.slice(0, 9); var last = w[w.length - 1]; return w.slice(0, -1).map(function (x) { return x.charAt(0); }).join('.') + '.' + last.slice(0, 8); }
   function drawOverlay(x, w, h) {
     x.clearRect(0, 0, w, h);
     var sp = UIS.rx.span, span = SPANS[sp], f0 = sp === 'band' ? 3000 : kHz() - span / 2;
@@ -5855,13 +5985,14 @@ var UIRx = (function () {
       var xx = X(sigF(s)), isNew = R._newId === s.id;
       if (xx < -20 || xx > w + 20 || (!s.label && !isNew)) return null;
       var t = isNew && !s.label ? 'NEW' : (s.label || '').toUpperCase();
-      if (s.bcast && sp === 'band') t = t.split(/[ ,(]/)[0];
-      return { s: s, xx: xx, t: t, isNew: isNew, pri: s.bcast ? 0 : isNew ? 2 : 1 };
+      var near = Math.abs(sigF(s) - kHz()) < (sp === 'band' ? 120 : sp === 'wide' ? 8 : 3);
+      if (s.bcast && !near) t = abbr(t);
+      return { s: s, xx: xx, t: t, isNew: isNew, pri: near ? 3 : s.bcast ? 0 : isNew ? 2 : 1 };
     }).filter(Boolean).sort(function (a, b) { return b.pri - a.pri; });
     var placed = [];
     labs.forEach(function (L) {
       x.font = (L.s.bcast ? '500 ' : '700 ') + '10px "DX Mono", monospace';
-      var tw = x.measureText(L.t).width, lx = UIclamp(L.xx, tw / 2 + 3, w - tw / 2 - 3), row = 0;
+      var tw = x.measureText(L.t).width, lx = UIclamp(L.xx, tw / 2 + 14, w - tw / 2 - 14), row = 0;
       while (row < 2 && placed.some(function (p) { return p.row === row && Math.abs(p.x - lx) < (p.w + tw) / 2 + 6; })) row++;
       if (row >= 2 || (L.s.bcast && row > 0)) return;
       placed.push({ x: lx, w: tw, row: row });
@@ -6057,6 +6188,8 @@ var UIRx = (function () {
     R.refresh();
   }
   R.listening = function () { return !!L; };
+  /** tuning error against the signal being held (kHz), for tests */
+  R.err = function () { return L && L.phase === 'hold' ? kHz() - sigF(L.sig) : null; };
 
   // ------------------------------------------------------------------ DF and van
   function onDf() {
@@ -6099,6 +6232,8 @@ var UIRx = (function () {
     var ticks = ''; for (var hh = 0; hh <= 8; hh++) ticks += '<i style="left:' + (hh * 12.5) + '%"><b>' + String((18 + hh) % 24).padStart(2, '0') + '</b></i>';
     var past = log.map(function (e) { return '<u class="' + (e.faint ? 'f' : '') + '" style="left:' + (e.minute / 480 * 100) + '%"></u>'; }).join('');
     var next = up.filter(function (u) { return u.at + u.dur > m; })[0];
+    if (el.tbar) el.tbar.innerHTML = (next ? '<button class="btn next" data-w="next">' + UIICON.wait + '<span>Wait for <b>' + UIA.hhmm(next.at) + ' ' + UIesc(next.callsign || next.label) + '</b></span></button>' : '<button class="btn next" data-w="watch">' + UIICON.eye + '<span>Watch the band</span></button>') +
+      '<button class="btn" data-w="10">+10</button><button class="btn" data-w="30">+30</button><button class="btn ghost" data-w="end" aria-label="End shift">' + UIICON.moon + '</button>';
     el.sched.innerHTML =
       '<div class="sb-head"><span class="engr xs">Tonight’s schedule</span><span class="sb-sub">' + (up.length ? UIplural(up.length, 'known transmission') + ' to come' : 'nothing more known tonight') + '</span></div>' +
       '<div class="sb-strip"><div class="sb-ticks">' + ticks + '</div><div class="sb-past">' + past + '</div>' + blocks + '<span class="sb-now" style="left:' + (m / 480 * 100) + '%"></span></div>' +
@@ -6165,7 +6300,8 @@ var UIRx = (function () {
     return g.map(function (s, i) { return '<span class="g' + (i === 0 ? ' ind' : '') + '">' + UIesc(s).replace(/\?/g, '<i class="lost">?</i>') + '</span>'; }).join('') + (limit && gs.length > limit ? '<span class="more">+' + (gs.length - limit) + '</span>' : '');
   }
   R.renderLog = function () {
-    var c = UIA.clock(), log = UIA.log().slice().sort(function (a, b) { return b.t - a.t; });
+    var c = UIA.clock(), log = UIA.log().slice().sort(function (a, b) { return b.t - a.t; }), air = {};
+    UIA.band().now.forEach(function (s) { air[s.id] = 1; });
     var byShift = {}; log.forEach(function (e) { (byShift[e.shift] = byShift[e.shift] || []).push(e); });
     var h = '<div class="ls-head"><div><span class="ls-org">Station Kestrel · intercept log</span><h3>Log sheet</h3></div><span class="ls-form">Form K/7</span></div>';
     if (!log.length) h += '<p class="ls-empty">Nothing copied yet tonight. Wait for the first transmission on the schedule, or tap a trace on the display.</p>';
@@ -6178,7 +6314,7 @@ var UIRx = (function () {
           '<span class="ls-t">' + e.label + '</span><span class="ls-f">' + UImhz(e.freq) + '</span><span class="ls-m">' + UImodeName(e.mode) + '</span>' +
           '<span class="ls-cs">' + (e.callsign ? UIesc(e.callsign) + (e.to ? '<small>→' + UIesc(e.to) + '</small>' : '') : '<em>?</em>') + '</span>' +
           '<span class="ls-q">' + (e.faint ? '' : qStamp(e.quality)) + (e.df ? '<span class="dfm" title="bearings taken">DF</span>' : '') + '</span>' +
-          '<span class="ls-g">' + (e.faint ? '<em class="pencil">heard faintly — not copied</em>' : e.decoy ? '<em class="pencil">test transmission — VVV only</em>' : groupsHtml(gs, live ? 0 : UIwide() ? 12 : 6)) + '</span></button>';
+          '<span class="ls-g">' + (e.faint && e.tx && air[e.tx] && e.shift === c.shift ? '<em class="pencil onair">on the air now — tune in and copy</em>' : e.faint ? '<em class="pencil">heard faintly — not copied</em>' : e.decoy ? '<em class="pencil">test transmission — VVV only</em>' : groupsHtml(gs, live ? 0 : UIwide() ? 12 : 6)) + '</span></button>';
       });
       h += '</div>';
     });
@@ -6488,8 +6624,9 @@ var UIMap = (function () {
         var lp = [p0[0] + a0[0] * 46, p0[1] + a0[1] * 46]; var db = { x: lp[0], y: lp[1] - 10, w: 34, h: 18 }; if (!hit(db)) { LBL.push(db); x.fillText(Math.round(b.deg) + '°', lp[0] + 12, lp[1]); }
       });
     });
-    // fixes
-    list.forEach(function (d) {
+    // fixes (the selected / latest first, so its label wins the space)
+    var onKey = sel || (list.length ? list[list.length - 1].key : null);
+    list.slice().sort(function (a, b) { return (b.key === onKey) - (a.key === onKey) || b.t - a.t; }).forEach(function (d) {
       if (!d.fix) return;
       var f = d.fix, c = W2S([f.x, f.y]), on = sel ? sel === d.key : d === list[list.length - 1], old = d.shift !== UIA.clock().shift;
       x.save(); x.globalAlpha = on ? 1 : old ? 0.35 : 0.75; x.translate(c[0], c[1]); x.rotate(f.rot * Math.PI / 180);
@@ -6501,7 +6638,7 @@ var UIMap = (function () {
       var lt = (d.cs || '?') + ' · ' + (old ? 'night ' + (d.shift + 1) + ' ' : '') + d.label + (d.live ? ' (now)' : ''), lw = x.measureText(lt).width, lx = c[0] + Math.max(6, f.rx * sc) + 6;
       if (lx + lw > w - 70) lx = c[0] - Math.max(6, f.rx * sc) - 6 - lw;
       var lb = { x: lx, y: c[1] - 14, w: lw, h: 20 };
-      if (on || (!old && !hit(lb))) { if (!on) LBL.push(lb); x.globalAlpha = on ? 1 : 0.8; x.fillText(lt, lx, c[1] - 4); }
+      if (on || (!old && !hit(lb))) { LBL.push(lb); x.globalAlpha = on ? 1 : 0.8; x.fillText(lt, lx, c[1] - 4); }
       x.globalAlpha = 1;
     });
     // van areas
@@ -6769,7 +6906,7 @@ var UIBench = (function () {
   B.build = function (r) {
     root = r;
     root.innerHTML = '<div class="bench"><div class="bn-tray" id="bn-tray" aria-label="Messages"></div>' +
-      '<div class="bn-main"><div class="bn-tabs" id="bn-tabs" role="tablist"><button data-t="msgs">' + UIICON.bench + 'Messages</button><button data-t="depth">' + UIICON.swap + 'Depth</button><button data-t="key">' + UIICON.key + 'Key</button><button data-t="board">' + UIICON.grid + 'Checkerboard</button></div>' +
+      '<div class="bn-main"><div class="bn-tabs" id="bn-tabs" role="tablist"><button data-t="msgs">' + UIICON.bench + 'Messages</button><button data-t="depth">' + UIICON.swap + 'Depth</button><button data-t="key">' + UIICON.key + 'Key</button><button data-t="board">' + UIICON.grid + '<span class="lg">Checkerboard</span><span class="sm">Board</span></button></div>' +
       '<div class="bn-hint" id="bn-hint"></div><div class="bn-work" id="bn-work"></div></div></div>';
     UI$('#bn-tray').addEventListener('click', function (e) { var c = e.target.closest('[data-m]'); if (!c) return; UIAudio.cue('paper'); B.openMsg(c.dataset.m); });
     UI$('#bn-tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-t]'); if (!b) return; UIAudio.cue('switch'); S().tech = b.dataset.t; B.render(); });
@@ -6992,7 +7129,7 @@ var UIBench = (function () {
   var R_marks = null;
   function scan(crib, side) {
     var out = [], n = D.diff.length;
-    for (var o = 0; o < n; o++) { var p = UIA.bench.preview(D.diff, crib, o, side); if (!p || !p.fits) break; if (p.plaus >= 0.62 && p.other.indexOf('?') < 0) out.push(o); }
+    for (var o = 0; o < n; o++) { var p = UIA.bench.preview(D.diff, crib, o, side); if (!p || !p.fits) break; if (p.otherDigits === p.cribDigits) continue; if (p.plaus >= 0.62 && p.other.indexOf('?') < 0) out.push(o); }
     return out.slice(0, 12);
   }
   function pinIt(crib, off, side) {
@@ -7099,6 +7236,7 @@ var UIBench = (function () {
       if (a === 'period') { var r = UIA.bench.period(id); if (!r) { UItoast('The period finder jammed.', { err: true }); return; } P.pres = r; if (helps()) P.period = bestP(P); UIAudio.cue('type'); UI.act(function () { }); B.render(); UI.emit('period', id); }
       else if (a === 'cols') { var c2 = UIA.bench.columns(id, P.period); if (!c2) return; P.cols = c2; P.key = c2.cols.map(function (c) { return helps() && c.fit ? c.fit[0].shift : 0; }); UIAudio.cue('type'); UI.act(function () { }); B.render(); UIExplain.once('columns'); UI.emit('columns', id); }
       else if (a === 'best') { P.key = P.cols.cols.map(function (c, i) { return c.fit ? c.fit[0].shift : bestShift(c.freq, P.cols.expect); }); UIAudio.cue('pencil'); B.render(); }
+      else if (a === 'polish') { var before = keyPreview(m, P).plaus; P.key = polish(m, P); var after = keyPreview(m, P).plaus; UIAudio.cue('pencil'); UItoast(after > before + 0.02 ? 'Tried every shift in every column: the text reads better now.' : 'No single column reads better shifted.', { good: after > before + 0.02 }); B.render(); }
       else if (a === 'align') { var al = UIA.bench.align(id, P.period); if (!al) { UItoast('Alignment is not available.', { err: true }); return; } P.rel = al.rel; UI.act(function () { }); B.render(); }
       else if (a === 'solve') { var sv = UIA.bench.boardSolve(id, P.rel); UI.act(function () { }); if (sv.ok) { UIAudio.cue('win'); UItoast('The computer found the keyword ' + sv.keyword + '. The checkerboard is on your bench.', { ms: 5000, good: true }); S().per[id] = { period: P.period, pres: P.pres, cols: null, key: [], rel: null }; } else UItoast(sv.err || 'No keyword in the list reads.', { err: true, ms: 4200 }); B.render(); }
       else if (a === 'write') writeUp(id, keyPreview(m, P).text);
@@ -7134,8 +7272,18 @@ var UIBench = (function () {
         '<div class="cc-k"><button class="ib" data-kd="-1" data-c="' + i + '" aria-label="Key digit down">' + UIICON.minus + '</button><b>' + k + '</b><button class="ib" data-kd="1" data-c="' + i + '" aria-label="Key digit up">' + UIICON.plus + '</button></div></div>';
     });
     h += '</div>' + (exp ? '<p class="note">Grey: how plain text looks on this checkerboard. Ink: this column, shifted back by the key digit. When they match, the digit is right.</p>' : '<p class="note">No checkerboard to compare against: line the columns up against each other instead.</p>') +
-      (helps() && exp ? '<button class="btn sm" data-k-act="best">' + UIICON.check + 'Use every best fit</button>' : '');
+      (helps() && exp ? '<div class="row" style="gap:8px"><button class="btn sm" data-k-act="best">' + UIICON.check + 'Use every best fit</button></div>' : '');
     return h;
+  }
+  /** coordinate ascent on the key: each column tries all ten shifts, keeping what reads best (tool help) */
+  function polish(m, P) {
+    var key = P.key.slice();
+    for (var pass = 0; pass < 2; pass++) for (var i = 0; i < key.length; i++) {
+      var best = key[i], bp = -1;
+      for (var sh = 0; sh < 10; sh++) { key[i] = sh; var pv = keyPreview(m, { key: key }); if (pv.plaus > bp + 1e-9) { bp = pv.plaus; best = sh; } }
+      key[i] = best;
+    }
+    return key;
   }
   function keyPreview(m, P) {
     var bd = UIA.board(); if (!bd || !P.key.length) return { text: '', plaus: 0 };
@@ -7510,7 +7658,7 @@ var UICoach = (function () {
       { title: 'Station Kestrel', text: 'A spy ring in Haldmar talks by radio. Tonight you learn the loop: listen, fix, break, chart, act. Follow the lit spots; you can leave the guide any time.', next: 'Begin', go: 'receiver' },
       { el: function () { return UI$('#tb-clock'); }, title: 'Station time', text: 'Time only moves when you act: copying a transmission takes its length, bench work a few minutes, waiting what you choose. The watch ends at 02:00.' },
       { el: function () { return vis('.sb-btns .next') || vis('.sb-strip'); }, go: 'receiver', title: 'The first broadcast', text: 'The case file gives the controller’s schedule. Wait for it — the dial will be set close to its frequency.', wait: 'waited' },
-      { el: function () { return vis('#rx-fine') ; }, title: 'Centre it', text: 'Turn FINE — or drag the green trace on the display — until it sits on the red hairline. The whistle drops away when you are dead on. Voice needs the lever on AM.', wait: 'copyready', place: 'top' },
+      { el: function () { return vis('.crt'); }, title: 'Centre it', text: 'Drag the green trace onto the red hairline (or turn FINE, below). The whistle falls away when you are dead on. Voice needs the lever on AM.', wait: 'copyready', place: 'bottom' },
       { el: function () { return vis('#rx-copy'); }, title: 'Copy', text: 'Press COPY. While the interval tune plays, keep the drifting trace on the line.', wait: 'copystart', place: 'top' },
       { el: function () { return vis('.crt'); }, title: 'Hold it', text: 'Steady hands mean fewer lost digits. Then the numbers come in on the green tape and into the log.', wait: 'copied' },
       { el: function () { return vis('#rx-log'); }, title: 'The log sheet', text: 'Every copy goes here: time, frequency, callsign, the groups. The first group is the pad page. Lost digits are ringed in red.' },
