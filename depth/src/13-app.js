@@ -258,6 +258,7 @@ UI.shiftOver = function () {
     mount: function (b) { b.addEventListener('click', function (e) { if (!e.target.closest('[data-x]')) return; UIsheet.close(); UI.endShift(); }); } });
 };
 UI.endShift = function () {
+  if (!UIA.g || UIA.over()) return;
   if (UI.busy) return;
   UI.busy = true;
   UIRx.stopAll();

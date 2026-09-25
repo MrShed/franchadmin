@@ -1,4 +1,4 @@
-DEPTH case "sample-1"  grade Analyst  attempt 0  generated in 214 ms  verify: stake-out, arrest  (periodic:PV9@1379 depth:x0/x10 depth:x1/x4 depth:x5/x11 lift)
+DEPTH case "sample-1"  grade Analyst  attempt 0  generated in 150 ms  verify: stake-out, arrest  (periodic:PV9@1379 depth:x0/x10 depth:x1/x4 depth:x5/x11 lift)
 Nights: 4 (Mon 10 Oct .. Thu 13 Oct)   warrants 4   outstations DF1 Skovhøj, DF2 Rønnebakke, DF3 Holmen mole
 
 THE CITY: Haldmar — 12 districts (Brohus, Lindevang, Frihavn, Søndermark, Østerled, Skipperholm, Ravnsborg, Nordhavn, Kalkværket, Gammelby, Sankt Jakob, Møllebakken), 11 streets, 58 places
@@ -59,8 +59,8 @@ MESSAGES (plaintext; facts; cipher)
         NR21 FROM ZE7. SAFFRON READY. V4X WILL BE IN POSITION NIGHT OF THURSDAY. NOTHING FURTHER
   x17 Wed 12 Oct 00:00 ZE7 > KB2  pad 40791
         NR24 FROM ZE7. WATCH YARD MAIN GATE NIGHT OF TUESDAY AND REPORT. NOTHING FURTHER
-  x20 Wed 12 Oct 00:15 PV9 > ZE7  periodic  [who when]
-        FOR ZE7 NR22. PACKAGE FOR V4X IS IN TIVOLI BENCH FROM WEDNESDAY AFTER 2200. V4X MUST CLEAR IT BEFORE NIGHT OF THURSDAY. SHIP ARRIVED AT QUAY 8. THREE MEN ON WATCH. END PV9
+  x20 Wed 12 Oct 00:15 PV9 > ZE7  periodic  [who where when]
+        FOR ZE7 NR22. PACKAGE FOR V4X IS IN TIVOLI BENCH FROM WEDNESDAY AFTER 2200. IT IS FOR SAFFRON AT RADAR MAST NIGHT OF THURSDAY. SHIP ARRIVED AT QUAY 8. THREE MEN ON WATCH. END PV9
   x14 Wed 12 Oct 00:45 V4X > ZE7  pad 80528  [when]
         NR14 FROM V4X. READY FOR SAFFRON. THURSDAY AT 2350 IS GOOD. V4X OUT
   x21 Wed 12 Oct 00:55 PV9 > ZE7  periodic

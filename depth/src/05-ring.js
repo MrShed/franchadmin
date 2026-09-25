@@ -46,6 +46,7 @@
     RA_ORDER: ['WATCH {PLACE} NIGHT OF {DAY} AND REPORT.', 'CLEAR {SPOT} AFTER {TIME} {DAY}. BURN THE PAPER.'],
     C_DROP: ['{SPOT} LOADED NIGHT OF {DAY} AFTER {TIME} FOR {AG}. MARK ON {SIGNAL}. PACKAGE CONTAINS {ITEM}.'],
     C_EXEC: ['PACKAGE FOR {EXEC} IS IN {SPOT} FROM {DAY} AFTER {TIME}. {EXEC} MUST CLEAR IT BEFORE NIGHT OF {OPDAY}.'],
+    C_EXECW: ['PACKAGE FOR {EXEC} IS IN {SPOT} FROM {DAY} AFTER {TIME}. IT IS FOR {CW} AT {OPPLACE} NIGHT OF {OPDAY}.'],
     C_FILL: ['ALL DROPS CLEAR. NO SURVEILLANCE SEEN AT {SPOT}. NEXT CONTACT {DAY} AT {TIME}.', 'MARK SEEN ON {SIGNAL}. {SPOT} EMPTIED. NOTHING FOR YOU.'],
     DROP_EXEC: ['FOR {EXEC}. {CW} AT {OPPLACE} NIGHT OF {OPDAY} AT {OPTIME}. {ITEM} ENCLOSED. BURN THIS.'],
     DROP_OTHER: ['FOR {AG}. {N} KRONER. NEW SIGNAL SITE {SIGNAL}. BURN THIS.']
@@ -291,9 +292,9 @@
     couriers.forEach(function (cm, k) {
       var nMsg = G.courierMsgs + (k === 0 ? 1 : 0);
       for (var j = 0; j < nMsg; j++) {
-        var beat = (k === 0 && j === 1) || (k === 1 && j === 0) ? 'C_EXEC' : (j === 0 ? 'C_DROP' : 'C_FILL');
-        var cn = beat === 'C_EXEC' ? Math.max(0, dropNight - R.int(0, 1)) : beat === 'C_DROP' ? Math.max(0, odrop.night - 1) : R.int(0, o);
-        var ce = beat === 'C_EXEC' ? { SPOT: execSpot.code, DAY: DX.nightName(dropNight), TIME: DX.hhmm4(dropTime) } :
+        var beat = (k === 0 && j === 1) || (k === 1 && j === 0) ? (G.courierWhere ? 'C_EXECW' : 'C_EXEC') : (j === 0 ? 'C_DROP' : 'C_FILL');
+        var cn = /C_EXEC/.test(beat) ? Math.max(0, dropNight - R.int(0, 1)) : beat === 'C_DROP' ? Math.max(0, odrop.night - 1) : R.int(0, o);
+        var ce = /C_EXEC/.test(beat) ? { SPOT: execSpot.code, DAY: DX.nightName(dropNight), TIME: DX.hhmm4(dropTime) } :
           beat === 'C_DROP' ? { SPOT: otherSpot.code, DAY: DX.nightName(odrop.night), TIME: DX.hhmm4(odrop.after), AG: members.filter(function (m) { return m.id === odrop.forId; })[0].spell } : {};
         // courier traffic is chattier: a second sentence gives the period finder enough material
         compose(cm.id, res.id, beat, cn, ce, { cipher: 'periodic', more: R.pick(['C_FILL', 'A_FILL']) });

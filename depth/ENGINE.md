@@ -56,7 +56,7 @@ c.seed, c.grade, c.gradeInfo, c.attempt
 | `c.patience` | superintendent's patience (starts 120/100/80); at 0 the case is taken away (`sacked`) |
 | `c.controller` | the controller's callsign |
 | `c.notes` | free-form player pencil notes (string, saved) |
-| `c.costs()` | station minutes per bench action `{depth, crib, place, period, columns, align, setKey, suggest, boardSolve, warrant, van, df}` |
+| `c.costs()` | station minutes per action `{depth, crib, place, period, columns, align, setKey, suggest, boardSolve (30), warrant (10), van (after the transmission: 5/10/15), df (0)}` |
 
 ## The city
 
@@ -104,10 +104,11 @@ c.waitForSignal(max?) -> {events, tx: band view of what just keyed up | null, cl
      // the operator sits at the set: time runs until the next transmission starts (or max minutes / 02:00)
 event = {kind:'heard', t, tx, intercept, freq, mode, callsign}      // band watch logged a transmission (faint)
       | {kind:'warrant', t, warrant, wkind, result, inbox:[noteIds]}
-      | {kind:'computer', t, job, ok, keyword, inbox:[noteIds]}    // the big computer answered (Chief)
       | {kind:'op', t, stopped}                                     // the operation hour came
 ```
 Time never passes 480 on its own; call `c.endShift()` to go to the next night.
+Advancing (advanceTo / wait / waitForSignal) to exactly a transmission's start leaves it on air and untouched:
+it is not auto-logged as faint (it is logged faint only if the clock moves past its start without a `tune`).
 Every transmission that starts while time passes is logged as a **faint** intercept (time, freq, mode, callsigns
 from the call-up, no groups) and teaches the schedule. Copying needs `tune`.
 
@@ -160,18 +161,25 @@ c.bench.unplace(a, b, index?)         -> workspace   (remove one / all)
 c.bench.work(a, b) -> {a:{text, digits, runs, plaus}, b:{...}, placed:[{side,text,offset}], diff}
      both texts as far as the placed cribs determine them ('?' for unknown stretches, ~1 per 1.4 digits)
 c.bench.suggest(a, b, offset, side)  -> {list:[{word, other, plaus}]}   (Cadet/Analyst only: likely dictionary words)
-c.bench.period(ids)                  -> {ic:[{period, ic}] 1..12, repeats:[{seq, spacing, at}], best}
-c.bench.columns(ids, period)         -> {cols:[{col, n, freq:[10], fit?:[{shift, score}] best first}], expect:[10]|null}
+c.bench.period(ids)                  -> {ic:[{period, ic}] 1..12, repeats:[{seq, spacing, at}], best, via:'ic'|'crib', cribPeriods}
+     best: the smallest period whose IC is within 70% of the strongest (never a multiple like 10 for 5); with the
+     checkerboard, the courier's habitual opening (callsigns from the log) exposes key digits that must repeat,
+     which pins the period even on one message (via:'crib').
+c.bench.columns(ids, period)         -> {cols:[{col, n, freq:[10], fit?:[{shift, score}] best first, via:'crib'|'freq'}],
+                                         bestKey:[digits]|null, crib, expect:[10]|null}
+     fit ranks all ten shifts per column: where the opening crib covers the column consistently it is first
+     (via:'crib'); otherwise by log-likelihood of the column's digits against the board's expected digit
+     frequencies (the multinomial fit; chi-squared ranks the same way). bestKey = every column's fit[0]. On
+     Cadet/Analyst this reads single courier messages (tests: 29/29 with period+columns+setKey).
 c.bench.align(ids, period)           -> {rel:[key digits relative to column 0], conf:[...]}   (Chief: no board needed)
 c.bench.setKey(ids, keyDigits)       -> {texts:[{id, text, plaus}], text, plaus}   trial decrypt
 c.bench.keyFromCrib(ids, crib, period) -> {key:[digits, -1 unknown], keyStr, known, conflict}
      known plaintext: the crib (e.g. 'FORKX7NR#2.' — '#2' = a two-figure number) is assumed at the start of each
      message (every courier message restarts the key and couriers always open the same way)
-c.bench.boardSolve(ids, period|relKey, crib?) -> {ok, pending:true, job:'C3', ready:{shift, t, label}}
-     Chief: "time on the big computer". 5 min of paperwork; the job runs 60 minutes (it can finish next night) and
-     answers in the inbox (note.job, note.keyword, note.key) + a 'computer' event. It tries every keyword in
-     DX.DATA.KEYWORDS: from your crib (or the ring's usual openings with the logged callsigns), column
-     frequencies and aligned columns; sets the checkerboard when one reads. One job at a time.
+c.bench.boardSolve(ids, period|relKey, crib?) -> {ok, keyword, key, plaus, board} | {ok:false, err}
+     Chief: "time on the big computer" (30 min of station time; answers at once, also posted to the inbox).
+     It tries every keyword in DX.DATA.KEYWORDS: from your crib (or the ring's usual openings with the logged
+     callsigns), column frequencies and aligned columns; sets the checkerboard when one reads.
 c.bench.decode(digits) / c.bench.encode(text)
 c.bench.accept(id, text) -> {grade:'right'|'partial'|'wrong', score, card}   record a decrypt; graded against the truth
 ```
@@ -280,7 +288,7 @@ plaintext = `{id, wb (bench id if heard), night, from, to, text, cipher, page, d
 * `c.bench.period/columns/setKey` accept an array of ids (pooling one courier's traffic).
 * `c.van(txId, centre)` takes where to send the van; `c.vanResult(found, sceneId?)`.
 * Hints: `c.mentor(tier)` plus `c.mentorStatus()`.
-* `c.waitForSignal(max)` (operator at the set), `c.bench.keyFromCrib`, and `boardSolve` is asynchronous (inbox).
+* `c.waitForSignal(max)` (operator at the set), `c.bench.keyFromCrib`; `period`/`columns` add `via`, `cribPeriods`, `bestKey`.
 * The van: spec says "real time + 30 min"; here the hunt overlaps the transmission and costs 5/10/15 min after it
   (a 30-minute block made the van cost the next schedule every time; balanced with tests/play.js).
 * `DX.warm()` builds the language tables; `newCase`/`load` call it (so no action pays for it).
@@ -294,7 +302,7 @@ plaintext = `{id, wb (bench id if heard), night, from, to, text, cipher, page, d
 | `tests/load.js` | loads `src/0*.js` as the page does and returns `DX` |
 | `tests/api.js [seed]` | walks the whole API (~360 checks): shapes, costs, receiver, repeats merging, bench tools, DF + van, every warrant, security reactions, Chief's computer, mentor, save/load determinism, debrief |
 | `tests/crypto.js` | checkerboard round trips for every keyword, pad/periodic arithmetic, depth cancels the pad, true cribs give true digits, the depth solver reads pairs and the operation facts, period finder + column fit + keyword search recover keys and boards |
-| `tests/play.js [a..b] [--policy=competent\|none\|listener] [--grade=..] [--v]` | headless players (`tests/policy.js`) and win rates per grade |
+| `tests/play.js [a..b] [--policy=competent\|aided\|none\|listener] [--grade=..] [--v]` | headless players (`tests/policy.js`) and win rates per grade |
 | `tests/why.js [a..b] [--grade=..]` | post-mortem of lost games: what the case offered vs what the player got |
 | `tests/perf.js [n]` | newCase timings per grade, every per-action call during played games, save/load |
 | `tests/gen.js <seed> [--grade=..]` | dumps a case: ring, operation, drops, meeting, all plaintexts with cipher/depth, the transmission schedule (example: `tests/sample-case.txt`) |
@@ -305,3 +313,22 @@ near-matches), breaks them with crib dragging over the station dictionary (`DX.s
 word), breaks courier traffic from the opening habit + column counts (Chief: books the big computer), reads the
 facts out of its own decrypts, takes bearings on every Morse set, sends the van on targets, and spends warrants on
 stake-outs, lifts, meeting/drop watches and raids with evidence. Receiver and van skill carry human error.
+The `aided` policy is a phone player using only the UI's aids: best-fit keys (period → columns → setKey), DF, the
+van (less precise), the operation card, and the supervisor's tier-3 help once a night for depths (no crib engine).
+`none` does nothing; `listener` only copies traffic. Both must always lose.
+
+## Balance (60 seeds per grade, `node tests/play.js 1..60 [--policy=...]`)
+
+| grade | aided (UI aids, phone precision) | competent (expert, crib engine) | none / listener |
+|---|---|---|---|
+| Cadet | 90% | 98% | 0% / 0% |
+| Analyst | 72% | 93% | 0% / 0% |
+| Chief | 37% | 53% | 0% / 0% |
+
+Grade knobs live in `DX.GRADES` (02-data.js). What makes the grades differ: nights (5/4/4), warrants (6/4/3),
+outstations (4/3/3), reused pad pages (4/3/2), copy garble (0.7/1.0/1.45), bench costs, security-officer alarm
+multiplier (0.5/1/1.5) and reaction order, checkerboard on file (Chief recovers it), courier key length and traffic,
+the courier's package message naming the target (Cadet/Analyst only), DF precision, van time, raid delay, the
+possible operation nights (Chief: sometimes night 2), patience, and how big a roll-up counts as collapse.
+On Cadet/Analyst WHERE+WHEN are readable from one courier decrypt (period → columns → best-fit key) or a
+lift of the executor's drop; depths and DF/van give the other routes.

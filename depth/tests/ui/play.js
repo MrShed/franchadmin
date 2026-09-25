@@ -38,6 +38,7 @@ fs.mkdirSync(OUT, { recursive: true });
         }
         UI.refresh();
       });
+      if (await page.evaluate(function () { if (UIA.over()) { UIDebrief.show(); return true; } return false; })) break;
       // bench: the first depth pair through the real strip (crib GREETINGS at the first likely mark), then a write-up
       var pair = await page.evaluate(function () { var p = UIA.depthPairs().filter(function (q) { var a = UIA.message(q[0]); return !(a.decrypted && a.decrypted.verdict === 'right'); })[0]; if (p) UIBench.depth(p[0], p[1]); return p; });
       if (pair && await page.$('#dp-crib')) {

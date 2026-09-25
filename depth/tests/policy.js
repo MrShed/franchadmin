@@ -14,8 +14,9 @@ module.exports = function (DX) {
   function play(c, kind, opts) {
     opts = opts || {};
     if (kind === 'none') { var g = 0; while (!c.over && g++ < 20) c.endShift(); return { kind: kind }; }
+    // 'aided': a phone player leaning on the UI's aids: best-fit keys, DF, the van, the supervisor (no crib-dragging engine)
     var R = DX.rng('policy/' + (opts.seed || c.seed) + '/' + c.grade + '/' + kind);
-    var skill = opts.skill || { freqSd: 0.2, modeMiss: 0.03, drift: [0.7, 0.95], van: 1 };
+    var skill = opts.skill || (kind === 'aided' ? { freqSd: 0.3, modeMiss: 0.06, drift: [0.55, 0.9], van: 0.7 } : { freqSd: 0.2, modeMiss: 0.03, drift: [0.7, 0.95], van: 1 });
     var P = {
       solvedPairs: {}, pairTries: {}, courierKey: {}, courierTried: {}, readTexts: {}, facts: { where: {}, when: {}, who: {} },
       drops: [], meets: [], cw: null, vanTried: {}, dfDone: {}, log: [], didStake: {}, lifted: {}, watched: {}, raided: {}
@@ -161,6 +162,15 @@ module.exports = function (DX) {
       return did;
     }
     function solvePair(m, o) {
+      if (kind === 'aided') {
+        if (P.mentorNight === c.shift) return;
+        P.mentorNight = c.shift;
+        var h = c.mentor(3);
+        note('supervisor: ' + (h.text || ''));
+        [m, o].forEach(function (x) { var mm = c.message(x.id); if (mm.decrypted) P.readTexts[x.id] = { text: mm.decrypted.text, from: x.from, to: x.to }; });
+        parseAll();
+        return;
+      }
       var dep = c.bench.depth(m.id, o.id);
       if (!dep.ok) return;
       var sp = ctlSpell();
@@ -211,25 +221,20 @@ module.exports = function (DX) {
         var p = pr.best;
         if (!c.board()) {
           // Chief: the big computer
-          if (P.job) return;
           var bs = c.bench.boardSolve(ids, p);
-          if (bs.ok) { P.job = { id: bs.job, f: f, p: p }; note('big computer booked on ' + f + ' p' + p); }
-          return;
+          note('big computer on ' + f + ' p' + p + ': ' + (bs.ok ? bs.keyword : 'failed'));
+          if (!bs.ok) return;
+          P.courierKey[f] = { key: bs.key, period: p };
         } else {
           var cols = c.bench.columns(ids, p);
-          var k0 = cols.cols.map(function (col) { return col.fit[0].shift; });
-          var board = DX.boardCache(c.board().key);
-          var streams = list.map(function (m) { return DX.toDigits(m.groups.join('')); });
-          // the courier's opening habit as a crib: try each usual format with the callsigns from the log
-          var starts = [k0];
-          DX.openingTexts(f, list[0].to, ctlSpell(), c.controller).forEach(function (ct) {
-            var kc = c.bench.keyFromCrib(ids, ct, p);
-            if (kc.ok && kc.key) starts.push(kc.key.map(function (x, i) { return x >= 0 ? x : k0[i]; }));
-          });
-          var rf = null;
-          starts.forEach(function (st0) { var r0 = DX.refineKey(streams, board, st0, 2); if (!rf || r0.plaus > rf.plaus) rf = r0; });
-          var trials = Math.min(8, Math.ceil(rf.evals / 10));
-          for (var t = 0; t < trials; t++) { while (!c.over && c.minute < SH && listenNow()) act(); c.bench.setKey(ids, rf.key); }
+          var k0 = cols.bestKey;
+          var tr = c.bench.setKey(ids, k0);
+          var rf = { key: k0, plaus: tr.plaus };
+          if (tr.plaus < 0.5 && kind !== 'aided') {
+            var streams = list.map(function (m) { return DX.toDigits(m.groups.join('')); });
+            rf = DX.refineKey(streams, DX.boardCache(c.board().key), k0, 2);
+            for (var t = 0; t < 6; t++) { while (!c.over && c.minute < SH && listenNow()) act(); c.bench.setKey(ids, rf.key); }
+          }
           if (rf.plaus < 0.5) { note('courier ' + f + ' did not read (p' + p + ')'); return; }
           P.courierKey[f] = { key: rf.key, period: p };
         }
@@ -275,7 +280,7 @@ module.exports = function (DX) {
         var x = norm(t.text);
         var sentences = x.split('.');
         sentences.forEach(function (s) {
-          var opish = (CW && s.indexOf(CW) >= 0) || /TARGET|RECONNAISSANCE|WATCHED|HASSEEN|KNOWS|POSITION|DATEFOR|WILLTAKEPLACE/.test(s) || t.clear;
+          var opish = (CW && s.indexOf(CW) >= 0) || /TARGET|RECONNAISSANCE|WATCHED|HASSEEN|KNOWS|POSITION|DATEFOR|WILLTAKEPLACE|ITISFOR/.test(s) || t.clear;
           if (opish) {
             places.forEach(function (p) {
               if (['cafe', 'spot', 'signal', 'phone'].indexOf(p.kind) >= 0) return;
@@ -283,7 +288,7 @@ module.exports = function (DX) {
               if (i < 0) return;
               // "QUAY 1" must not match inside "QUAY 12" (there is no 12, but be careful with digits)
               if (/[0-9]$/.test(p.code) && /[0-9]/.test(s.charAt(i + p.code.length))) return;
-              vote(F.where, p.id, t.clear ? 5 : /TARGETFOR|WILLBEAT|RECONNAISSANCEOF|WATCHED/.test(s) ? 3 : 1);
+              vote(F.where, p.id, t.clear ? 5 : /TARGETFOR|WILLBEAT|RECONNAISSANCEOF|WATCHED|ITISFOR|HASSEEN|KNOWS/.test(s) ? 3 : 1);
             });
           }
           var dm = /NIGHTOF([A-Z]+)/.exec(s) || /^([A-Z]+DAY)AT[0-9?]{4}ISGOOD/.exec(s);
@@ -316,6 +321,11 @@ module.exports = function (DX) {
       P.facts.where = bw && bw.v >= 3 ? { place: bw.k, conf: bw.v } : {};
       P.facts.when = bn && bn.v >= 3 ? { night: +bn.k, conf: bn.v } : bn ? { guess: +bn.k, conf: bn.v } : {};
       P.facts.who = bh && bh.v >= 3 ? { call: bh.k, conf: bh.v } : {};
+      // the operation card on the desk (the engine fills it from correct reads)
+      var card = c.opCard();
+      if (card.where.known && card.where.place && !P.facts.where.place) P.facts.where = { place: card.where.place, conf: 9 };
+      if (card.when.known && card.when.night !== null && P.facts.when.night === undefined) P.facts.when = { night: card.when.night, conf: 9 };
+      if (card.who.known && !P.facts.who.call) P.facts.who = { call: card.who.callsign, conf: 9 };
     }
     function placeByCode(code) {
       for (var i = 0; i < places.length; i++) if (code.indexOf(places[i].code) === 0 || places[i].code === code) return places[i];

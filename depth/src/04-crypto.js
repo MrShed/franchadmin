@@ -274,8 +274,8 @@
   /** the period suggested by IC and spacings (tool help): the smallest period whose IC excess over random
    *  is close to the best (multiples of the true period score as well), nudged by long repeats */
   DX.bestPeriod = function (icList, reps) {
-    // score each candidate by the IC excess averaged over its multiples (the true period and all its multiples
-    // are high; a chance peak is alone), plus long repeats whose spacing it divides
+    // 1. score each candidate by the IC excess averaged over its multiples (the true period and all its multiples
+    //    are high; a chance peak is alone), plus long repeats whose spacing it divides
     var ic = {}, base = 0.1;
     icList.forEach(function (r) { ic[r.period] = r.ic - base; });
     var maxP = icList.length, best = 2, bestS = -1e9;
@@ -286,6 +286,8 @@
       (reps || []).forEach(function (x) { if (x.seq.length >= 6 && x.spacing % p === 0) sc += 0.0006; });
       if (sc > bestS) { bestS = sc; best = p; }
     }
+    // 2. prefer the smallest divisor of it whose IC is within a margin of it (10 when the key is 5)
+    for (var d = 2; d < best; d++) if (best % d === 0 && ic[d] >= 0.7 * ic[best]) return d;
     return best;
   };
   /** per-column digit counts; with a board, a ranked shift fit per column */

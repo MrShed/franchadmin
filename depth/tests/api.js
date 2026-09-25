@@ -73,7 +73,7 @@ ok(!c.tune('T999', {}).ok && !c.df('T999').ok && !c.van('T999').ok, 'unknown tra
 // wait for the first broadcast via waitForSignal
 var ws = c.waitForSignal(480);
 ok(ws.tx && ws.clock.minute === ws.tx.t0, 'waitForSignal stops when something keys up');
-ok(ws.events.some(function (e) { return e.kind === 'heard' && e.tx === ws.tx.id; }), 'faint log event');
+ok(!ws.events.some(function (e) { return e.kind === 'heard' && e.tx === ws.tx.id; }) && !c.log().some(function (e) { return e.tx === ws.tx.id; }), 'arriving exactly at the start leaves it on air, not logged faint');
 var tx0 = W.tx[ws.tx.id];
 var sig = c.signal(tx0.id);
 ok(sig.groups.length > 10 && sig.mode === tx0.mode && sig.fist && (tx0.mode !== 'VOICE' || sig.voice), 'signal parameters for audio');
@@ -183,7 +183,8 @@ if (cour.length) {
   ok(pr.ok && pr.ic.length === 12 && pr.best >= 2 && Array.isArray(pr.repeats), 'period finder');
   var cm = W.ring.members.filter(function (x) { return x.call === cour[0].from; })[0];
   var cl = c.bench.columns(ids, cm.periodKey.length);
-  ok(cl.ok && cl.cols.length === cm.periodKey.length && cl.cols[0].fit.length === 10 && cl.expect.length === 10, 'columns');
+  ok(cl.ok && cl.cols.length === cm.periodKey.length && cl.cols[0].fit.length === 10 && cl.expect.length === 10 && cl.bestKey.length === cm.periodKey.length, 'columns');
+  if (c.message(ids[0]).holes < 8) ok(DX.gradeText2(W.msg[c._s.wb[ids[0]].key].norm, c.bench.setKey(ids[0], cl.bestKey).text).score > 0.6, 'the best-fit key reads');
   var al = c.bench.align(ids, cm.periodKey.length);
   ok(al.ok && al.rel.length === cm.periodKey.length && al.rel[0] === 0, 'align');
   var sk = c.bench.setKey(ids, cm.periodKey);
@@ -324,22 +325,22 @@ ok(ch.board() === null && !ch.bench.crib('M1', 'M2', 'X', 0).ok, 'no board on Ch
 var cmem = ch._w.ring.members.filter(function (m) { return m.courier; })[0];
 var got = 0;
 for (var n = 0; n < ch.shifts && got < 3 && !ch.over; n++) {
-  while (ch.minute < 480 && !ch.over) { var w3 = ch.waitForSignal(480 - ch.minute); if (!w3.tx) break; var r4 = ch.tune(w3.tx.id, { freqErr: 0.05, modeOk: true, driftHeld: 0.95 }); if (r4.ok && w3.tx.callsign === cmem.call) got++; }
+  while (ch.minute < 480 && !ch.over) { var w3 = ch.waitForSignal(480 - ch.minute); if (!w3.tx) break; var r4 = ch.tune(w3.tx.id, { freqErr: 0.05, modeOk: true, driftHeld: 0.95 }); if (r4.ok && r4.intercept.callsign === cmem.call) got++; }
   if (got < 2) ch.endShift();
 }
 var cids = ch.messages().filter(function (m) { return m.from === cmem.call; }).map(function (m) { return m.id; });
-if (cids.length >= 2 && !ch.over) {
+if (cids.length >= 1 && !ch.over) {
   ran.push('computer');
+  var tb = ch.minute;
   var job = ch.bench.boardSolve(cids, cmem.periodKey.length);
-  ok(job.ok && job.pending && job.ready, 'computer job booked');
-  ok(!ch.bench.boardSolve(cids, 5).ok, 'one job at a time');
-  if (job.ready.shift > ch.shift) ch.endShift();
-  if (!ch.over) {
-    ch.advanceTo(job.ready.t);
-    var jn = ch.inbox().filter(function (x) { return x.job === job.job; })[0];
-    ok(jn, 'computer answers in the inbox');
-    if (jn.keyword) ran.push('board'), ok(ch.board() && ch.board().key === ch._w.ring.keyword, 'board recovered');
-  }
+  ok(job.ok && job.keyword === ch._w.ring.keyword && ch.board() && ch.board().key === job.keyword, 'the big computer recovers the board');
+  ok(ch.minute === Math.min(480, tb + 30), 'computer time costs 30 minutes');
+  ran.push('board');
+  // with the board, the courier tools answer on a single message
+  var pr1 = ch.bench.period(cids[0]);
+  ok(pr1.best === cmem.periodKey.length && pr1.via === 'crib', 'the opening habit shows the period');
+  var co1 = ch.bench.columns(cids[0], pr1.best);
+  ok(co1.bestKey.join('') === cmem.periodKey.join('') && co1.cols[0].via === 'crib' && co1.cols[0].fit[0].shift === co1.bestKey[0], 'best-fit key on one message');
 }
 
 // ------------------------------------------------------------------ mentor

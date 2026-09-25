@@ -95,14 +95,14 @@
     { id: 'cadet', label: 'Cadet', blurb: 'Five nights. The station holds the ring\'s checkerboard, the pad clerk was lazy, and Special Branch is generous.',
       shifts: 5, warrants: 6, outstations: 4, reusePairs: 4, garble: 0.7, cost: 0.6, alert: 0.5, boardHeld: true, suggest: true,
       period: [4, 5], bursts: 0, decoys: 0, patience: 120, collapseAgents: 2, dfSd: 0.75, vanSec: 150, opNights: [3, 4],
-      mentorCost: { 1: 0, 2: 15, 3: 5 }, courierMsgs: 3, stopReuseAt: 99, lateReuse: 1 },
+      mentorCost: { 1: 0, 2: 15, 3: 5 }, courierMsgs: 3, courierWhere: true, stopReuseAt: 99, lateReuse: 1 },
     { id: 'analyst', label: 'Analyst', blurb: 'Four nights. You hold the checkerboard; the pad clerk reused a few pages. The ring reacts to what you do.',
       shifts: 4, warrants: 4, outstations: 3, reusePairs: 3, garble: 1.0, cost: 1.0, alert: 1.0, boardHeld: true, suggest: true,
       period: [5, 6], bursts: 0.25, decoys: 1, patience: 100, collapseAgents: 3, dfSd: 1.0, vanSec: 110, opNights: [2, 3],
-      mentorCost: { 1: 0, 2: 30, 3: 10 }, courierMsgs: 2, stopReuseAt: 3, lateReuse: 0 },
+      mentorCost: { 1: 0, 2: 30, 3: 10 }, courierMsgs: 2, courierWhere: true, stopReuseAt: 3, lateReuse: 0 },
     { id: 'chief', label: 'Chief', blurb: 'Four nights. No checkerboard on file: recover it from courier traffic. Few warrants; a sharp security officer.',
       shifts: 4, warrants: 3, outstations: 3, reusePairs: 2, garble: 1.45, cost: 1.3, alert: 1.5, boardHeld: false, suggest: false,
-      period: [6, 7], bursts: 0.5, decoys: 2, patience: 80, collapseAgents: 3, dfSd: 1.3, vanSec: 80, opNights: [2, 3],
+      period: [6, 7], bursts: 0.5, decoys: 2, patience: 80, collapseAgents: 3, dfSd: 1.3, vanSec: 80, opNights: [1, 2, 3],
       mentorCost: { 1: 0, 2: 45, 3: 15 }, courierMsgs: 1, stopReuseAt: 2, lateReuse: 0 }
   ];
   DX.grade = function (id) { for (var i = 0; i < DX.GRADES.length; i++) if (DX.GRADES[i].id === id) return DX.GRADES[i]; return DX.GRADES[1]; };

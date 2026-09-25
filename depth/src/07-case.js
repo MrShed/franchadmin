@@ -71,7 +71,7 @@
   };
   CP.costs = function () {
     var k = this._w.G.cost;
-    return { depth: r1(2 * k), crib: r1(1 * k), place: 0, period: r1(5 * k), columns: r1(3 * k), align: r1(3 * k), setKey: r1(1 * k), suggest: r1(2 * k), boardSolve: 5, accept: 0, warrant: 10, van: this._w.G.id === 'cadet' ? 5 : this._w.G.id === 'analyst' ? 10 : 15, boardSolveWait: 60, df: 0 };
+    return { depth: r1(2 * k), crib: r1(1 * k), place: 0, period: r1(5 * k), columns: r1(3 * k), align: r1(3 * k), setKey: r1(1 * k), suggest: r1(2 * k), boardSolve: 30, accept: 0, warrant: 10, van: this._w.G.id === 'cadet' ? 5 : this._w.G.id === 'analyst' ? 10 : 15, boardSolveWait: 60, df: 0 };
   };
   function r1(x) { return Math.max(0, Math.round(x)); }
 
@@ -135,7 +135,8 @@
     var n = s.shift, list = W.byNight[n] || [], self = this;
     // gather timed happenings in (minute, target]
     var items = [];
-    list.forEach(function (t) { if (!t.cancelled && t.minute >= s.minute && t.minute <= target && !s.seenStart[t.id]) items.push({ at: t.minute, k: 'tx', t: t }); });
+    // a transmission starting exactly at the target is left on air for the player (logged if they move on)
+    list.forEach(function (t) { if (!t.cancelled && t.minute >= s.minute && (t.minute < target || (target === SHIFT && t.minute === target)) && !s.seenStart[t.id]) items.push({ at: t.minute, k: 'tx', t: t }); });
     s.pending.forEach(function (p) { if (p.shift === n && p.at <= target && !p.done) items.push({ at: p.at, k: 'warrant', p: p }); });
     if (W.op.night === n && W.op.minute <= target && !s.opDone) items.push({ at: W.op.minute, k: 'op' });
     items.sort(function (a, b) { return a.at - b.at || (a.k === 'tx' ? -1 : 1); });
@@ -607,6 +608,26 @@
     return { ok: false, msgIds: [this._post('report', 'The big computer: no luck', 'Computer room', [{ k: 'p', x: ['No keyword in the list gives readable text with period ' + (typeof job.arg === 'number' ? job.arg : job.arg.length) + '. Check the period, or wait for more traffic.'] }], { job: job.id })] };
   };
 
+  /** the key digits a courier's usual opening gives (tool help): tries the ring's opening formats with the
+   *  callsigns from the log, keeps the one that reads best. -> {key:[..,-1], crib} | null */
+  CP._cribKey = function (ids, st, period) {
+    var s = this._s, W = this._w, bd = s.board ? DX.boardCache(s.board) : null;
+    if (!bd) return null;
+    ids = Array.isArray(ids) ? ids : [ids];
+    var wb0 = s.wb[ids[0]];
+    var best = null;
+    DX.openingTexts(wb0.from, wb0.to, W.ring.controller.spell, W.ring.controller.call).forEach(function (ct) {
+      var cd = DX.cribDigits(bd, ct);
+      var k = DX.keyFromCribs(st, st.map(function () { return cd; }), period);
+      if (!k || k.indexOf(-1) === k.length) return;
+      var fit = DX.columnFreq(st, period, bd).map(function (col) { return col.fit[0].shift; });
+      var full = k.map(function (x, i) { return x >= 0 ? x : fit[i]; });
+      var pl = DX.plaus(st.map(function (x) { return DX.decode(bd, DX.subKey(x.slice(0, 120), full)).text; }).join('')).score;
+      if (!best || pl > best.plaus) best = { key: k, crib: ct, plaus: pl };
+    });
+    return best && best.plaus >= 0.45 ? best : null;
+  };
+
   CP._clearMessage = function (key, text, source) {
     var s = this._s;
     if (s.wbByKey[key]) return s.wbByKey[key];
@@ -908,7 +929,9 @@
     B.work = function (a, b) {
       var bd = board(), W2 = c._s.work[wkey(a, b)];
       if (!bd) return { ok: false, err: 'no checkerboard' };
-      var da = c._digitsOf(a), db = c._digitsOf(b), d = DX.diff(da, db);
+      var da = c._digitsOf(a), db = c._digitsOf(b);
+      if (!da || !db) return { ok: false, err: 'both messages must be cipher text on the bench' };
+      var d = DX.diff(da, db);
       var A = da.map(function () { return -1; }), Bd = db.map(function () { return -1; }), starts = { A: {}, B: {} };
       (W2 ? W2.placed : []).forEach(function (p) {
         var cd = DX.toDigits(DX.encode(bd, p.text)), own = p.side === 'A' ? A : Bd, oth = p.side === 'A' ? Bd : A;
@@ -940,15 +963,54 @@
       var e = need(ids); if (e) return { ok: false, err: e };
       var st = streams(ids);
       var ic = DX.icByPeriod(st, 12), reps = DX.repeats(st, 5);
+      var best = DX.bestPeriod(ic, reps), via = 'ic', cribPeriods = [];
+      // tool help with the checkerboard: the courier's usual opening exposes key digits; the key must repeat
+      var bd = board();
+      if (bd) {
+        var wb0 = c._s.wb[(Array.isArray(ids) ? ids : [ids])[0]], W = c._w;
+        DX.openingTexts(wb0.from, wb0.to, W.ring.controller.spell, W.ring.controller.call).forEach(function (ct) {
+          var cd = DX.cribDigits(bd, ct);
+          for (var p = 2; p <= 12; p++) {
+            var pairs = 0, bad = false;
+            st.forEach(function (x) {
+              for (var i = 0; i + p < cd.length && i + p < x.length; i++) {
+                if (cd[i] < 0 || cd[i + p] < 0 || x[i] < 0 || x[i + p] < 0) continue;
+                pairs++;
+                if (((x[i] - cd[i]) % 10 + 10) % 10 !== ((x[i + p] - cd[i + p]) % 10 + 10) % 10) bad = true;
+              }
+            });
+            if (!bad && pairs >= 3 && cribPeriods.indexOf(p) < 0) cribPeriods.push(p);
+          }
+        });
+        cribPeriods.sort(function (a, b) { return a - b; });
+        if (cribPeriods.length) { best = cribPeriods[0]; via = 'crib'; }
+      }
       var ev4 = c._spend(c.costs().period);
-      return { ok: true, ic: ic, repeats: reps, best: DX.bestPeriod(ic, reps), events: ev4 };
+      return { ok: true, ic: ic, repeats: reps, best: best, via: via, cribPeriods: cribPeriods, events: ev4 };
     };
+    /** per-column counts. With the checkerboard: each column's shifts ranked best first (fit[0] = the tool's
+     *  answer). Where the courier's habitual opening (from the log's callsigns) covers a column consistently in
+     *  every message, that shift is ranked first (via:'crib'); elsewhere by log-likelihood of the column's digits
+     *  against the board's expected digit frequencies (via:'freq'). bestKey = fit[0] of every column. */
     B.columns = function (ids, period) {
       var e = need(ids); if (e) return { ok: false, err: e };
       period = Math.max(1, period | 0);
-      var cols = DX.columnFreq(streams(ids), period, board());
+      var st = streams(ids), bd = board();
+      var cols = DX.columnFreq(st, period, bd), bestKey = null;
+      if (bd) {
+        var ck = c._cribKey(ids, st, period);
+        cols.forEach(function (col, i) {
+          col.via = 'freq';
+          if (ck && ck.key[i] >= 0) {
+            var sh = ck.key[i];
+            col.fit.sort(function (x, y) { return (y.shift === sh) - (x.shift === sh) || y.score - x.score; });
+            col.via = 'crib';
+          }
+        });
+        bestKey = cols.map(function (col) { return col.fit[0].shift; });
+      }
       var ev5 = c._spend(c.costs().columns);
-      return { ok: true, cols: cols, expect: board() ? DX.boardExpect(board()).map(function (x) { return DX.round(x, 4); }) : null, events: ev5 };
+      return { ok: true, cols: cols, bestKey: bestKey, crib: bd && ck ? ck.crib : null, expect: bd ? DX.boardExpect(bd).map(function (x) { return DX.round(x, 4); }) : null, events: ev5 };
     };
     B.align = function (ids, period) {
       var e = need(ids); if (e) return { ok: false, err: e };
@@ -964,29 +1026,25 @@
       var ev6 = c._spend(c.costs().setKey);
       return { ok: true, texts: list, text: list[0].text, plaus: list[0].plaus, events: ev6 };
     };
-    /** book the big computer: it tries every keyword in the list against these messages with this period (or
-     *  relative key). The job runs for an hour; the answer comes to the inbox (event kind 'computer'). */
+    /** time on the big computer (Chief): tries every keyword in the list against these messages with this period
+     *  (or relative key) — from your crib, or the ring's usual openings with the logged callsigns — and sets the
+     *  checkerboard when one reads. Costs 30 minutes of station time. */
     B.boardSolve = function (ids, periodOrRel, crib) {
       var e = need(ids); if (e) return { ok: false, err: e };
-      var s = c._s;
-      if (s.pending.some(function (p) { return p.kind === 'computer' && !p.done; })) return { ok: false, err: 'the computer is already running a job for you' };
-      var job = { id: 'C' + (s.pending.length + 1), kind: 'computer', shift: s.shift, at: Math.min(SHIFT, s.minute + c.costs().boardSolveWait), ids: (Array.isArray(ids) ? ids : [ids]).slice(), arg: periodOrRel, crib: crib || null, done: false };
-      if (s.minute + c.costs().boardSolveWait > SHIFT) { job.shift = s.shift + 1; job.at = Math.min(SHIFT, s.minute + c.costs().boardSolveWait - SHIFT); }
-      s.pending.push(job);
+      var s = c._s, W = c._w;
+      ids = Array.isArray(ids) ? ids : [ids];
+      var st = streams(ids), wb0 = s.wb[ids[0]];
+      var cribs = crib ? [DX.norm(crib)] : DX.openingTexts(wb0.from, wb0.to, W.ring.controller.spell, W.ring.controller.call);
+      var arg = typeof periodOrRel === 'number' ? periodOrRel : DX.toDigits(periodOrRel);
+      var best = DX.searchBoard(st, arg, null, cribs);
       var ev7 = c._spend(c.costs().boardSolve);
-      return { ok: true, pending: true, job: job.id, ready: { shift: job.shift, t: job.at, label: DX.hhmm(job.at) }, events: ev7 };
-    };
-    /** known plaintext: a crib assumed at the start of each message gives the key digits it covers.
-     *  crib may hold '#n' for an n-figure number. -> {key:[digits, -1 unknown], known, conflict} */
-    B.keyFromCrib = function (ids, crib, period) {
-      var e = need(ids); if (e) return { ok: false, err: e };
-      var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard: recover it first' };
-      period = Math.max(1, period | 0);
-      var st = streams(ids), cd = DX.cribDigits(bd, crib);
-      var key = DX.keyFromCribs(st, st.map(function () { return cd; }), period);
-      var ev9 = c._spend(c.costs().setKey);
-      if (!key) return { ok: true, key: null, conflict: true, known: 0, events: ev9 };
-      return { ok: true, key: key, keyStr: DX.digitStr(key), known: key.filter(function (x) { return x >= 0; }).length, conflict: false, events: ev9 };
+      if (best && best.plaus >= 0.55) {
+        if (!s.board) s.board = best.keyword;
+        c._post('report', 'The big computer: checkerboard recovered', 'Computer room', [{ k: 'p', x: ['Keyword ' + best.keyword + ' gives readable text on ', ref('msg', ids[0], 'the courier traffic'), ' with key ' + best.key.join('') + ' (period ' + best.key.length + '). The checkerboard is on your bench.'] }], { keyword: best.keyword, key: best.key });
+        return { ok: true, keyword: best.keyword, key: best.key, plaus: best.plaus, board: c.board(), events: ev7 };
+      }
+      c._post('report', 'The big computer: no luck', 'Computer room', [{ k: 'p', x: ['No keyword in the list gives readable text with period ' + (typeof arg === 'number' ? arg : arg.length) + '. Check the period, or wait for more traffic.'] }]);
+      return { ok: false, err: 'no keyword in the list gives readable text with that period', plaus: best ? best.plaus : 0, events: ev7 };
     };
     B.decode = function (digits) { var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard' }; var d = DX.decode(bd, digits); return { ok: true, text: d.text, plaus: DX.plaus(d.text).score }; };
     B.encode = function (text) { var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard' }; return { ok: true, digits: DX.encode(bd, text) }; };
