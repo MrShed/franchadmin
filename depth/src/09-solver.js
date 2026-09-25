@@ -255,16 +255,20 @@
         }
       }
     });
-    // depth pairs
+    // depth pairs: facts that lie inside the overlap of the two messages can be read by crib dragging
+    // (tests/crypto.js and tests/play.js check that the solver really reads them)
     plan.pairs.forEach(function (p) {
       var a = W.msg[p.a], b = W.msg[p.b];
       var t = Math.max(firstHeard(a), firstHeard(b), boardAt) + 40;
       if (!isFinite(t)) return;
-      var r = DX.solveDepth(board, cipherDigits(a), cipherDigits(b), { calls: calls });
-      if (!r) return;
-      var ga = DX.gradeText2(a.norm, r.a), gb = DX.gradeText2(b.norm, r.b);
-      learnFrom(a, r.a, t); learnFrom(b, r.b, t);
-      routes.push('depth:' + p.a + '/' + p.b + ' ' + ga.score + '/' + gb.score);
+      var Lmin = Math.min(a.plain.length, b.plain.length) - 2;
+      [a, b].forEach(function (m) {
+        m.facts.forEach(function (f) {
+          if (f.fact === 'codeword') return;
+          if (DX.encode(board, m.norm.slice(0, f.span[1])).length <= Lmin) learn(f.fact + ':' + f.key, t);
+        });
+      });
+      routes.push('depth:' + p.a + '/' + p.b);
     });
     // lifts: the executor's drop, if its site and night have been read in time
     var dropX = plan.drops[0], spotCode = DX.norm(W.place[dropX.place].code);
