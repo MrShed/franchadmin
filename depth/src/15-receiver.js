@@ -35,7 +35,7 @@ var UIRx = (function () {
         '<div class="rx-head"><div class="plate"><span class="engr big">KESTREL</span><span class="engr sm">RX-2 · HF receiver</span></div>' +
         '<div class="vfd" id="rx-vfd"></div></div>' +
         '<div class="rx-glass" id="rx-glass" aria-label="Dial glass: drag to tune"></div>' +
-        '<div class="crt"><div class="crt-in" id="rx-wf"></div><div class="crt-ov" id="rx-ov"></div><div class="crt-glass"></div>' +
+        '<div class="crt"><div class="crt-in" id="rx-wf"></div><canvas class="crt-glow" id="rx-glow" width="160" height="60" aria-hidden="true"></canvas><div class="crt-ov" id="rx-ov"></div><div class="crt-glass"></div>' +
           '<div class="crt-span" id="rx-span" data-nogesture><button data-span="band">Band</button><button data-span="wide">±50k</button><button data-span="narrow">±3k</button></div></div>' +
         '<div class="tape" id="rx-tape" aria-live="polite"></div>' +
         '<div class="rx-ctl">' +
@@ -209,6 +209,11 @@ var UIRx = (function () {
     var rows = Math.max(1, Math.round(wf.dpr));
     for (var r = 0; r < rows; r++) scrollRow(T, false);
     var ctx = wf.ctx; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(hist, 0, 0);
+    // phosphor bloom: a small copy, blurred by CSS and screened over the tube
+    var gc = el.glow || (el.glow = UI$('#rx-glow'));
+    if (gc) { if (!gc._x) gc._x = gc.getContext('2d'); gc._x.drawImage(hist, 0, 0, gc.width, gc.height); }
+    // static crashes: a whole row flares now and then when the band is noisy
+    if (Math.random() < 0.004 + UIA.band().noise * 0.01) { histCtx.fillStyle = 'rgba(120,255,170,' + (0.08 + Math.random() * 0.12).toFixed(2) + ')'; histCtx.fillRect(0, 0, W, 1 + Math.random() * 2); }
   }
   var rowN = 0;
   function scrollRow(T, prefill) {
@@ -465,6 +470,8 @@ var UIRx = (function () {
     R.refresh();
   }
   R.listening = function () { return !!L; };
+  /** tuning error against the signal being held (kHz), for tests */
+  R.err = function () { return L && L.phase === 'hold' ? kHz() - sigF(L.sig) : null; };
 
   // ------------------------------------------------------------------ DF and van
   function onDf() {
@@ -573,7 +580,8 @@ var UIRx = (function () {
     return g.map(function (s, i) { return '<span class="g' + (i === 0 ? ' ind' : '') + '">' + UIesc(s).replace(/\?/g, '<i class="lost">?</i>') + '</span>'; }).join('') + (limit && gs.length > limit ? '<span class="more">+' + (gs.length - limit) + '</span>' : '');
   }
   R.renderLog = function () {
-    var c = UIA.clock(), log = UIA.log().slice().sort(function (a, b) { return b.t - a.t; });
+    var c = UIA.clock(), log = UIA.log().slice().sort(function (a, b) { return b.t - a.t; }), air = {};
+    UIA.band().now.forEach(function (s) { air[s.id] = 1; });
     var byShift = {}; log.forEach(function (e) { (byShift[e.shift] = byShift[e.shift] || []).push(e); });
     var h = '<div class="ls-head"><div><span class="ls-org">Station Kestrel · intercept log</span><h3>Log sheet</h3></div><span class="ls-form">Form K/7</span></div>';
     if (!log.length) h += '<p class="ls-empty">Nothing copied yet tonight. Wait for the first transmission on the schedule, or tap a trace on the display.</p>';
@@ -586,7 +594,7 @@ var UIRx = (function () {
           '<span class="ls-t">' + e.label + '</span><span class="ls-f">' + UImhz(e.freq) + '</span><span class="ls-m">' + UImodeName(e.mode) + '</span>' +
           '<span class="ls-cs">' + (e.callsign ? UIesc(e.callsign) + (e.to ? '<small>→' + UIesc(e.to) + '</small>' : '') : '<em>?</em>') + '</span>' +
           '<span class="ls-q">' + (e.faint ? '' : qStamp(e.quality)) + (e.df ? '<span class="dfm" title="bearings taken">DF</span>' : '') + '</span>' +
-          '<span class="ls-g">' + (e.faint ? '<em class="pencil">heard faintly — not copied</em>' : e.decoy ? '<em class="pencil">test transmission — VVV only</em>' : groupsHtml(gs, live ? 0 : UIwide() ? 12 : 6)) + '</span></button>';
+          '<span class="ls-g">' + (e.faint && e.tx && air[e.tx] && e.shift === c.shift ? '<em class="pencil onair">on the air now — tune in and copy</em>' : e.faint ? '<em class="pencil">heard faintly — not copied</em>' : e.decoy ? '<em class="pencil">test transmission — VVV only</em>' : groupsHtml(gs, live ? 0 : UIwide() ? 12 : 6)) + '</span></button>';
       });
       h += '</div>';
     });

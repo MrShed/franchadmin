@@ -239,7 +239,7 @@ var UIBench = (function () {
   var R_marks = null;
   function scan(crib, side) {
     var out = [], n = D.diff.length;
-    for (var o = 0; o < n; o++) { var p = UIA.bench.preview(D.diff, crib, o, side); if (!p || !p.fits) break; if (p.plaus >= 0.62 && p.other.indexOf('?') < 0) out.push(o); }
+    for (var o = 0; o < n; o++) { var p = UIA.bench.preview(D.diff, crib, o, side); if (!p || !p.fits) break; if (p.otherDigits === p.cribDigits) continue; if (p.plaus >= 0.62 && p.other.indexOf('?') < 0) out.push(o); }
     return out.slice(0, 12);
   }
   function pinIt(crib, off, side) {
@@ -346,6 +346,7 @@ var UIBench = (function () {
       if (a === 'period') { var r = UIA.bench.period(id); if (!r) { UItoast('The period finder jammed.', { err: true }); return; } P.pres = r; if (helps()) P.period = bestP(P); UIAudio.cue('type'); UI.act(function () { }); B.render(); UI.emit('period', id); }
       else if (a === 'cols') { var c2 = UIA.bench.columns(id, P.period); if (!c2) return; P.cols = c2; P.key = c2.cols.map(function (c) { return helps() && c.fit ? c.fit[0].shift : 0; }); UIAudio.cue('type'); UI.act(function () { }); B.render(); UIExplain.once('columns'); UI.emit('columns', id); }
       else if (a === 'best') { P.key = P.cols.cols.map(function (c, i) { return c.fit ? c.fit[0].shift : bestShift(c.freq, P.cols.expect); }); UIAudio.cue('pencil'); B.render(); }
+      else if (a === 'polish') { var before = keyPreview(m, P).plaus; P.key = polish(m, P); var after = keyPreview(m, P).plaus; UIAudio.cue('pencil'); UItoast(after > before + 0.02 ? 'Tried every shift in every column: the text reads better now.' : 'No single column reads better shifted.', { good: after > before + 0.02 }); B.render(); }
       else if (a === 'align') { var al = UIA.bench.align(id, P.period); if (!al) { UItoast('Alignment is not available.', { err: true }); return; } P.rel = al.rel; UI.act(function () { }); B.render(); }
       else if (a === 'solve') { var sv = UIA.bench.boardSolve(id, P.rel); UI.act(function () { }); if (sv.ok) { UIAudio.cue('win'); UItoast('The computer found the keyword ' + sv.keyword + '. The checkerboard is on your bench.', { ms: 5000, good: true }); S().per[id] = { period: P.period, pres: P.pres, cols: null, key: [], rel: null }; } else UItoast(sv.err || 'No keyword in the list reads.', { err: true, ms: 4200 }); B.render(); }
       else if (a === 'write') writeUp(id, keyPreview(m, P).text);
@@ -381,8 +382,18 @@ var UIBench = (function () {
         '<div class="cc-k"><button class="ib" data-kd="-1" data-c="' + i + '" aria-label="Key digit down">' + UIICON.minus + '</button><b>' + k + '</b><button class="ib" data-kd="1" data-c="' + i + '" aria-label="Key digit up">' + UIICON.plus + '</button></div></div>';
     });
     h += '</div>' + (exp ? '<p class="note">Grey: how plain text looks on this checkerboard. Ink: this column, shifted back by the key digit. When they match, the digit is right.</p>' : '<p class="note">No checkerboard to compare against: line the columns up against each other instead.</p>') +
-      (helps() && exp ? '<button class="btn sm" data-k-act="best">' + UIICON.check + 'Use every best fit</button>' : '');
+      (helps() && exp ? '<div class="row" style="gap:8px"><button class="btn sm" data-k-act="best">' + UIICON.check + 'Use every best fit</button><button class="btn sm" data-k-act="polish">' + UIICON.pencil + 'Polish: try each column for readable text</button></div>' : '');
     return h;
+  }
+  /** coordinate ascent on the key: each column tries all ten shifts, keeping what reads best (tool help) */
+  function polish(m, P) {
+    var key = P.key.slice();
+    for (var pass = 0; pass < 2; pass++) for (var i = 0; i < key.length; i++) {
+      var best = key[i], bp = -1;
+      for (var sh = 0; sh < 10; sh++) { key[i] = sh; var pv = keyPreview(m, { key: key }); if (pv.plaus > bp + 1e-9) { bp = pv.plaus; best = sh; } }
+      key[i] = best;
+    }
+    return key;
   }
   function keyPreview(m, P) {
     var bd = UIA.board(); if (!bd || !P.key.length) return { text: '', plaus: 0 };

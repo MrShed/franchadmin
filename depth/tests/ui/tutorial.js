@@ -39,12 +39,17 @@ fs.mkdirSync(OUT, { recursive: true });
     else if (s.wait === 'copystart') await page.locator('#rx-copy').tap();
     else if (s.wait === 'copied') {
       // hold it: keep correcting the drift by dragging the trace back onto the line
-      for (var t = 0; t < 26; t++) {
-        var e2 = await page.evaluate(function () { var ph = UI$('#rx-set') ; var sg = UIA.band().now.filter(function (x) { return !x.bcast; })[0]; return sg ? null : null; });
-        await page.waitForTimeout(700);
+      for (var t = 0; t < 60; t++) {
+        var e2 = await page.evaluate(function () { return UIRx.err(); });
+        if (e2 !== null && Math.abs(e2) > 0.12) {
+          var bx = await page.locator('#rx-ov').boundingBox(), px = e2 / (6 / bx.width);
+          await page.mouse.move(bx.x + bx.width / 2, bx.y + bx.height / 2); await page.mouse.down();
+          await page.mouse.move(bx.x + bx.width / 2 + px, bx.y + bx.height / 2, { steps: 3 }); await page.mouse.up();
+        }
+        await page.waitForTimeout(350);
         var done = await page.evaluate(function () { return !UIRx.listening(); });
         if (done) break;
-        if (t === 20) await page.locator('#rx-copy').tap();
+        if (t === 40) await page.locator('#rx-copy').tap();
       }
       await page.waitForTimeout(1500);
     }

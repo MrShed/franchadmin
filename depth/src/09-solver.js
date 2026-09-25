@@ -207,6 +207,11 @@
       covered: [best.f[0], best.f[1]], tokensA: best.tk[0].map(function (x) { return x.t; }), tokensB: best.tk[1].map(function (x) { return x.t; }) };
   };
 
+  /** the ring's opening habits as crib TEXTS ('#2' = the message number), for a courier/agent from -> to */
+  DX.openingTexts = function (from, to, ctlSpell, ctlCall) {
+    var T = DX.TEMPLATES, isCtl = from === ctlCall, sp = function (x) { return x === ctlCall ? ctlSpell : x; };
+    return (isCtl ? T.ctlOpen : T.agOpen).map(function (tpl) { return tpl.replace('{TO}', sp(to)).replace('{FROM}', sp(from)).split('{NR}').map(DX.norm).join('#2'); });
+  };
   /** the ring's opening habits as crib token lists, for a message from `from` to `to` (callsigns as heard).
    *  ctlSpell: how the controller's callsign is spelt in text (e.g. SAEL). */
   DX.openingCribs = function (from, to, ctlSpell, ctlCall) {
@@ -233,13 +238,19 @@
     var p = opts.period || DX.bestPeriod(ic, reps);
     var keyword = board ? board.key : null, key, plaus;
     if (!board) {
-      var sb = DX.searchBoard(streams, p);
+      var sb = DX.searchBoard(streams, p, null, opts.cribs);
       if (!sb || sb.plaus < 0.55) return { ok: false, period: p, plaus: sb ? sb.plaus : 0 };
       board = DX.boardCache(sb.keyword); keyword = sb.keyword; key = sb.key; plaus = sb.plaus;
     } else {
-      key = DX.columnFreq(streams, p, board).map(function (col) { return col.fit[0].shift; });
-      var r = DX.refineKey(streams, board, key);
-      key = r.key; plaus = r.plaus;
+      var fit = DX.columnFreq(streams, p, board).map(function (col) { return col.fit[0].shift; });
+      var tries = [fit];
+      (opts.cribs || []).forEach(function (ct) {
+        var cd = DX.cribDigits(board, ct), kk = DX.keyFromCribs(streams, streams.map(function () { return cd; }), p);
+        if (kk) tries.push(kk.map(function (x, i) { return x >= 0 ? x : fit[i]; }));
+      });
+      var bestR = null;
+      tries.forEach(function (k0) { var r = DX.refineKey(streams, board, k0, 2); if (!bestR || r.plaus > bestR.plaus) bestR = r; });
+      key = bestR.key; plaus = bestR.plaus;
     }
     return { ok: plaus >= 0.5, period: p, key: key, keyword: keyword, plaus: plaus, texts: streams.map(function (s) { return DX.decode(board, DX.subKey(s, key)).text; }) };
   };
@@ -268,7 +279,7 @@
       // try with the first k messages as they arrive
       for (var k = 2; k <= ms.length; k++) {
         var sub = ms.slice(0, k);
-        var r = DX.solvePeriodic(sub.map(cipherDigits), G.boardHeld ? board : null);
+        var r = DX.solvePeriodic(sub.map(cipherDigits), G.boardHeld ? board : null, { cribs: DX.openingTexts(cm.call, W.ring.resident.call, W.ring.controller.spell, W.ring.controller.call) });
         if (r.ok) {
           var t = Math.max.apply(null, sub.map(firstHeard)) + (G.boardHeld ? 30 : 90);
           if (!G.boardHeld) boardAt = Math.min(boardAt, t);

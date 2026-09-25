@@ -42,7 +42,7 @@
     E_RECON: ['RECONNAISSANCE OF {OPPLACE} COMPLETE. GUARDS CHANGE AT {TIME}. FENCE WEAK ON EAST SIDE.',
       'I HAVE WATCHED {OPPLACE} THREE NIGHTS. ONE GUARD ONLY AFTER {TIME}.'],
     E_READY: ['{ITEM} RECEIVED. I WILL BE IN POSITION NIGHT OF {OPDAY} AT {OPTIME}.', 'READY FOR {CW}. {OPDAY} AT {OPTIME} IS GOOD.'],
-    A_FILL: ['NOTHING NEW. {PLACE} QUIET. WAITING FOR ORDERS.', 'SHIP ARRIVED AT {PLACE}. THREE MEN ON WATCH.', 'I NEED MONEY FOR RENT. SEND BY {SPOT}.'],
+    A_FILL: ['NOTHING NEW. {PLACE} QUIET. WAITING FOR ORDERS.', 'SHIP ARRIVED AT {QUAY}. THREE MEN ON WATCH.', 'I NEED MONEY FOR RENT. SEND BY {SPOT}.'],
     RA_ORDER: ['WATCH {PLACE} NIGHT OF {DAY} AND REPORT.', 'CLEAR {SPOT} AFTER {TIME} {DAY}. BURN THE PAPER.'],
     C_DROP: ['{SPOT} LOADED NIGHT OF {DAY} AFTER {TIME} FOR {AG}. MARK ON {SIGNAL}. PACKAGE CONTAINS {ITEM}.'],
     C_EXEC: ['PACKAGE FOR {EXEC} IS IN {SPOT} FROM {DAY} AFTER {TIME}. {EXEC} MUST CLEAR IT BEFORE NIGHT OF {OPDAY}.'],
@@ -214,7 +214,7 @@
     function V(extra) {
       var v = {
         CW: op.codeword, WHAT: op.what, OPPLACE: opPlace.code, OPDAY: DX.nightName(o), OPTIME: DX.hhmm4(op.minute), EXEC: ex.spell,
-        ITEM: execItem, PH: ex.sex === 'F' ? 'SHE' : 'HE', N: op.kroner, SPOT: execSpot.code, SIGNAL: R.pick(signals).code,
+        ITEM: execItem, PH: ex.sex === 'F' ? 'SHE' : 'HE', N: op.kroner, SPOT: R.pick(spareSpots).code, QUAY: 'QUAY ' + R.int(1, 9), SIGNAL: R.pick(signals).code,
         CAFE: R.pick(cafes).code, PLACE: R.pick(landmarks).code, AG: (R.pick(otherAgents.length ? otherAgents : plainAgents)).spell,
         DAY: DX.nightName(R.int(0, N - 1)), TIME: DX.hhmm4(R.int(10, 40) * 10), N2: R.int(10, 40), F: String(R.int(3000, 9000))
       };
@@ -232,8 +232,12 @@
       var sign = isCtl ? T.ctlSign[ring.signCtl] : T.agSign[fromM.sign];
       var vars = V(extra);
       vars.TO = toSpell; vars.FROM = fromSpell; vars.NR = nextNr(from);
-      if (opts.more) tpl = tpl + ' ' + R.pick(T[opts.more]);
       var a = fill(open + ' ', vars), b = fill(tpl + ' ', vars), c = fill(sign, vars);
+      if (opts.more) {
+        // a second, unrelated sentence (its own fillers)
+        var b2 = fill(R.pick(T[opts.more]) + ' ', V({})), nb = DX.norm(b.text).length;
+        b = { text: b.text + b2.text, facts: b.facts.concat(b2.facts.map(function (f) { return { fact: f.fact, key: f.key, value: f.value, span: [f.span[0] + nb, f.span[1] + nb] }; })) };
+      }
       var off1 = DX.norm(a.text).length, off2 = off1 + DX.norm(b.text).length;
       var facts = a.facts.concat(b.facts.map(function (f) { return { fact: f.fact, key: f.key, value: f.value, span: [f.span[0] + off1, f.span[1] + off1] }; }))
         .concat(c.facts.map(function (f) { return { fact: f.fact, key: f.key, value: f.value, span: [f.span[0] + off2, f.span[1] + off2] }; }));
@@ -260,6 +264,8 @@
     for (n = 0; n <= o && n < N; n++) {
       ctlBeats[n].slice(0, 3).forEach(function (beat, k) {
         var extra = {};
+        if (beat === 'OP_WHO') extra = { SPOT: execSpot.code };
+        if (beat === 'MONEY') extra = { SPOT: otherSpot.code };
         if (beat === 'MEET') { extra = { AG: meetAgent.spell, CAFE: city.places.filter(function (p) { return p.id === meet.cafe; })[0].code, DAY: DX.nightName(meet.night), TIME: DX.hhmm4(meet.minute) }; }
         if (beat === 'ORDER_DROP') { extra = { SPOT: otherSpot.code, AG: members.filter(function (m) { return m.id === odrop.forId; })[0].spell, DAY: DX.nightName(odrop.night), TIME: DX.hhmm4(odrop.after) }; }
         var m = compose('ctl', res.id, beat, n, extra);
@@ -450,7 +456,7 @@
       var spec = R.pick(OPS);
       var v = { CW: R.pick(D.CODEWORDS), WHAT: spec.what, OPPLACE: R.pick(spec.places), OPDAY: R.pick(DX.CAL.DAY_NAMES), OPTIME: DX.pad(R.int(0, 23), 2) + DX.pad(R.int(0, 5) * 10, 2),
         EXEC: cs(), ITEM: R.pick(ITEMS), PH: R.pick(['HE', 'SHE']), N: R.int(2, 9) * 1000, SPOT: R.pick(placeCodes), SIGNAL: R.pick(placeCodes), CAFE: R.pick(placeCodes),
-        PLACE: R.pick(placeCodes), AG: cs(), DAY: R.pick(DX.CAL.DAY_NAMES), TIME: DX.pad(R.int(18, 23), 2) + DX.pad(R.int(0, 5) * 10, 2), N2: R.int(10, 40), F: String(R.int(3000, 9000)), TO: cs(), NR: R.int(11, 60) };
+        PLACE: R.pick(placeCodes), QUAY: 'QUAY ' + R.int(1, 9), AG: cs(), DAY: R.pick(DX.CAL.DAY_NAMES), TIME: DX.pad(R.int(18, 23), 2) + DX.pad(R.int(0, 5) * 10, 2), N2: R.int(10, 40), F: String(R.int(3000, 9000)), TO: cs(), NR: R.int(11, 60) };
       var ctl = i % 3 === 0;
       v.FROM = ctl ? R.pick(D.CONTROLLERS)[1] : cs();
       if (ctl) v.TO = cs();

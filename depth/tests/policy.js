@@ -202,7 +202,7 @@ module.exports = function (DX) {
         }
         var sig = ids.join(',') + '/' + list.map(holes).join(',');
         if (P.courierTried[f] === sig) return;
-        var need = c.board() ? 170 : 330;
+        var need = c.board() ? 150 : 200;
         if (digits < need) return;
         P.courierTried[f] = sig;
         var pr = c.bench.period(ids);
@@ -219,10 +219,16 @@ module.exports = function (DX) {
           var k0 = cols.cols.map(function (col) { return col.fit[0].shift; });
           var board = DX.boardCache(c.board().key);
           var streams = list.map(function (m) { return DX.toDigits(m.groups.join('')); });
-          // try the key; if it reads badly, flip columns to their next-best shifts (each trial costs a setKey)
-          var rf = DX.refineKey(streams, board, k0);
-          var trials = Math.min(12, Math.ceil(rf.evals / 8));
-          for (var t = 0; t < trials; t++) { while (!c.over && c.minute < SH && listenNow()) act(); c.bench.setKey(ids, k0); }
+          // the courier's opening habit as a crib: try each usual format with the callsigns from the log
+          var starts = [k0];
+          DX.openingTexts(f, list[0].to, ctlSpell(), c.controller).forEach(function (ct) {
+            var kc = c.bench.keyFromCrib(ids, ct, p);
+            if (kc.ok && kc.key) starts.push(kc.key.map(function (x, i) { return x >= 0 ? x : k0[i]; }));
+          });
+          var rf = null;
+          starts.forEach(function (st0) { var r0 = DX.refineKey(streams, board, st0, 2); if (!rf || r0.plaus > rf.plaus) rf = r0; });
+          var trials = Math.min(8, Math.ceil(rf.evals / 10));
+          for (var t = 0; t < trials; t++) { while (!c.over && c.minute < SH && listenNow()) act(); c.bench.setKey(ids, rf.key); }
           if (rf.plaus < 0.5) { note('courier ' + f + ' did not read (p' + p + ')'); return; }
           P.courierKey[f] = { key: rf.key, period: p };
         }

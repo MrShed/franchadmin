@@ -204,13 +204,17 @@
     var join = s.minute;
     var noise = DX.AIR.noise(W, t.night, t.minute), str = DX.AIR.strength(W, t);
     var q = DX.AIR.quality(inp, str, noise);
-    var groups = t.msg ? W.msg[t.msg].groups : t.groups;
+    var groups = t.msg ? W.msg[t.msg].groups : (t.groups || []);
     var cp = DX.AIR.copy(W, t, groups, inp, join, q);
     events = events.concat(this._advance(t.minute + t.dur));
     var e = this._logFaint(t);
     e.faint = false; e.groups = cp.groups; e.quality = cp.quality; e.length = groups.length; e.lost = cp.lost; e.corrupt = cp.corrupt;
     var hasInd = t.msg ? W.msg[t.msg].cipher === 'pad' : !!t.indicator;
     e.indicator = hasInd ? cp.groups[0] : null;
+    if (!groups.length) {   // the VVV test transmitter: nothing to copy but its call-up
+      e.faint = false; e.groups = []; e.quality = cp.quality; e.length = 0;
+      return { ok: true, intercept: DX.copy(e), msg: null, groups: [], quality: cp.quality, lost: 0, corrupt: 0, events: events, clock: this.clock(), note: 'VVV VVV VVV: a test transmission, no message' };
+    }
     // workbench message (copies of the same message merge: repeats are recognised by length and indicator)
     var key = t.msg || ('decoy:' + t.id);
     if (!s.wbByKey[key]) { var no = s.nextNo++; s.wbByKey[key] = 'M' + no; s.wb['M' + no] = { id: 'M' + no, no: no, key: key, copies: [], first: { shift: t.night, t: t.minute }, from: t.from, to: t.to, kind: hasInd ? 'pad' : 'periodic' }; }
@@ -392,7 +396,8 @@
     if (!a || !b || a === b) return { ok: false, err: 'two different callsigns' };
     this.unlink(a, b);
     this._s.links.push({ a: a, b: b, kind: kind });
-    return { ok: true, links: this.links() };
+    var dg = this.links(); dg.ok = true;
+    return dg;
   };
   CP.unlink = function (a, b) { this._s.links = this._s.links.filter(function (l) { return !((l.a === a && l.b === b) || (l.a === b && l.b === a)); }); return { ok: true }; };
   CP.links = function () {
@@ -586,7 +591,10 @@
   CP._computerJob = function (job) {
     var s = this._s, self = this;
     var st = job.ids.map(function (id) { return self._digitsOf(id); }).filter(Boolean);
-    var best = st.length ? DX.searchBoard(st, typeof job.arg === 'number' ? job.arg : DX.toDigits(job.arg)) : null;
+    // the computer room tries the player's crib, or the ring's usual openings with the callsigns in the log
+    var wb0 = s.wb[job.ids[0]], W = this._w;
+    var cribs = job.crib ? [DX.norm(job.crib)] : DX.openingTexts(wb0.from, wb0.to, W.ring.controller.spell, W.ring.controller.call);
+    var best = st.length ? DX.searchBoard(st, typeof job.arg === 'number' ? job.arg : DX.toDigits(job.arg), null, cribs) : null;
     job.result = best ? { keyword: best.keyword, key: best.key, plaus: best.plaus } : null;
     if (best && best.plaus >= 0.55) {
       if (!s.board) s.board = best.keyword;
@@ -956,15 +964,27 @@
     };
     /** book the big computer: it tries every keyword in the list against these messages with this period (or
      *  relative key). The job runs for an hour; the answer comes to the inbox (event kind 'computer'). */
-    B.boardSolve = function (ids, periodOrRel) {
+    B.boardSolve = function (ids, periodOrRel, crib) {
       var e = need(ids); if (e) return { ok: false, err: e };
       var s = c._s;
       if (s.pending.some(function (p) { return p.kind === 'computer' && !p.done; })) return { ok: false, err: 'the computer is already running a job for you' };
-      var job = { id: 'C' + (s.pending.length + 1), kind: 'computer', shift: s.shift, at: Math.min(SHIFT, s.minute + c.costs().boardSolveWait), ids: (Array.isArray(ids) ? ids : [ids]).slice(), arg: periodOrRel, done: false };
+      var job = { id: 'C' + (s.pending.length + 1), kind: 'computer', shift: s.shift, at: Math.min(SHIFT, s.minute + c.costs().boardSolveWait), ids: (Array.isArray(ids) ? ids : [ids]).slice(), arg: periodOrRel, crib: crib || null, done: false };
       if (s.minute + c.costs().boardSolveWait > SHIFT) { job.shift = s.shift + 1; job.at = Math.min(SHIFT, s.minute + c.costs().boardSolveWait - SHIFT); }
       s.pending.push(job);
       var ev7 = c._spend(c.costs().boardSolve);
       return { ok: true, pending: true, job: job.id, ready: { shift: job.shift, t: job.at, label: DX.hhmm(job.at) }, events: ev7 };
+    };
+    /** known plaintext: a crib assumed at the start of each message gives the key digits it covers.
+     *  crib may hold '#n' for an n-figure number. -> {key:[digits, -1 unknown], known, conflict} */
+    B.keyFromCrib = function (ids, crib, period) {
+      var e = need(ids); if (e) return { ok: false, err: e };
+      var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard: recover it first' };
+      period = Math.max(1, period | 0);
+      var st = streams(ids), cd = DX.cribDigits(bd, crib);
+      var key = DX.keyFromCribs(st, st.map(function () { return cd; }), period);
+      var ev9 = c._spend(c.costs().setKey);
+      if (!key) return { ok: true, key: null, conflict: true, known: 0, events: ev9 };
+      return { ok: true, key: key, keyStr: DX.digitStr(key), known: key.filter(function (x) { return x >= 0; }).length, conflict: false, events: ev9 };
     };
     B.decode = function (digits) { var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard' }; var d = DX.decode(bd, digits); return { ok: true, text: d.text, plaus: DX.plaus(d.text).score }; };
     B.encode = function (text) { var bd = board(); if (!bd) return { ok: false, err: 'no checkerboard' }; return { ok: true, digits: DX.encode(bd, text) }; };
@@ -1085,8 +1105,11 @@
     });
   }
 
+  /** build the lazily computed language tables now (so no player action pays for them) */
+  DX.warm = function () { DX.lang(); DX.wordLM(); DX.vocab(); };
   DX.newCase = function (seed, opts) {
     opts = opts || {};
+    DX.warm();
     if (seed === undefined || seed === null || seed === '') seed = String(Math.floor(Math.random() * 1e9));
     var grade = DX.grade(opts.tutorial ? 'cadet' : opts.grade || 'analyst').id;
     if (opts.tutorial) seed = 'tutorial-1977';
@@ -1111,6 +1134,7 @@
   DX.load = function (str) {
     var json = /^DX1:/.test(str) ? DX.unpack(str.slice(4)) : str;
     var s = JSON.parse(json);
+    DX.warm();
     var W = DX.makeWorld(s.seed, s.grade, s.attempt);
     // replay the world changes: security reactions and arrests, in order
     s.reactions.forEach(function (r) { DX.applyReaction(W, r); });

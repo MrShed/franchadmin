@@ -237,7 +237,8 @@ UI.act = function (f) {
   return r;
 };
 UI.showEvents = function (evs) {
-  evs = (evs || []).filter(function (e) { return e.text; });
+  var air = {}; UIA.band().now.forEach(function (s) { air[s.id] = 1; });
+  evs = (evs || []).filter(function (e) { return e.text && !(e.kind === 'heard' && e.tx && air[e.tx]); });
   if (!evs.length) return;
   if (evs.length === 1) UItoast(evs[0].text, { ms: 4200 });
   else UItoast(evs.length + ' things happened while you waited — see the log.', { ms: 3600 });

@@ -129,7 +129,11 @@
     D.LANDMARKS.forEach(function (L) {
       var w = where[L[0]], pos;
       if (L[0] === 'bridge') { var ry = R.range(0.55, 0.8); pos = [riverXAt(ry), ry]; }
-      else { var xx = R.range(w[0], w[1]); pos = [xx, coastY(xx) + 0.02 + R.range(w[2], w[3])]; }
+      else {
+        var xx = R.range(w[0], w[1]);
+        var coastal = ['naval_yard', 'fuel_depot', 'ferry', 'lighthouse', 'power', 'customs', 'radar', 'market'].indexOf(L[0]) >= 0;
+        pos = [xx, coastal ? coastY(xx) + 0.02 + R.range(w[2], w[3]) : DX.clamp(R.range(w[2], w[3]) + 0.1, coastY(xx) + 0.05, 0.95)];
+      }
       addPlace(L[0], L[1], L[2], pos);
     });
     D.CAFES.forEach(function (cf) { addPlace('cafe', cf[0], cf[1], landPoint(0.08, 0.92, 0.28, 0.9)); });

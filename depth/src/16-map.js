@@ -284,8 +284,9 @@ var UIMap = (function () {
         var lp = [p0[0] + a0[0] * 46, p0[1] + a0[1] * 46]; var db = { x: lp[0], y: lp[1] - 10, w: 34, h: 18 }; if (!hit(db)) { LBL.push(db); x.fillText(Math.round(b.deg) + '°', lp[0] + 12, lp[1]); }
       });
     });
-    // fixes
-    list.forEach(function (d) {
+    // fixes (the selected / latest first, so its label wins the space)
+    var onKey = sel || (list.length ? list[list.length - 1].key : null);
+    list.slice().sort(function (a, b) { return (b.key === onKey) - (a.key === onKey) || b.t - a.t; }).forEach(function (d) {
       if (!d.fix) return;
       var f = d.fix, c = W2S([f.x, f.y]), on = sel ? sel === d.key : d === list[list.length - 1], old = d.shift !== UIA.clock().shift;
       x.save(); x.globalAlpha = on ? 1 : old ? 0.35 : 0.75; x.translate(c[0], c[1]); x.rotate(f.rot * Math.PI / 180);
@@ -297,7 +298,7 @@ var UIMap = (function () {
       var lt = (d.cs || '?') + ' · ' + (old ? 'night ' + (d.shift + 1) + ' ' : '') + d.label + (d.live ? ' (now)' : ''), lw = x.measureText(lt).width, lx = c[0] + Math.max(6, f.rx * sc) + 6;
       if (lx + lw > w - 70) lx = c[0] - Math.max(6, f.rx * sc) - 6 - lw;
       var lb = { x: lx, y: c[1] - 14, w: lw, h: 20 };
-      if (on || (!old && !hit(lb))) { if (!on) LBL.push(lb); x.globalAlpha = on ? 1 : 0.8; x.fillText(lt, lx, c[1] - 4); }
+      if (on || (!old && !hit(lb))) { LBL.push(lb); x.globalAlpha = on ? 1 : 0.8; x.fillText(lt, lx, c[1] - 4); }
       x.globalAlpha = 1;
     });
     // van areas

@@ -11,7 +11,7 @@ var AUTO = function () {
   // copy everything on the air tonight (DF on the Morse sets first), band-watching in 5-minute steps
   window.__done = window.__done || {};
   var guard = 0, n = 0;
-  while (UIA.clock().minute < 470 && guard++ < 300 && !UIA.over()) {
+  while (UIA.clock().minute < 430 && guard++ < 300 && !UIA.over()) {
     var s = UIA.band().now.filter(function (x) { return !x.bcast && !window.__done[x.id]; })[0];
     if (s) { window.__done[s.id] = 1; if (s.mode !== 'voice') { var d = UIA.df(s.id, null); if (d.ok) UIRx.liveDf[s.id] = { bearings: d.bearings, fix: d.fix, callsign: s.label, t: UIA.clock().abs, freq: s.freq }; } UIA.tune(s.id, { freqErr: 0.25, modeOk: true, driftHeld: 0.9 }); n++; }
     else UIA.wait(5);
@@ -78,7 +78,7 @@ var AUTO = function () {
     await shot('map', { wait: 800 });
     var hasFix = await ev(function () { var e = UIA.log().filter(function (x) { return x.df && x.df.fix; })[0]; if (e) { UIMap.focusLog(e.id); return e.id; } return null; });
     if (hasFix) { await page.waitForTimeout(500); await shot('map-fix'); await ev(function (id) { var e = UIA.logEntry(id); UIMap.fixSheet({ key: e.id, log: e.id, cs: e.callsign, bearings: e.df.bearings, fix: e.df.fix, shift: e.shift, label: e.label }); }, hasFix); await shot('map-fixsheet', { wait: 600 }); await ev(function () { UIsheet.close(); }); }
-    await ev(function () { var p = UIA.city().places.filter(function (x) { return x.kind === 'spot'; })[0]; UIMap.placeSheet(p.id); }); await shot('map-place', { wait: 600 }); await ev(function () { UIsheet.close(); });
+    await ev(function () { var p = UIA.city().places.filter(function (x) { return x.kind === 'spot'; })[0] || UIA.city().places[0]; UIMap.placeSheet(p.id); }); await shot('map-place', { wait: 600 }); await ev(function () { UIsheet.close(); });
     // bench
     await ev(function () { UI.go('bench'); }); await page.waitForTimeout(400); await closeExplain();
     await shot('bench');

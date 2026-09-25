@@ -329,36 +329,80 @@
   /** keyword search (the big computer): for every keyword in the pool build the board, fit each column of the
    *  period against that board's expected digit frequencies, and score the decrypt. If rel (a relative key) is
    *  given, the 10 constants on top of it are tried as well. -> best {keyword, key, plaus} */
-  DX.searchBoard = function (streams, periodOrRel, pool) {
+  /** crib text -> digit array; '#n' stands for an n-figure number (figures unknown: -1) */
+  DX.cribDigits = function (b, crib) {
+    var out = [];
+    String(crib).split(/(#[0-9])/).forEach(function (part) {
+      var m = /^#([0-9])$/.exec(part);
+      if (m) { out = out.concat(DX.toDigits(b.figCode)); for (var i = 0; i < 2 * +m[1]; i++) out.push(-1); out = out.concat(DX.toDigits(b.figCode)); return; }
+      if (part) out = out.concat(DX.toDigits(DX.encode(b, part)));
+    });
+    return out;
+  };
+  /** known plaintext at the start of each stream -> periodic key digits (-1 where no crib covers a column).
+   *  cribs: one digit array per stream (or null). Returns null when the cribs contradict each other. */
+  DX.keyFromCribs = function (streams, cribs, period) {
+    var key = [], i;
+    for (i = 0; i < period; i++) key.push(-1);
+    for (var s = 0; s < streams.length; s++) {
+      var cr = cribs[s];
+      if (!cr) continue;
+      for (i = 0; i < cr.length && i < streams[s].length; i++) {
+        if (cr[i] < 0 || streams[s][i] < 0) continue;
+        var k = ((streams[s][i] - cr[i]) % 10 + 10) % 10, col = i % period;
+        if (key[col] >= 0 && key[col] !== k) return null;
+        key[col] = k;
+      }
+    }
+    return key;
+  };
+  /** keyword search (the big computer): for every keyword in the pool build the board and derive a key three
+   *  ways — known openings (cribs, a list of candidate opening texts), column frequencies, and the columns aligned
+   *  on each other plus one constant — then score the decrypt. -> best {keyword, key, plaus} */
+  DX.searchBoard = function (streams, periodOrRel, pool, cribs) {
     pool = pool || DX.DATA.KEYWORDS;
     var rel = Array.isArray(periodOrRel) ? periodOrRel : null, period = rel ? rel.length : periodOrRel;
-    var sample = streams.map(function (s) { return s.slice(0, 160); });
+    if (!rel) rel = DX.alignColumns(streams, period).rel;
+    var sample = streams.map(function (s) { return s.slice(0, 110); });
+    var pooled = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    streams.forEach(function (s) { for (var i = 0; i < s.length; i++) if (s[i] >= 0) pooled[((s[i] - rel[i % period]) % 10 + 10) % 10]++; });
     var cands = [];
-    for (var k = 0; k < pool.length; k++) {
-      var b = DX.boardCache(pool[k]);
-      var keys = [DX.columnFreq(streams, period, b).map(function (c) { return c.fit[0].shift; })];
-      if (rel) for (var c = 0; c < 10; c++) keys.push(rel.map(function (r) { return (r + c) % 10; }));
-      keys.forEach(function (key) {
-        var txt = sample.map(function (p) { return DX.decode(b, DX.subKey(p, key)).text; }).join('');
-        cands.push({ keyword: pool[k], key: key, plaus: DX.plaus(txt).score });
+    function score(kw, b, key) { var txt = sample.map(function (p) { return DX.decode(b, DX.subKey(p, key)).text; }).join(''); cands.push({ keyword: kw, key: key, plaus: DX.plaus(txt).score }); }
+    // 1. known openings: consistent across every message, or not at all
+    if (cribs && cribs.length) {
+      pool.forEach(function (kw) {
+        var b = DX.boardCache(kw), colfit = null;
+        cribs.forEach(function (ct) {
+          var cd = DX.cribDigits(b, ct);
+          var kk = DX.keyFromCribs(streams, streams.map(function () { return cd; }), period);
+          if (!kk) return;
+          if (kk.indexOf(-1) >= 0 && !colfit) colfit = DX.columnFreq(streams, period, b).map(function (c) { return c.fit[0].shift; });
+          score(kw, b, kk.map(function (x, i) { return x >= 0 ? x : colfit[i]; }));
+        });
       });
+      cands.sort(function (x, y) { return y.plaus - x.plaus; });
+    }
+    // 2. statistics only (no crib fits): column fit, and aligned columns + one constant
+    if (!cands.length || cands[0].plaus < 0.6) {
+      for (var k = 0; k < pool.length; k++) {
+        var b = DX.boardCache(pool[k]), exp = DX.boardExpect(b);
+        score(pool[k], b, DX.columnFreq(streams, period, b).map(function (c) { return c.fit[0].shift; }));
+        var bestC = 0, bestSc = -1e18;
+        for (var c = 0; c < 10; c++) { var sc = 0; for (var d = 0; d < 10; d++) sc += pooled[(d + c) % 10] * Math.log(exp[d]); if (sc > bestSc) { bestSc = sc; bestC = c; } }
+        score(pool[k], b, rel.map(function (r) { return (r + bestC) % 10; }));
+      }
     }
     cands.sort(function (x, y) { return y.plaus - x.plaus; });
-    // refine the three best keywords column by column
-    var best = null;
-    cands.slice(0, 3).forEach(function (cd) {
-      var r = DX.refineKey(streams, DX.boardCache(cd.keyword), cd.key);
-      if (!best || r.plaus > best.plaus) best = { keyword: cd.keyword, key: r.key, plaus: r.plaus };
-    });
-    return best;
+    var cd0 = cands[0], r = DX.refineKey(streams, DX.boardCache(cd0.keyword), cd0.key, 2);
+    return { keyword: cd0.keyword, key: r.key, plaus: r.plaus };
   };
   /** coordinate ascent on a periodic key: each column tries all ten shifts, keeping what reads best */
-  DX.refineKey = function (streams, b, key) {
+  DX.refineKey = function (streams, b, key, passes) {
     key = key.slice();
-    var sample = streams.map(function (s) { return s.slice(0, 200); });
+    var sample = streams.map(function (s) { return s.slice(0, 160); });
     function score(k) { return DX.plaus(sample.map(function (s) { return DX.decode(b, DX.subKey(s, k)).text; }).join('')).score; }
     var best = score(key), evals = 1;
-    for (var pass = 0; pass < 3; pass++) {
+    for (var pass = 0; pass < (passes || 3); pass++) {
       var changed = false;
       for (var c = 0; c < key.length; c++) {
         var bestS = key[c];
