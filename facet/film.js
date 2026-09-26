@@ -103,9 +103,6 @@ function finish(t) {
   const v = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 1.0);
   v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.55)');
   g.fillStyle = v; g.fillRect(0, 0, W, H);
-  // film grain, moving each frame
-  const f = Math.floor(t * 24), r = rng(f + 1);
-  g.drawImage(grain, -r() * 512, -r() * 512, W + 1024, H + 1024);
   // fade in and out of black
   const a = Math.max(1 - prog(t, 0, 0.6), prog(t, DUR - 0.5, DUR));
   if (a > 0) { g.fillStyle = 'rgba(0,0,0,' + a + ')'; g.fillRect(0, 0, W, H); }
